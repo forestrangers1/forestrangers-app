@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Forest Rangers — Client</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --accent:     #ff5f1f;
+  --accent-dim: rgba(255,95,31,0.12);
+  --accent-mid: rgba(255,95,31,0.25);
+  --bg:         #1c1f14;
+  --surface:    #252a1a;
+  --surface2:   #2f3520;
+  --border:     rgba(255,255,255,0.08);
+  --border2:    rgba(255,255,255,0.14);
+  --text:       #eceee6;
+  --text-dim:   rgba(236,238,230,0.55);
+  --text-faint: rgba(236,238,230,0.3);
+  --green:      #5ec97a;
+  --green-dim:  rgba(94,201,122,0.12);
+  --red:        #e05a5a;
+  --red-dim:    rgba(224,90,90,0.12);
+  --blue:       #5a9ae0;
+  --blue-dim:   rgba(90,154,224,0.12);
+  --radius:     14px;
+  --radius-lg:  20px;
+}
+
+html, body {
+  height: 100%; font-family: 'Instrument Sans', sans-serif;
+  background: #0e0f0a; color: var(--text); overflow: hidden; height: 100%;
+}
+
+/* ── PHONE SHELL ── */
+.phone-shell {
+  width: 390px; height: 844px;
+  margin: 20px auto;
+  background: var(--bg);
+  border-radius: 44px;
+  border: 2px solid rgba(255,255,255,0.1);
+  box-shadow: 0 40px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
+  overflow: hidden; position: relative;
+  display: flex; flex-direction: column;
+}
+
+@media (max-width: 480px) {
+  html, body { height: 100%; overflow: hidden; }
+  .phone-shell {
+    width: 100%; height: 100vh;
+    margin: 0; border-radius: 0; border: none;
+    box-shadow: none;
+  }
+  div[style*="min-height:100vh"] {
+    padding: 0 !important; align-items: stretch !important;
+  }
+}
+.notch {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 120px; height: 34px; background: #000;
+  border-radius: 0 0 20px 20px; z-index: 100;
+}
+.status-bar {
+  height: 44px; flex-shrink: 0;
+  display: flex; align-items: flex-end; justify-content: space-between;
+  padding: 0 28px 6px; font-size: 12px; font-weight: 600;
+  position: relative; z-index: 50;
+}
+.status-time { font-family: 'Norwester', sans-serif; font-size: 15px; font-weight: 700; }
+.status-icons { display: flex; align-items: center; gap: 5px; }
+.status-icons svg { width: 14px; height: 14px; fill: var(--text); }
+
+/* ── SCREENS ── */
+.screens { flex: 1; overflow: hidden; position: relative; }
+.screen {
+  display: none; position: absolute; inset: 0;
+  overflow-y: auto; overflow-x: hidden;
+  padding-bottom: 80px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.screen::-webkit-scrollbar { display: none; }
+.screen.active { display: block; animation: fadeUp 0.25s ease; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  height: 78px; flex-shrink: 0;
+  background: var(--surface); border-top: 1px solid var(--border);
+  display: flex; align-items: flex-start;
+  padding: 10px 8px 0; gap: 4px;
+}
+
+@media (max-width: 480px) {
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    z-index: 100; height: 72px;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .screen { padding-bottom: 90px !important; }
+  .notch { display: none; }
+  .status-bar { display: none; }
+}
+.nav-tab {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; gap: 4px; padding: 8px 4px;
+  border-radius: 12px; cursor: pointer;
+  transition: background 0.15s; color: var(--text-faint);
+  position: relative;
+}
+.nav-tab.active { color: var(--accent); background: var(--accent-dim); }
+.nav-tab svg { width: 22px; height: 22px; }
+.nav-tab span { font-size: 10px; font-weight: 600; letter-spacing: 0.04em; }
+.notif-dot {
+  position: absolute; top: 6px; right: 20px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent); border: 2px solid var(--bg);
+}
+
+/* ── BADGES ── */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 3px 9px; border-radius: 20px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+}
+.b-green  { background: var(--green-dim);  color: var(--green); }
+.b-accent { background: var(--accent-dim); color: var(--accent); }
+.b-red    { background: var(--red-dim);    color: var(--red); }
+.b-blue   { background: var(--blue-dim);   color: var(--blue); }
+.b-muted  { background: rgba(255,255,255,0.06); color: var(--text-faint); }
+
+/* ── CARDS ── */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden; margin-bottom: 12px;
+}
+.card-head {
+  padding: 13px 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.card-title {
+  font-family: 'Norwester', sans-serif; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim);
+}
+.card-body { padding: 14px 16px; }
+
+.screen-pad { padding: 16px 20px; }
+
+/* ── NOTIFICATION CARD ── */
+.notif-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 16px;
+  margin-bottom: 10px; cursor: pointer;
+  transition: border-color 0.15s; position: relative; overflow: hidden;
+}
+.notif-card::before {
+  content:''; position:absolute; left:0; top:0; bottom:0;
+  width: 3px;
+}
+.notif-card.new::before  { background: var(--accent); }
+.notif-card.read::before { background: var(--border); }
+.notif-card:hover { border-color: var(--border2); }
+.notif-card.new  { border-color: rgba(255,95,31,0.2); }
+
+.notif-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px;
+}
+.notif-type {
+  font-family: 'Norwester', sans-serif; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.1em;
+}
+.notif-card.new .notif-type { color: var(--accent); }
+.notif-card.read .notif-type { color: var(--text-faint); }
+.notif-time { font-size: 11px; color: var(--text-faint); }
+.notif-title { font-size: 15px; font-weight: 600; margin-bottom: 5px; }
+.notif-sub { font-size: 12.5px; color: var(--text-dim); line-height: 1.5; }
+.notif-stats {
+  display: flex; gap: 14px; margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.notif-stat { font-size: 12px; color: var(--text-dim); display: flex; align-items: center; gap: 5px; }
+.notif-stat svg { width: 13px; height: 13px; color: var(--accent); }
+.notif-stat strong { color: var(--accent); font-family: 'Norwester', sans-serif; font-weight: 700; }
+
+/* ── WALK DETAIL (full screen) ── */
+.walk-photo {
+  width: 100%; height: 200px;
+  background: linear-gradient(135deg, #2f3520 0%, #3d4429 50%, #515938 100%);
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.walk-photo-placeholder {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.walk-photo-placeholder svg { width: 48px; height: 48px; color: rgba(255,255,255,0.2); }
+.walk-photo-placeholder span { font-size: 12px; color: rgba(255,255,255,0.3); }
+.walk-photo-badge {
+  position: absolute; bottom: 12px; right: 12px;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(6px);
+  border-radius: 8px; padding: 5px 10px;
+  font-size: 11px; font-weight: 600; color: white;
+}
+.photo-expand-btn {
+  position: absolute; bottom: 12px; left: 12px;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(6px);
+  border: none; border-radius: 8px; padding: 6px 10px;
+  font-size: 11px; font-weight: 600; color: white;
+  cursor: pointer; display: flex; align-items: center; gap: 5px;
+}
+.photo-expand-btn svg { width: 13px; height: 13px; }
+
+/* GPS MAP (detail) */
+.detail-map {
+  width: 100%; height: 160px;
+  background: var(--surface2); border-radius: var(--radius);
+  position: relative; overflow: hidden; border: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+.map-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* ── COMMENT BOX ── */
+.comment-box {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px;
+  margin-bottom: 10px;
+}
+.comment-author { font-size: 11px; color: var(--text-faint); margin-bottom: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; }
+.comment-text { font-size: 13.5px; color: var(--text-dim); line-height: 1.6; }
+
+.comment-input-row {
+  display: flex; gap: 8px; align-items: flex-end;
+}
+.comment-input {
+  flex: 1; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 11px 14px; color: var(--text);
+  font-family: 'Instrument Sans', sans-serif; font-size: 13.5px;
+  outline: none; transition: border-color 0.15s; resize: none;
+}
+.comment-input:focus { border-color: var(--accent); }
+.send-btn {
+  width: 42px; height: 42px; border-radius: 12px;
+  background: var(--accent); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s; flex-shrink: 0;
+}
+.send-btn:hover { background: #ff7a3d; }
+.send-btn svg { width: 18px; height: 18px; stroke: white; }
+
+/* ── BOOKING CARD ── */
+.booking-item {
+  padding: 14px 16px; border-top: 1px solid var(--border);
+  cursor: pointer; transition: background 0.12s;
+}
+.booking-item:first-child { border-top: none; }
+.booking-item:hover { background: rgba(255,255,255,0.02); }
+.booking-date { font-size: 11px; color: var(--text-faint); margin-bottom: 3px; }
+.booking-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.booking-meta { display: flex; align-items: center; justify-content: space-between; }
+.booking-price { font-family: 'Norwester', sans-serif; font-size: 15px; font-weight: 800; color: var(--accent); }
+
+/* ── DOG PROFILE ── */
+.dog-hero {
+  background: linear-gradient(135deg, var(--surface), var(--surface2));
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 20px 16px; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 14px;
+}
+.dog-avatar {
+  width: 60px; height: 60px; border-radius: 16px;
+  background: linear-gradient(135deg, #3d4429, #6b7450);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; flex-shrink: 0; border: 2px solid var(--accent);
+}
+.dog-name { font-family: 'Norwester', sans-serif; font-size: 18px; font-weight: 800; }
+.dog-breed { font-size: 12px; color: var(--text-faint); margin-top: 3px; }
+.dog-prop-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 16px; border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+.dog-prop-key { color: var(--text-faint); }
+
+/* ── INVOICE ── */
+.invoice-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 16px; border-top: 1px solid var(--border);
+  cursor: pointer; transition: background 0.12s;
+}
+.invoice-item:first-child { border-top: none; }
+.invoice-item:hover { background: rgba(255,255,255,0.02); }
+.invoice-num { font-family: monospace; font-size: 11px; color: var(--text-faint); }
+.invoice-detail { flex: 1; }
+.invoice-name { font-size: 13px; font-weight: 600; }
+.invoice-date { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+.invoice-amount { font-family: 'Norwester', sans-serif; font-size: 15px; font-weight: 800; }
+
+/* ── BTN ── */
+.btn-big {
+  width: 100%; padding: 16px;
+  border-radius: var(--radius); border: none;
+  font-family: 'Norwester', sans-serif; font-size: 15px; font-weight: 800;
+  cursor: pointer; transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.btn-big svg { width: 20px; height: 20px; }
+.btn-accent { background: var(--accent); color: white; box-shadow: 0 8px 24px rgba(255,95,31,0.3); }
+.btn-accent:hover { background: #ff7a3d; transform: translateY(-1px); }
+.btn-outline-big {
+  background: transparent; border: 1.5px solid var(--border2);
+  color: var(--text-dim); padding: 14px;
+  border-radius: var(--radius); font-family: 'Norwester', sans-serif;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  transition: all 0.15s; letter-spacing: 0.02em;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-outline-big:hover { border-color: var(--accent); color: var(--accent); }
+.btn-outline-big svg { width: 17px; height: 17px; }
+
+/* ── BACK BTN ── */
+.back-btn {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text); flex-shrink: 0;
+}
+.back-btn svg { width: 16px; height: 16px; }
+
+/* ── MODAL ── */
+.modal-overlay {
+  display: none; position: absolute; inset: 0; z-index: 300;
+  background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+  align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal-full {
+  background: var(--surface); border-radius: 20px;
+  width: 88%; max-height: 80%; overflow-y: auto;
+  padding: 20px; border: 1px solid var(--border2);
+  animation: fadeUp 0.25s ease;
+}
+.modal-full::-webkit-scrollbar { display: none; }
+.modal-close {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--surface2); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text-dim); margin-left: auto; margin-bottom: 14px;
+}
+.modal-close svg { width: 14px; height: 14px; }
+
+::-webkit-scrollbar { display: none; }
+
+.jour-pill {
+  padding: 6px 2px; border-radius: 7px; text-align: center;
+  font-family: 'Norwester', sans-serif; font-size: 10px; font-weight: 800;
+  background: var(--surface2); border: 1.5px solid var(--border);
+  cursor: pointer; transition: all 0.15s; color: var(--text-dim);
+}
+.jour-pill.selected { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
+</style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const { createClient } = window.supabase;
+    const SUPABASE_URL = 'https://zxzhqptimjvdtvvtnpyw.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_drh_w_i9T4GOZ_AzoqkLcw_SW45X1FT';
+    const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+    console.log('Supabase connecte', db);
+  </script>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#ff5f1f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Forest Rangers">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+</head>
+<body>
+
+<div style="background:#0e0f0a;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
+<div class="phone-shell">
+
+  <div class="notch"></div>
+
+  <div class="status-bar">
+    <span class="status-time">16:42</span>
+    <div class="status-icons">
+      <svg viewBox="0 0 24 24"><rect x="2" y="16" width="3" height="6" rx="1"/><rect x="7" y="12" width="3" height="10" rx="1"/><rect x="12" y="7" width="3" height="15" rx="1"/><rect x="17" y="3" width="3" height="19" rx="1"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0114.08 0M1.42 9a16 16 0 0121.16 0M8.53 16.11a6 6 0 016.95 0M12 20h.01"/></svg>
+      <svg viewBox="0 0 24 24"><rect x="2" y="7" width="18" height="11" rx="2"/><path d="M20 11h2v3h-2z"/><rect x="4" y="9" width="12" height="7" rx="1" fill="currentColor"/></svg>
+    </div>
+  </div>
+
+  <div class="screens">
+
+    <!-- ══ ACCUEIL / NOTIFICATIONS ══ -->
+    <div class="screen active" id="screen-home">
+      <div class="screen-pad">
+
+        <!-- Header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;margin-top:4px;">
+          <div>
+            <div id="client-date" style="font-size:12px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">Lundi 9 juin</div>
+            <div id="client-bonjour" style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;margin-top:2px;">Bonjour, Marie</div>
+          </div>
+          <div id="client-avatar" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#3d4429,#6b7450);display:flex;align-items:center;justify-content:center;font-family:'Norwester',sans-serif;font-weight:800;font-size:13px;border:2px solid var(--accent);">MD</div>
+        </div>
+
+        <!-- Prochaine promenade -->
+        <div id="prochaine-promenade" style="background:linear-gradient(135deg,rgba(255,95,31,0.15),rgba(255,95,31,0.05));border:1px solid rgba(255,95,31,0.25);border-radius:var(--radius-lg);padding:16px;margin-bottom:16px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--accent);font-weight:700;margin-bottom:8px;">Prochaine promenade</div>
+          <div style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;">Demain · 07:30</div>
+          <div style="font-size:13px;color:var(--text-dim);">Max · Dog Walking · Gabriel</div>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <span class="badge b-green">Confirmé</span>
+            <span class="badge b-muted">Forêt de Merl</span>
+          </div>
+        </div>
+
+        <!-- Notification nouvelle — promenade terminée -->
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:var(--text-faint);font-weight:700;margin-bottom:10px;">Notifications</div>
+
+        <div class="notif-card new" onclick="showScreen('screen-walk-detail')">
+          <div class="notif-header">
+            <span class="notif-type">Promenade terminée</span>
+            <span class="notif-time">Il y a 12 min</span>
+          </div>
+          <div class="notif-title">Max est rentré !</div>
+          <div class="notif-sub">Sophie vient de terminer la promenade du matin. Tout s'est bien passé.</div>
+          <div class="notif-stats">
+            <div class="notif-stat">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <strong>48 min</strong>
+            </div>
+            <div class="notif-stat">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6l3-3M3 18l3 3"/></svg>
+              <strong>3,4 km</strong>
+            </div>
+            <div class="notif-stat">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <strong>1 photo</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="notif-card read">
+          <div class="notif-header">
+            <span class="notif-type">Réservation confirmée</span>
+            <span class="notif-time">Hier · 18:04</span>
+          </div>
+          <div class="notif-title">Dog Walking · Mardi 10 juin</div>
+          <div class="notif-sub">Gabriel a confirmé votre demande pour demain matin à 07:30.</div>
+        </div>
+
+        <div class="notif-card read">
+          <div class="notif-header">
+            <span class="notif-type">Facture disponible</span>
+            <span class="notif-time">1 juin · 09:00</span>
+          </div>
+          <div class="notif-title">Facture mai 2026 — 308 €</div>
+          <div class="notif-sub">Votre facture mensuelle est disponible. Échéance : 15 juin.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══ DÉTAIL PROMENADE ══ -->
+    <div class="screen" id="screen-walk-detail">
+      <div>
+        <!-- Photo -->
+        <div class="walk-photo">
+          <div class="walk-photo-placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <span>Photo de groupe</span>
+          </div>
+          <div class="walk-photo-badge">Groupe B · 3 chiens</div>
+          <button class="photo-expand-btn" onclick="openPhotoModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+            Agrandir
+          </button>
+        </div>
+
+        <div class="screen-pad">
+
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+            <div class="back-btn" onclick="showScreen('screen-home')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+            </div>
+            <div>
+              <div style="font-family:'Norwester',sans-serif;font-size:16px;font-weight:800;">Promenade du matin</div>
+              <div style="font-size:12px;color:var(--text-faint);">Aujourd'hui · 08:00 → 08:48</div>
+            </div>
+            <span class="badge b-green" style="margin-left:auto;">Terminé</span>
+          </div>
+
+          <!-- Stats -->
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
+              <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:var(--accent);">3,4</div>
+              <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">km</div>
+            </div>
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
+              <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:var(--accent);">48</div>
+              <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">min</div>
+            </div>
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
+              <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:var(--green);">3</div>
+              <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">chiens</div>
+            </div>
+          </div>
+
+          <!-- Tracé GPS -->
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Parcours GPS</div>
+          <div class="detail-map">
+            <div class="map-grid"></div>
+            <svg style="position:absolute;inset:0;" viewBox="0 0 390 160" preserveAspectRatio="none">
+              <polyline points="40,120 80,100 120,85 160,95 200,70 240,55 280,65 320,45 360,60" fill="none" stroke="rgba(255,95,31,0.3)" stroke-width="2" stroke-dasharray="4,3"/>
+              <polyline points="40,120 80,100 120,85 160,95 200,70 240,55 280,65 320,45 360,60" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="40" cy="120" r="5" fill="var(--green)" stroke="white" stroke-width="2"/>
+              <circle cx="360" cy="60" r="5" fill="var(--accent)" stroke="white" stroke-width="2"/>
+            </svg>
+            <div style="position:absolute;bottom:8px;left:10px;font-size:10px;color:var(--text-faint);background:rgba(28,31,20,0.8);padding:3px 8px;border-radius:6px;">Bambësch</div>
+          </div>
+
+          <!-- Chiens présents -->
+          <div class="card" style="margin-bottom:12px;">
+            <div class="card-head"><span class="card-title">Chiens du groupe</span></div>
+            <div style="padding:4px 0;">
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;">
+                <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;"></div>
+                <div style="font-size:13px;font-weight:600;flex:1;">Max <span style="font-weight:400;color:var(--text-faint);">· votre chien</span></div>
+                <span class="badge b-green">Présent</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid var(--border);">
+                <div style="width:8px;height:8px;border-radius:50%;background:var(--border2);flex-shrink:0;"></div>
+                <div style="font-size:13px;font-weight:600;flex:1;color:var(--text-dim);">Charlie</div>
+                <span class="badge b-muted">Présent</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid var(--border);">
+                <div style="width:8px;height:8px;border-radius:50%;background:var(--border2);flex-shrink:0;"></div>
+                <div style="font-size:13px;font-weight:600;flex:1;color:var(--text-dim);">Nala</div>
+                <span class="badge b-muted">Présente</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Commentaire de Sophie -->
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Commentaires</div>
+
+          <div class="comment-box">
+            <div class="comment-author">Sophie · Ranger</div>
+            <div class="comment-text">Max était en grande forme aujourd'hui, très énergique ! Il a bien couru avec Charlie. Bonne promenade dans l'ensemble.</div>
+          </div>
+
+          <!-- Réponse client -->
+          <div class="comment-input-row" style="margin-bottom:16px;">
+            <textarea class="comment-input" rows="2" id="commentInput" placeholder="Laisser un commentaire à Gabriel..."></textarea>
+            <button class="send-btn" onclick="sendComment()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+
+          <!-- Commentaire envoyé (caché par défaut) -->
+          <div id="sentComment" style="display:none;" class="comment-box" style="border-color:rgba(255,95,31,0.2);">
+            <div class="comment-author" style="color:var(--accent);">Vous</div>
+            <div class="comment-text" id="sentCommentText"></div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ RÉSERVATIONS ══ -->
+    <div class="screen" id="screen-bookings">
+      <div class="screen-pad">
+        <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;margin-bottom:4px;margin-top:4px;">Mes réservations</div>
+        <div style="font-size:13px;color:var(--text-dim);margin-bottom:18px;">Historique et à venir</div>
+
+        <button class="btn-big btn-accent" style="margin-bottom:16px;" onclick="window.location.href='forestrangers-reservation.html'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nouvelle réservation
+        </button>
+
+        <div id="reservations-list">
+          <div class="booking-item">
+            <div class="booking-date">Mardi 10 juin · 07:30</div>
+            <div class="booking-title">Dog Walking · Max</div>
+            <div class="booking-meta">
+              <span class="badge b-green">Confirmé</span>
+              <span class="booking-price">28 €</span>
+            </div>
+          </div>
+          <div class="booking-item">
+            <div class="booking-date">Jeudi 12 juin · 07:30</div>
+            <div class="booking-title">Dog Walking · Max</div>
+            <div class="booking-meta">
+              <span class="badge b-green">Confirmé</span>
+              <span class="booking-price">28 €</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Historique</div>
+        <div class="card">
+          <div class="booking-item" onclick="showScreen('screen-walk-detail')">
+            <div class="booking-date">Aujourd'hui · 08:00</div>
+            <div class="booking-title">Dog Walking · Max · Bambësch</div>
+            <div class="booking-meta">
+              <span class="badge b-muted">Terminé · 3,4 km</span>
+              <span class="booking-price">28 €</span>
+            </div>
+          </div>
+          <div class="booking-item">
+            <div class="booking-date">Vendredi 6 juin · 07:30</div>
+            <div class="booking-title">Dog Walking · Max</div>
+            <div class="booking-meta">
+              <span class="badge b-muted">Terminé · 4,1 km</span>
+              <span class="booking-price">28 €</span>
+            </div>
+          </div>
+          <div class="booking-item">
+            <div class="booking-date">Mercredi 4 juin · 07:30</div>
+            <div class="booking-title">Dog Walking · Max</div>
+            <div class="booking-meta">
+              <span class="badge b-muted">Terminé · 3,8 km</span>
+              <span class="booking-price">28 €</span>
+            </div>
+          </div>
+          <div style="padding:12px 16px;border-top:1px solid var(--border);text-align:center;">
+            <button class="btn-outline-big" style="width:100%;font-size:12px;padding:10px;">Voir tout l'historique</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MON CHIEN ══ -->
+        </div><!-- /reservations-list -->
+      </div>
+    </div>
+
+    <div class="screen" id="screen-dog">
+      <div class="screen-pad">
+        <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;margin-bottom:16px;margin-top:4px;">Mon chien</div>
+
+        <div id="chiens-list"><div class="dog-hero">
+          <div class="dog-avatar">🐕</div>
+          <div>
+            <div class="dog-name">Max</div>
+            <div class="dog-breed">Berger Allemand · Mâle · 4 ans</div>
+            <div style="margin-top:8px;"><span class="badge b-green">Actif</span></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:12px;">
+          <div class="card-head"><span class="card-title">Informations</span></div>
+          <div class="dog-prop-row"><span class="dog-prop-key">Stérilisé</span><span>Oui</span></div>
+          <div class="dog-prop-row"><span class="dog-prop-key">Comportement</span><span class="badge b-green">Sociable</span></div>
+          <div class="dog-prop-row"><span class="dog-prop-key">Vétérinaire</span><span>Dr. Muller · +352 26 xx xx</span></div>
+          <div class="dog-prop-row"><span class="dog-prop-key">Allergies</span><span>Acariens</span></div>
+        </div>
+
+        <div class="card" style="margin-bottom:12px;">
+          <div class="card-head"><span class="card-title">Stats du mois</span></div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 16px;">
+            <div style="text-align:center;">
+              <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:var(--accent);">11</div>
+              <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">promenades</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:var(--accent);">38</div>
+              <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">km parcourus</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:var(--green);">8h45</div>
+              <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">total</div>
+            </div>
+          </div>
+        </div>
+
+        </div><!-- /chiens-list -->
+        <!-- Dernières photos -->
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Dernières photos</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px;">
+          <div style="aspect-ratio:1;background:linear-gradient(135deg,#2f3520,#3d4429);border-radius:10px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="openPhotoModal()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          </div>
+          <div style="aspect-ratio:1;background:linear-gradient(135deg,#3d4429,#515938);border-radius:10px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="openPhotoModal()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          </div>
+          <div style="aspect-ratio:1;background:linear-gradient(135deg,#515938,#6b7450);border-radius:10px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="openPhotoModal()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══ FACTURES ══ -->
+    <div class="screen" id="screen-invoices">
+      <div class="screen-pad">
+        <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;margin-bottom:4px;margin-top:4px;">Mes factures</div>
+        <div style="font-size:13px;color:var(--text-dim);margin-bottom:18px;">Suivi de vos paiements</div>
+        <div id="factures-list">
+
+        <!-- Résumé -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center;">
+            <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;color:var(--green);">308 €</div>
+            <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:3px;">À payer</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center;">
+            <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;color:var(--text-dim);">15 juin</div>
+            <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:3px;">Échéance</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="invoice-item">
+            <div class="invoice-detail">
+              <div class="invoice-name">Facture mai 2026</div>
+              <div class="invoice-date">Dog Walking × 11 · mai 2026</div>
+            </div>
+            <span class="badge b-accent" style="margin-right:8px;">À payer</span>
+            <div class="invoice-amount" style="color:var(--accent);">308 €</div>
+          </div>
+          <div class="invoice-item">
+            <div class="invoice-detail">
+              <div class="invoice-name">Facture avril 2026</div>
+              <div class="invoice-date">Dog Walking × 9 · avril 2026</div>
+            </div>
+            <span class="badge b-green" style="margin-right:8px;">Payée</span>
+            <div class="invoice-amount" style="color:var(--green);">252 €</div>
+          </div>
+          <div class="invoice-item">
+            <div class="invoice-detail">
+              <div class="invoice-name">Facture mars 2026</div>
+              <div class="invoice-date">Dog Walking × 10 · mars 2026</div>
+            </div>
+            <span class="badge b-green" style="margin-right:8px;">Payée</span>
+            <div class="invoice-amount" style="color:var(--green);">280 €</div>
+          </div>
+        </div>
+
+        <button class="btn-big btn-accent" style="margin-top:4px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          Payer en ligne
+        </button>
+
+      </div>
+    </div>
+
+  </div><!-- /screens -->
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <div class="nav-tab active" id="tab-home" onclick="goTab('screen-home','tab-home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Accueil</span>
+      <div class="notif-dot" id="notifDot"></div>
+    </div>
+    <div class="nav-tab" id="tab-bookings" onclick="goTab('screen-bookings','tab-bookings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      <span>Réservations</span>
+    </div>
+    <div class="nav-tab" id="tab-dog" onclick="goTab('screen-dog','tab-dog')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 5.172C10 3.782 8.423 2.679 6.5 3c-2 .336-3.5 2.332-3.5 4.327 0 .644.198 1.885.5 2.669L10 21v-3.164"/><path d="M14 5.172C14 3.782 15.577 2.679 17.5 3c2 .336 3.5 2.332 3.5 4.327 0 .644-.198 1.885-.5 2.669L14 21v-3.164"/><path d="M12 12a2 2 0 100-4 2 2 0 000 4z"/></svg>
+      <span>Mon chien</span>
+    </div>
+    <div class="nav-tab" id="tab-invoices" onclick="goTab('screen-invoices','tab-invoices')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <span>Factures</span>
+    </div>
+  </div>
+
+</div><!-- /phone-shell -->
+</div>
+
+<!-- MODAL PHOTO -->
+<div class="modal-overlay" id="photoModal">
+  <div class="modal-full">
+    <div class="modal-close" onclick="closePhotoModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </div>
+    <div style="width:100%;aspect-ratio:4/3;background:linear-gradient(135deg,#2f3520,#3d4429,#515938);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
+      <div style="text-align:center;">
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <div style="font-size:12px;color:rgba(255,255,255,0.2);margin-top:8px;">Photo de groupe</div>
+      </div>
+    </div>
+    <div style="font-family:'Norwester',sans-serif;font-size:14px;font-weight:800;margin-bottom:4px;">Promenade du matin · 9 juin</div>
+    <div style="font-size:12px;color:var(--text-faint);">Bambësch · Sophie · 3 chiens · 3,4 km</div>
+  </div>
+</div>
+
+<!-- MODAL NOUVELLE RÉSERVATION -->
+<div class="modal-overlay" id="bookingModal">
+  <div class="modal-full">
+    <div class="modal-close" onclick="closeBookingModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </div>
+    <div style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;margin-bottom:16px;">Nouvelle demande</div>
+
+    <div style="margin-bottom:12px;">
+      <label style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;display:block;margin-bottom:6px;">Service</label>
+      <select style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:13.5px;outline:none;">
+        <option>Dog Walking — 28 €</option>
+        <option>Day Care — 55 €</option>
+        <option>Boarding — 68 €</option>
+      </select>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;display:block;margin-bottom:6px;">Date souhaitée</label>
+      <input type="date" value="2026-06-11" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:13.5px;outline:none;">
+    </div>
+    <div style="margin-bottom:16px;">
+      <label style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;display:block;margin-bottom:6px;">Message (optionnel)</label>
+      <textarea style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:13.5px;outline:none;resize:none;" rows="3" placeholder="Ex : Max a un rendez-vous vétérinaire jeudi..."></textarea>
+    </div>
+
+    <div style="background:var(--accent-dim);border:1px solid rgba(255,95,31,0.2);border-radius:10px;padding:11px 13px;font-size:12px;color:var(--text-dim);margin-bottom:14px;line-height:1.5;">
+      Gabriel confirmera votre demande sous 24h. Le planning est clôturé la veille à 9h00.
+    </div>
+
+    <button class="btn-big btn-accent" onclick="closeBookingModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      Envoyer la demande
+    </button>
+  </div>
+</div>
+
+<script>
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function goTab(screenId, tabId) {
+  showScreen(screenId);
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+}
+
+function openPhotoModal()  { document.getElementById('photoModal').classList.add('open'); }
+function closePhotoModal() { document.getElementById('photoModal').classList.remove('open'); }
+function openBookingModal()  { document.getElementById('bookingModal').classList.add('open'); }
+function closeBookingModal() { document.getElementById('bookingModal').classList.remove('open'); }
+
+['photoModal','bookingModal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+});
+
+function updateModalPrix() {
+  var svc = document.getElementById('modal-service').value;
+  var isBoarding = svc === 'boarding';
+  var isDaycare  = svc === 'daycare';
+  document.getElementById('modal-creneau-group').style.display = isBoarding || isDaycare ? 'none' : 'block';
+  document.getElementById('modal-jours-group').style.display   = isBoarding ? 'none' : 'block';
+  document.getElementById('modal-datefin-group').style.display = 'block';
+}
+
+var joursSelectionnes = [];
+function toggleJourPill(el, jour) {
+  el.classList.toggle('selected');
+  if (el.classList.contains('selected')) { joursSelectionnes.push(jour); }
+  else { joursSelectionnes = joursSelectionnes.filter(j => j !== jour); }
+}
+
+async function envoyerDemande() {
+  var svc    = document.getElementById('modal-service').value;
+  var debut  = document.getElementById('modal-date-debut').value;
+  var fin    = document.getElementById('modal-date-fin').value || debut;
+  var cr     = document.getElementById('modal-creneau') ? document.getElementById('modal-creneau').value : null;
+  var msg    = document.getElementById('modal-message').value;
+
+  if (!debut) {
+    document.getElementById('modal-date-debut').style.borderColor = 'var(--red)';
+    return;
+  }
+
+  try {
+    if (clientId) {
+      await db.from('reservations').insert({
+        client_id:  clientId,
+        service:    svc,
+        date_debut: debut,
+        date_fin:   fin,
+        creneau:    cr,
+        jours:      joursSelectionnes.length > 0 ? joursSelectionnes : null,
+        notes:      msg || null,
+        statut:     'en_attente',
+        ranger_nom: 'Gabriel'
+      });
+    }
+  } catch(e) { console.log('Erreur envoi demande:', e); }
+
+  closeBookingModal();
+
+  // Toast confirmation
+  var toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--green);color:white;padding:12px 20px;border-radius:12px;font-family:Norwester,sans-serif;font-size:13px;font-weight:800;z-index:999;box-shadow:0 8px 24px rgba(94,201,122,0.4);white-space:nowrap;';
+  toast.textContent = '✓ Demande envoyée — Gabriel confirmera sous 24h';
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3500);
+}
+
+function sendComment() {
+  const input = document.getElementById('commentInput');
+  const text = input.value.trim();
+  if (!text) return;
+  document.getElementById('sentCommentText').textContent = text;
+  document.getElementById('sentComment').style.display = 'block';
+  input.value = '';
+  document.getElementById('notifDot').style.display = 'none';
+}
+
+// ── CHARGEMENT CLIENT SUPABASE ──
+var clientData = null;
+var clientId = null;
+
+document.addEventListener('DOMContentLoaded', async function() {
+  await loadClientProfile();
+});
+
+async function loadClientProfile() {
+  try {
+    // Récupérer la session
+    var { data: session } = await db.auth.getSession();
+    if (!session || !session.session) return;
+    var userId = session.session.user.id;
+
+    // Charger le profil client
+    var { data: client } = await db.from('clients')
+      .select('*, chiens(*)')
+      .eq('auth_id', userId)
+      .single();
+
+    if (!client) return;
+    clientData = client;
+    clientId = client.id;
+
+    // Mettre à jour l'interface
+    updateHomeScreen(client);
+    updateDogScreen(client.chiens || []);
+    await loadReservations(client.id);
+    await loadFactures(client.id);
+    await loadProchainePromenade(client.id);
+
+  } catch(e) {
+    console.log('Mode démo — pas de session active');
+  }
+}
+
+function updateHomeScreen(client) {
+  // Date
+  var joursFr = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  var moisFr  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  var now = new Date();
+  var dateEl = document.getElementById('client-date');
+  if (dateEl) dateEl.textContent = joursFr[now.getDay()] + ' ' + now.getDate() + ' ' + moisFr[now.getMonth()];
+
+  // Bonjour
+  var bonjourEl = document.getElementById('client-bonjour');
+  if (bonjourEl) bonjourEl.textContent = 'Bonjour, ' + client.prenom;
+
+  // Avatar
+  var avatarEl = document.getElementById('client-avatar');
+  if (avatarEl) avatarEl.textContent = (client.prenom[0] + client.nom[0]).toUpperCase();
+}
+
+async function loadProchainePromenade(id) {
+  var today = new Date().toISOString().split('T')[0];
+  try {
+    var { data: resas } = await db.from('reservations')
+      .select('service, creneau, date_debut, ranger_nom, statut')
+      .eq('client_id', id)
+      .gte('date_fin', today)
+      .neq('statut', 'annule')
+      .order('date_debut', { ascending: true })
+      .limit(1);
+
+    var el = document.getElementById('prochaine-promenade');
+    if (!el) return;
+
+    if (!resas || resas.length === 0) {
+      el.innerHTML = '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--accent);font-weight:700;margin-bottom:8px;">Prochaine promenade</div>'
+        + '<div style="font-size:13px;color:var(--text-dim);">Aucune réservation à venir</div>'
+        + '<div style="margin-top:12px;"><a href="forestrangers-reservation.html" style="background:var(--accent);color:white;padding:8px 14px;border-radius:8px;font-family:\'Norwester\',sans-serif;font-size:11px;font-weight:800;text-decoration:none;">Réserver maintenant</a></div>';
+      return;
+    }
+
+    var r = resas[0];
+    var svcNames = { walking: 'Dog Walking', daycare: 'Day Care', boarding: 'Boarding' };
+    var creneaux = { matin: '09h00', midi: '12h00', apmidi: '14h30' };
+    var dateLabel = new Date(r.date_debut).toLocaleDateString('fr-LU', { weekday: 'long', day: 'numeric', month: 'long' });
+    var cr = creneaux[r.creneau] || '—';
+    var badge = r.statut === 'confirme' ? '<span class="badge b-green">Confirmé</span>' : '<span class="badge b-amber">En attente</span>';
+
+    el.innerHTML = '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--accent);font-weight:700;margin-bottom:8px;">Prochaine promenade</div>'
+      + '<div style="font-family:\'Norwester\',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;">' + dateLabel + ' · ' + cr + '</div>'
+      + '<div style="font-size:13px;color:var(--text-dim);">' + (svcNames[r.service] || r.service) + ' · ' + (r.ranger_nom || 'Gabriel') + '</div>'
+      + '<div style="display:flex;gap:8px;margin-top:12px;">' + badge + '</div>';
+
+  } catch(e) { console.log('Erreur prochaine promenade:', e); }
+}
+
+async function loadReservations(id) {
+  try {
+    var { data: resas } = await db.from('reservations')
+      .select('*')
+      .eq('client_id', id)
+      .order('date_debut', { ascending: false })
+      .limit(20);
+
+    var container = document.getElementById('reservations-list');
+    if (!container || !resas) return;
+
+    if (resas.length === 0) {
+      container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-faint);font-size:13px;">Aucune réservation</div>';
+      return;
+    }
+
+    var svcNames = { walking: 'Dog Walking', daycare: 'Day Care', boarding: 'Boarding' };
+    var creneaux = { matin: 'Matin · 09h00', midi: 'Midi · 12h00', apmidi: 'Après-midi · 14h30' };
+    var badges = { confirme: '<span class="badge b-green">Confirmé</span>', en_attente: '<span class="badge b-amber">En attente</span>', termine: '<span class="badge b-muted">Terminé</span>', annule: '<span class="badge b-red">Annulé</span>' };
+
+    container.innerHTML = resas.map(function(r) {
+      var date = r.date_debut ? new Date(r.date_debut).toLocaleDateString('fr-LU', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+      var cr = r.creneau ? creneaux[r.creneau] : '—';
+      return '<div style="padding:14px 16px;border-bottom:1px solid var(--border);">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
+        + '<div style="font-size:13px;font-weight:600;color:var(--text);">' + (svcNames[r.service] || r.service) + '</div>'
+        + (badges[r.statut] || '') + '</div>'
+        + '<div style="font-size:12px;color:var(--text-dim);">' + date + (cr !== '—' ? ' · ' + cr : '') + '</div>'
+        + '</div>';
+    }).join('');
+
+  } catch(e) { console.log('Erreur réservations:', e); }
+}
+
+async function loadFactures(id) {
+  try {
+    var { data: factures } = await db.from('factures')
+      .select('*')
+      .eq('client_id', id)
+      .order('created_at', { ascending: false })
+      .limit(12);
+
+    var container = document.getElementById('factures-list');
+    if (!container || !factures) return;
+
+    if (factures.length === 0) {
+      container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-faint);font-size:13px;">Aucune facture</div>';
+      return;
+    }
+
+    var badges = { payee: '<span class="badge b-green">Payée</span>', impayee: '<span class="badge b-amber">À payer</span>' };
+
+    container.innerHTML = factures.map(function(f) {
+      var date = f.created_at ? new Date(f.created_at).toLocaleDateString('fr-LU', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
+      var montant = f.total_ttc ? parseFloat(f.total_ttc).toLocaleString('fr-LU', { minimumFractionDigits: 2 }) + ' €' : '—';
+      return '<div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">'
+        + '<div><div style="font-size:13px;font-weight:600;color:var(--text);font-family:\'Norwester\',sans-serif;">' + (f.numero || '—') + '</div>'
+        + '<div style="font-size:11px;color:var(--text-dim);margin-top:2px;">' + (f.periode || date) + '</div></div>'
+        + '<div style="text-align:right;"><div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px;">' + montant + '</div>'
+        + (badges[f.statut] || '') + '</div>'
+        + '</div>';
+    }).join('');
+
+  } catch(e) { console.log('Erreur factures:', e); }
+}
+
+function updateDogScreen(chiens) {
+  var container = document.getElementById('chiens-list');
+  if (!container || !chiens.length) return;
+
+  container.innerHTML = chiens.map(function(d) {
+    var emoji = d.poids && d.poids >= 35 ? '🐕' : '🐩';
+    return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;">'
+      + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">'
+      + '<div style="width:44px;height:44px;border-radius:50%;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-size:22px;">' + emoji + '</div>'
+      + '<div><div style="font-family:\'Norwester\',sans-serif;font-size:16px;font-weight:800;">' + (d.prenom || d.nom) + '</div>'
+      + '<div style="font-size:12px;color:var(--text-dim);">' + (d.race || '—') + (d.age ? ' · ' + d.age + ' ans' : '') + '</div></div>'
+      + '<span class="badge b-green" style="margin-left:auto;">Actif</span></div>'
+      + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">'
+      + '<div style="background:var(--surface2);border-radius:8px;padding:8px;text-align:center;"><div style="font-family:\'Norwester\',sans-serif;font-size:14px;font-weight:800;color:var(--accent);">' + (d.poids ? d.poids + ' kg' : '—') + '</div><div style="font-size:9px;color:var(--text-faint);text-transform:uppercase;margin-top:2px;">Poids</div></div>'
+      + '<div style="background:var(--surface2);border-radius:8px;padding:8px;text-align:center;"><div style="font-family:\'Norwester\',sans-serif;font-size:14px;font-weight:800;color:' + (d.vaccins_ok ? 'var(--green)' : 'var(--amber)') + ';">' + (d.vaccins_ok ? '✓' : '!') + '</div><div style="font-size:9px;color:var(--text-faint);text-transform:uppercase;margin-top:2px;">Vaccins</div></div>'
+      + '<div style="background:var(--surface2);border-radius:8px;padding:8px;text-align:center;"><div style="font-family:\'Norwester\',sans-serif;font-size:14px;font-weight:800;color:var(--green);">✓</div><div style="font-size:9px;color:var(--text-faint);text-transform:uppercase;margin-top:2px;">Actif</div></div>'
+      + '</div>'
+      + (d.notes ? '<div style="margin-top:10px;font-size:12px;color:var(--text-dim);">' + d.notes + '</div>' : '')
+      + '</div>';
+  }).join('');
+}
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/sw.js');
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1740 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Forest Rangers — Staff</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --accent:    #ff5f1f;
+  --accent-dim: rgba(255,95,31,0.12);
+  --bg:        #1c1f14;
+  --surface:   #252a1a;
+  --surface2:  #2f3520;
+  --border:    rgba(255,255,255,0.08);
+  --text:      #eceee6;
+  --text-dim:  rgba(236,238,230,0.55);
+  --text-faint:rgba(236,238,230,0.3);
+  --green:     #5ec97a;
+  --green-dim: rgba(94,201,122,0.12);
+  --red:       #e05a5a;
+  --red-dim:   rgba(224,90,90,0.12);
+  --blue:      #5a9ae0;
+  --radius:    14px;
+  --radius-lg: 20px;
+}
+
+html, body {
+  height: 100%; font-family: 'Instrument Sans', sans-serif;
+  background: var(--bg); color: var(--text);
+  overflow: hidden;
+}
+
+/* ── PHONE SHELL ── */
+.phone-shell {
+  width: 390px; height: 844px;
+  margin: 20px auto;
+  background: var(--bg);
+  border-radius: 44px;
+  border: 2px solid rgba(255,255,255,0.1);
+  box-shadow: 0 40px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
+  overflow: hidden;
+  position: relative;
+  display: flex; flex-direction: column;
+}
+@media (max-width: 430px) {
+  .phone-shell {
+    width: 100vw; height: 100vh;
+    margin: 0; border-radius: 0; border: none;
+    box-shadow: none;
+  }
+  html, body { overflow: hidden; }
+}
+
+/* Notch */
+.notch {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 120px; height: 34px;
+  background: #000;
+  border-radius: 0 0 20px 20px;
+  z-index: 100;
+}
+
+/* Status bar */
+.status-bar {
+  height: 44px; flex-shrink: 0;
+  display: flex; align-items: flex-end; justify-content: space-between;
+  padding: 0 28px 6px;
+  font-size: 12px; font-weight: 600;
+  position: relative; z-index: 50;
+}
+.status-time { font-family: 'Norwester', sans-serif; font-size: 15px; font-weight: 700; }
+.status-icons { display: flex; align-items: center; gap: 5px; }
+.status-icons svg { width: 14px; height: 14px; fill: var(--text); }
+
+/* ── SCREENS ── */
+.screens { flex: 1; overflow: hidden; position: relative; min-height: 0; }
+.screen {
+  position: absolute; inset: 0;
+  overflow-y: auto; overflow-x: hidden;
+  display: none;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  touch-action: pan-y;
+}
+.screen::-webkit-scrollbar { display: none; }
+.screen.active { display: block; animation: slideIn 0.3s ease; }
+@keyframes slideIn { from { opacity:0; transform:translateX(18px); } to { opacity:1; transform:translateX(0); } }
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  height: 78px; flex-shrink: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex; align-items: flex-start;
+  padding: 10px 8px 0;
+  gap: 4px;
+}
+.nav-tab {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; gap: 4px;
+  padding: 8px 4px; border-radius: 12px;
+  cursor: pointer; transition: background 0.15s;
+  color: var(--text-faint);
+}
+.nav-tab.active { color: var(--accent); background: var(--accent-dim); }
+.nav-tab svg { width: 22px; height: 22px; }
+.nav-tab span { font-size: 10px; font-weight: 600; letter-spacing: 0.04em; }
+
+/* ── COMMON ── */
+.screen-pad { padding: 16px 20px; }
+.section-title {
+  font-family: 'Norwester', sans-serif;
+  font-size: 22px; font-weight: 800;
+  margin-bottom: 4px;
+}
+.section-sub { font-size: 13px; color: var(--text-dim); margin-bottom: 20px; }
+
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden; margin-bottom: 12px;
+}
+.card-head {
+  padding: 13px 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.card-title {
+  font-family: 'Norwester', sans-serif;
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim);
+}
+.card-body { padding: 14px 16px; }
+
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 3px 9px; border-radius: 20px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+}
+.b-green  { background: var(--green-dim);  color: var(--green); }
+.b-accent { background: var(--accent-dim); color: var(--accent); }
+.b-red    { background: var(--red-dim);    color: var(--red); }
+.b-muted  { background: rgba(255,255,255,0.06); color: var(--text-faint); }
+.b-blue   { background: rgba(90,154,224,0.12); color: var(--blue); }
+
+/* ── MISSION CARD ── */
+.mission {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px;
+  cursor: pointer; transition: border-color 0.15s;
+  position: relative; overflow: hidden;
+}
+.mission::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px;
+}
+.mission.done::before   { background: var(--green); }
+.mission.active::before { background: var(--accent); }
+.mission.next::before   { background: var(--border); }
+.mission:hover { border-color: rgba(255,255,255,0.15); }
+
+.mission-time {
+  font-family: 'Norwester', sans-serif; font-size: 11px; font-weight: 700;
+  color: var(--accent); margin-bottom: 5px;
+}
+.mission-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+.mission-dogs { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.dog-tag {
+  background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+  border-radius: 6px; padding: 3px 9px;
+  font-size: 11px; font-weight: 600; color: var(--text-dim);
+}
+.mission-meta { font-size: 12px; color: var(--text-faint); }
+.mission-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);
+}
+
+/* ── BIG BUTTONS ── */
+.btn-big {
+  width: 100%; padding: 18px;
+  border-radius: var(--radius); border: none;
+  font-family: 'Norwester', sans-serif; font-size: 16px; font-weight: 800;
+  cursor: pointer; transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  letter-spacing: 0.02em;
+}
+.btn-big svg { width: 22px; height: 22px; }
+.btn-start { background: var(--accent); color: white; box-shadow: 0 8px 24px rgba(255,95,31,0.35); }
+.btn-start:hover { background: #ff7a3d; transform: translateY(-1px); box-shadow: 0 12px 30px rgba(255,95,31,0.45); }
+.btn-stop  { background: var(--red);    color: white; box-shadow: 0 8px 24px rgba(224,90,90,0.35); }
+.btn-stop:hover  { transform: translateY(-1px); }
+.btn-outline-big {
+  background: transparent; border: 1.5px solid var(--border);
+  color: var(--text-dim); padding: 16px;
+  border-radius: var(--radius); font-family: 'Norwester',sans-serif;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  transition: all 0.15s; letter-spacing: 0.02em;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-outline-big:hover { border-color: var(--accent); color: var(--accent); }
+.btn-outline-big svg { width: 18px; height: 18px; }
+
+/* ── GPS SCREEN ── */
+.gps-map {
+  width: 100%; height: 220px;
+  background: var(--surface2);
+  border-radius: var(--radius); margin-bottom: 14px;
+  position: relative; overflow: hidden;
+  border: 1px solid var(--border);
+}
+.map-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+.map-path {
+  position: absolute; inset: 0;
+}
+.map-dot {
+  position: absolute; width: 12px; height: 12px;
+  border-radius: 50%; background: var(--accent);
+  border: 2px solid white;
+  box-shadow: 0 0 0 4px rgba(255,95,31,0.3);
+  animation: pulse 2s ease infinite;
+}
+@keyframes pulse {
+  0%,100% { box-shadow: 0 0 0 4px rgba(255,95,31,0.3); }
+  50%      { box-shadow: 0 0 0 8px rgba(255,95,31,0.1); }
+}
+.map-label {
+  position: absolute; bottom: 10px; left: 12px;
+  font-size: 11px; font-weight: 600; color: var(--text-dim);
+  background: rgba(28,31,20,0.8); padding: 3px 8px; border-radius: 6px;
+}
+
+.gps-stats {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px;
+}
+.gps-stat {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px;
+  text-align: center;
+}
+.gps-stat-val {
+  font-family: 'Norwester', sans-serif; font-size: 20px; font-weight: 800;
+  color: var(--accent); line-height: 1;
+}
+.gps-stat-label { font-size: 10px; color: var(--text-faint); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.1em; }
+
+/* ── TIMER ── */
+.timer-display {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px;
+  text-align: center; margin-bottom: 14px;
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+}
+.timer-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent); animation: blink 1s ease infinite;
+}
+@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+.timer-val {
+  font-family: 'Norwester', sans-serif; font-size: 32px; font-weight: 800;
+  letter-spacing: 0.05em; color: var(--text);
+}
+
+/* ── DOG CHECKLIST ── */
+.dog-check-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 16px; border-top: 1px solid var(--border);
+  cursor: pointer; transition: background 0.12s;
+}
+.dog-check-item:first-child { border-top: none; }
+.dog-check-item:hover { background: rgba(255,255,255,0.02); }
+.check-box {
+  width: 22px; height: 22px; border-radius: 6px;
+  border: 2px solid var(--border2, rgba(255,255,255,0.2));
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all 0.15s;
+}
+.check-box.checked { background: var(--accent); border-color: var(--accent); }
+.check-box svg { width: 13px; height: 13px; stroke: white; display: none; }
+.check-box.checked svg { display: block; }
+.dog-check-info { flex: 1; }
+.dog-check-name { font-size: 14px; font-weight: 600; }
+.dog-check-detail { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+.dog-check-item .badge { margin-left: auto; }
+
+/* ── PHOTO UPLOAD ── */
+.photo-zone {
+  width: 100%; aspect-ratio: 4/3;
+  background: var(--surface2); border: 2px dashed rgba(255,255,255,0.12);
+  border-radius: var(--radius); margin-bottom: 14px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; cursor: pointer; transition: border-color 0.2s;
+  position: relative; overflow: hidden;
+}
+.photo-zone:hover { border-color: var(--accent); }
+.photo-zone svg { width: 36px; height: 36px; color: var(--text-faint); }
+.photo-zone p { font-size: 13px; color: var(--text-faint); text-align: center; }
+.photo-zone.has-photo { border-style: solid; border-color: var(--accent); }
+.photo-preview {
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, #2f3520, #3d4429);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 60px; display: none;
+}
+.photo-zone.has-photo .photo-preview { display: flex; }
+.photo-zone.has-photo .photo-placeholder { display: none; }
+.photo-badge {
+  position: absolute; bottom: 10px; right: 10px;
+  background: var(--accent); color: white;
+  font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 20px;
+}
+
+/* ── HISTORY ── */
+.history-item {
+  padding: 14px 16px; border-top: 1px solid var(--border);
+  cursor: pointer; transition: background 0.12s;
+}
+.history-item:first-child { border-top: none; }
+.history-item:hover { background: rgba(255,255,255,0.02); }
+.history-date { font-size: 11px; color: var(--text-faint); margin-bottom: 3px; }
+.history-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.history-stats { display: flex; gap: 14px; }
+.history-stat { font-size: 11px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; }
+.history-stat svg { width: 12px; height: 12px; }
+
+/* ── PROFILE ── */
+.profile-hero {
+  background: linear-gradient(135deg, var(--surface), var(--surface2));
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 24px; text-align: center; margin-bottom: 14px;
+}
+.profile-avatar {
+  width: 72px; height: 72px; border-radius: 20px;
+  background: linear-gradient(135deg, #3d4429, #6b7450);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Norwester', sans-serif; font-size: 24px; font-weight: 800;
+  color: var(--text); margin: 0 auto 12px;
+  border: 2px solid var(--accent);
+}
+.profile-name { font-family: 'Norwester', sans-serif; font-size: 18px; font-weight: 800; }
+.profile-role { font-size: 12px; color: var(--accent); margin-top: 3px; font-weight: 600; }
+.profile-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--border); border-radius: 10px; overflow: hidden; margin-top: 16px; }
+.profile-stat { background: var(--surface); padding: 12px 8px; text-align: center; }
+.profile-stat-val { font-family: 'Norwester', sans-serif; font-size: 18px; font-weight: 800; color: var(--accent); }
+.profile-stat-label { font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
+
+/* ── MODAL OVERLAY ── */
+.modal-overlay {
+  display: none; position: absolute; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+  align-items: flex-end; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal-sheet {
+  width: 100%; background: var(--surface);
+  border-radius: 24px 24px 0 0;
+  border-top: 1px solid var(--border);
+  padding: 20px;
+  animation: slideUp 0.3s cubic-bezier(.4,0,.2,1);
+  max-height: 85%;
+  overflow-y: auto;
+}
+@keyframes slideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+.sheet-handle {
+  width: 40px; height: 4px; border-radius: 2px;
+  background: rgba(255,255,255,0.15); margin: 0 auto 18px;
+}
+.sheet-title {
+  font-family: 'Norwester', sans-serif; font-size: 17px; font-weight: 800;
+  margin-bottom: 16px;
+}
+
+/* ── STEP INDICATOR ── */
+.steps { display: flex; align-items: center; gap: 6px; margin-bottom: 18px; }
+.step { flex: 1; height: 3px; border-radius: 2px; background: var(--surface2); transition: background 0.3s; }
+.step.done { background: var(--green); }
+.step.active { background: var(--accent); }
+
+/* ── GPS LINE SVG (decorative) ── */
+.gps-line { position: absolute; inset: 0; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { display: none; }
+
+/* ─ FORM ─ */
+.input-field {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px; color: var(--text);
+  font-family: 'Instrument Sans', sans-serif; font-size: 14px;
+  outline: none; transition: border-color 0.15s; margin-bottom: 10px;
+}
+.input-field:focus { border-color: var(--accent); }
+textarea.input-field { resize: none; }
+.input-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-faint); font-weight: 600; margin-bottom: 5px; display: block; }
+</style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const { createClient } = window.supabase;
+    const SUPABASE_URL = 'https://zxzhqptimjvdtvvtnpyw.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_drh_w_i9T4GOZ_AzoqkLcw_SW45X1FT';
+    const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+    console.log('Supabase connecte', db);
+  </script>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#ff5f1f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Forest Rangers">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+</head>
+<body>
+
+<div style="background:#111;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
+<div class="phone-shell">
+
+  <!-- Notch -->
+  <div class="notch"></div>
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <span class="status-time">09:14</span>
+    <div class="status-icons">
+      <!-- Signal -->
+      <svg viewBox="0 0 24 24"><rect x="2" y="16" width="3" height="6" rx="1"/><rect x="7" y="12" width="3" height="10" rx="1"/><rect x="12" y="7" width="3" height="15" rx="1"/><rect x="17" y="3" width="3" height="19" rx="1"/></svg>
+      <!-- WiFi -->
+      <svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0114.08 0M1.42 9a16 16 0 0121.16 0M8.53 16.11a6 6 0 016.95 0M12 20h.01"/></svg>
+      <!-- Battery -->
+      <svg viewBox="0 0 24 24"><rect x="2" y="7" width="18" height="11" rx="2"/><path d="M20 11h2v3h-2z"/><rect x="4" y="9" width="12" height="7" rx="1" fill="currentColor"/></svg>
+    </div>
+  </div>
+
+  <!-- SCREENS -->
+  <div class="screens">
+
+    <!-- ══ SCREEN 1 : MISSIONS DU JOUR ══ -->
+    <div class="screen active" id="screen-missions">
+      <div class="screen-pad">
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;margin-top:4px;">
+          <div>
+            <div id="date-label" style="font-size:12px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">Lundi 9 juin</div>
+            <div id="ranger-bonjour" style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;margin-top:2px;">Bonjour, Sophie</div>
+          </div>
+          <div id="ranger-avatar" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#3d4429,#6b7450);display:flex;align-items:center;justify-content:center;font-family:'Norwester',sans-serif;font-weight:800;font-size:13px;border:1px solid var(--border);">SM</div>
+        </div>
+
+        <!-- Boutons début/fin journée -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+          <button id="btn-demarrer-journee" onclick="showScreen('screen-debut')" style="padding:12px;border-radius:var(--radius);background:var(--accent);border:none;color:white;font-family:'Norwester',sans-serif;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 4px 16px rgba(255,95,31,0.3);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Démarrer journée
+          </button>
+          <button onclick="showScreen('screen-fin')" style="padding:12px;border-radius:var(--radius);background:var(--surface);border:1px solid var(--border);color:var(--text-dim);font-family:'Norwester',sans-serif;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+            Terminer journée
+          </button>
+        </div>
+        <!-- Badge journée démarrée -->
+        <div id="badge-journee" style="display:none;align-items:center;gap:6px;font-size:11px;color:var(--green);font-weight:700;margin-bottom:14px;padding:6px 12px;background:var(--green-dim);border-radius:20px;width:fit-content;"></div>
+
+        <!-- Stats -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px;">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
+            <div id="stat-missions" style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:var(--accent);">—</div>
+            <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">Missions</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
+            <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:var(--accent);">—</div>
+            <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">Chiens</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
+            <div id="stat-terminees" style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:var(--green);">—</div>
+            <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">Terminées</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
+            <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:var(--blue);">—</div>
+            <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">Durée</div>
+          </div>
+        </div>
+
+        <!-- Missions dynamiques -->
+        <div id="missions-list">
+          <div style="text-align:center;padding:32px 16px;color:var(--text-faint);font-size:13px;">Chargement des missions...</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══ SCREEN : MESSAGE GABRIEL ══ -->
+    <div class="screen" id="screen-message-gabriel">
+      <div class="screen-pad" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;">
+        <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#c44010);display:flex;align-items:center;justify-content:center;font-family:'Norwester',sans-serif;font-size:24px;font-weight:800;color:white;margin:0 auto 20px;box-shadow:0 8px 24px rgba(255,95,31,0.35);">G</div>
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:var(--text-faint);margin-bottom:8px;">Message de Gabriel</div>
+        <div id="message-gabriel-texte" style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:#eceee6;line-height:1.4;margin-bottom:8px;padding:0 16px;">Merci <span id="msg-ranger-prenom">Sophie</span> ! 🐾</div>
+        <div style="font-size:15px;color:var(--text-dim);line-height:1.6;padding:0 24px;">
+          Amusez-vous bien avec les chiens aujourd'hui.<br>
+          <span style="color:var(--accent);">Bonne journée !</span>
+        </div>
+        <div style="margin-top:28px;display:flex;gap:6px;justify-content:center;">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.2s infinite;"></div>
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.2s 0.4s infinite;opacity:0.6;"></div>
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.2s 0.8s infinite;opacity:0.3;"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text-faint);margin-top:12px;">Redirection vers vos missions...</div>
+      </div>
+    </div>
+
+    <!-- ══ SCREEN : MESSAGE FIN JOURNÉE ══ -->
+    <div class="screen" id="screen-message-fin">
+      <div class="screen-pad" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;">
+        <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#c44010);display:flex;align-items:center;justify-content:center;font-family:'Norwester',sans-serif;font-size:24px;font-weight:800;color:white;margin:0 auto 20px;box-shadow:0 8px 24px rgba(255,95,31,0.35);">G</div>
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:var(--text-faint);margin-bottom:8px;">Message de Gabriel</div>
+        <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:#eceee6;line-height:1.4;margin-bottom:8px;padding:0 16px;">Merci <span id="msg-fin-prenom">Sophie</span> ! 🌙</div>
+        <div style="font-size:15px;color:var(--text-dim);line-height:1.6;padding:0 24px;">
+          Excellent travail aujourd'hui.<br>
+          <span style="color:var(--accent);">Belle fin de journée !</span>
+        </div>
+        <div style="margin-top:28px;display:flex;gap:6px;justify-content:center;">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.2s infinite;"></div>
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.2s 0.4s infinite;opacity:0.6;"></div>
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.2s 0.8s infinite;opacity:0.3;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SCREEN : RÉCAP FIN JOURNÉE ══ -->
+    <div class="screen" id="screen-recap-journee">
+      <div class="screen-pad">
+        <div style="text-align:center;padding:24px 0 20px;">
+          <div style="width:64px;height:64px;border-radius:50%;background:var(--green-dim);border:2px solid var(--green);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#5ec97a" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:#eceee6;margin-bottom:6px;">Journée terminée !</div>
+          <div style="font-size:13px;color:var(--text-dim);">Rapport envoyé à Gabriel · <span id="recap-heure-fin">—</span></div>
+        </div>
+
+        <!-- Stats récap -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+            <div id="recap-missions-fin" style="font-family:'Norwester',sans-serif;font-size:26px;font-weight:800;color:var(--accent);">—</div>
+            <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:3px;">Missions</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+            <div id="recap-km" style="font-family:'Norwester',sans-serif;font-size:26px;font-weight:800;color:var(--blue);">—</div>
+            <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:3px;">Kilomètres</div>
+          </div>
+        </div>
+
+        <div style="background:var(--accent-dim);border:1px solid rgba(255,95,31,0.2);border-radius:12px;padding:16px;text-align:center;margin-bottom:20px;">
+          <div style="font-size:13px;color:var(--text-dim);line-height:1.6;">
+            Merci <strong style="color:#eceee6;" id="recap-ranger-nom">Sophie</strong> pour votre travail aujourd'hui ! 🐾<br>
+            <span style="color:var(--accent);">À demain !</span>
+          </div>
+        </div>
+
+        <button onclick="showScreen('screen-missions')" style="width:100%;padding:14px;border-radius:var(--radius);background:var(--surface);border:1px solid var(--border);color:var(--text-dim);font-family:'Norwester',sans-serif;font-size:14px;font-weight:800;cursor:pointer;">
+          Retour à l'accueil
+        </button>
+      </div>
+    </div>
+    <div class="screen" id="screen-gps">
+      <div class="screen-pad">
+
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;margin-top:4px;">
+          <button onclick="showScreen('screen-missions')" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <div style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;">Promenade en cours</div>
+          <span class="badge b-accent" style="margin-left:auto;">GPS actif</span>
+        </div>
+
+        <!-- Timer -->
+        <div class="timer-display">
+          <div class="timer-dot"></div>
+          <div class="timer-val" id="timer">00:23:14</div>
+        </div>
+
+        <!-- Map -->
+        <div class="gps-map">
+          <div class="map-grid"></div>
+          <svg class="gps-line" viewBox="0 0 390 220" preserveAspectRatio="none">
+            <polyline points="60,160 90,140 120,120 150,130 180,100 200,80 230,70 260,85 280,60 300,75 320,55" fill="none" stroke="rgba(255,95,31,0.4)" stroke-width="2" stroke-dasharray="4,3"/>
+            <polyline points="60,160 90,140 120,120 150,130 180,100 200,80 230,70 260,85 280,60 300,75 320,55" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="60" cy="160" r="5" fill="var(--green)" stroke="white" stroke-width="2"/>
+          </svg>
+          <div class="map-dot" style="right:80px;top:50px;"></div>
+          <div class="map-label">Forêt de Merl</div>
+        </div>
+
+        <!-- Stats GPS -->
+        <div class="gps-stats">
+          <div class="gps-stat">
+            <div class="gps-stat-val">2,1</div>
+            <div class="gps-stat-label">km</div>
+          </div>
+          <div class="gps-stat">
+            <div class="gps-stat-val">23</div>
+            <div class="gps-stat-label">min</div>
+          </div>
+          <div class="gps-stat">
+            <div class="gps-stat-val">4,2</div>
+            <div class="gps-stat-label">km/h</div>
+          </div>
+        </div>
+
+        <!-- Chiens dans ce groupe -->
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-head"><span class="card-title">Chiens présents</span></div>
+          <div style="padding:4px 0;">
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;"></div>
+              <div style="flex:1;"><div style="font-size:13px;font-weight:600;">Luna</div><div style="font-size:11px;color:var(--text-faint);">Berger · Mme Dupont</div></div>
+              <span class="badge b-green">Présente</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid var(--border);">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;"></div>
+              <div style="flex:1;"><div style="font-size:13px;font-weight:600;">Milo</div><div style="font-size:11px;color:var(--text-faint);">Golden · M. Schmit</div></div>
+              <span class="badge b-green">Présent</span>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-big btn-stop" onclick="showScreen('screen-finish')">
+          <svg viewBox="0 0 24 24" fill="white" width="20" height="20"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+          Terminer la promenade
+        </button>
+
+      </div>
+    </div>
+
+    <!-- ══ SCREEN 3 : TERMINER + PHOTO ══ -->
+    <div class="screen" id="screen-finish">
+      <div class="screen-pad">
+
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;margin-top:4px;">
+          <button onclick="showScreen('screen-gps')" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <div style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;">Terminer la promenade</div>
+        </div>
+
+        <!-- Steps -->
+        <div class="steps">
+          <div class="step done"></div>
+          <div class="step done"></div>
+          <div class="step active"></div>
+        </div>
+
+        <!-- Résumé GPS -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;margin-bottom:10px;">Résumé de la promenade</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+            <div style="text-align:center;">
+              <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;color:var(--accent);">3,4</div>
+              <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;">km</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;color:var(--accent);">48</div>
+              <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;">min</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;color:var(--accent);" id="gps-chiens-count">—</div>
+              <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;">chiens</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Photo upload -->
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Photo de groupe</div>
+        <div class="photo-zone" id="photoZone" onclick="togglePhoto()">
+          <div class="photo-placeholder" style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <p>Appuyer pour ajouter<br>la photo du groupe</p>
+          </div>
+          <div class="photo-preview">
+            <div style="text-align:center;">
+              <div style="font-size:40px;margin-bottom:8px;">📸</div>
+              <div style="font-size:12px;color:var(--text-dim);">Photo chargée</div>
+            </div>
+            <div class="photo-badge">Groupe · 2 chiens</div>
+          </div>
+        </div>
+
+        <!-- Parcours GPS — aperçu de ce que le client recevra -->
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;margin:14px 0 8px;">
+          Aperçu — ce que le client recevra
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+          <!-- Mini map SVG -->
+          <div style="position:relative;height:160px;background:#1e2416;">
+            <svg style="position:absolute;inset:0;width:100%;height:100%;" viewBox="0 0 340 160" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <pattern id="grid2" width="20" height="20" patternUnits="userSpaceOnUse">
+                  <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+                </pattern>
+              </defs>
+              <rect width="340" height="160" fill="url(#grid2)"/>
+              <path d="M0,80 Q80,70 170,80 Q260,90 340,85" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
+              <path d="M60,0 Q65,50 70,80 Q75,110 80,160" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1.5"/>
+              <path d="M200,0 Q195,50 190,80 Q185,110 180,160" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1.5"/>
+              <polyline points="40,110 65,95 95,78 130,65 165,72 200,58 240,62 275,55 310,60"
+                fill="none" stroke="#5ec97a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="40" cy="110" r="6" fill="#ff5f1f" stroke="#1c1f14" stroke-width="2"/>
+              <text x="50" y="113" fill="rgba(255,255,255,0.5)" font-size="9" font-family="Instrument Sans">Départ</text>
+              <circle cx="310" cy="60" r="6" fill="#5ec97a" stroke="#1c1f14" stroke-width="2"/>
+              <text x="272" y="52" fill="rgba(255,255,255,0.5)" font-size="9" font-family="Instrument Sans">Arrivée</text>
+              <circle cx="310" cy="60" r="20" fill="rgba(94,201,122,0.07)" stroke="rgba(94,201,122,0.2)" stroke-width="1" stroke-dasharray="3,2"/>
+              <text x="280" y="88" fill="rgba(94,201,122,0.4)" font-size="8" font-family="Instrument Sans">Bambësch</text>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Commentaire -->
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Commentaire (optionnel)</div>
+        <textarea class="input-field" rows="3" placeholder="Ex : Luna très énergique aujourd'hui, Milo a mangé de l'herbe..."></textarea>
+
+        <button class="btn-big btn-start" onclick="showScreen('screen-done')" style="margin-top:4px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" width="20" height="20"><polyline points="20 6 9 17 4 12"/></svg>
+          Envoyer aux clients
+        </button>
+
+      </div>
+    </div>
+
+    <!-- ══ SCREEN 4 : CONFIRMATION ══ -->
+    <div class="screen" id="screen-done">
+      <div class="screen-pad" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100% - 40px);text-align:center;">
+
+        <div style="width:80px;height:80px;border-radius:24px;background:var(--green-dim);border:2px solid var(--green);display:flex;align-items:center;justify-content:center;margin-bottom:20px;">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+
+        <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;margin-bottom:8px;">Promenade terminée</div>
+        <div style="font-size:14px;color:var(--text-dim);line-height:1.6;margin-bottom:24px;max-width:280px;">Les clients ont été notifiés avec la photo, le tracé GPS et le résumé de la promenade.</div>
+
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;width:100%;margin-bottom:20px;">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+            <div style="text-align:center;">
+              <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;color:var(--accent);">3,4</div>
+              <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;">km</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;color:var(--accent);">48</div>
+              <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;">min</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;color:var(--green);">2</div>
+              <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;">notifiés</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-outline-big" style="width:100%;" onclick="showScreen('screen-missions')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+          Retour aux missions
+        </button>
+
+      </div>
+    </div>
+
+    <!-- ══ SCREEN 5 : HISTORIQUE ══ -->
+    <div class="screen" id="screen-history">
+      <div class="screen-pad">
+        <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;margin-bottom:4px;margin-top:4px;">Historique</div>
+        <div style="font-size:13px;color:var(--text-dim);margin-bottom:18px;">Vos promenades terminées</div>
+
+        <div class="card">
+          <div class="history-item">
+            <div class="history-date">Aujourd'hui · 08:00</div>
+            <div class="history-title">Groupe B · Bambësch</div>
+            <div class="history-stats">
+              <div class="history-stat">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                48 min
+              </div>
+              <div class="history-stat">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+                3,4 km
+              </div>
+              <div class="history-stat">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/></svg>
+                3 chiens
+              </div>
+            </div>
+          </div>
+          <div class="history-item">
+            <div class="history-date">Vendredi 6 juin · 08:00</div>
+            <div class="history-title">Groupe B · Forêt de Merl</div>
+            <div class="history-stats">
+              <div class="history-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>52 min</div>
+              <div class="history-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18"/></svg>4,1 km</div>
+              <div class="history-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/></svg>4 chiens</div>
+            </div>
+          </div>
+          <div class="history-item">
+            <div class="history-date">Jeudi 5 juin · 16:30</div>
+            <div class="history-title">Groupe C · Bambësch</div>
+            <div class="history-stats">
+              <div class="history-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>41 min</div>
+              <div class="history-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18"/></svg>3,1 km</div>
+              <div class="history-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/></svg>2 chiens</div>
+            </div>
+          </div>
+          <div class="history-item">
+            <div class="history-date">Mercredi 4 juin · 08:00</div>
+            <div class="history-title">Groupe B · Forêt de Merl</div>
+            <div class="history-stats">
+              <div class="history-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>50 min</div>
+              <div class="history-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18"/></svg>3,8 km</div>
+              <div class="history-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/></svg>3 chiens</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats semaine -->
+        <div class="card">
+          <div class="card-head"><span class="card-title">Cette semaine</span></div>
+          <div class="card-body" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
+            <div>
+              <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;color:var(--accent);">8</div>
+              <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;">missions</div>
+            </div>
+            <div>
+              <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;color:var(--accent);">31,6</div>
+              <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;">km total</div>
+            </div>
+            <div>
+              <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;color:var(--green);">22</div>
+              <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;">chiens</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SCREEN 6 : PROFIL ══ -->
+    <div class="screen" id="screen-profile">
+      <div class="screen-pad">
+        <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;margin-bottom:16px;margin-top:4px;">Mon profil</div>
+
+        <div class="profile-hero">
+          <div class="profile-avatar">SM</div>
+          <div class="profile-name">Sophie Müller</div>
+          <div class="profile-role">Ranger · Forest Rangers</div>
+          <div class="profile-stats">
+            <div class="profile-stat"><div class="profile-stat-val">8</div><div class="profile-stat-label">Cette sem.</div></div>
+            <div class="profile-stat"><div class="profile-stat-val">31,6</div><div class="profile-stat-label">km / sem.</div></div>
+            <div class="profile-stat"><div class="profile-stat-val">94</div><div class="profile-stat-label">Total 2026</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><span class="card-title">Informations</span></div>
+          <div style="padding:4px 0;">
+            <div style="padding:11px 16px;border-top:none;display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-faint);">Téléphone</span><span>+352 621 xxx xxx</span></div>
+            <div style="padding:11px 16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-faint);">Email</span><span>sophie@forestrangers.lu</span></div>
+            <div style="padding:11px 16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-faint);">Contrat</span><span>Depuis mars 2025</span></div>
+          </div>
+        </div>
+
+        <button class="btn-outline-big" style="width:100%;color:var(--red);border-color:rgba(224,90,90,0.2);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          Se déconnecter
+        </button>
+      </div>
+    </div>
+
+
+    <!-- ══ SCREEN 5b : DEMANDE CRÉNEAU ══ -->
+    <div class="screen" id="screen-demande">
+      <div class="screen-pad">
+
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;margin-top:4px;">
+          <button onclick="showScreen('screen-missions')" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <div style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;">Demandes reçues</div>
+          <div style="margin-left:auto;width:8px;height:8px;border-radius:50%;background:var(--accent);"></div>
+        </div>
+
+        <!-- Demande en attente -->
+        <div style="background:var(--accent-dim);border:1.5px solid var(--accent-mid);border-radius:var(--radius-lg);padding:16px;margin-bottom:12px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--accent);font-weight:700;margin-bottom:10px;">Nouvelle demande de Gabriel</div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+            <div style="background:var(--surface2);border-radius:10px;padding:10px;text-align:center;">
+              <div style="font-family:'Norwester',sans-serif;font-size:18px;font-weight:800;color:var(--accent);">Mar</div>
+              <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">10 juin 2026</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:10px;padding:10px;text-align:center;">
+              <div style="font-family:'Norwester',sans-serif;font-size:16px;font-weight:800;color:var(--accent);">09:00</div>
+              <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">→ ~11:30</div>
+            </div>
+          </div>
+          <!-- Créneaux détaillés -->
+          <div style="background:var(--surface2);border-radius:10px;padding:11px 13px;margin-bottom:10px;">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Créneaux demandés</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);">
+              <div>
+                <div style="font-size:13px;font-weight:600;">Matin · 09:00 → ~11:30</div>
+                <div style="font-size:11px;color:var(--text-faint);margin-top:2px;">Groupe A · 4 chiens · ~2h30</div>
+              </div>
+              <span style="background:var(--accent-dim);color:var(--accent);padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;">Requis</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;">
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text-dim);">Midi · 12:00 → ~14:30</div>
+                <div style="font-size:11px;color:var(--text-faint);margin-top:2px;">Non requis ce jour</div>
+              </div>
+              <span style="background:rgba(255,255,255,0.06);color:var(--text-faint);padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;">Optionnel</span>
+            </div>
+          </div>
+          <div style="background:var(--surface2);border-radius:10px;padding:11px 13px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
+            <div style="font-size:12px;color:var(--text-dim);">Durée totale estimée</div>
+            <div style="font-family:'Norwester',sans-serif;font-size:16px;font-weight:800;color:var(--accent);">~2h30</div>
+          </div>
+
+          <div style="background:var(--surface2);border-radius:10px;padding:11px 13px;margin-bottom:12px;">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-faint);font-weight:700;margin-bottom:4px;">Camionnette</div>
+            <div style="font-size:13px;font-weight:600;">Camionnette A · 10 places</div>
+          </div>
+
+          <div style="background:var(--surface2);border-radius:10px;padding:11px 13px;margin-bottom:14px;">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-faint);font-weight:700;margin-bottom:4px;">Note de Gabriel</div>
+            <div style="font-size:13px;color:var(--text-dim);line-height:1.5;">Remplacement — je suis indisponible ce matin. Merci de couvrir le Groupe A.</div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <button onclick="respondDemande('accept')" style="padding:13px;border-radius:12px;background:var(--green);border:none;color:white;font-family:'Norwester',sans-serif;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              Accepter
+            </button>
+            <button onclick="respondDemande('decline')" style="padding:13px;border-radius:12px;background:var(--red-dim);border:1px solid rgba(224,90,90,0.3);color:var(--red);font-family:'Norwester',sans-serif;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              Décliner
+            </button>
+          </div>
+        </div>
+
+        <!-- Réponse (cachée par défaut) -->
+        <div id="demande-response" style="display:none;text-align:center;padding:2rem 1rem;">
+          <div id="demande-icon" style="width:60px;height:60px;border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;"></div>
+          <div id="demande-title" style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;margin-bottom:8px;"></div>
+          <div id="demande-sub" style="font-size:13px;color:var(--text-dim);line-height:1.6;"></div>
+          <button onclick="showScreen('screen-missions')" style="margin-top:20px;padding:12px 24px;border-radius:10px;background:var(--surface);border:1px solid var(--border);color:var(--text-dim);font-family:'Norwester',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">
+            Retour aux missions
+          </button>
+        </div>
+
+        <!-- Historique -->
+        <div style="font-family:'Norwester',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-faint);margin-bottom:10px;margin-top:4px;">Historique</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;">
+          <div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;font-size:12.5px;">
+            <div>
+              <div style="font-weight:600;">Vendredi 6 juin · Après-midi</div>
+              <div style="font-size:11px;color:var(--text-faint);margin-top:2px;">Demande de Gabriel</div>
+            </div>
+            <span style="background:var(--green-dim);color:var(--green);padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;">Accepté</span>
+          </div>
+          <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:12.5px;">
+            <div>
+              <div style="font-weight:600;">Mercredi 4 juin · Midi</div>
+              <div style="font-size:11px;color:var(--text-faint);margin-top:2px;">Demande de Gabriel</div>
+            </div>
+            <span style="background:var(--red-dim);color:var(--red);padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;">Décliné</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- ══ SCREEN : DEBUT JOURNEE ══ -->
+    <div class="screen" id="screen-debut">
+      <div class="screen-pad">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;margin-top:4px;">
+          <button onclick="showScreen('screen-missions')" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <div>
+            <div style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;">Début de journée</div>
+            <div style="font-size:11px;color:var(--text-faint);margin-top:2px;">Lundi 9 juin · 08:47</div>
+          </div>
+        </div>
+
+        <!-- Camionnette assignée -->
+        <div style="background:var(--accent-dim);border:1.5px solid var(--accent-mid);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--accent);font-weight:700;margin-bottom:4px;">Camionnette assignée</div>
+            <div style="font-family:'Norwester',sans-serif;font-size:16px;font-weight:800;">Camionnette A</div>
+            <div style="font-size:11px;color:var(--text-faint);margin-top:2px;font-family:monospace;">LU · AB 1234</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:10px;color:var(--text-faint);margin-bottom:4px;">Capacité</div>
+            <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;color:var(--accent);">10</div>
+            <div style="font-size:10px;color:var(--text-faint);">chiens max</div>
+          </div>
+        </div>
+
+        <!-- Kilométrage départ -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:14px;">
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+            <div style="width:26px;height:26px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+            </div>
+            <div style="font-family:'Norwester',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);">Kilométrage départ</div>
+            <span style="margin-left:auto;font-size:10px;color:var(--red);font-weight:700;">Obligatoire</span>
+          </div>
+          <div style="padding:16px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <input type="number" id="km-depart" placeholder="Ex: 48 250" style="flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;color:var(--text);font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;outline:none;text-align:center;" oninput="this.style.borderColor=this.value?'var(--accent)':'var(--border)'">
+              <span style="font-size:14px;color:var(--text-faint);font-weight:600;">km</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- État technique -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:14px;">
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+            <div style="width:26px;height:26px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/><path d="M12 6v6l4 2"/></svg>
+            </div>
+            <div style="font-family:'Norwester',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);">État technique</div>
+          </div>
+          <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px;">
+
+            <!-- Huile -->
+            <div>
+              <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Niveau d'huile</div>
+              <div style="display:flex;gap:6px;">
+                <div class="state-btn active" onclick="selectState(this,'huile')" data-val="ok" style="flex:1;padding:10px;border-radius:9px;text-align:center;background:var(--green-dim);border:1.5px solid var(--green);cursor:pointer;">
+                  <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--green);">OK</div>
+                </div>
+                <div class="state-btn" onclick="selectState(this,'huile')" data-val="surveiller" style="flex:1;padding:10px;border-radius:9px;text-align:center;background:var(--surface2);border:1.5px solid var(--border);cursor:pointer;">
+                  <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--text-dim);">À surveiller</div>
+                </div>
+                <div class="state-btn" onclick="selectState(this,'huile')" data-val="faire" style="flex:1;padding:10px;border-radius:9px;text-align:center;background:var(--surface2);border:1.5px solid var(--border);cursor:pointer;">
+                  <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--text-dim);">À faire</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- AdBlue -->
+            <div>
+              <div style="font-size:12px;font-weight:600;margin-bottom:8px;">AdBlue</div>
+              <div style="display:flex;gap:6px;">
+                <div class="state-btn active" onclick="selectState(this,'adblue')" data-val="ok" style="flex:1;padding:10px;border-radius:9px;text-align:center;background:var(--green-dim);border:1.5px solid var(--green);cursor:pointer;">
+                  <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--green);">OK</div>
+                </div>
+                <div class="state-btn" onclick="selectState(this,'adblue')" data-val="faire" style="flex:1;padding:10px;border-radius:9px;text-align:center;background:var(--surface2);border:1.5px solid var(--border);cursor:pointer;">
+                  <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--text-dim);">À faire</div>
+                </div>
+                <div class="state-btn" onclick="selectState(this,'adblue')" data-val="na" style="flex:1;padding:10px;border-radius:9px;text-align:center;background:var(--surface2);border:1.5px solid var(--border);cursor:pointer;">
+                  <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--text-dim);">N/A</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Remarques -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:14px;">
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border);">
+            <div style="font-family:'Norwester',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);">Remarques (optionnel)</div>
+          </div>
+          <div style="padding:14px 16px;">
+            <textarea id="debut-remarques" style="width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:13px;outline:none;resize:none;min-height:80px;" placeholder="Ex : voyant pression pneu allumé, rayure nouvelle sur carrosserie..."></textarea>
+          </div>
+        </div>
+
+        <button onclick="confirmerDebut()" style="width:100%;padding:16px;border-radius:var(--radius);background:var(--accent);border:none;color:white;font-family:'Norwester',sans-serif;font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 8px 24px rgba(255,95,31,0.3);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Démarrer ma journée
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ SCREEN : FIN JOURNEE ══ -->
+    <div class="screen" id="screen-fin">
+      <div class="screen-pad">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;margin-top:4px;">
+          <button onclick="showScreen('screen-missions')" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <div>
+            <div style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;">Fin de journée</div>
+            <div style="font-size:11px;color:var(--text-faint);margin-top:2px;">Lundi 9 juin · Départ : 48 250 km</div>
+          </div>
+        </div>
+
+        <!-- Kilométrage arrivée -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:14px;">
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+            <div style="width:26px;height:26px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+            </div>
+            <div style="font-family:'Norwester',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);">Kilométrage arrivée</div>
+            <span style="margin-left:auto;font-size:10px;color:var(--red);font-weight:700;">Obligatoire</span>
+          </div>
+          <div style="padding:16px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <input type="number" id="km-arrivee" placeholder="Ex: 48 372" style="flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;color:var(--text);font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;outline:none;text-align:center;" oninput="calcKm()">
+              <span style="font-size:14px;color:var(--text-faint);font-weight:600;">km</span>
+            </div>
+            <!-- Résultat km -->
+            <div id="km-result" style="display:none;margin-top:12px;background:var(--green-dim);border:1px solid rgba(94,201,122,0.25);border-radius:10px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-size:13px;color:var(--text-dim);">Kilomètres parcourus aujourd'hui</span>
+              <span id="km-total" style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;color:var(--green);">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Résumé missions -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:14px;">
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border);">
+            <div style="font-family:'Norwester',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);">Résumé de la journée</div>
+          </div>
+          <div style="padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;justify-content:space-between;font-size:13px;">
+              <span style="color:var(--text-faint);">Missions réalisées</span>
+              <strong>2 / 2</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;">
+              <span style="color:var(--text-faint);">Chiens accompagnés</span>
+              <strong>5 chiens</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;">
+              <span style="color:var(--text-faint);">Photos envoyées</span>
+              <strong style="color:var(--green);">2 / 2 ✓</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;">
+              <span style="color:var(--text-faint);">Camionnette</span>
+              <strong>Camionnette A</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Remarques fin -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:14px;">
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border);">
+            <div style="font-family:'Norwester',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);">Remarques / Incidents</div>
+          </div>
+          <div style="padding:14px 16px;">
+            <textarea id="fin-remarques" style="width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:13px;outline:none;resize:none;min-height:80px;" placeholder="Ex : petit accrochage parking, chien malade pendant promenade, clé difficile à tourner..."></textarea>
+          </div>
+        </div>
+
+        <button onclick="confirmerFin()" style="width:100%;padding:16px;border-radius:var(--radius);background:var(--surface3);border:none;color:var(--text);font-family:'Norwester',sans-serif;font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          Terminer ma journée
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /screens -->
+
+  <!-- ══ BOTTOM NAV ══ -->
+  <div class="bottom-nav">
+    <div class="nav-tab active" id="tab-missions" onclick="showScreen('screen-missions');setTab('tab-missions')" style="position:relative;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      <span>Missions</span>
+    </div>
+    <div class="nav-tab" id="tab-gps" onclick="showScreen('screen-gps');setTab('tab-gps')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      <span>GPS</span>
+    </div>
+    <div class="nav-tab" id="tab-history" onclick="showScreen('screen-history');setTab('tab-history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v10l4 4M12 2a10 10 0 100 20A10 10 0 0012 2z"/></svg>
+      <span>Historique</span>
+    </div>
+    <div class="nav-tab" id="tab-demande" onclick="showScreen('screen-demande');setTab('tab-demande')" style="position:relative;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span>Demandes</span>
+      <div style="position:absolute;top:6px;right:18px;width:8px;height:8px;border-radius:50%;background:var(--accent);border:2px solid var(--bg);" id="demande-dot"></div>
+    </div>
+    <div class="nav-tab" id="tab-profile" onclick="showScreen('screen-profile');setTab('tab-profile')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0112 0v2"/></svg>
+      <span>Profil</span>
+    </div>
+  </div>
+
+</div><!-- /phone-shell -->
+</div>
+
+<!-- ══ MODAL : Confirmation présence chiens ══ -->
+<div class="modal-overlay" id="startModal" style="position:fixed;">
+  <div class="modal-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Confirmation de présence</div>
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:14px;">Pour chaque chien, confirmez s'il est présent ou absent.</div>
+
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:12px;" id="dog-presence-list">
+
+      <!-- Chien 1 — Max — présent -->
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div style="font-size:13px;font-weight:600;flex:1;">Max</div>
+          <div style="font-size:11px;color:var(--text-faint);">Berger · Mme Dupont</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <div class="presence-btn present" onclick="setPresence(this,'max','present')" style="padding:10px;border-radius:9px;text-align:center;background:var(--surface);border:1.5px solid var(--border);cursor:pointer;">
+            <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--text-dim);">Présent</div>
+            <div style="font-size:10px;color:var(--text-faint);margin-top:2px;">Promenade normale</div>
+          </div>
+          <div class="presence-btn absent active" onclick="setPresence(this,'max','absent')" style="padding:10px;border-radius:9px;text-align:center;background:var(--red-dim);border:1.5px solid rgba(224,90,90,0.4);cursor:pointer;">
+            <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--red);">Absent</div>
+            <div style="font-size:10px;color:var(--red);opacity:0.7;margin-top:2px;">Non prévenu</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chien 2 — Luna — absente -->
+      <div style="padding:12px 14px;" id="luna-row">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div style="font-size:13px;font-weight:600;flex:1;">Luna</div>
+          <div style="font-size:11px;color:var(--text-faint);">Labrador · Mme Dupont</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <div class="presence-btn present" onclick="setPresence(this,'luna','present')" style="padding:10px;border-radius:9px;text-align:center;background:var(--surface);border:1.5px solid var(--border);cursor:pointer;">
+            <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--text-dim);">Présente</div>
+            <div style="font-size:10px;color:var(--text-faint);margin-top:2px;">Promenade normale</div>
+          </div>
+          <div class="presence-btn absent active" onclick="setPresence(this,'luna','absent')" style="padding:10px;border-radius:9px;text-align:center;background:var(--red-dim);border:1.5px solid rgba(224,90,90,0.4);cursor:pointer;">
+            <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--red);">Absente</div>
+            <div style="font-size:10px;color:var(--red);opacity:0.7;margin-top:2px;">Non prévenu</div>
+          </div>
+        </div>
+        <!-- Alerte absence Luna -->
+        <div id="luna-alert" style="margin-top:8px;padding:9px 11px;background:var(--red-dim);border:1px solid rgba(224,90,90,0.25);border-radius:8px;font-size:11.5px;color:var(--red);line-height:1.5;">
+          <strong style="color:var(--red);">Absence notée.</strong> Séance non effectuée pour Luna. Max récupéré ce même trajet.
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Résumé facturation -->
+    <div id="facturation-resume" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Impact facturation</div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-top:1px solid var(--border);">
+        <div style="width:7px;height:7px;border-radius:50%;background:var(--red);flex-shrink:0;"></div>
+        <span style="color:var(--text-dim);">Max — Absent · non prévenu</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-top:1px solid var(--border);">
+        <div style="width:7px;height:7px;border-radius:50%;background:var(--red);flex-shrink:0;"></div>
+        <span style="color:var(--text-dim);">Luna — Absente · non prévenu</span>
+      </div>
+    </div>
+
+    <button class="btn-big btn-start" onclick="confirmerPresenceEtDemarrer()">
+      <svg viewBox="0 0 24 24" fill="white" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Confirmer et démarrer GPS
+    </button>
+    <button class="btn-outline-big" style="width:100%;margin-top:8px;" onclick="closeStartModal()">Annuler</button>
+  </div>
+</div>
+
+<script>
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function setTab(id) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function openStartModal(e) {
+  e.stopPropagation();
+  document.getElementById('startModal').classList.add('open');
+}
+function closeStartModal() {
+  document.getElementById('startModal').classList.remove('open');
+}
+document.getElementById('startModal').addEventListener('click', function(e) {
+  if (e.target === this) closeStartModal();
+});
+
+function toggleCheck(el) {
+  const box = el.querySelector('.check-box');
+  const badge = el.querySelector('.badge');
+  box.classList.toggle('checked');
+  if (box.classList.contains('checked')) {
+    badge.className = 'badge b-green';
+    badge.textContent = 'Récupéré(e)';
+  } else {
+    badge.className = 'badge b-muted';
+    badge.textContent = 'Absent(e)';
+  }
+}
+
+// Presence state tracking
+var presenceState = { max: 'absent', luna: 'absent' };
+
+function setPresence(btn, dog, status) {
+  presenceState[dog] = status;
+
+  // Update button styles for this dog
+  var row = btn.closest('div[style*="padding:12px"]');
+  var btns = row.querySelectorAll('.presence-btn');
+  btns.forEach(function(b) {
+    var isPresent = b.classList.contains('present');
+    if ((isPresent && status === 'present') || (!isPresent && status === 'absent')) {
+      // Active state
+      if (status === 'present') {
+        b.style.background = 'var(--green-dim)';
+        b.style.borderColor = 'var(--green)';
+        b.querySelector('div').style.color = 'var(--green)';
+      } else {
+        b.style.background = 'var(--red-dim)';
+        b.style.borderColor = 'rgba(224,90,90,0.4)';
+        b.querySelector('div').style.color = 'var(--red)';
+      }
+    } else {
+      b.style.background = 'var(--surface)';
+      b.style.borderColor = 'var(--border)';
+      b.querySelector('div').style.color = 'var(--text-dim)';
+    }
+  });
+
+  // Show/hide absence alert for luna
+  if (dog === 'luna') {
+    var alert = document.getElementById('luna-alert');
+    if (alert) alert.style.display = status === 'absent' ? 'block' : 'none';
+  }
+
+  updateFacturationResume();
+}
+
+function updateFacturationResume() {
+  var resume = document.getElementById('facturation-resume');
+  if (!resume) return;
+
+  var maxPresent = presenceState['max'] === 'present';
+  var lunaPresent = presenceState['luna'] === 'present';
+  var bothAbsent = !maxPresent && !lunaPresent;
+  var onlyLunaAbsent = maxPresent && !lunaPresent;
+  var onlyMaxAbsent = !maxPresent && lunaPresent;
+
+  var html = '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Statut de la séance</div>';
+
+  // Max line
+  if (maxPresent) {
+    html += '<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-top:1px solid var(--border);"><div style="width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;"></div><span style="color:var(--text-dim);">Max — Présent · promenade effectuée</span></div>';
+  } else {
+    html += '<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-top:1px solid var(--border);"><div style="width:7px;height:7px;border-radius:50%;background:var(--red);flex-shrink:0;"></div><span style="color:var(--text-dim);">Max — Absent · séance non effectuée</span></div>';
+    if (!lunaPresent) {
+      html += '<div style="display:flex;align-items:center;gap:8px;font-size:11px;padding:4px 0 4px 15px;"><span style="color:var(--amber);">Déplacement effectué sans récupération</span></div>';
+    }
+  }
+
+  // Luna line
+  if (lunaPresent) {
+    html += '<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-top:1px solid var(--border);"><div style="width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;"></div><span style="color:var(--text-dim);">Luna — Présente · promenade effectuée</span></div>';
+  } else {
+    html += '<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-top:1px solid var(--border);"><div style="width:7px;height:7px;border-radius:50%;background:var(--red);flex-shrink:0;"></div><span style="color:var(--text-dim);">Luna — Absente · non prévenu</span></div>';
+    if (maxPresent) {
+      html += '<div style="display:flex;align-items:center;gap:8px;font-size:11px;padding:4px 0 4px 15px;"><span style="color:var(--text-faint);">Max récupéré lors de ce même trajet</span></div>';
+    }
+  }
+
+  resume.innerHTML = html;
+}
+
+function respondDemande(response) {
+  document.querySelector('#screen-demande .van-card, #screen-demande > div > div:first-of-type + div')?.remove();
+  const card = document.querySelector('#screen-demande .screen-pad > div:first-of-type + div');
+  if (card) card.style.display = 'none';
+
+  // Hide the demande card
+  const demandeCard = document.querySelector('[style*="accent-dim"][style*="accent-mid"]');
+  if (demandeCard) demandeCard.style.display = 'none';
+
+  const resp = document.getElementById('demande-response');
+  const icon = document.getElementById('demande-icon');
+  const title = document.getElementById('demande-title');
+  const sub = document.getElementById('demande-sub');
+  const dot = document.getElementById('demande-dot');
+
+  resp.style.display = 'block';
+  if (dot) dot.style.display = 'none';
+
+  if (response === 'accept') {
+    icon.style.background = 'var(--green-dim)';
+    icon.style.border = '2px solid var(--green)';
+    icon.innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
+    title.textContent = 'Créneau accepté !';
+    sub.textContent = 'Gabriel a été notifié. Le mardi 10 juin matin a été ajouté à vos missions.';
+  } else {
+    icon.style.background = 'var(--red-dim)';
+    icon.style.border = '2px solid var(--red)';
+    icon.innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    title.textContent = 'Créneau décliné';
+    sub.textContent = 'Gabriel a été notifié de votre indisponibilité. Il cherchera une autre solution.';
+  }
+}
+
+function selectState(el, group) {
+  document.querySelectorAll(`[onclick*="'${group}'"]`).forEach(b => {
+    b.style.background = 'var(--surface2)';
+    b.style.borderColor = 'var(--border)';
+    b.querySelector('div').style.color = 'var(--text-dim)';
+  });
+  const val = el.dataset.val;
+  if (val === 'ok') {
+    el.style.background = 'var(--green-dim)';
+    el.style.borderColor = 'var(--green)';
+    el.querySelector('div').style.color = 'var(--green)';
+  } else if (val === 'surveiller' || val === 'faire') {
+    el.style.background = 'var(--accent-dim)';
+    el.style.borderColor = 'var(--accent)';
+    el.querySelector('div').style.color = 'var(--accent)';
+  } else {
+    el.style.background = 'var(--surface3)';
+    el.querySelector('div').style.color = 'var(--text-faint)';
+  }
+}
+
+function confirmerPresenceEtDemarrer() {
+  // Count present dogs
+  var presentCount = 0;
+  Object.keys(presenceState).forEach(function(dog) {
+    if (presenceState[dog] === 'present') presentCount++;
+  });
+  // Update GPS chiens count
+  var counter = document.getElementById('gps-chiens-count');
+  if (counter) counter.textContent = presentCount;
+  closeStartModal();
+  showScreen('screen-gps');
+  setTab('tab-gps');
+}
+
+var kmDepart = 0;
+
+function confirmerDebut() {
+  const km = document.getElementById('km-depart').value;
+  if (!km) {
+    document.getElementById('km-depart').style.borderColor = 'var(--red)';
+    document.getElementById('km-depart').placeholder = 'Obligatoire !';
+    return;
+  }
+  kmDepart = parseInt(km);
+
+  // Sauvegarder en Supabase
+  var heure = new Date().toLocaleTimeString('fr-LU', { hour: '2-digit', minute: '2-digit' });
+  try {
+    db.from('kilometrage').insert({
+      ranger_nom: rangerNom,
+      date: new Date().toISOString().split('T')[0],
+      km_depart: kmDepart,
+      created_at: new Date().toISOString()
+    });
+  } catch(e) {}
+
+  // Mettre à jour le badge "Journée démarrée"
+  var badge = document.getElementById('badge-journee');
+  if (badge) {
+    badge.style.display = 'flex';
+    badge.textContent = '✓ Journée démarrée · ' + heure;
+  }
+
+  // Bouton "Démarrer journée" devient grisé
+  var btnDebut = document.getElementById('btn-demarrer-journee');
+  if (btnDebut) {
+    btnDebut.style.background = 'var(--green)';
+    btnDebut.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Journée démarrée';
+    btnDebut.disabled = true;
+    btnDebut.style.opacity = '0.7';
+    btnDebut.onclick = null;
+  }
+
+  // Mettre à jour le prénom dans le message Gabriel
+  var msgPrenom = document.getElementById('msg-ranger-prenom');
+  if (msgPrenom) msgPrenom.textContent = rangerNom;
+  var recapNom = document.getElementById('recap-ranger-nom');
+  if (recapNom) recapNom.textContent = rangerNom;
+
+  // Afficher le message de Gabriel
+  showScreen('screen-message-gabriel');
+
+  // Retour automatique aux missions après 3.5 secondes
+  setTimeout(function() {
+    showScreen('screen-missions');
+  }, 3500);
+}
+
+function confirmerFin() {
+  const km = document.getElementById('km-arrivee').value;
+  if (!km) {
+    document.getElementById('km-arrivee').style.borderColor = 'var(--red)';
+    return;
+  }
+  var kmTotal = parseInt(km) - kmDepart;
+
+  // Sauvegarder km retour
+  try {
+    db.from('kilometrage').upsert({
+      ranger_nom: rangerNom,
+      date: new Date().toISOString().split('T')[0],
+      km_arrivee: parseInt(km),
+      km_total: kmTotal > 0 ? kmTotal : 0
+    }, { onConflict: 'ranger_nom,date' });
+  } catch(e) {}
+
+  // Préparer le récap
+  var el = document.getElementById('recap-km');
+  if (el) el.textContent = (kmTotal > 0 ? kmTotal : '—') + ' km';
+  var el2 = document.getElementById('recap-missions-fin');
+  if (el2) el2.textContent = missionsAujourdhui.length + ' mission' + (missionsAujourdhui.length > 1 ? 's' : '');
+  var heureEl = document.getElementById('recap-heure-fin');
+  if (heureEl) heureEl.textContent = new Date().toLocaleTimeString('fr-LU', { hour: '2-digit', minute: '2-digit' });
+
+  // Mettre à jour le prénom dans le message fin
+  var msgFinPrenom = document.getElementById('msg-fin-prenom');
+  if (msgFinPrenom) msgFinPrenom.textContent = rangerNom;
+  var recapNom = document.getElementById('recap-ranger-nom');
+  if (recapNom) recapNom.textContent = rangerNom;
+
+  // Afficher le message Gabriel fin de journée
+  showScreen('screen-message-fin');
+
+  // Puis récap après 3.5 secondes
+  setTimeout(function() {
+    showScreen('screen-recap-journee');
+  }, 3500);
+}
+
+function calcKm() {
+  const arrivee = parseFloat(document.getElementById('km-arrivee').value);
+  const depart = 48250; // stored from début
+  const result = document.getElementById('km-result');
+  const total = document.getElementById('km-total');
+  if (arrivee && arrivee > depart) {
+    result.style.display = 'flex';
+    total.textContent = (arrivee - depart) + ' km';
+  } else {
+    result.style.display = 'none';
+  }
+}
+
+let photoAdded = false;
+function togglePhoto() {
+  photoAdded = !photoAdded;
+  const zone = document.getElementById('photoZone');
+  zone.classList.toggle('has-photo', photoAdded);
+}
+
+// ── CHARGEMENT MISSIONS SUPABASE ──
+var rangerNom = 'Sophie';
+var rangerInitiales = 'SM';
+var missionsAujourdhui = [];
+
+document.addEventListener('DOMContentLoaded', async function() {
+  await loadRangerProfile();
+  await loadMissionsJour();
+});
+
+async function loadRangerProfile() {
+  try {
+    var { data: session } = await db.auth.getSession();
+    if (!session || !session.session) return;
+    var userId = session.session.user.id;
+    var { data: ranger } = await db.from('staff')
+      .select('prenom, nom')
+      .eq('auth_id', userId)
+      .single();
+    if (ranger) {
+      rangerNom = ranger.prenom;
+      rangerInitiales = (ranger.prenom[0] + ranger.nom[0]).toUpperCase();
+      var el = document.getElementById('ranger-bonjour');
+      if (el) el.textContent = 'Bonjour, ' + ranger.prenom;
+      var av = document.getElementById('ranger-avatar');
+      if (av) av.textContent = rangerInitiales;
+    }
+  } catch(e) { /* garde les valeurs par défaut */ }
+}
+
+async function loadMissionsJour() {
+  var today = new Date().toISOString().split('T')[0];
+  var joursFr = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  var moisFr  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  var now = new Date();
+  var dateLabel = joursFr[now.getDay()] + ' ' + now.getDate() + ' ' + moisFr[now.getMonth()];
+
+  var dateEl = document.getElementById('date-label');
+  if (dateEl) dateEl.textContent = dateLabel;
+
+  try {
+    var { data: resas } = await db.from('reservations')
+      .select('id, service, creneau, statut, date_debut, date_fin, jours, ranger_nom, client_id, notes')
+      .eq('ranger_nom', rangerNom)
+      .lte('date_debut', today)
+      .gte('date_fin', today)
+      .neq('statut', 'annule')
+      .order('creneau', { ascending: true });
+
+    if (!resas || resas.length === 0) {
+      renderMissionsVides();
+      return;
+    }
+
+    // Filtrer selon jours récurrence
+    var jourMap = { lun:1, mar:2, mer:3, jeu:4, ven:5, sam:6, dim:0 };
+    var dowToday = now.getDay();
+    var filtered = resas.filter(function(r) {
+      if (r.service === 'boarding') return true;
+      if (r.jours && r.jours.length > 0) {
+        return r.jours.some(function(j) { return jourMap[j] === dowToday; });
+      }
+      return true;
+    });
+
+    // Charger clients
+    var clientIds = [...new Set(filtered.filter(r => r.client_id).map(r => r.client_id))];
+    var clientsMap = {};
+    if (clientIds.length > 0) {
+      var { data: clients } = await db.from('clients')
+        .select('id, prenom, nom')
+        .in('id', clientIds);
+      if (clients) clients.forEach(c => { clientsMap[c.id] = c; });
+    }
+
+    // Charger chiens par réservation
+    var resaIds = filtered.map(r => r.id);
+    var chiensMap = {};
+    if (resaIds.length > 0) {
+      var { data: promenades } = await db.from('promenades')
+        .select('reservation_id, chiens(id, prenom)')
+        .in('reservation_id', resaIds);
+      if (promenades) {
+        promenades.forEach(function(p) {
+          if (!chiensMap[p.reservation_id]) chiensMap[p.reservation_id] = [];
+          if (p.chiens) chiensMap[p.reservation_id].push(p.chiens);
+        });
+      }
+    }
+
+    missionsAujourdhui = filtered;
+    renderMissions(filtered, clientsMap, chiensMap);
+
+    // Stats
+    updateStatsMissions(filtered);
+
+  } catch(e) {
+    console.error('Erreur chargement missions:', e);
+  }
+}
+
+function renderMissions(resas, clientsMap, chiensMap) {
+  var container = document.getElementById('missions-list');
+  if (!container) return;
+
+  var svcLabels = { walking: 'Promenade', daycare: 'Day Care', boarding: 'Pension' };
+  var creneaux  = { matin: '09h00', midi: '12h00', apmidi: '14h30' };
+
+  var html = '';
+  resas.forEach(function(r, i) {
+    var client = clientsMap[r.client_id];
+    var clientNom = client ? client.prenom + ' ' + client.nom : '—';
+    var chiens = chiensMap[r.id] || [];
+    var chiensHtml = chiens.length > 0
+      ? chiens.map(function(c) { return '<span class="dog-tag">' + (c.prenom || c.nom) + '</span>'; }).join('')
+      : '<span class="dog-tag" style="color:var(--text-faint);">Aucun chien lié</span>';
+    var cr = creneaux[r.creneau] || (r.service === 'boarding' ? 'Pension' : '—');
+    var svc = svcLabels[r.service] || r.service;
+    var isDone = r.statut === 'termine';
+    var missionClass = isDone ? 'mission done' : (i === 0 ? 'mission next' : 'mission');
+    var badgeClass = isDone ? 'b-green' : 'b-muted';
+    var badgeLabel = isDone ? 'Terminé' : 'À faire';
+
+    html += '<div class="' + missionClass + '" id="mission-' + r.id + '">';
+    html += '<div class="mission-time">' + cr + '</div>';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">';
+    html += '<div class="mission-title">' + svc + ' — ' + clientNom + '</div>';
+    html += '<span class="badge ' + badgeClass + '">' + badgeLabel + '</span>';
+    html += '</div>';
+    html += '<div class="mission-dogs">' + chiensHtml + '</div>';
+    if (r.notes) html += '<div class="mission-meta" style="margin-top:6px;color:var(--accent);">📌 ' + r.notes + '</div>';
+    if (!isDone) {
+      html += '<div class="mission-footer">';
+      html += '<button class="btn-big btn-start" style="width:auto;padding:10px 18px;font-size:13px;margin-top:8px;" onclick="demarrerMission(\'' + r.id + '\')">';
+      html += '<svg viewBox="0 0 24 24" fill="white" width="16" height="16"><polygon points="5 3 19 12 5 21 5 3"/></svg> Démarrer</button>';
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+
+  container.innerHTML = html;
+}
+
+function renderMissionsVides() {
+  var container = document.getElementById('missions-list');
+  if (container) container.innerHTML = '<div style="text-align:center;padding:32px 16px;color:var(--text-faint);font-size:13px;">✓ Aucune mission aujourd\'hui</div>';
+  updateStatsMissions([]);
+}
+
+function updateStatsMissions(resas) {
+  var nbMissions = resas.length;
+  var nbTerminees = resas.filter(function(r) { return r.statut === 'termine'; }).length;
+  var el = document.getElementById('stat-missions');
+  if (el) el.textContent = nbMissions;
+  var el2 = document.getElementById('stat-terminees');
+  if (el2) el2.textContent = nbTerminees;
+}
+
+async function demarrerMission(resaId) {
+  showScreen('screen-gps');
+}
+
+// Timer simulation
+let seconds = 23*60+14;
+function tick() {
+  seconds++;
+  const m = String(Math.floor(seconds/60)).padStart(2,'0');
+  const s = String(seconds%60).padStart(2,'0');
+  const el = document.getElementById('timer');
+  if (el) el.textContent = `00:${m}:${s}`;
+}
+setInterval(tick, 1000);
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/sw.js');
+  });
+}
+</script>
+</body>
+</html>
