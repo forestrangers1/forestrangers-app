@@ -131,9 +131,28 @@ html, body {
 .info-item { }
 .info-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--tf); font-weight: 700; margin-bottom: 4px; }
 .info-value { font-size: 13px; color: #eceee6; font-weight: 500; }
+.edit-input, .edit-select {
+  width: 100%; background: var(--s2); border: 1px solid var(--bd2);
+  border-radius: 8px; padding: 7px 9px; color: var(--tx);
+  font-family: 'Instrument Sans', sans-serif; font-size: 12.5px; outline: none;
+}
+.edit-input:focus, .edit-select:focus { border-color: var(--accent); }
+.pa-row { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+.pa-row:last-child { margin-bottom: 0; }
+.pa-row .edit-input, .pa-row .edit-select { flex: 1; }
+.pa-remove {
+  flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px;
+  background: var(--rd); border: 1px solid rgba(224,90,90,0.3); color: var(--red);
+  display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; font-weight: 800;
+}
 
 /* ── DOG CARD ── */
 .dog-card { background: var(--s2); border: 1px solid var(--bd); border-radius: var(--r); padding: 14px; margin-bottom: 10px; }
+.g2-hist { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.hist-summary-row { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--bd); font-size: 12px; }
+.hist-summary-row:first-of-type { border-top: none; padding-top: 0; }
+.hist-summary-row span:first-child { color: var(--tf); }
+.hist-summary-row span:last-child { color: var(--tx); font-weight: 600; text-align: right; }
 .dog-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .dog-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--acc-dim); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
 .dog-name { font-family: 'Norwester', sans-serif; font-size: 14px; font-weight: 800; color: #eceee6; }
@@ -190,6 +209,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   .client-sidebar { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--bd); }
   .stats-row { grid-template-columns: repeat(2,1fr); }
   .info-grid { grid-template-columns: 1fr; }
+  .g2-hist { grid-template-columns: 1fr; }
   .dog-grid { grid-template-columns: repeat(3,1fr); }
   .tab { font-size: 9px; padding: 7px 4px; }
 }
@@ -266,8 +286,8 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <!-- STATS -->
     <div class="stats-row">
       <div class="stat-card">
-        <div class="stat-val" id="stat-promenades">—</div>
-        <div class="stat-label">Promenades</div>
+        <div class="stat-val" id="stat-reservations">—</div>
+        <div class="stat-label" id="stat-reservations-label">Réservations 2026</div>
       </div>
       <div class="stat-card">
         <div class="stat-val" id="stat-factures" style="color:var(--green);">—</div>
@@ -275,11 +295,11 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       </div>
       <div class="stat-card">
         <div class="stat-val" id="stat-total">—</div>
-        <div class="stat-label">Total 2026</div>
+        <div class="stat-label" id="stat-total-label">Total 2026</div>
       </div>
       <div class="stat-card">
-        <div class="stat-val" id="stat-chiens" style="color:var(--blue);">—</div>
-        <div class="stat-label">Chiens</div>
+        <div class="stat-val" id="stat-annulations" style="color:var(--red);">—</div>
+        <div class="stat-label">Annulations</div>
       </div>
     </div>
 
@@ -298,10 +318,14 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <div class="card">
         <div class="card-head">
           <div class="card-title">Informations personnelles</div>
-          <button class="btn btn-outline" style="width:auto;" onclick="toggleEdit()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Modifier
-          </button>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-outline" id="btn-cancel-edit" style="width:auto;display:none;" onclick="cancelEditInfos()">Annuler</button>
+            <button class="btn btn-accent" id="btn-save-edit" style="width:auto;display:none;margin-bottom:0;" onclick="saveInfos()">Enregistrer</button>
+            <button class="btn btn-outline" id="btn-toggle-edit" style="width:auto;" onclick="toggleEdit()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Modifier
+            </button>
+          </div>
         </div>
         <div class="info-grid">
           <div class="info-item"><div class="info-label">Prénom</div><div class="info-value">Marie</div></div>
@@ -312,6 +336,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
           <div class="info-item"><div class="info-label">Commune</div><div class="info-value">Strassen · L-8030</div></div>
           <div class="info-item"><div class="info-label">N° client</div><div class="info-value" style="color:var(--accent);font-family:'Norwester',sans-serif;">#1001</div></div>
           <div class="info-item"><div class="info-label">Date inscription</div><div class="info-value">15 janvier 2025</div></div>
+          <div class="info-item"><div class="info-label">Client depuis le</div><div class="info-value">15 janvier 2025</div></div>
         </div>
       </div>
 
@@ -329,9 +354,9 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
       <div class="card">
         <div class="card-head"><div class="card-title">Personnes autorisées</div>
-          <button class="btn btn-outline" style="width:auto;">+ Ajouter</button>
+          <button class="btn btn-outline" id="btn-add-personne" style="width:auto;display:none;" onclick="addPersonneRow()">+ Ajouter</button>
         </div>
-        <div class="info-grid">
+        <div class="info-grid" id="personnes-autorisees-content">
           <div class="info-item"><div class="info-label">Conjoint(e)</div><div class="info-value">Thomas Dupont · +352 621 000 222</div></div>
           <div class="info-item"><div class="info-label">Vétérinaire</div><div class="info-value">Dr. Fischer · Strassen · +352 26 000 333</div></div>
         </div>
@@ -398,15 +423,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
             <thead><tr>
               <th>Service</th><th>Chien(s)</th><th>Créneau</th><th>Récurrence</th><th>Statut</th><th></th>
             </tr></thead>
-            <tbody>
-              <tr>
-                <td class="td-main">Dog Walking</td>
-                <td>Max + Luna</td>
-                <td>Matin · Lun/Mer/Ven</td>
-                <td>Jusqu'au 31 août</td>
-                <td><span class="badge b-green">Confirmé</span></td>
-                <td><button class="btn btn-outline" style="width:auto;padding:4px 10px;font-size:10px;">Modifier</button></td>
-              </tr>
+            <tbody id="tbody-resas-actives">
               <tr>
                 <td class="td-main">Day Care</td>
                 <td>Max</td>
@@ -425,10 +442,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
         <div class="table-wrap">
           <table>
             <thead><tr><th>Service</th><th>Chien(s)</th><th>Période</th><th>Séances</th><th>Statut</th></tr></thead>
-            <tbody>
-              <tr>
-                <td class="td-main">Dog Walking</td><td>Max + Luna</td><td>Mai 2026</td><td>20 séances</td><td><span class="badge b-muted">Terminé</span></td>
-              </tr>
+            <tbody id="tbody-resas-passees">
               <tr>
                 <td class="td-main">Boarding</td><td>Max + Luna</td><td>15–22 avr. 2026</td><td>7 nuits</td><td><span class="badge b-muted">Terminé</span></td>
               </tr>
@@ -437,6 +451,28 @@ tr:hover td { background: rgba(255,255,255,0.02); }
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><div class="card-title">Détails des annulations</div></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+          <div style="background:var(--s2);border-radius:8px;padding:10px 6px;text-align:center;">
+            <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;color:var(--red);" id="ann-total">0</div>
+            <div style="font-size:9.5px;color:var(--tf);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">Total annulé</div>
+          </div>
+          <div style="background:var(--s2);border-radius:8px;padding:10px 6px;text-align:center;">
+            <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;color:var(--amber);" id="ann-tardifs">0</div>
+            <div style="font-size:9.5px;color:var(--tf);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">Tardives</div>
+          </div>
+          <div style="background:var(--s2);border-radius:8px;padding:10px 6px;text-align:center;">
+            <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;color:var(--green);" id="ann-sans-frais">0</div>
+            <div style="font-size:9.5px;color:var(--tf);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">Clôturées sans frais</div>
+          </div>
+          <div style="background:var(--s2);border-radius:8px;padding:10px 6px;text-align:center;">
+            <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;" id="ann-gabriel">0</div>
+            <div style="font-size:9.5px;color:var(--tf);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">Annulées par Gabriel</div>
+          </div>
         </div>
       </div>
     </div>
@@ -490,8 +526,24 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
     <!-- ── ONGLET HISTORIQUE ── -->
     <div class="tab-panel" id="panel-historique">
-      <div class="card">
-        <div class="card-head"><div class="card-title">Dernières promenades</div></div>
+
+      <div class="g2-hist">
+        <div class="card" style="margin-bottom:0;">
+          <div class="card-head"><div class="card-title">Dernière promenade</div></div>
+          <div id="derniere-promenade">
+            <div class="hist-summary-row"><span>—</span><span>—</span></div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:0;">
+          <div class="card-head"><div class="card-title">Dernière visite à la pension</div></div>
+          <div id="derniere-pension">
+            <div class="hist-summary-row"><span>—</span><span>—</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="card-dernieres-infos">
+        <div class="card-head"><div class="card-title">Dernières infos</div></div>
         <div class="timeline-item">
           <div class="timeline-dot"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg></div>
           <div>
@@ -611,7 +663,7 @@ async function loadClient(id) {
     document.getElementById('s-email').textContent = c.email || '—';
     document.getElementById('s-tel').textContent = c.telephone || '—';
     document.getElementById('s-commune').textContent = c.commune || '—';
-    var since = c.created_at ? new Date(c.created_at).toLocaleDateString('fr-LU', { month: 'short', year: 'numeric' }) : '—';
+    var since = (c.client_depuis || c.created_at) ? new Date(c.client_depuis || c.created_at).toLocaleDateString('fr-LU', { month: 'short', year: 'numeric' }) : '—';
     document.getElementById('s-since').textContent = since;
     var typeLabel = c.client_fidele ? 'Fidèle' : 'Nouveau';
     var typeColor = c.client_fidele ? 'var(--green)' : 'var(--amber)';
@@ -631,7 +683,6 @@ async function loadClient(id) {
     var { data: chiens } = await db.from('chiens').select('*').eq('client_id', id).eq('actif', true);
     loadChiens(chiens || [], c.client_fidele);
     var nbChiens = chiens ? chiens.length : 0;
-    document.getElementById('stat-chiens').textContent = nbChiens;
     tags.innerHTML += '<span class="tag tag-accent">' + nbChiens + ' chien' + (nbChiens > 1 ? 's' : '') + '</span>';
 
     // 3. Réservations
@@ -640,6 +691,15 @@ async function loadClient(id) {
       .eq('client_id', id)
       .order('date_debut', { ascending: false });
     loadReservations(resas || []);
+
+    // Stats réservations / annulations (année en cours, toujours à jour)
+    var annee = new Date().getFullYear();
+    var nbReservations = resas ? resas.filter(function(r) { return r.date_debut && r.date_debut.startsWith(String(annee)); }).length : 0;
+    document.getElementById('stat-reservations').textContent = nbReservations;
+    document.getElementById('stat-reservations-label').textContent = 'Réservations ' + annee;
+    var nbAnnulations = resas ? resas.filter(function(r) { return r.statut === 'annule'; }).length : 0;
+    document.getElementById('stat-annulations').textContent = nbAnnulations;
+    loadAnnulationDetails(resas || []);
 
     // 4. Factures
     var { data: factures } = await db.from('factures')
@@ -652,9 +712,9 @@ async function loadClient(id) {
     if (nbImpayes > 0) document.getElementById('stat-factures').style.color = 'var(--red)';
 
     // 5. Stats revenus
-    var annee = new Date().getFullYear();
     var total = factures ? factures.filter(function(f) { return f.statut === 'payee' && f.periode && f.periode.startsWith(String(annee)); }).reduce(function(s, f) { return s + (parseFloat(f.total_ttc) || 0); }, 0) : 0;
     document.getElementById('stat-total').textContent = total.toLocaleString('fr-LU', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' €';
+    document.getElementById('stat-total-label').textContent = 'Total ' + annee;
 
     // 6. Notes
     if (c.notes_internes) {
@@ -668,22 +728,43 @@ async function loadClient(id) {
       .order('created_at', { ascending: false })
       .limit(20);
     loadHistorique(promenades || []);
-
-    // Stat promenades totales
-    var { count } = await db.from('promenades').select('*', { count: 'exact', head: true }).eq('client_id', id);
-    document.getElementById('stat-promenades').textContent = count || 0;
+    loadDerniereActivite(promenades || [], resas || []);
 
   } catch(e) {
     console.error('Erreur chargement fiche client:', e);
   }
 }
 
+var currentClient = null;
+var editMode = false;
+
+function getTarifValues(c) {
+  var def = c.client_fidele
+    ? { walking: 28, daycare: 55, boarding: 68, reduction: 50 }
+    : { walking: 30, daycare: 60, boarding: 75, reduction: 30 };
+  return {
+    walking:   (c.tarif_walking   != null) ? c.tarif_walking   : def.walking,
+    daycare:   (c.tarif_daycare   != null) ? c.tarif_daycare   : def.daycare,
+    boarding:  (c.tarif_boarding  != null) ? c.tarif_boarding  : def.boarding,
+    reduction: (c.tarif_reduction != null) ? c.tarif_reduction : def.reduction
+  };
+}
+
+function escapeAttr(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
 function loadInfos(c) {
+  currentClient = c;
+  editMode = false;
+  renderInfosDisplay(c);
+}
+
+function renderInfosDisplay(c) {
   var grid = document.querySelector('#panel-infos .info-grid');
   if (!grid) return;
-  var tarif = c.client_fidele
-    ? { walking: '28 €', daycare: '55 €', boarding: '68 €', reduction: '−50%' }
-    : { walking: '30 €', daycare: '60 €', boarding: '75 €', reduction: '−30%' };
+  var tarif = getTarifValues(c);
+  var depuis = c.client_depuis || c.created_at;
 
   grid.innerHTML =
     '<div class="info-item"><div class="info-label">Prénom</div><div class="info-value">' + (c.prenom || '—') + '</div></div>' +
@@ -693,7 +774,8 @@ function loadInfos(c) {
     '<div class="info-item"><div class="info-label">Adresse</div><div class="info-value">' + (c.adresse || '—') + '</div></div>' +
     '<div class="info-item"><div class="info-label">Commune</div><div class="info-value">' + (c.commune || '—') + '</div></div>' +
     '<div class="info-item"><div class="info-label">N° client</div><div class="info-value" style="color:var(--accent);font-family:\'Norwester\',sans-serif;">#' + c.numero_client + '</div></div>' +
-    '<div class="info-item"><div class="info-label">Inscription</div><div class="info-value">' + (c.created_at ? new Date(c.created_at).toLocaleDateString('fr-LU', { day: '2-digit', month: 'long', year: 'numeric' }) : '—') + '</div></div>';
+    '<div class="info-item"><div class="info-label">Date inscription</div><div class="info-value">' + (c.created_at ? new Date(c.created_at).toLocaleDateString('fr-LU', { day: '2-digit', month: 'long', year: 'numeric' }) : '—') + '</div></div>' +
+    '<div class="info-item"><div class="info-label">Client depuis le</div><div class="info-value">' + (depuis ? new Date(depuis).toLocaleDateString('fr-LU', { day: '2-digit', month: 'long', year: 'numeric' }) : '—') + '</div></div>';
 
   // Tarification
   var tarifGrid = document.querySelectorAll('#panel-infos .info-grid')[1];
@@ -701,10 +783,203 @@ function loadInfos(c) {
     tarifGrid.innerHTML =
       '<div class="info-item"><div class="info-label">Type</div><div class="info-value" style="color:' + (c.client_fidele ? 'var(--green)' : 'var(--amber)') + ';">' + (c.client_fidele ? 'Client fidèle' : 'Nouveau client') + '</div></div>' +
       '<div class="info-item"><div class="info-label">Zone</div><div class="info-value">' + (c.commune || '—') + ' · ' + (c.hors_zone ? 'Hors zone +5€' : 'Sans frais') + '</div></div>' +
-      '<div class="info-item"><div class="info-label">Dog Walking</div><div class="info-value">' + tarif.walking + ' / séance</div></div>' +
-      '<div class="info-item"><div class="info-label">Day Care</div><div class="info-value">' + tarif.daycare + ' / journée</div></div>' +
-      '<div class="info-item"><div class="info-label">Boarding</div><div class="info-value">' + tarif.boarding + ' / nuit</div></div>' +
-      '<div class="info-item"><div class="info-label">Réduction 2e chien</div><div class="info-value" style="color:var(--green);">' + tarif.reduction + '</div></div>';
+      '<div class="info-item"><div class="info-label">Dog Walking</div><div class="info-value">' + tarif.walking + ' € / séance</div></div>' +
+      '<div class="info-item"><div class="info-label">Day Care</div><div class="info-value">' + tarif.daycare + ' € / journée</div></div>' +
+      '<div class="info-item"><div class="info-label">Boarding</div><div class="info-value">' + tarif.boarding + ' € / nuit</div></div>' +
+      '<div class="info-item"><div class="info-label">Réduction 2e chien</div><div class="info-value" style="color:var(--green);">−' + tarif.reduction + '%</div></div>';
+  }
+
+  renderPersonnesDisplay(c.personnes_autorisees);
+}
+
+function renderPersonnesDisplay(personnes) {
+  var container = document.getElementById('personnes-autorisees-content');
+  if (!container) return;
+  if (!personnes || !personnes.length) {
+    container.innerHTML = '<div class="info-item" style="grid-column:1/-1;"><div class="info-value" style="color:var(--tf);">Aucune personne autorisée enregistrée.</div></div>';
+    return;
+  }
+  container.innerHTML = personnes.map(function(p) {
+    return '<div class="info-item"><div class="info-label">' + (p.role || '—') + '</div><div class="info-value">' + (p.details || '—') + '</div></div>';
+  }).join('');
+}
+
+function fieldHtml(label, id, value, type) {
+  return '<div class="info-item"><div class="info-label">' + label + '</div><input class="edit-input" type="' + (type || 'text') + '" id="' + id + '" value="' + escapeAttr(value) + '"></div>';
+}
+
+function numFieldHtml(label, id, value) {
+  return '<div class="info-item"><div class="info-label">' + label + '</div><input class="edit-input" type="number" step="0.5" id="' + id + '" value="' + value + '"></div>';
+}
+
+function renderInfosEdit(c) {
+  var tarif = getTarifValues(c);
+  var depuis = c.client_depuis || c.created_at;
+  var depuisVal = depuis ? new Date(depuis).toISOString().slice(0, 10) : '';
+
+  var grid = document.querySelector('#panel-infos .info-grid');
+  grid.innerHTML =
+    fieldHtml('Prénom', 'edit-prenom', c.prenom) +
+    fieldHtml('Nom', 'edit-nom', c.nom) +
+    fieldHtml('Email', 'edit-email', c.email, 'email') +
+    fieldHtml('Téléphone', 'edit-telephone', c.telephone) +
+    fieldHtml('Adresse', 'edit-adresse', c.adresse) +
+    fieldHtml('Commune', 'edit-commune', c.commune) +
+    '<div class="info-item"><div class="info-label">N° client</div><div class="info-value" style="color:var(--accent);font-family:\'Norwester\',sans-serif;">#' + c.numero_client + '</div></div>' +
+    '<div class="info-item"><div class="info-label">Date inscription</div><div class="info-value">' + (c.created_at ? new Date(c.created_at).toLocaleDateString('fr-LU', { day: '2-digit', month: 'long', year: 'numeric' }) : '—') + '</div></div>' +
+    '<div class="info-item"><div class="info-label">Client depuis le</div><input class="edit-input" type="date" id="edit-client-depuis" value="' + depuisVal + '"></div>';
+
+  var tarifGrid = document.querySelectorAll('#panel-infos .info-grid')[1];
+  if (tarifGrid) {
+    tarifGrid.innerHTML =
+      '<div class="info-item"><div class="info-label">Type</div><select class="edit-select" id="edit-client-fidele" onchange="onTypeChange()">' +
+        '<option value="true"' + (c.client_fidele ? ' selected' : '') + '>Client fidèle</option>' +
+        '<option value="false"' + (!c.client_fidele ? ' selected' : '') + '>Nouveau client</option>' +
+      '</select></div>' +
+      '<div class="info-item"><div class="info-label">Zone</div><select class="edit-select" id="edit-hors-zone">' +
+        '<option value="false"' + (!c.hors_zone ? ' selected' : '') + '>Sans frais</option>' +
+        '<option value="true"' + (c.hors_zone ? ' selected' : '') + '>Hors zone (+5€)</option>' +
+      '</select></div>' +
+      numFieldHtml('Dog Walking (€ / séance)', 'edit-tarif-walking', tarif.walking) +
+      numFieldHtml('Day Care (€ / journée)', 'edit-tarif-daycare', tarif.daycare) +
+      numFieldHtml('Boarding (€ / nuit)', 'edit-tarif-boarding', tarif.boarding) +
+      numFieldHtml('Réduction 2e chien (%)', 'edit-tarif-reduction', tarif.reduction);
+  }
+
+  renderPersonnesEdit(c.personnes_autorisees);
+}
+
+function onTypeChange() {
+  var fidele = document.getElementById('edit-client-fidele').value === 'true';
+  var def = fidele
+    ? { walking: 28, daycare: 55, boarding: 68, reduction: 50 }
+    : { walking: 30, daycare: 60, boarding: 75, reduction: 30 };
+  document.getElementById('edit-tarif-walking').value   = def.walking;
+  document.getElementById('edit-tarif-daycare').value   = def.daycare;
+  document.getElementById('edit-tarif-boarding').value  = def.boarding;
+  document.getElementById('edit-tarif-reduction').value = def.reduction;
+}
+
+function personneRowHtml(p) {
+  return '<div class="pa-row">' +
+    '<input class="edit-input" style="flex:0 0 38%;" placeholder="Rôle (ex: Conjoint(e), Vétérinaire)" value="' + escapeAttr(p && p.role) + '">' +
+    '<input class="edit-input" placeholder="Nom, téléphone, adresse..." value="' + escapeAttr(p && p.details) + '">' +
+    '<div class="pa-remove" onclick="this.parentElement.remove()">×</div>' +
+  '</div>';
+}
+
+function renderPersonnesEdit(personnes) {
+  var container = document.getElementById('personnes-autorisees-content');
+  if (!container) return;
+  var list = (personnes && personnes.length) ? personnes : [{ role: '', details: '' }];
+  var html = '<div id="pa-edit-rows" style="grid-column:1/-1;">';
+  list.forEach(function(p) { html += personneRowHtml(p); });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function addPersonneRow() {
+  var container = document.getElementById('pa-edit-rows');
+  if (!container) return;
+  container.insertAdjacentHTML('beforeend', personneRowHtml({ role: '', details: '' }));
+}
+
+function collectPersonnesRows() {
+  var rows = document.querySelectorAll('#pa-edit-rows .pa-row');
+  var result = [];
+  rows.forEach(function(row) {
+    var inputs = row.querySelectorAll('input');
+    var role = inputs[0].value.trim();
+    var details = inputs[1].value.trim();
+    if (role || details) result.push({ role: role, details: details });
+  });
+  return result;
+}
+
+function toggleEdit() {
+  if (!currentClient) return;
+  editMode = true;
+  renderInfosEdit(currentClient);
+  document.getElementById('btn-toggle-edit').style.display = 'none';
+  document.getElementById('btn-cancel-edit').style.display = '';
+  document.getElementById('btn-save-edit').style.display = '';
+  document.getElementById('btn-add-personne').style.display = '';
+}
+
+function cancelEditInfos() {
+  editMode = false;
+  renderInfosDisplay(currentClient);
+  document.getElementById('btn-toggle-edit').style.display = '';
+  document.getElementById('btn-cancel-edit').style.display = 'none';
+  document.getElementById('btn-save-edit').style.display = 'none';
+  document.getElementById('btn-add-personne').style.display = 'none';
+}
+
+function updateSidebarFromClient(c) {
+  var initials = (c.prenom[0] + c.nom[0]).toUpperCase();
+  document.getElementById('sidebar-avatar').textContent = initials;
+  document.getElementById('sidebar-name').textContent = c.prenom + ' ' + c.nom;
+  document.getElementById('s-email').textContent = c.email || '—';
+  document.getElementById('s-tel').textContent = c.telephone || '—';
+  document.getElementById('s-commune').textContent = c.commune || '—';
+  var since = c.client_depuis || c.created_at;
+  document.getElementById('s-since').textContent = since ? new Date(since).toLocaleDateString('fr-LU', { month: 'short', year: 'numeric' }) : '—';
+  var typeLabel = c.client_fidele ? 'Fidèle' : 'Nouveau';
+  document.getElementById('s-type').textContent = typeLabel;
+  document.getElementById('s-type').style.color = c.client_fidele ? 'var(--green)' : 'var(--amber)';
+  document.getElementById('s-zone').textContent = c.hors_zone ? 'Hors zone +5€' : 'Sans frais';
+
+  var tags = document.getElementById('sidebar-tags');
+  var dogTag = tags.querySelector('.tag-accent');
+  tags.innerHTML = '<span class="tag ' + (c.client_fidele ? 'tag-green' : 'tag-amber') + '">' + typeLabel + '</span>';
+  if (c.hors_zone) tags.innerHTML += '<span class="tag tag-amber">Hors zone</span>';
+  if (dogTag) tags.innerHTML += dogTag.outerHTML;
+}
+
+async function saveInfos() {
+  var btn = document.getElementById('btn-save-edit');
+  var orig = btn.textContent;
+  btn.textContent = '...';
+  btn.disabled = true;
+  try {
+    var update = {
+      prenom: document.getElementById('edit-prenom').value.trim(),
+      nom: document.getElementById('edit-nom').value.trim(),
+      email: document.getElementById('edit-email').value.trim(),
+      telephone: document.getElementById('edit-telephone').value.trim(),
+      adresse: document.getElementById('edit-adresse').value.trim(),
+      commune: document.getElementById('edit-commune').value.trim(),
+      client_depuis: document.getElementById('edit-client-depuis').value || null,
+      client_fidele: document.getElementById('edit-client-fidele').value === 'true',
+      hors_zone: document.getElementById('edit-hors-zone').value === 'true',
+      tarif_walking: parseFloat(document.getElementById('edit-tarif-walking').value),
+      tarif_daycare: parseFloat(document.getElementById('edit-tarif-daycare').value),
+      tarif_boarding: parseFloat(document.getElementById('edit-tarif-boarding').value),
+      tarif_reduction: parseFloat(document.getElementById('edit-tarif-reduction').value),
+      personnes_autorisees: collectPersonnesRows()
+    };
+    ['tarif_walking', 'tarif_daycare', 'tarif_boarding', 'tarif_reduction'].forEach(function(k) {
+      if (isNaN(update[k])) update[k] = null;
+    });
+
+    var { error } = await db.from('clients').update(update).eq('id', clientId);
+    if (error) throw error;
+
+    Object.assign(currentClient, update);
+    editMode = false;
+    renderInfosDisplay(currentClient);
+    updateSidebarFromClient(currentClient);
+
+    document.getElementById('btn-toggle-edit').style.display = '';
+    document.getElementById('btn-cancel-edit').style.display = 'none';
+    document.getElementById('btn-save-edit').style.display = 'none';
+    document.getElementById('btn-add-personne').style.display = 'none';
+  } catch(e) {
+    console.error('Erreur sauvegarde infos client:', e);
+    alert("Erreur lors de l'enregistrement. Vérifiez que les colonnes client_depuis, tarif_walking, tarif_daycare, tarif_boarding, tarif_reduction et personnes_autorisees existent dans la table clients (migration SQL).");
+  } finally {
+    btn.textContent = orig;
+    btn.disabled = false;
   }
 }
 
@@ -757,11 +1032,22 @@ function loadReservations(resas) {
     return '<tr><td class="td-main">' + svc + '</td><td>' + dates + '</td><td>' + (r.creneau || '—') + '</td><td><span class="badge ' + badge + '">' + label + '</span></td><td><button class="btn btn-outline" style="width:auto;padding:4px 10px;font-size:10px;">Voir</button></td></tr>';
   }
 
-  var tbody1 = document.querySelector('#panel-reservations .card:first-child table tbody');
+  var tbody1 = document.getElementById('tbody-resas-actives');
   if (tbody1) tbody1.innerHTML = actives.length ? actives.map(row).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--td);padding:16px;">Aucune réservation active</td></tr>';
 
-  var tbody2 = document.querySelector('#panel-reservations .card:last-child table tbody');
+  var tbody2 = document.getElementById('tbody-resas-passees');
   if (tbody2) tbody2.innerHTML = passees.length ? passees.map(row).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--td);padding:16px;">Aucun historique</td></tr>';
+}
+
+function loadAnnulationDetails(resas) {
+  var annulations = resas.filter(function(r) { return r.statut === 'annule'; });
+  var tardifs    = annulations.filter(function(r) { return r.annulation_tardive; }).length;
+  var sansFrais  = annulations.filter(function(r) { return (r.facture_pourcentage || 0) === 0; }).length;
+  var parGabriel = annulations.filter(function(r) { return r.annule_par === 'gabriel'; }).length;
+  document.getElementById('ann-total').textContent     = annulations.length;
+  document.getElementById('ann-tardifs').textContent   = tardifs;
+  document.getElementById('ann-sans-frais').textContent = sansFrais;
+  document.getElementById('ann-gabriel').textContent   = parGabriel;
 }
 
 function loadFactures(factures) {
@@ -783,7 +1069,7 @@ function loadFactures(factures) {
 }
 
 function loadHistorique(promenades) {
-  var container = document.querySelector('#panel-historique .card');
+  var container = document.getElementById('card-dernieres-infos');
   if (!container) return;
   var head = container.querySelector('.card-head');
   if (promenades.length === 0) {
@@ -806,6 +1092,42 @@ function loadHistorique(promenades) {
   container.innerHTML = html;
 }
 
+function loadDerniereActivite(promenades, resas) {
+  // ── Dernière promenade ──
+  var elWalk = document.getElementById('derniere-promenade');
+  var lastWalk = promenades.find(function(p) { return p.reservations && p.reservations.service === 'walking'; });
+  if (lastWalk) {
+    var dateW = lastWalk.created_at ? new Date(lastWalk.created_at).toLocaleDateString('fr-LU', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : '—';
+    var rangerW = lastWalk.reservations.ranger_nom || 'Gabriel';
+    var rows = '<div class="hist-summary-row"><span>Date</span><span>' + dateW + '</span></div>'
+      + '<div class="hist-summary-row"><span>Ranger</span><span>' + rangerW + '</span></div>';
+    if (lastWalk.distance_km) rows += '<div class="hist-summary-row"><span>Distance</span><span>' + lastWalk.distance_km + ' km</span></div>';
+    if (lastWalk.duree_min) rows += '<div class="hist-summary-row"><span>Durée</span><span>' + lastWalk.duree_min + ' min</span></div>';
+    if (lastWalk.statut_presence) rows += '<div class="hist-summary-row"><span>Présence</span><span>' + lastWalk.statut_presence + '</span></div>';
+    elWalk.innerHTML = rows;
+  } else {
+    elWalk.innerHTML = '<div class="hist-summary-row"><span>Aucune promenade enregistrée</span><span></span></div>';
+  }
+
+  // ── Dernière visite à la pension ──
+  var elBoard = document.getElementById('derniere-pension');
+  var lastBoarding = resas.filter(function(r) { return r.service === 'boarding' && r.statut === 'termine'; })
+    .sort(function(a, b) { return new Date(b.date_fin) - new Date(a.date_fin); })[0];
+  if (lastBoarding) {
+    var debut = lastBoarding.date_debut ? new Date(lastBoarding.date_debut).toLocaleDateString('fr-LU', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+    var fin = lastBoarding.date_fin ? new Date(lastBoarding.date_fin).toLocaleDateString('fr-LU', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+    var nuits = '—';
+    if (lastBoarding.date_debut && lastBoarding.date_fin) {
+      nuits = Math.round((new Date(lastBoarding.date_fin) - new Date(lastBoarding.date_debut)) / 86400000);
+    }
+    elBoard.innerHTML = '<div class="hist-summary-row"><span>Période</span><span>' + debut + ' → ' + fin + '</span></div>'
+      + '<div class="hist-summary-row"><span>Nuits</span><span>' + nuits + '</span></div>'
+      + '<div class="hist-summary-row"><span>Statut</span><span>Terminé</span></div>';
+  } else {
+    elBoard.innerHTML = '<div class="hist-summary-row"><span>Aucune visite à la pension enregistrée</span><span></span></div>';
+  }
+}
+
 async function saveNotes() {
   var notes = document.getElementById('notes-content').value;
   var btn = event.target.closest('button');
@@ -823,10 +1145,6 @@ async function saveNotes() {
     btn.style.background = '#5ec97a';
   }
   setTimeout(function() { btn.innerHTML = orig; btn.style.background = ''; }, 2000);
-}
-
-function toggleEdit() {
-  alert('Modification disponible prochainement.');
 }
 </script>
 
