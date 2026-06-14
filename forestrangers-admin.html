@@ -1977,13 +1977,35 @@ function showToastAdmin(msg, type) {
 var allClients = [];
 
 async function loadClients() {
+  var container = document.getElementById('clients-list');
   try {
     var { data, error } = await db.from('clients')
-      .select('id, prenom, nom, numero_client, commune, client_fidele, hors_zone, is_test, chiens(id, prenom, race)')
+      .select('id, prenom, nom, numero_client, commune, client_fidele, hors_zone, is_test')
       .eq('actif', true)
       .order('nom', { ascending: true });
 
-    if (error || !data) { console.error('loadClients error:', error); return; }
+    if (error) {
+      console.error('loadClients error:', error);
+      if (container) container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--red);font-size:12px;">Erreur de chargement des clients : ' + (error.message || JSON.stringify(error)) + '</div>';
+      return;
+    }
+    data = data || [];
+
+    // Charger les chiens séparément (évite de dépendre d'une relation FK déclarée pour l'embedding)
+    var chiensMap = {};
+    if (data.length > 0) {
+      var ids = data.map(function(c) { return c.id; });
+      var { data: chiens, error: errChiens } = await db.from('chiens')
+        .select('id, prenom, nom, race, client_id')
+        .eq('actif', true)
+        .in('client_id', ids);
+      if (errChiens) console.error('loadClients (chiens) error:', errChiens);
+      (chiens || []).forEach(function(d) {
+        if (!chiensMap[d.client_id]) chiensMap[d.client_id] = [];
+        chiensMap[d.client_id].push(d);
+      });
+    }
+    data.forEach(function(c) { c.chiens = chiensMap[c.id] || []; });
 
     allClients = data;
     renderClients(data);
@@ -1999,6 +2021,7 @@ async function loadClients() {
 
   } catch(e) {
     console.error('Erreur chargement clients:', e);
+    if (container) container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--red);font-size:12px;">Erreur de chargement des clients (voir console).</div>';
   }
 }
 
