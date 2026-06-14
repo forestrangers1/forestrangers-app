@@ -72,17 +72,14 @@ html.light .sidebar { background: #ffffff; }
 html.light .brand-name { color: #3d4429; }
 html.light .topbar  { background: #ffffff; }
 html.light .tbl td:first-child { color: var(--text); }
-html.light .dog-note { background: #eef0e8; }
 html.light #planning-container { border-color: rgba(0,0,0,0.08); }
-html.light .ranger-card,
-html.light .dog-card { background: #eef0e8; }
 html.light .slot { background: #eef0e8; }
 
 /* Planning adapté au mode clair : blanc, cohérent avec le reste du design */
 html.light .week-slot         { background: #ffffff !important; color: var(--text) !important; border-color: var(--border) !important; }
 html.light .week-slot.cancel  { background: rgba(224,90,90,0.08) !important; }
 html.light .week-slot.boarding{ background: rgba(90,154,224,0.08) !important; }
-html.light .week-head.other   { background: #ffffff !important; border-color: var(--border) !important; }
+html.light .week-head.other   { background: var(--k700) !important; border-color: var(--border) !important; }
 html.light .week-head.today   { background: rgba(255,95,31,0.1) !important; }
 html.light .week-head.weekend { background: rgba(90,154,224,0.1) !important; }
 html.light .ws-title  { color: var(--text) !important; }
@@ -251,8 +248,8 @@ html.light .brand-name .rangers { color: var(--accent); }
   /* Stats en 2 colonnes */
   .stats-row { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
 
-  /* Planning en colonne unique */
-  #planning-grid { grid-template-columns: repeat(3,1fr) !important; gap: 6px !important; }
+  /* Planning : on garde le nombre de colonnes défini en JS (1=jour, 7=semaine/mois), juste un gap réduit */
+  #planning-grid { gap: 6px !important; }
 
   /* Cards pleine largeur */
   .card { margin-bottom: 10px; }
@@ -552,17 +549,17 @@ html.light .week-head.weekend .month-count { color: #5a9ae0 !important; }
 .ws-meta  { font-size: 10.5px; color: rgba(236,238,230,0.4); }
 
 /* ─── DOG CARD ─── */
-.dog-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; }
+.dog-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; }
 .dog-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .dog-card-name { font-family:Norwester,sans-serif; font-size:14px; font-weight:800; }
 .dog-prop { display: flex; justify-content: space-between; font-size: 11.5px; padding: 6px 0; border-top: 1px solid var(--border); }
 .dog-prop:first-of-type { border-top: none; }
 .dog-prop-key { color: var(--text-faint); }
-.dog-note { margin-top: 8px; padding: 8px 10px; background: var(--k600); border-radius: 6px; font-size: 11px; color: var(--text-dim); line-height: 1.5; }
+.dog-note { margin-top: 8px; padding: 8px 10px; background: var(--surface2); border-radius: 6px; font-size: 11px; color: var(--text-dim); line-height: 1.5; }
 
 /* ─── RANGER CARD ─── */
 .ranger-card {
-  background: var(--surface2); border: 1px solid var(--border);
+  background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius-lg); padding: 14px 16px;
 }
 .ranger-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
@@ -964,9 +961,9 @@ textarea.form-control { resize: vertical; }
         </div>
 
         <!-- Navigation -->
-        <button class="btn btn-outline" style="padding:6px 10px;" onclick="naviguerPlanning(-1)">←</button>
-        <button class="btn btn-outline" style="padding:6px 10px;font-size:11px;" onclick="naviguerPlanning(0)">Auj.</button>
-        <button class="btn btn-outline" style="padding:6px 10px;" onclick="naviguerPlanning(1)">→</button>
+        <button class="btn btn-outline" style="padding:6px 10px;background:var(--surface);" onclick="naviguerPlanning(-1)">←</button>
+        <button class="btn btn-outline" style="padding:6px 10px;font-size:11px;background:var(--surface);" onclick="naviguerPlanning(0)">Auj.</button>
+        <button class="btn btn-outline" style="padding:6px 10px;background:var(--surface);" onclick="naviguerPlanning(1)">→</button>
         <span id="planning-date-label" style="font-family:Norwester,sans-serif;font-size:12px;color:var(--text-dim);"></span>
 
         <!-- Filtres -->
@@ -2064,7 +2061,7 @@ var vuePlanning = 'semaine';
 var planningOffset = 0;
 var JOURS_FR = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
 var MOIS_FR  = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-var SVC_COLORS = { walking:'#ff5f1f', daycare:'#5ec97a', boarding:'#5a9ae0' };
+var SVC_COLORS = { walking:'#5ec97a', daycare:'#ff5f1f', boarding:'#5a9ae0' };
 var SVC_NAMES  = { walking:'Walking', daycare:'Day Care', boarding:'Boarding' };
 var CRENEAUX   = { matin:'09h00', midi:'12h00', apmidi:'14h30' };
 
@@ -2081,6 +2078,11 @@ function formatDateFR(dateStr) {
 }
 
 function formatDateISO(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function daysBetween(a, b) {
+  var ua = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
+  var ub = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
+  return Math.round((ua - ub) / 86400000);
+}
 function formatDateLabel(d) { return d.toLocaleDateString('fr-LU',{weekday:'short',day:'numeric',month:'short'}); }
 function goWeek(offset) { planningOffset += offset; loadPlanning(); }
 
@@ -2213,14 +2215,15 @@ async function loadPlanning() {
 function renderPlanningSemaine(resas, clientsMap, debut, today) {
   var grid = document.getElementById('planning-grid');
   grid.style.gridTemplateColumns = 'repeat(7,1fr)';
-  var mon = new Date(debut+'T00:00:00'); var html='';
+  var mon = new Date(debut+'T00:00:00'); var todayMid = new Date(today+'T00:00:00'); var html='';
   for (var i=0;i<7;i++) {
     var day=new Date(mon); day.setDate(mon.getDate()+i);
     var ds=formatDateISO(day);
     var isT=ds===today; var isWE=day.getDay()===0||day.getDay()===6;
     var hc=isT?'week-head today':isWE?'week-head weekend':'week-head other';
     var dr=filterResasForDay(resas,ds);
-    html+='<div class="week-col" onclick="if(event.target===this||event.target.classList.contains(\'week-col\')){vuePlanning=\'jour\';planningOffset='+Math.round((day-new Date())/86400000)+';loadPlanning();}" style="cursor:pointer;">';
+    var dayOffset=daysBetween(day,todayMid);
+    html+='<div class="week-col" onclick="if(event.target===this||event.target.classList.contains(\'week-col\')){vuePlanning=\'jour\';planningOffset='+dayOffset+';loadPlanning();}" style="cursor:pointer;">';
     html+='<div class="'+hc+'"><div class="week-day">'+JOURS_FR[day.getDay()]+'</div><div class="week-num">'+day.getDate()+'</div></div>';
     if (!dr.length) html+='<div style="padding:8px 4px;text-align:center;font-size:10px;color:var(--text-faint);">—</div>';
     else dr.forEach(function(r){html+=slotHtml(r,clientsMap,ds);});
@@ -2267,13 +2270,13 @@ function renderPlanningMois(resas, clientsMap, debut, fin, today) {
   var first=new Date(debut+'T00:00:00');
   var offset=first.getDay()===0?6:first.getDay()-1;
   for(var i=0;i<offset;i++) html+='<div></div>';
-  var cur=new Date(first); var last=new Date(fin+'T00:00:00');
+  var cur=new Date(first); var last=new Date(fin+'T00:00:00'); var todayMid=new Date(today+'T00:00:00');
   while(cur<=last) {
     var ds=formatDateISO(cur); var dr=filterResasForDay(resas,ds);
     var isT=ds===today; var nbR=dr.length;
     var isWE=cur.getDay()===0||cur.getDay()===6;
     var cols=[...new Set(dr.map(function(r){return SVC_COLORS[r.service]||'#ff5f1f';}))];
-    var off=Math.round((cur-new Date())/86400000);
+    var off=daysBetween(cur,todayMid);
     var hc = isT?'week-head month-cell today':isWE?'week-head month-cell weekend':'week-head month-cell other';
     html+='<div class="'+hc+'" onclick="vuePlanning=\'jour\';planningOffset='+off+';loadPlanning();">';
     html+='<div class="week-num">'+cur.getDate()+'</div>';
