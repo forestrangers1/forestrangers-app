@@ -78,18 +78,18 @@ html.light .ranger-card,
 html.light .dog-card { background: #eef0e8; }
 html.light .slot { background: #eef0e8; }
 
-/* Planning toujours en mode nuit — override light */
-html.light .week-slot         { background: #252a1a !important; color: #eceee6 !important; }
-html.light .week-slot.cancel  { background: rgba(224,90,90,0.12) !important; }
-html.light .week-slot.boarding{ background: rgba(90,154,224,0.12) !important; }
-html.light .week-head.other   { background: #2f3520 !important; }
-html.light .week-head.today   { background: rgba(255,95,31,0.18) !important; }
-html.light .week-head.weekend { background: rgba(90,154,224,0.12) !important; }
-html.light .ws-title  { color: #eceee6 !important; }
-html.light .ws-meta   { color: rgba(236,238,230,0.45) !important; }
+/* Planning adapté au mode clair : blanc, cohérent avec le reste du design */
+html.light .week-slot         { background: #ffffff !important; color: var(--text) !important; border-color: var(--border) !important; }
+html.light .week-slot.cancel  { background: rgba(224,90,90,0.08) !important; }
+html.light .week-slot.boarding{ background: rgba(90,154,224,0.08) !important; }
+html.light .week-head.other   { background: #ffffff !important; border-color: var(--border) !important; }
+html.light .week-head.today   { background: rgba(255,95,31,0.1) !important; }
+html.light .week-head.weekend { background: rgba(90,154,224,0.1) !important; }
+html.light .ws-title  { color: var(--text) !important; }
+html.light .ws-meta   { color: var(--text-faint) !important; }
 html.light .ws-time   { color: #ff5f1f !important; }
-html.light .week-day  { color: rgba(236,238,230,0.45) !important; }
-html.light .week-num  { color: #eceee6 !important; }
+html.light .week-day  { color: var(--text-faint) !important; }
+html.light .week-num  { color: var(--text) !important; }
 html.light .week-head.today .week-num  { color: #ff5f1f !important; }
 html.light .week-head.weekend .week-num{ color: #5a9ae0 !important; }
 
@@ -533,7 +533,7 @@ html.light .brand-name .rangers { color: var(--accent); }
 .month-count { font-size: 10px; font-weight: 700; margin-top: 2px; color: #eceee6; }
 .week-head.today .month-count { color: #ff5f1f; }
 .week-head.weekend .month-count { color: #5a9ae0; }
-html.light .month-count { color: #eceee6 !important; }
+html.light .month-count { color: var(--text-dim) !important; }
 html.light .week-head.today .month-count { color: #ff5f1f !important; }
 html.light .week-head.weekend .month-count { color: #5a9ae0 !important; }
 .week-slot {
@@ -971,24 +971,24 @@ textarea.form-control { resize: vertical; }
 
         <!-- Filtres -->
         <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;">
-          <select id="filtre-service" onchange="loadPlanning()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 8px;color:var(--text-dim);font-family:'Instrument Sans',sans-serif;font-size:12px;outline:none;">
+          <select id="filtre-service" onchange="loadPlanning()" style="background:#ffffff;border:1px solid var(--border);border-radius:8px;padding:6px 8px;color:var(--text-dim);font-family:'Instrument Sans',sans-serif;font-size:12px;outline:none;">
             <option value="">Tous services</option>
             <option value="walking">Dog Walking</option>
             <option value="daycare">Day Care</option>
             <option value="boarding">Boarding</option>
           </select>
-          <select id="filtre-ranger" onchange="loadPlanning()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 8px;color:var(--text-dim);font-family:'Instrument Sans',sans-serif;font-size:12px;outline:none;">
+          <select id="filtre-ranger" onchange="loadPlanning()" style="background:#ffffff;border:1px solid var(--border);border-radius:8px;padding:6px 8px;color:var(--text-dim);font-family:'Instrument Sans',sans-serif;font-size:12px;outline:none;">
             <option value="">Tous rangers</option>
           </select>
-          <input type="text" id="filtre-client" placeholder="Client / Chien..." oninput="loadPlanning()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text-dim);font-family:'Instrument Sans',sans-serif;font-size:12px;outline:none;width:140px;">
+          <input type="text" id="filtre-client" placeholder="Client / Chien..." oninput="loadPlanning()" style="background:#ffffff;border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text-dim);font-family:'Instrument Sans',sans-serif;font-size:12px;outline:none;width:140px;">
           <button class="btn btn-accent" style="padding:6px 12px;font-size:11px;" onclick="ouvrirNouvelleReservationAdmin()">+ Reservation</button>
         </div>
       </div>
 
       <!-- Contenu planning -->
-      <div style="background:var(--bg);border-radius:14px;padding:12px;border:1px solid rgba(255,255,255,0.07);" id="planning-container">
+      <div style="background:var(--surface);border-radius:14px;padding:12px;border:1px solid rgba(255,255,255,0.07);" id="planning-container">
         <div id="planning-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;">
-          <div style="grid-column:1/-1;text-align:center;padding:40px;color:rgba(236,238,230,0.3);font-size:13px;">Chargement...</div>
+          <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-faint);font-size:13px;">Chargement...</div>
         </div>
       </div>
     </div>
@@ -1393,7 +1393,7 @@ if (localStorage.getItem('fr-theme') === 'light') {
 const titles = {
   dashboard:    ['Tableau de bord', 'Vue générale · Lundi 9 juin 2026'],
   planning:     ['Planning',         'Semaine du 9 au 15 juin 2026'],
-  reservations: ['Réservations',     'Demandes et historique'],
+  reservations: ['Reservations',     'Demandes et historique'],
   clients:      ['Clients',          '24 clients actifs'],
   chiens:       ['Chiens',           'Fiches individuelles'],
   staff:        ['Staff & Rangers',  'Équipe terrain'],
@@ -1401,7 +1401,7 @@ const titles = {
   stats:        ['Statistiques',     'Performances 2026'],
   messages:     ['Messages',         'Communication clients'],
   invitation:   ['Invitations',       'Liens d\'inscription clients'],
-  parametres:   ['Paramètres',       'Tarifs & règles'],
+  parametres:   ['Parametres',       'Tarifs & règles'],
 };
 
 function nav(id, el) {
@@ -2069,7 +2069,7 @@ var SVC_NAMES  = { walking:'Walking', daycare:'Day Care', boarding:'Boarding' };
 var CRENEAUX   = { matin:'09h00', midi:'12h00', apmidi:'14h30' };
 
 // ─── Détail réservation ───
-var SVC_LABELS_FULL = { walking:'🐾 Dog Walking', daycare:'☀️ Day Care', boarding:'🏠 Boarding' };
+var SVC_LABELS_FULL = { walking:'Dog Walking', daycare:'Day Care', boarding:'Boarding' };
 var SVC_TARIFS  = { walking:'28€', daycare:'55€', boarding:'68€' };
 var CRENEAU_FULL = { matin:'Matin — 09h00', midi:'Midi — 12h00', apmidi:'Après-midi — 14h30' };
 var JOUR_LABELS = { lun:'Lun', mar:'Mar', mer:'Mer', jeu:'Jeu', ven:'Ven', sam:'Sam' };
@@ -2080,7 +2080,7 @@ function formatDateFR(dateStr) {
   return new Date(dateStr+'T00:00:00').toLocaleDateString('fr-LU',{day:'2-digit',month:'2-digit',year:'numeric'});
 }
 
-function formatDateISO(d) { return d.toISOString().split('T')[0]; }
+function formatDateISO(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function formatDateLabel(d) { return d.toLocaleDateString('fr-LU',{weekday:'short',day:'numeric',month:'short'}); }
 function goWeek(offset) { planningOffset += offset; loadPlanning(); }
 
@@ -2137,7 +2137,7 @@ function slotHtml(r, clientsMap, dateStr) {
 async function loadPlanning() {
   var grid = document.getElementById('planning-grid');
   if (!grid) return;
-  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:rgba(236,238,230,0.3);">Chargement...</div>';
+  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--text-faint);">Chargement...</div>';
   var today = formatDateISO(new Date());
   var now = new Date(); var debut, fin, labelText;
   if (vuePlanning==='jour') {
@@ -2206,7 +2206,7 @@ async function loadPlanning() {
     }
   } catch(e) {
     console.error(e);
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:rgba(236,238,230,0.3);">Aucune réservation ou erreur.</div>';
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--text-faint);">Aucune reservation ou erreur.</div>';
   }
 }
 
@@ -2222,7 +2222,7 @@ function renderPlanningSemaine(resas, clientsMap, debut, today) {
     var dr=filterResasForDay(resas,ds);
     html+='<div class="week-col" onclick="if(event.target===this||event.target.classList.contains(\'week-col\')){vuePlanning=\'jour\';planningOffset='+Math.round((day-new Date())/86400000)+';loadPlanning();}" style="cursor:pointer;">';
     html+='<div class="'+hc+'"><div class="week-day">'+JOURS_FR[day.getDay()]+'</div><div class="week-num">'+day.getDate()+'</div></div>';
-    if (!dr.length) html+='<div style="padding:8px 4px;text-align:center;font-size:10px;color:rgba(236,238,230,0.15);">—</div>';
+    if (!dr.length) html+='<div style="padding:8px 4px;text-align:center;font-size:10px;color:var(--text-faint);">—</div>';
     else dr.forEach(function(r){html+=slotHtml(r,clientsMap,ds);});
     html+='</div>';
   }
@@ -2240,7 +2240,7 @@ function renderPlanningJour(resas, clientsMap, dateStr, today) {
   var html='<div style="width:100%;">';
   html+='<div class="'+hc+'" style="border-radius:10px 10px 0 0;padding:12px 16px;margin-bottom:8px;">';
   html+='<div class="week-day">'+JOURS_FR[day.getDay()]+'</div><div class="week-num" style="font-size:28px;">'+day.getDate()+' '+MOIS_FR[day.getMonth()]+'</div></div>';
-  if (!dr.length) html+='<div style="text-align:center;padding:32px;color:rgba(236,238,230,0.3);font-size:13px;">Aucune réservation ce jour</div>';
+  if (!dr.length) html+='<div style="text-align:center;padding:32px;color:var(--text-faint);font-size:13px;">Aucune reservation ce jour</div>';
   else dr.forEach(function(r) {
     var color=SVC_COLORS[r.service]||'#ff5f1f';
     var svc=SVC_NAMES[r.service]||r.service;
@@ -2248,12 +2248,12 @@ function renderPlanningJour(resas, clientsMap, dateStr, today) {
     var c=r.client_id?clientsMap[r.client_id]:null;
     var client=c?c.prenom+' '+c.nom:'—';
     var sc=r.statut==='en_attente'?'#f0b429':color;
-    html+='<div style="background:#252a1a;border:1px solid rgba(255,255,255,0.08);border-left:3px solid '+color+';border-radius:10px;padding:14px 16px;margin-bottom:8px;cursor:pointer;" onclick="openResaDetail(\''+r.id+'\',\''+dateStr+'\')">';
+    html+='<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid '+color+';border-radius:10px;padding:14px 16px;margin-bottom:8px;cursor:pointer;" onclick="openResaDetail(\''+r.id+'\',\''+dateStr+'\')">';
     html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">';
     html+='<div style="font-family:Norwester,sans-serif;font-size:14px;color:'+color+';">'+cr+' · '+svc+'</div>';
     html+='<span style="font-size:10px;background:'+(r.statut==='confirme'?'rgba(94,201,122,0.12)':r.statut==='en_attente'?'rgba(240,180,41,0.12)':'rgba(224,90,90,0.12)')+';color:'+(r.statut==='confirme'?'#5ec97a':r.statut==='en_attente'?'#f0b429':'#e05a5a')+';padding:3px 8px;border-radius:10px;font-family:Norwester,sans-serif;font-weight:800;">'+(r.statut==='confirme'?'Confirme':r.statut==='en_attente'?'En attente':'Annule')+'</span>';
-    html+='</div><div style="font-size:13px;font-weight:600;color:#eceee6;">'+client+'</div>';
-    html+='<div style="font-size:12px;color:rgba(236,238,230,0.45);margin-top:2px;">👤 '+(r.ranger_nom||'Gabriel')+'</div></div>';
+    html+='</div><div style="font-size:13px;font-weight:600;color:var(--text);">'+client+'</div>';
+    html+='<div style="font-size:12px;color:var(--text-faint);margin-top:2px;">👤 '+(r.ranger_nom||'Gabriel')+'</div></div>';
   });
   html+='</div>';
   grid.innerHTML=html;
@@ -2928,9 +2928,9 @@ document.addEventListener('click', function(e) {
       <div class="form-group">
         <label class="form-label">Service</label>
         <select class="form-control" id="resa-service" style="width:100%;" onchange="updateResaFields()">
-          <option value="walking">🐾 Dog Walking — 28€</option>
-          <option value="daycare">☀️ Day Care — 55€</option>
-          <option value="boarding">🏠 Boarding — 68€</option>
+          <option value="walking">Dog Walking — 28€</option>
+          <option value="daycare">Day Care — 55€</option>
+          <option value="boarding">Boarding — 68€</option>
         </select>
       </div>
       <div class="form-group">
