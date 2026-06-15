@@ -636,11 +636,6 @@ function periodeLabel(periode) {
   var mois = parseInt(parts[1], 10);
   return MOIS_FR[mois - 1].charAt(0).toUpperCase() + MOIS_FR[mois - 1].slice(1) + ' ' + parts[0];
 }
-function daysBetween(a, b) {
-  var ua = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
-  var ub = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
-  return Math.round((ua - ub) / 86400000);
-}
 
 // ════════════════════════════════════════
 // ── TARIFS (alignés sur la fiche client) ──
@@ -656,23 +651,17 @@ function getTarifs(c) {
     reduction: c.tarif_reduction != null ? parseFloat(c.tarif_reduction) : def.reduction
   };
 }
-function tarifEffectif(service, chienId, tarifs, secondDogId) {
-  var base = tarifs[service] || 0;
-  if (chienId && secondDogId && chienId === secondDogId) {
-    return { prix: base * (1 - tarifs.reduction / 100), reduit: true };
-  }
-  return { prix: base, reduit: false };
-}
-
-// Compte le nombre d'occurrences facturables d'une réservation sur une période donnée
-function countOccurrences(r, periodStart, periodEnd) {
+// Liste des dates (ou nuits, pour le boarding) facturables d'une réservation sur une période donnée
+function occurrenceDates(r, periodStart, periodEnd) {
+  var dates = [];
   if (r.service === 'boarding') {
-    if (!r.date_debut || !r.date_fin) return 0;
+    if (!r.date_debut || !r.date_fin) return dates;
     var s = new Date(r.date_debut + 'T00:00:00');
     var e = new Date(r.date_fin + 'T00:00:00');
-    var rs = s > periodStart ? s : periodStart;
-    var re = e < periodEnd ? e : periodEnd;
-    return Math.max(0, daysBetween(re, rs));
+    for (var d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
+      if (d >= periodStart && d <= periodEnd) dates.push(formatDateISO(d));
+    }
+    return dates;
   }
   var exclues = (r.dates_exclues || '').split(',').map(function(x) { return x.trim(); }).filter(Boolean);
   if (r.jours_recurrence) {
@@ -682,15 +671,15 @@ function countOccurrences(r, periodStart, periodEnd) {
     if (rangeStart < periodStart) rangeStart = new Date(periodStart);
     var endLimit = r.date_fin_recurrence ? new Date(r.date_fin_recurrence + 'T00:00:00') : periodEnd;
     var rangeEnd = endLimit < periodEnd ? endLimit : periodEnd;
-    var count = 0;
     for (var d = new Date(rangeStart); d <= rangeEnd; d.setDate(d.getDate() + 1)) {
-      if (targetDays.indexOf(d.getDay()) !== -1 && exclues.indexOf(formatDateISO(d)) === -1) count++;
+      if (targetDays.indexOf(d.getDay()) !== -1 && exclues.indexOf(formatDateISO(d)) === -1) dates.push(formatDateISO(d));
     }
-    return count;
+    return dates;
   }
-  if (!r.date_debut) return 0;
+  if (!r.date_debut) return dates;
   var dd = new Date(r.date_debut + 'T00:00:00');
-  return (dd >= periodStart && dd <= periodEnd) ? 1 : 0;
+  if (dd >= periodStart && dd <= periodEnd) dates.push(formatDateISO(dd));
+  return dates;
 }
 
 // ════════════════════════════════════════
@@ -880,20 +869,60 @@ async function chargerLignesPourPeriode(periodStart, periodEnd, annee, mois) {
   });
 
   var tarifs = getTarifs(currentClient);
-  var secondDogId = currentChiens.length > 1 ? currentChiens[1].id : null;
   var items = [];
-  var horsZoneOcc = 0;
   var moisLabel = MOIS_FR[mois - 1].charAt(0).toUpperCase() + MOIS_FR[mois - 1].slice(1) + ' ' + annee;
 
+  // ── Pass 1 : dates d'occurrence par chien et par service (réservations actives uniquement) ──
+  // occSets['<chienId ou "tous">|<service>'] = Set des dates (ISO) facturables sur la période
+  var occSets = {};
+  relevant.forEach(function(r) {
+    if (r.statut === 'annule') return;
+    var dates = occurrenceDates(r, periodStart, periodEnd);
+    r._occDates = dates;
+    if (!dates.length) return;
+    var key = (r.chien_id || 'tous') + '|' + r.service;
+    if (!occSets[key]) occSets[key] = new Set();
+    dates.forEach(function(d) { occSets[key].add(d); });
+  });
+
+  // ── Pass 2 : la réduction "2e chien" ne s'applique que les jours où AU MOINS
+  // 2 chiens du foyer ont une prestation du même type (récupérés/promenés ensemble).
+  // Le chien qui n'est pas le "premier" présent ce jour-là (selon l'ordre des chiens
+  // du client) reçoit la réduction pour cette occurrence précise.
+  function sharedDatesForService(service) {
+    var counts = {};
+    currentChiens.forEach(function(c) {
+      var set = occSets[c.id + '|' + service];
+      if (!set) return;
+      set.forEach(function(d) { counts[d] = (counts[d] || 0) + 1; });
+    });
+    var shared = new Set();
+    Object.keys(counts).forEach(function(d) { if (counts[d] >= 2) shared.add(d); });
+    return shared;
+  }
+  var sharedByService = { walking: sharedDatesForService('walking'), daycare: sharedDatesForService('daycare'), boarding: sharedDatesForService('boarding') };
+
+  function estReduit(chienId, service, date) {
+    if (!chienId || !sharedByService[service] || !sharedByService[service].has(date)) return false;
+    var idx = currentChiens.findIndex(function(c) { return c.id === chienId; });
+    if (idx <= 0) return false;
+    for (var i = 0; i < idx; i++) {
+      var set = occSets[currentChiens[i].id + '|' + service];
+      if (set && set.has(date)) return true;
+    }
+    return false;
+  }
+
+  // ── Pass 3 : construction des lignes ──
   relevant.forEach(function(r) {
     var chien = currentChiens.find(function(c) { return c.id === r.chien_id; });
     var chienNom = chien ? chien.nom : 'Tous les chiens';
     var svc = SVC_NAMES[r.service] || r.service;
-    var eff = tarifEffectif(r.service, r.chien_id, tarifs, secondDogId);
+    var prixBase = tarifs[r.service] || 0;
 
     if (r.statut === 'annule') {
       var pct = r.facture_pourcentage || 0;
-      var montant = eff.prix * (pct / 100);
+      var montant = prixBase * (pct / 100);
       if (montant <= 0) return;
       items.push({
         label: 'Annulation' + (r.annulation_tardive ? ' tardive' : '') + ' · ' + svc + ' · ' + chienNom,
@@ -903,22 +932,66 @@ async function chargerLignesPourPeriode(periodStart, periodEnd, annee, mois) {
       return;
     }
 
-    var occ = countOccurrences(r, periodStart, periodEnd);
-    if (occ <= 0) return;
+    var dates = r._occDates || [];
+    if (!dates.length) return;
+    var unite = r.service === 'boarding' ? 'nuit' : (r.service === 'daycare' ? 'journée' : 'séance');
+    var unitePlur = r.service === 'boarding' ? 'nuits' : (r.service === 'daycare' ? 'journées' : 'séances');
 
-    var total = occ * eff.prix;
-    var unite = r.service === 'boarding' ? (occ > 1 ? 'nuits' : 'nuit') : (occ > 1 ? 'séances' : 'séance');
-    var sousLabel = moisLabel + ' · ' + occ + ' ' + unite;
-    if (eff.reduit) sousLabel += ' · 2e chien −' + tarifs.reduction + '% (client ' + (currentClient.client_fidele ? 'fidèle' : 'nouveau') + ')';
+    if (r.chien_id) {
+      // Sépare les occurrences "seul" (plein tarif) de celles "avec un autre chien du foyer" (2e chien -> réduit)
+      var datesNormal = [];
+      var datesReduit = [];
+      dates.forEach(function(d) {
+        if (estReduit(r.chien_id, r.service, d)) datesReduit.push(d); else datesNormal.push(d);
+      });
 
-    items.push({
-      label: svc + ' · ' + chienNom,
-      sousLabel: sousLabel,
-      qte: occ, prixUnit: eff.prix, total: total, color: eff.reduit ? 'green' : null, tvaRate: getTvaRate(r.service)
-    });
-
-    if (currentClient.hors_zone && (r.service === 'walking' || r.service === 'daycare')) horsZoneOcc += occ;
+      if (datesNormal.length) {
+        items.push({
+          label: svc + ' · ' + chienNom,
+          sousLabel: moisLabel + ' · ' + datesNormal.length + ' ' + (datesNormal.length > 1 ? unitePlur : unite),
+          qte: datesNormal.length, prixUnit: prixBase, total: datesNormal.length * prixBase, color: null, tvaRate: getTvaRate(r.service)
+        });
+      }
+      if (datesReduit.length) {
+        var prixReduit = prixBase * (1 - tarifs.reduction / 100);
+        items.push({
+          label: svc + ' · ' + chienNom,
+          sousLabel: moisLabel + ' · ' + datesReduit.length + ' ' + (datesReduit.length > 1 ? unitePlur : unite) + ' · 2e chien −' + tarifs.reduction + '% (avec un autre chien du foyer)',
+          qte: datesReduit.length, prixUnit: prixReduit, total: datesReduit.length * prixReduit, color: 'green', tvaRate: getTvaRate(r.service)
+        });
+      }
+    } else {
+      // "Tous les chiens" : l'occurrence couvre tout le foyer — 1 chien à plein tarif
+      // + (nb chiens - 1) au tarif réduit 2e chien
+      var nb = Math.max(1, currentChiens.length);
+      items.push({
+        label: svc + ' · Tous les chiens',
+        sousLabel: moisLabel + ' · ' + dates.length + ' ' + (dates.length > 1 ? unitePlur : unite),
+        qte: dates.length, prixUnit: prixBase, total: dates.length * prixBase, color: null, tvaRate: getTvaRate(r.service)
+      });
+      if (nb > 1) {
+        var prixReduit2 = prixBase * (1 - tarifs.reduction / 100);
+        var qteReduit = dates.length * (nb - 1);
+        items.push({
+          label: svc + ' · Tous les chiens',
+          sousLabel: moisLabel + ' · ' + qteReduit + ' ' + (qteReduit > 1 ? unitePlur : unite) + ' · 2e chien (et suivants) −' + tarifs.reduction + '%',
+          qte: qteReduit, prixUnit: prixReduit2, total: qteReduit * prixReduit2, color: 'green', tvaRate: getTvaRate(r.service)
+        });
+      }
+    }
   });
+
+  // ── Supplément hors zone : +X € par trajet, donc par jour (et non par chien) ──
+  var horsZoneOcc = 0;
+  if (currentClient.hors_zone) {
+    ['walking', 'daycare'].forEach(function(service) {
+      var union = new Set();
+      Object.keys(occSets).forEach(function(key) {
+        if (key.split('|')[1] === service) occSets[key].forEach(function(d) { union.add(d); });
+      });
+      horsZoneOcc += union.size;
+    });
+  }
 
   lineItemsData = items;
   horsZoneCount = horsZoneOcc;
