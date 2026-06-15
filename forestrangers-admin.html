@@ -1941,7 +1941,7 @@ function renderChiens(chiens) {
       + (d.notes_sante ? '<div class="dog-note">' + d.notes_sante + '</div>' : '')
       + '<div style="display:flex;justify-content:flex-end;margin-top:8px;gap:6px;">'
       + '<button onclick="editChien(\'' + d.id + '\')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;color:var(--text-dim);font-family:\'Norwester\',sans-serif;font-size:10px;font-weight:800;cursor:pointer;">Modifier</button>'
-      + '<button onclick="window.location.href=\'forestrangers-client-detail.html?id=' + (d.clients ? d.client_id : '') + '\'" style="background:var(--accent-dim);border:1px solid var(--accent-mid);border-radius:8px;padding:5px 12px;color:var(--accent);font-family:\'Norwester\',sans-serif;font-size:10px;font-weight:800;cursor:pointer;">Fiche client</button>'
+      + '<button onclick="window.location.href=\'forestrangers-client-detail.html?id=' + (d.clients ? d.client_id : '') + '&from=chiens\'" style="background:var(--accent-dim);border:1px solid var(--accent-mid);border-radius:8px;padding:5px 12px;color:var(--accent);font-family:\'Norwester\',sans-serif;font-size:10px;font-weight:800;cursor:pointer;">Fiche client</button>'
       + '</div></div>';
   }).join('');
 }
@@ -2047,7 +2047,7 @@ function renderClients(clients) {
     var testBadge = c.is_test ? '<span class="badge b-muted" style="font-size:9px;">Test</span>' : '';
     var zoneBadge = c.hors_zone ? '<span class="badge b-amber" style="font-size:9px;">Hors zone</span>' : '';
 
-    html += '<div class="client-row" onclick="window.location.href=\'forestrangers-client-detail.html?id=' + c.id + '\'" style="cursor:pointer;">'
+    html += '<div class="client-row" onclick="window.location.href=\'forestrangers-client-detail.html?id=' + c.id + '&from=clients\'" style="cursor:pointer;">'
       + '<div class="c-avatar">' + initials + '</div>'
       + '<div style="flex:1;min-width:0;">'
       + '<div class="c-name">' + c.prenom + ' ' + c.nom + ' <span style="color:var(--accent);font-size:10px;font-family:\'Norwester\',sans-serif;">#' + c.numero_client + '</span></div>'
@@ -2502,6 +2502,16 @@ document.addEventListener('DOMContentLoaded', function() {
   loadChiens();
   loadStats();
   setInterval(loadDashboardStats, 5 * 60 * 1000);
+
+  // Revenir sur la section d'origine si on arrive depuis la fiche client (?section=...)
+  var params = new URLSearchParams(window.location.search);
+  var section = params.get('section');
+  if (section) {
+    var navEl = document.querySelector('.nav-item[onclick*="nav(\'' + section + '\'"]');
+    if (navEl) nav(section, navEl);
+    var mnavEl = document.getElementById('mnav-' + section);
+    if (mnavEl) setMobileNav(mnavEl);
+  }
 });
 
 
@@ -2792,6 +2802,9 @@ if ('serviceWorker' in navigator) {
     </div>
   </div>
 </div>
+
+<script>
+function setMobileNav(el) {
   document.querySelectorAll('.mobile-nav-item').forEach(function(t) { t.classList.remove('active'); });
   if (el) el.classList.add('active');
   document.getElementById('mobile-more-menu').style.display = 'none';
@@ -2825,7 +2838,7 @@ async function openStatDetail(type) {
       title.textContent = '👥 Clients actifs';
       var { data } = await db.from('clients').select('id, prenom, nom, commune, client_fidele, numero_client').eq('actif', true).eq('is_test', false).order('nom');
       if (!data || !data.length) { content.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-faint);">Aucun client</div>'; return; }
-      content.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px;">' + data.map(function(c) { var badge = c.client_fidele ? '<span style="font-size:9px;background:var(--accent-dim);color:var(--accent);padding:2px 6px;border-radius:10px;">Fidele</span>' : '<span style="font-size:9px;background:var(--blue-dim);color:var(--blue);padding:2px 6px;border-radius:10px;">Nouveau</span>'; return '<tr style="border-bottom:1px solid var(--border);cursor:pointer;" onclick="document.getElementById(\'modal-stat-detail\').classList.remove(\'open\');window.location.href=\'forestrangers-client-detail.html?id=' + c.id + '\'"><td style="padding:8px;color:var(--accent);font-family:\'Norwester\',sans-serif;font-size:11px;">#' + c.numero_client + '</td><td style="padding:8px;color:var(--text);">' + c.prenom + ' ' + c.nom + '</td><td style="padding:8px;color:var(--text-dim);">' + (c.commune||'—') + '</td><td style="padding:8px;">' + badge + '</td></tr>'; }).join('') + '</table>';
+      content.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px;">' + data.map(function(c) { var badge = c.client_fidele ? '<span style="font-size:9px;background:var(--accent-dim);color:var(--accent);padding:2px 6px;border-radius:10px;">Fidele</span>' : '<span style="font-size:9px;background:var(--blue-dim);color:var(--blue);padding:2px 6px;border-radius:10px;">Nouveau</span>'; return '<tr style="border-bottom:1px solid var(--border);cursor:pointer;" onclick="document.getElementById(\'modal-stat-detail\').classList.remove(\'open\');window.location.href=\'forestrangers-client-detail.html?id=' + c.id + '&from=dashboard\'"><td style="padding:8px;color:var(--accent);font-family:\'Norwester\',sans-serif;font-size:11px;">#' + c.numero_client + '</td><td style="padding:8px;color:var(--text);">' + c.prenom + ' ' + c.nom + '</td><td style="padding:8px;color:var(--text-dim);">' + (c.commune||'—') + '</td><td style="padding:8px;">' + badge + '</td></tr>'; }).join('') + '</table>';
     } else if (type === 'impayes') {
       title.textContent = '⚠️ Factures impayées';
       var { data } = await db.from('factures').select('id, numero, total_ttc, created_at, periode, clients!inner(id, prenom, nom, email, is_test)').eq('statut', 'impayee').eq('clients.is_test', false).order('created_at', { ascending: true });
