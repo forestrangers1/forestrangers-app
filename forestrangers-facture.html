@@ -1016,6 +1016,7 @@ function confirmAddLine() {
     });
   }
 
+  useStoredTotals = false;
   renderLineItems();
   recalculateTotals();
   document.getElementById('add-line-form').style.display = 'none';
@@ -1156,6 +1157,7 @@ async function chargerLignesPourPeriode(periodStart, periodEnd, annee, mois) {
     });
   }
 
+  useStoredTotals = false;
   lineItemsData = items;
   horsZoneCount = horsZoneOcc;
   renderLineItems();
