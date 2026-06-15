@@ -6,6 +6,13 @@
 <title>Forest Rangers — Facture</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
+<script>
+  // Reprend le choix jour/nuit du dashboard (clé partagée), appliqué avant l'affichage
+  if (localStorage.getItem('fr-theme') === 'light') {
+    document.documentElement.classList.add('light');
+  }
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -58,7 +65,24 @@ html, body {
 .page-title { font-family: 'Norwester', sans-serif; font-size: 15px; font-weight: 800; color: #eceee6; }
 .breadcrumb { font-size: 12px; color: var(--tf); }
 .breadcrumb strong { color: var(--td); }
-.topbar-right { margin-left: auto; display: flex; gap: 8px; }
+.topbar-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.theme-toggle {
+  width: 44px; height: 24px; border-radius: 12px;
+  background: var(--bd, #3a4128); border: 1px solid rgba(255,255,255,0.14);
+  cursor: pointer; position: relative;
+  transition: background 0.25s;
+  flex-shrink: 0;
+}
+html.light .theme-toggle { background: #d0d4c0; border-color: rgba(0,0,0,0.14); }
+.theme-toggle-knob {
+  position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #ff5f1f;
+  transition: transform 0.25s cubic-bezier(.4,0,.2,1);
+  display: flex; align-items: center; justify-content: center;
+}
+html.light .theme-toggle-knob { transform: translateX(20px); }
+.theme-toggle-knob svg { width: 9px; height: 9px; fill: white; }
 
 /* ── BTNS ── */
 .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; font-family: 'Norwester', sans-serif; font-size: 11px; font-weight: 800; cursor: pointer; border: none; transition: all 0.15s; letter-spacing: 0.04em; text-transform: uppercase; }
@@ -153,6 +177,7 @@ select.form-input option { background: #252a1a; color: #eceee6; }
 /* ── INVOICE PREVIEW ── */
 .invoice-doc {
   width: 100%; max-width: 680px;
+  flex-shrink: 0;
   background: white; border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(0,0,0,0.4);
@@ -288,7 +313,7 @@ select.form-input option { background: #252a1a; color: #eceee6; }
    + surcharge les surfaces sombres écrites en dur. L'aperçu facture (.inv-*)
    est indépendant et reste clair tel quel.
    ════════════════════════════════════════ */
-body.theme-light {
+html.light {
   --bg:  #eef0e8;
   --s1:  #ffffff;
   --s2:  #ffffff;
@@ -301,25 +326,25 @@ body.theme-light {
   background: #eef0e8 !important;
   color: #1c1f14;
 }
-body.theme-light .sidebar      { background: #e6e8df; border-right-color: rgba(0,0,0,0.08); }
-body.theme-light .s-logo svg   { fill: #1c1f14; }
-body.theme-light .s-btn:hover  { background: #dadccf; color: #1c1f14; }
-body.theme-light .topbar       { background: #f6f7f2; border-bottom-color: rgba(0,0,0,0.08); }
-body.theme-light .page-title   { color: #1c1f14; }
-body.theme-light .btn-outline:hover { background: #e6e8df; color: #1c1f14; }
-body.theme-light .panel-title  { color: rgba(28,31,20,0.5); }
-body.theme-light .form-panel   { background: #f6f7f2; border-right-color: rgba(0,0,0,0.08); }
-body.theme-light .preview-panel{ background: #dfe2d8; }
-body.theme-light .section-block{ background: #ffffff; border-color: rgba(0,0,0,0.08); }
-body.theme-light .section-head { border-bottom-color: rgba(0,0,0,0.08); }
-body.theme-light .section-title{ color: rgba(28,31,20,0.6); }
-body.theme-light .form-label   { color: rgba(28,31,20,0.5); }
-body.theme-light .form-input   { background: #ffffff; border-color: #d6dac9; color: #1c1f14; }
-body.theme-light select.form-input option { background: #ffffff; color: #1c1f14; }
-body.theme-light .line-item    { background: #fafbf7; border-color: rgba(0,0,0,0.08); }
-body.theme-light #add-line-form{ background: #fafbf7 !important; border-color: rgba(0,0,0,0.16) !important; }
-body.theme-light .total-block  { background: #ffffff; border-color: rgba(0,0,0,0.08); }
-body.theme-light .actions-bar  { background: #f6f7f2; border-top-color: rgba(0,0,0,0.08); }
+html.light .sidebar      { background: #e6e8df; border-right-color: rgba(0,0,0,0.08); }
+html.light .s-logo svg   { fill: #1c1f14; }
+html.light .s-btn:hover  { background: #dadccf; color: #1c1f14; }
+html.light .topbar       { background: #f6f7f2; border-bottom-color: rgba(0,0,0,0.08); }
+html.light .page-title   { color: #1c1f14; }
+html.light .btn-outline:hover { background: #e6e8df; color: #1c1f14; }
+html.light .panel-title  { color: rgba(28,31,20,0.5); }
+html.light .form-panel   { background: #f6f7f2; border-right-color: rgba(0,0,0,0.08); }
+html.light .preview-panel{ background: #dfe2d8; }
+html.light .section-block{ background: #ffffff; border-color: rgba(0,0,0,0.08); }
+html.light .section-head { border-bottom-color: rgba(0,0,0,0.08); }
+html.light .section-title{ color: rgba(28,31,20,0.6); }
+html.light .form-label   { color: rgba(28,31,20,0.5); }
+html.light .form-input   { background: #ffffff; border-color: #d6dac9; color: #1c1f14; }
+html.light select.form-input option { background: #ffffff; color: #1c1f14; }
+html.light .line-item    { background: #fafbf7; border-color: rgba(0,0,0,0.08); }
+html.light #add-line-form{ background: #fafbf7 !important; border-color: rgba(0,0,0,0.16) !important; }
+html.light .total-block  { background: #ffffff; border-color: rgba(0,0,0,0.08); }
+html.light .actions-bar  { background: #f6f7f2; border-top-color: rgba(0,0,0,0.08); }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
@@ -353,9 +378,12 @@ body.theme-light .actions-bar  { background: #f6f7f2; border-top-color: rgba(0,0
       <div class="back-btn" id="back-btn" onclick="retourFiche()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg></div>
       <div class="breadcrumb"><span>Factures</span> → <strong id="breadcrumb-numero">Nouvelle facture</strong></div>
       <div class="topbar-right">
-        <button class="btn btn-outline" id="btn-theme" onclick="toggleTheme()" title="Mode jour / nuit" style="padding:7px 9px;">
-          <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
-        </button>
+        <div class="theme-toggle" onclick="toggleTheme()" title="Basculer jour / nuit">
+          <div class="theme-toggle-knob">
+            <svg id="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
+            <svg id="icon-sun" viewBox="0 0 24 24" style="display:none;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3" stroke="white" stroke-width="2"/><line x1="12" y1="21" x2="12" y2="23" stroke="white" stroke-width="2"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke="white" stroke-width="2"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke="white" stroke-width="2"/><line x1="1" y1="12" x2="3" y2="12" stroke="white" stroke-width="2"/><line x1="21" y1="12" x2="23" y2="12" stroke="white" stroke-width="2"/></svg>
+          </div>
+        </div>
         <button class="btn btn-outline" id="btn-preview-mobile" onclick="toggleMobilePreview()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           Aperçu
@@ -1441,7 +1469,30 @@ async function marquerPayeeFacture() {
 }
 
 function telechargerPDF() {
-  window.print();
+  var inv = document.getElementById('invoiceDoc');
+  if (!inv) { alert('Aperçu non disponible'); return; }
+  var btn = document.getElementById('btn-dl');
+  var ancien = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = 'Génération…'; }
+
+  var numero = (document.getElementById('breadcrumb-numero')
+    && document.getElementById('breadcrumb-numero').textContent || 'facture')
+    .replace(/[^a-zA-Z0-9_-]/g, '_');
+
+  var options = {
+    margin: 0,
+    filename: 'ForestRangers_' + numero + '.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, backgroundColor: '#ffffff', useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  html2pdf().set(options).from(inv).save().then(function() {
+    if (btn) { btn.disabled = false; btn.innerHTML = ancien; }
+  }).catch(function(e) {
+    if (btn) { btn.disabled = false; btn.innerHTML = ancien; }
+    alert('Le téléchargement du PDF a échoué. Réessaie.');
+  });
 }
 
 function retourFiche() {
@@ -1453,25 +1504,20 @@ function retourFiche() {
 }
 
 // ════════════════════════════════════════
-// ── THÈME JOUR / NUIT ──
+// ── THÈME JOUR / NUIT (partagé avec le dashboard) ──
 // ════════════════════════════════════════
-var SUN_ICON  = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
-var MOON_ICON = '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>';
-
-function applyTheme(theme) {
-  var light = theme === 'light';
-  document.body.classList.toggle('theme-light', light);
-  var icon = document.getElementById('theme-icon');
-  if (icon) icon.innerHTML = light ? MOON_ICON : SUN_ICON; // affiche l'action à venir
-  try { localStorage.setItem('fr_facture_theme', theme); } catch(e) {}
-}
 function toggleTheme() {
-  applyTheme(document.body.classList.contains('theme-light') ? 'dark' : 'light');
+  var isLight = document.documentElement.classList.toggle('light');
+  document.getElementById('icon-moon').style.display = isLight ? 'none' : 'block';
+  document.getElementById('icon-sun').style.display  = isLight ? 'block' : 'none';
+  try { localStorage.setItem('fr-theme', isLight ? 'light' : 'dark'); } catch(e) {}
 }
 function initTheme() {
-  var saved = 'light';
-  try { saved = localStorage.getItem('fr_facture_theme') || 'light'; } catch(e) {}
-  applyTheme(saved);
+  var isLight = document.documentElement.classList.contains('light');
+  var moon = document.getElementById('icon-moon');
+  var sun  = document.getElementById('icon-sun');
+  if (moon) moon.style.display = isLight ? 'none' : 'block';
+  if (sun)  sun.style.display  = isLight ? 'block' : 'none';
 }
 
 // ════════════════════════════════════════
@@ -1497,7 +1543,7 @@ function toggleMobilePreview() {
   if (!inv) { alert('Apercu non disponible'); return; }
   var overlay = document.createElement('div');
   overlay.id = 'preview-modal';
-  var ovBg = document.body.classList.contains('theme-light') ? '#dfe2d8' : '#1c1f14';
+  var ovBg = document.documentElement.classList.contains('light') ? '#dfe2d8' : '#1c1f14';
   overlay.setAttribute('style', 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;background:' + ovBg + ';overflow-y:scroll;-webkit-overflow-scrolling:touch;');
   var closeBtn = document.createElement('button');
   closeBtn.setAttribute('style', 'display:block;width:calc(100% - 32px);margin:16px;padding:14px;background:#ff5f1f;border:none;border-radius:10px;color:white;font-size:14px;font-weight:800;cursor:pointer;');
