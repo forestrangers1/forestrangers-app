@@ -2512,6 +2512,15 @@ document.addEventListener('DOMContentLoaded', function() {
     var mnavEl = document.getElementById('mnav-' + section);
     if (mnavEl) setMobileNav(mnavEl);
   }
+
+  // Ouvrir directement "Nouvelle reservation" pour un client donne (?new_resa_client=...)
+  var newResaClient = params.get('new_resa_client');
+  if (newResaClient) {
+    ouvrirNouvelleReservationAdmin().then(function() {
+      var c = resaClientsCache.find(function(x) { return x.id === newResaClient; });
+      if (c) selectResaClient(c.id, c.prenom + ' ' + c.nom, c.commune, c.client_fidele);
+    });
+  }
 });
 
 
@@ -2886,26 +2895,47 @@ async function creerFacture() {
   if (!clientId) { showToastAdmin('Sélectionnez un client', 'amber'); return; }
   try {
     var now = new Date(); var annee = now.getFullYear(); var moisNum = String(now.getMonth()+1).padStart(2,'0');
-    var { data: lastFact } = await db.from('factures').select('numero').order('created_at', { ascending: false }).limit(1);
-    var lastNum = lastFact && lastFact.length > 0 && lastFact[0].numero ? parseInt(lastFact[0].numero.split('-').pop()) || 0 : 0;
-    var numero = 'FR-' + annee + '-' + String(lastNum + 1).padStart(3, '0');
-    var payload = { client_id: clientId, numero: numero, statut: 'impayee', created_at: now.toISOString() };
+
+    var periode;
     if (factureType === 'auto') {
-      var mois = document.getElementById('facture-mois').value || (annee + '-' + moisNum);
-      payload.periode = mois;
-      var moisParts = mois.split('-');
+      periode = document.getElementById('facture-mois').value || (annee + '-' + moisNum);
+    } else {
+      periode = annee + '-' + moisNum;
+    }
+
+    // Numérotation : numero_client-AA-N (N = séquence par client pour l'année de la période)
+    var { data: clientRow } = await db.from('clients').select('numero_client').eq('id', clientId).single();
+    var annee2 = periode.split('-')[0].slice(-2);
+    var numClient = (clientRow && clientRow.numero_client) ? clientRow.numero_client : '0000';
+    var prefix = numClient + '-' + annee2 + '-';
+    var { data: existants } = await db.from('factures').select('numero').eq('client_id', clientId).ilike('numero', prefix + '%');
+    var maxN = 0;
+    (existants||[]).forEach(function(f) {
+      var parts = (f.numero||'').split('-');
+      var n = parseInt(parts[parts.length-1], 10);
+      if (!isNaN(n) && n > maxN) maxN = n;
+    });
+    var numero = prefix + (maxN + 1);
+
+    var payload = { client_id: clientId, numero: numero, statut: 'impayee', created_at: now.toISOString(), periode: periode };
+    var total_ht;
+    if (factureType === 'auto') {
+      var moisParts = periode.split('-');
       var finMoisFact = formatDateISO(new Date(parseInt(moisParts[0],10), parseInt(moisParts[1],10), 0));
-      var { data: resas } = await db.from('reservations').select('service').eq('client_id', clientId).gte('date_debut', mois + '-01').lte('date_debut', finMoisFact).neq('statut', 'annule');
+      var { data: resas } = await db.from('reservations').select('service').eq('client_id', clientId).gte('date_debut', periode + '-01').lte('date_debut', finMoisFact).neq('statut', 'annule');
       var tarifs = { walking: 28, daycare: 55, boarding: 68 };
-      var total_ht = (resas||[]).reduce(function(s,r) { return s + (tarifs[r.service]||0); }, 0);
-      payload.total_ht = total_ht; payload.total_ttc = total_ht;
+      total_ht = (resas||[]).reduce(function(s,r) { return s + (tarifs[r.service]||0); }, 0);
       payload.notes = 'Auto — ' + (resas||[]).length + ' réservation(s)';
     } else {
       var desc = document.getElementById('facture-desc').value;
-      var montant = parseFloat(document.getElementById('facture-montant').value) || 0;
-      if (!desc || !montant) { showToastAdmin('Description et montant obligatoires', 'amber'); return; }
-      payload.periode = annee + '-' + moisNum; payload.total_ht = montant; payload.total_ttc = montant; payload.notes = desc;
+      total_ht = parseFloat(document.getElementById('facture-montant').value) || 0;
+      if (!desc || !total_ht) { showToastAdmin('Description et montant obligatoires', 'amber'); return; }
+      payload.notes = desc;
     }
+    // TVA 17% sur les prestations (services à la personne hors zone à TVA réduite/exonérée non concernés ici)
+    payload.total_ht = total_ht;
+    payload.total_ttc = Math.round(total_ht * 1.17 * 100) / 100;
+
     var { error: errFact } = await db.from('factures').insert(payload);
     if (errFact) throw errFact;
     document.getElementById('modal-nouvelle-facture').classList.remove('open');

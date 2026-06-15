@@ -228,6 +228,11 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .icon-btn { width: 30px; height: 30px; border-radius: 8px; background: transparent; border: 1px solid var(--bd2); color: var(--td); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; flex-shrink: 0; }
 .icon-btn:hover { background: var(--s2); color: var(--tx); }
 .icon-btn svg { width: 14px; height: 14px; }
+.icon-btn-accent { background: var(--acc-dim); border-color: var(--acc-mid); color: var(--accent); }
+.icon-btn-accent:hover { background: var(--acc-mid); color: var(--accent); }
+
+.btn-accent-outline { background: var(--acc-dim); border: 1px solid var(--acc-mid); color: var(--accent); }
+.btn-accent-outline:hover { background: var(--acc-mid); color: var(--accent); }
 
 .dog-card[data-clickable] { cursor: pointer; transition: border-color 0.15s; }
 .dog-card[data-clickable]:hover { border-color: var(--bd2); }
@@ -269,7 +274,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <div class="client-avatar" id="sidebar-avatar">MD</div>
     <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:4px;">
       <div class="client-name" id="sidebar-name" style="margin-bottom:0;">Marie Dupont</div>
-      <button class="icon-btn" id="btn-message-client" onclick="openMessageModal()" title="Envoyer un message">
+      <button class="icon-btn icon-btn-accent" id="btn-message-client" onclick="openMessageModal()" title="Envoyer un message">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
       </button>
     </div>
@@ -298,15 +303,15 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
     <div class="sidebar-section">
       <div class="sidebar-label">Actions</div>
-      <button class="btn btn-accent">
+      <button class="btn btn-accent" onclick="window.location.href='forestrangers-facture.html?client_id='+clientId">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         Nouvelle facture
       </button>
-      <button class="btn btn-outline">
+      <button class="btn btn-outline" onclick="window.location.href='forestrangers-admin.html?section=clients&new_resa_client='+clientId">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
         Nouvelle réservation
       </button>
-      <button class="btn btn-outline" style="margin-top:4px;">
+      <button class="btn btn-outline" style="margin-top:4px;" onclick="contacterClient()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
         Contacter
       </button>
@@ -354,7 +359,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
           <div style="display:flex;gap:8px;">
             <button class="btn btn-outline" id="btn-cancel-edit" style="width:auto;display:none;" onclick="cancelEditInfos()">Annuler</button>
             <button class="btn btn-accent" id="btn-save-edit" style="width:auto;display:none;margin-bottom:0;" onclick="saveInfos()">Enregistrer</button>
-            <button class="btn btn-outline" id="btn-toggle-edit" style="width:auto;" onclick="toggleEdit()">
+            <button class="btn btn-accent-outline" id="btn-toggle-edit" style="width:auto;" onclick="toggleEdit()">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               Modifier
             </button>
@@ -398,50 +403,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
     <!-- ── ONGLET CHIENS ── -->
     <div class="tab-panel" id="panel-chiens">
-      <!-- Chien 1 -->
-      <div class="dog-card">
-        <div class="dog-header">
-          <div class="dog-avatar">🐕</div>
-          <div>
-            <div class="dog-name">Max</div>
-            <div class="dog-race">Berger Allemand · Mâle · 5 ans</div>
-          </div>
-          <span class="badge b-green" style="margin-left:auto;">Actif</span>
-        </div>
-        <div class="dog-grid">
-          <div class="dog-stat"><div class="dog-stat-val">32 kg</div><div class="dog-stat-label">Poids</div></div>
-          <div class="dog-stat"><div class="dog-stat-val" style="color:var(--green);">✓</div><div class="dog-stat-label">Vaccins</div></div>
-          <div class="dog-stat"><div class="dog-stat-val" style="color:var(--green);">✓</div><div class="dog-stat-label">Assurance</div></div>
-        </div>
-        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);font-size:12px;color:var(--td);">
-          Grand chien (35kg+) · Promenade en groupe · Aucune restriction
-        </div>
-      </div>
-
-      <!-- Chien 2 -->
-      <div class="dog-card">
-        <div class="dog-header">
-          <div class="dog-avatar">🐩</div>
-          <div>
-            <div class="dog-name">Luna</div>
-            <div class="dog-race">Labrador · Femelle · 3 ans</div>
-          </div>
-          <span class="badge b-green" style="margin-left:auto;">Active</span>
-        </div>
-        <div class="dog-grid">
-          <div class="dog-stat"><div class="dog-stat-val">28 kg</div><div class="dog-stat-label">Poids</div></div>
-          <div class="dog-stat"><div class="dog-stat-val" style="color:var(--green);">✓</div><div class="dog-stat-label">Vaccins</div></div>
-          <div class="dog-stat"><div class="dog-stat-val" style="color:var(--amber);">!</div><div class="dog-stat-label">Assurance</div></div>
-        </div>
-        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);font-size:12px;color:var(--td);">
-          Réduction 2e chien −50% · Assurance à renouveler avant le 30 juin
-        </div>
-      </div>
-
-      <button class="btn btn-outline" style="width:auto;margin-top:4px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Ajouter un chien
-      </button>
+      <div class="empty"><p>Chargement...</p></div>
     </div>
 
     <!-- ── ONGLET RESERVATIONS ── -->
@@ -449,7 +411,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <div class="card">
         <div class="card-head">
           <div class="card-title">Réservations actives</div>
-          <button class="btn btn-accent" style="width:auto;">+ Nouvelle</button>
+          <button class="btn btn-accent" style="width:auto;" onclick="window.location.href='forestrangers-admin.html?section=clients&new_resa_client='+clientId">+ Nouvelle</button>
         </div>
         <div class="table-wrap">
           <table>
@@ -457,14 +419,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
               <th>Service</th><th>Chien(s)</th><th>Créneau</th><th>Récurrence</th><th>Statut</th><th></th>
             </tr></thead>
             <tbody id="tbody-resas-actives">
-              <tr>
-                <td class="td-main">Day Care</td>
-                <td>Max</td>
-                <td>Mardi 17 juin</td>
-                <td>Ponctuel</td>
-                <td><span class="badge b-accent">En attente</span></td>
-                <td><button class="btn btn-outline" style="width:auto;padding:4px 10px;font-size:10px;">Modifier</button></td>
-              </tr>
+              <tr><td colspan="6" style="text-align:center;color:var(--td);padding:16px;">Chargement...</td></tr>
             </tbody>
           </table>
         </div>
@@ -476,12 +431,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
           <table>
             <thead><tr><th>Service</th><th>Chien(s)</th><th>Période</th><th>Séances</th><th>Statut</th><th></th></tr></thead>
             <tbody id="tbody-resas-passees">
-              <tr>
-                <td class="td-main">Boarding</td><td>Max + Luna</td><td>15–22 avr. 2026</td><td>7 nuits</td><td><span class="badge b-muted">Terminé</span></td>
-              </tr>
-              <tr>
-                <td class="td-main">Dog Walking</td><td>Max + Luna</td><td>Avril 2026</td><td>18 séances</td><td><span class="badge b-muted">Terminé</span></td>
-              </tr>
+              <tr><td colspan="6" style="text-align:center;color:var(--td);padding:16px;">Chargement...</td></tr>
             </tbody>
           </table>
         </div>
@@ -515,7 +465,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <div class="card">
         <div class="card-head">
           <div class="card-title">Factures</div>
-          <button class="btn btn-accent" style="width:auto;">
+          <button class="btn btn-accent" style="width:auto;" onclick="window.location.href='forestrangers-facture.html?client_id='+clientId">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
             Générer facture
           </button>
@@ -524,33 +474,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
           <table>
             <thead><tr><th>N° Facture</th><th>Période</th><th>Montant TTC</th><th>Émise le</th><th>Échéance</th><th>Statut</th><th></th></tr></thead>
             <tbody>
-              <tr>
-                <td class="td-main" style="font-family:'Norwester',sans-serif;color:var(--accent);">1001-26-3</td>
-                <td>Juin 2026</td>
-                <td class="td-main">1 012,05 €</td>
-                <td>1 juil. 2026</td>
-                <td>31 juil. 2026</td>
-                <td><span class="badge b-amber">En attente</span></td>
-                <td><button class="btn btn-outline" style="width:auto;padding:4px 10px;font-size:10px;">Voir</button></td>
-              </tr>
-              <tr>
-                <td class="td-main" style="font-family:'Norwester',sans-serif;color:var(--accent);">1001-26-2</td>
-                <td>Mai 2026</td>
-                <td class="td-main">978,00 €</td>
-                <td>1 juin 2026</td>
-                <td>30 juin 2026</td>
-                <td><span class="badge b-green">Payée</span></td>
-                <td><button class="btn btn-outline" style="width:auto;padding:4px 10px;font-size:10px;">Voir</button></td>
-              </tr>
-              <tr>
-                <td class="td-main" style="font-family:'Norwester',sans-serif;color:var(--accent);">1001-26-1</td>
-                <td>Avril 2026</td>
-                <td class="td-main">840,00 €</td>
-                <td>1 mai 2026</td>
-                <td>31 mai 2026</td>
-                <td><span class="badge b-green">Payée</span></td>
-                <td><button class="btn btn-outline" style="width:auto;padding:4px 10px;font-size:10px;">Voir</button></td>
-              </tr>
+              <tr><td colspan="7" style="text-align:center;color:var(--td);padding:16px;">Chargement...</td></tr>
             </tbody>
           </table>
         </div>
@@ -685,6 +609,62 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
     <div class="card-head" style="margin-bottom:10px;"><div class="card-title">Historique des services</div></div>
     <div id="chien-detail-historique"></div>
+  </div>
+</div>
+
+<!-- ══ MODAL AJOUTER UN CHIEN ══ -->
+<div class="modal-overlay" id="modal-ajout-chien" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal-sheet">
+    <div class="modal-head">
+      <div class="modal-title">Ajouter un chien</div>
+      <button class="modal-close" onclick="document.getElementById('modal-ajout-chien').classList.remove('open')">✕</button>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Nom <span style="color:var(--accent);">*</span></label>
+      <input type="text" class="form-control" id="ac-nom" placeholder="Ex : Simba">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Race</label>
+        <input type="text" class="form-control" id="ac-race" placeholder="Ex : Berger australien">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Sexe</label>
+        <select class="form-control" id="ac-sexe">
+          <option value="">—</option>
+          <option value="Mâle">Mâle</option>
+          <option value="Femelle">Femelle</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Poids (kg)</label>
+        <input type="number" step="0.1" min="0" class="form-control" id="ac-poids" placeholder="Ex : 28">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date de naissance</label>
+        <input type="date" class="form-control" id="ac-naissance">
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="jours-row" style="gap:14px;">
+        <label><input type="checkbox" id="ac-vaccins" checked> Vaccins à jour</label>
+        <label><input type="checkbox" id="ac-assurance" checked> Assurance à jour</label>
+        <label><input type="checkbox" id="ac-dangereux"> Chien dangereux</label>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:0;">
+      <label class="form-label">Notes de santé</label>
+      <textarea class="form-control" id="ac-notes" style="min-height:60px;resize:vertical;" placeholder="Allergies, traitements, particularités..."></textarea>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn btn-outline" style="width:auto;" onclick="document.getElementById('modal-ajout-chien').classList.remove('open')">Annuler</button>
+      <div style="flex:1;"></div>
+      <button class="btn btn-accent" style="width:auto;margin-bottom:0;" id="btn-ajout-chien-save" onclick="saveNouveauChien()">Ajouter</button>
+    </div>
   </div>
 </div>
 
@@ -1247,7 +1227,7 @@ function loadChiens(chiens, fidele) {
       + '</div>';
   });
 
-  container.innerHTML = html + '<button class="btn btn-outline" style="width:auto;margin-top:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Ajouter un chien</button>';
+  container.innerHTML = html + '<button class="btn btn-accent-outline" style="width:auto;margin-top:4px;" onclick="openAjoutChien()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Ajouter un chien</button>';
 }
 
 function chienNom(chienId) {
@@ -1293,7 +1273,7 @@ function loadReservations(resas) {
       + '<td>' + creneauTxt + '</td>'
       + '<td>' + recTxt + '</td>'
       + '<td><span class="badge ' + badge + '">' + label + '</span></td>'
-      + '<td><button class="btn btn-outline" style="width:auto;padding:4px 10px;font-size:10px;" onclick="openResaDetail(\'' + r.id + '\')">Voir</button></td>'
+      + '<td><button class="btn btn-accent-outline" style="width:auto;padding:4px 10px;font-size:10px;" onclick="openResaDetail(\'' + r.id + '\')">Voir</button></td>'
       + '</tr>';
   }
 
@@ -1322,7 +1302,7 @@ function loadReservations(resas) {
       + '<td>' + periode + '</td>'
       + '<td>' + seances + '</td>'
       + '<td><span class="badge ' + badge + '">' + label + '</span></td>'
-      + '<td><button class="btn btn-outline" style="width:auto;padding:4px 10px;font-size:10px;" onclick="openResaDetail(\'' + r.id + '\')">Voir</button></td>'
+      + '<td><button class="btn btn-accent-outline" style="width:auto;padding:4px 10px;font-size:10px;" onclick="openResaDetail(\'' + r.id + '\')">Voir</button></td>'
       + '</tr>';
   }
 
@@ -1353,12 +1333,19 @@ function loadFactures(factures) {
   }
   var badges = { payee: 'b-green', impayee: 'b-amber', en_attente: 'b-amber' };
   var labels = { payee: 'Payée', impayee: 'Impayée', en_attente: 'En attente' };
+  var moisFR = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
   tbody.innerHTML = factures.map(function(f) {
     var badge = badges[f.statut] || 'b-muted';
     var label = labels[f.statut] || f.statut;
     var montant = f.total_ttc ? parseFloat(f.total_ttc).toLocaleString('fr-LU', { minimumFractionDigits: 2 }) + ' €' : '—';
     var emise = f.created_at ? new Date(f.created_at).toLocaleDateString('fr-LU', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-    return '<tr><td class="td-main" style="font-family:\'Norwester\',sans-serif;color:var(--accent);">' + (f.numero || '—') + '</td><td>' + (f.periode || '—') + '</td><td class="td-main">' + montant + '</td><td>' + emise + '</td><td>—</td><td><span class="badge ' + badge + '">' + label + '</span></td><td><button class="btn btn-outline" style="width:auto;padding:4px 10px;font-size:10px;">Voir</button></td></tr>';
+    var periode = '—';
+    if (f.periode) {
+      var pp = f.periode.split('-');
+      var mIdx = parseInt(pp[1], 10) - 1;
+      periode = (moisFR[mIdx] ? (moisFR[mIdx].charAt(0).toUpperCase() + moisFR[mIdx].slice(1)) : f.periode) + ' ' + pp[0];
+    }
+    return '<tr><td class="td-main" style="font-family:\'Norwester\',sans-serif;color:var(--accent);">' + (f.numero || '—') + '</td><td>' + periode + '</td><td class="td-main">' + montant + '</td><td>' + emise + '</td><td>—</td><td><span class="badge ' + badge + '">' + label + '</span></td><td><button class="btn btn-accent-outline" style="width:auto;padding:4px 10px;font-size:10px;" onclick="window.location.href=\'forestrangers-facture.html?id=' + f.id + '\'">Voir</button></td></tr>';
   }).join('');
 }
 
@@ -1811,6 +1798,65 @@ function sendMessageClient() {
   var mailto = 'mailto:' + encodeURIComponent(currentClient.email) + '?subject=' + encodeURIComponent(sujet) + '&body=' + encodeURIComponent(corps);
   window.location.href = mailto;
   document.getElementById('modal-message').classList.remove('open');
+}
+
+function contacterClient() {
+  if (!currentClient || !currentClient.telephone) { alert('Aucun numéro de téléphone enregistré pour ce client.'); return; }
+  window.location.href = 'tel:' + currentClient.telephone.replace(/\s+/g, '');
+}
+
+// ════════════════════════════════════════
+// ── MODALE AJOUTER UN CHIEN ──
+// ════════════════════════════════════════
+function openAjoutChien() {
+  document.getElementById('ac-nom').value = '';
+  document.getElementById('ac-race').value = '';
+  document.getElementById('ac-sexe').value = '';
+  document.getElementById('ac-poids').value = '';
+  document.getElementById('ac-naissance').value = '';
+  document.getElementById('ac-vaccins').checked = true;
+  document.getElementById('ac-assurance').checked = true;
+  document.getElementById('ac-dangereux').checked = false;
+  document.getElementById('ac-notes').value = '';
+  document.getElementById('modal-ajout-chien').classList.add('open');
+}
+
+async function saveNouveauChien() {
+  var nom = document.getElementById('ac-nom').value.trim();
+  if (!nom) { alert('Le nom du chien est obligatoire.'); return; }
+  var poids = parseFloat(document.getElementById('ac-poids').value);
+  if (isNaN(poids)) poids = null;
+
+  var payload = {
+    client_id: clientId,
+    nom: nom,
+    race: document.getElementById('ac-race').value.trim() || null,
+    sexe: document.getElementById('ac-sexe').value || null,
+    poids_kg: poids,
+    date_naissance: document.getElementById('ac-naissance').value || null,
+    vaccins_ok: document.getElementById('ac-vaccins').checked,
+    assurance_ok: document.getElementById('ac-assurance').checked,
+    chien_dangereux: document.getElementById('ac-dangereux').checked,
+    grand_chien: poids != null && poids >= 35,
+    notes_sante: document.getElementById('ac-notes').value.trim() || null,
+    actif: true
+  };
+
+  var btn = document.getElementById('btn-ajout-chien-save');
+  var orig = btn.textContent;
+  btn.textContent = '...'; btn.disabled = true;
+  try {
+    var { data, error } = await db.from('chiens').insert(payload).select().single();
+    if (error) throw error;
+    currentChiens.push(data);
+    loadChiens(currentChiens, currentClient ? currentClient.client_fidele : false);
+    document.getElementById('modal-ajout-chien').classList.remove('open');
+  } catch(e) {
+    console.error('Erreur ajout chien:', e);
+    alert("Erreur lors de l'ajout du chien.");
+  } finally {
+    btn.textContent = orig; btn.disabled = false;
+  }
 }
 </script>
 
