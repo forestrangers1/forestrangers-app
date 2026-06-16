@@ -257,9 +257,9 @@ textarea.field-input { resize: vertical; min-height: 80px; }
   padding: 0 10px 8px;
 }
 .cancel-table td {
-  padding: 9px 10px; border-top: 1px solid var(--border); color: var(--text-dim);
+  padding: 9px 10px; border-top: 1px solid var(--border); color: #1c1f14;
 }
-.cancel-table td:first-child { color: #eceee6; font-weight: 500; }
+.cancel-table td:first-child { color: #1c1f14; font-weight: 600; }
 
 /* ── RECAP ── */
 .recap-row {
@@ -1062,7 +1062,7 @@ textarea.field-input { resize: vertical; min-height: 80px; }
 
 <script>
 let currentService = null;
-const prices = { walking: 28, daycare: 55, boarding: 68 };
+const prices = { walking: 30, daycare: 60, boarding: 75 };
 const serviceNames = { walking: 'Dog Walking', daycare: 'Day Care', boarding: 'Boarding' };
 
 // ── CHARGEMENT CLIENT + CHIENS DEPUIS SUPABASE ──
@@ -1374,9 +1374,9 @@ function buildRecap() {
     let totalPrice = prices[svc];
     let priceNote = 'par séance';
     if (dogCount > 1) {
-      const secondDog = Math.round(prices[svc] * 0.5);
+      const secondDog = Math.round(prices[svc] * 0.7);
       totalPrice = prices[svc] + secondDog;
-      priceNote = `${dogCount} chiens · ${prices[svc]} € + ${secondDog} € (réduction 50% 2e chien)`;
+      priceNote = `${dogCount} chiens · ${prices[svc]} € + ${secondDog} € (réduction 30% 2e chien)`;
     }
     const fmt = (n) => n % 1 === 0 ? n + ' €' : n.toFixed(2).replace('.',',') + ' €';
     document.getElementById('recap-price').innerHTML = `<span class="price-main">${fmt(totalPrice)}</span><span class="price-breakdown">${priceNote}</span>`;
