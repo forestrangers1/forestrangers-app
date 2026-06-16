@@ -648,41 +648,8 @@ html, body {
       <div class="screen-pad">
         <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;margin-bottom:16px;margin-top:4px;">Mon chien</div>
 
-        <div id="chiens-list"><div class="dog-hero">
-          <div class="dog-avatar">🐕</div>
-          <div>
-            <div class="dog-name">Max</div>
-            <div class="dog-breed">Berger Allemand · Mâle · 4 ans</div>
-            <div style="margin-top:8px;"><span class="badge b-green">Actif</span></div>
-          </div>
-        </div>
-
-        <div class="card" style="margin-bottom:12px;">
-          <div class="card-head"><span class="card-title">Informations</span></div>
-          <div class="dog-prop-row"><span class="dog-prop-key">Stérilisé</span><span>Oui</span></div>
-          <div class="dog-prop-row"><span class="dog-prop-key">Comportement</span><span class="badge b-green">Sociable</span></div>
-          <div class="dog-prop-row"><span class="dog-prop-key">Vétérinaire</span><span>Dr. Muller · +352 26 xx xx</span></div>
-          <div class="dog-prop-row"><span class="dog-prop-key">Allergies</span><span>Acariens</span></div>
-        </div>
-
-        <div class="card" style="margin-bottom:12px;">
-          <div class="card-head"><span class="card-title">Stats du mois</span></div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 16px;">
-            <div style="text-align:center;">
-              <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:var(--accent);">11</div>
-              <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">promenades</div>
-            </div>
-            <div style="text-align:center;">
-              <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:var(--accent);">38</div>
-              <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">km parcourus</div>
-            </div>
-            <div style="text-align:center;">
-              <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:var(--green);">8h45</div>
-              <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">total</div>
-            </div>
-          </div>
-        </div>
-
+        <div id="chiens-list">
+          <div style="padding:24px;text-align:center;color:var(--text-faint);font-size:13px;">Chargement…</div>
         </div><!-- /chiens-list -->
         <!-- Dernières photos -->
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Dernières photos</div>
@@ -962,9 +929,18 @@ async function loadClientProfile() {
     clientData = client;
     clientId = client.id;
 
+    // Charger les chiens directement (plus fiable que le join imbriqué)
+    var chiens = client.chiens || [];
+    try {
+      var { data: chiensDirect } = await db.from('chiens')
+        .select('*')
+        .eq('client_id', client.id);
+      if (chiensDirect && chiensDirect.length) chiens = chiensDirect;
+    } catch(e) { console.log('Erreur chargement chiens:', e); }
+
     // Mettre à jour l'interface
     updateHomeScreen(client);
-    updateDogScreen(client.chiens || []);
+    updateDogScreen(chiens);
     await loadReservations(client.id);
     await loadFactures(client.id);
     await loadProchainePromenade(client.id);
@@ -1095,24 +1071,74 @@ async function loadFactures(id) {
 
 function updateDogScreen(chiens) {
   var container = document.getElementById('chiens-list');
-  if (!container || !chiens.length) return;
+  if (!container) return;
 
-  container.innerHTML = chiens.map(function(d) {
-    var emoji = d.poids && d.poids >= 35 ? '🐕' : '🐩';
+  // Aucun chien : état vide explicite (au lieu de la fiche démo)
+  if (!chiens || !chiens.length) {
+    container.innerHTML = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;text-align:center;">'
+      + '<div style="font-size:30px;margin-bottom:8px;">🐾</div>'
+      + '<div style="font-size:14px;font-weight:600;margin-bottom:4px;">Aucun chien enregistré</div>'
+      + '<div style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">Ajoutez votre chien pour pouvoir réserver une promenade.</div>'
+      + '<a href="forestrangers-inscription.html" style="display:inline-block;background:var(--accent);color:#fff;padding:9px 16px;border-radius:9px;font-family:\'Norwester\',sans-serif;font-size:12px;font-weight:800;text-decoration:none;">Ajouter mon chien</a>'
+      + '</div>';
+    return;
+  }
+
+  // Libellés lisibles pour les champs détaillés (affichés s'ils existent)
+  var labels = {
+    race: 'Race', sexe: 'Sexe', age: 'Âge', date_naissance: 'Naissance',
+    puce: 'N° de puce', chip: 'N° de puce', sterilise: 'Stérilisé',
+    grand_gabarit: 'Grand gabarit', comportement: 'Comportement',
+    allergies: 'Allergies', veterinaire: 'Vétérinaire', notes: 'Notes'
+  };
+  function fmt(k, v) {
+    if (typeof v === 'boolean') return v ? 'Oui' : 'Non';
+    if (k === 'poids') return v + ' kg';
+    if (k === 'age') return v + ' ans';
+    return v;
+  }
+
+  container.innerHTML = chiens.map(function(d, idx) {
+    var name = d.prenom || d.nom || 'Chien';
+    var emoji = (d.poids && d.poids >= 25) ? '🐕' : '🐩';
+    var sub = (d.race || '—') + (d.poids ? ' · ' + d.poids + ' kg' : '');
+
+    // Lignes de détail : tous les champs connus, non vides
+    var rows = '';
+    Object.keys(labels).forEach(function(k) {
+      var v = d[k];
+      if (v === null || v === undefined || v === '' ) return;
+      rows += '<div class="dog-prop-row"><span class="dog-prop-key">' + labels[k] + '</span><span>' + fmt(k, v) + '</span></div>';
+    });
+    if (!rows) rows = '<div style="padding:12px 0;font-size:12px;color:var(--text-faint);">Aucune information complémentaire enregistrée.</div>';
+
     return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;">'
-      + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">'
-      + '<div style="width:44px;height:44px;border-radius:50%;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-size:22px;">' + emoji + '</div>'
-      + '<div><div style="font-family:\'Norwester\',sans-serif;font-size:16px;font-weight:800;">' + (d.prenom || d.nom) + '</div>'
-      + '<div style="font-size:12px;color:var(--text-dim);">' + (d.race || '—') + (d.age ? ' · ' + d.age + ' ans' : '') + '</div></div>'
-      + '<span class="badge b-green" style="margin-left:auto;">Actif</span></div>'
-      + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">'
-      + '<div style="background:var(--surface2);border-radius:8px;padding:8px;text-align:center;"><div style="font-family:\'Norwester\',sans-serif;font-size:14px;font-weight:800;color:var(--accent);">' + (d.poids ? d.poids + ' kg' : '—') + '</div><div style="font-size:9px;color:var(--text-faint);text-transform:uppercase;margin-top:2px;">Poids</div></div>'
-      + '<div style="background:var(--surface2);border-radius:8px;padding:8px;text-align:center;"><div style="font-family:\'Norwester\',sans-serif;font-size:14px;font-weight:800;color:' + (d.vaccins_ok ? 'var(--green)' : 'var(--amber)') + ';">' + (d.vaccins_ok ? '✓' : '!') + '</div><div style="font-size:9px;color:var(--text-faint);text-transform:uppercase;margin-top:2px;">Vaccins</div></div>'
-      + '<div style="background:var(--surface2);border-radius:8px;padding:8px;text-align:center;"><div style="font-family:\'Norwester\',sans-serif;font-size:14px;font-weight:800;color:var(--green);">✓</div><div style="font-size:9px;color:var(--text-faint);text-transform:uppercase;margin-top:2px;">Actif</div></div>'
+      // En-tête cliquable
+      + '<div onclick="toggleDogDetail(' + idx + ')" style="display:flex;align-items:center;gap:12px;cursor:pointer;">'
+      + '<div style="width:46px;height:46px;border-radius:50%;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-size:23px;flex-shrink:0;">' + emoji + '</div>'
+      + '<div style="flex:1;min-width:0;"><div style="font-family:\'Norwester\',sans-serif;font-size:16px;font-weight:800;">' + name + '</div>'
+      + '<div style="font-size:12px;color:var(--text-dim);">' + sub + '</div></div>'
+      + '<span class="badge b-green">Actif</span>'
+      + '<svg id="dog-chevron-' + idx + '" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5" style="margin-left:6px;flex-shrink:0;transition:transform .2s;"><polyline points="6 9 12 15 18 9"/></svg>'
       + '</div>'
-      + (d.notes ? '<div style="margin-top:10px;font-size:12px;color:var(--text-dim);">' + d.notes + '</div>' : '')
+      // Stats rapides (toujours visibles)
+      + '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:14px;">'
+      + '<div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center;"><div style="font-family:\'Norwester\',sans-serif;font-size:15px;font-weight:800;color:var(--accent);">' + (d.poids ? d.poids + ' kg' : '—') + '</div><div style="font-size:9px;color:var(--text-faint);text-transform:uppercase;margin-top:2px;">Poids</div></div>'
+      + '<div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center;"><div style="font-family:\'Norwester\',sans-serif;font-size:13px;font-weight:800;color:var(--text);">' + (d.race || '—') + '</div><div style="font-size:9px;color:var(--text-faint);text-transform:uppercase;margin-top:2px;">Race</div></div>'
+      + '</div>'
+      // Détail dépliable
+      + '<div id="dog-detail-' + idx + '" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:8px;">' + rows + '</div>'
       + '</div>';
   }).join('');
+}
+
+function toggleDogDetail(idx) {
+  var panel = document.getElementById('dog-detail-' + idx);
+  var chev = document.getElementById('dog-chevron-' + idx);
+  if (!panel) return;
+  var open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  if (chev) chev.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
 }
 </script>
 
