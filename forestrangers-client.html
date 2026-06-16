@@ -431,7 +431,7 @@ html, body {
 
         <div class="notif-card new" onclick="showScreen('screen-walk-detail')">
           <div class="notif-header">
-            <span class="notif-type">Promenade terminée</span>
+            <span class="notif-type">Promenade terminee</span>
             <span class="notif-time">Il y a 12 min</span>
           </div>
           <div class="notif-title">Max est rentré !</div>
@@ -454,7 +454,7 @@ html, body {
 
         <div class="notif-card read">
           <div class="notif-header">
-            <span class="notif-type">Réservation confirmée</span>
+            <span class="notif-type">Reservation confirmee</span>
             <span class="notif-time">Hier · 18:04</span>
           </div>
           <div class="notif-title">Dog Walking · Mardi 10 juin</div>
@@ -582,7 +582,7 @@ html, body {
     <!-- ══ RÉSERVATIONS ══ -->
     <div class="screen" id="screen-bookings">
       <div class="screen-pad">
-        <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;margin-bottom:4px;margin-top:4px;">Mes réservations</div>
+        <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;margin-bottom:4px;margin-top:4px;">Mes reservations</div>
         <div style="font-size:13px;color:var(--text-dim);margin-bottom:18px;">Historique et à venir</div>
 
         <button class="btn-big btn-accent" style="margin-bottom:16px;" onclick="window.location.href='forestrangers-reservation.html'">
@@ -984,14 +984,14 @@ async function loadProchainePromenade(id) {
     if (!resas || resas.length === 0) {
       el.innerHTML = '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--accent);font-weight:700;margin-bottom:8px;">Prochaine promenade</div>'
         + '<div style="font-size:13px;color:var(--text-dim);">Aucune réservation à venir</div>'
-        + '<div style="margin-top:12px;"><a href="forestrangers-reservation.html" style="background:var(--accent);color:white;padding:8px 14px;border-radius:8px;font-family:\'Norwester\',sans-serif;font-size:11px;font-weight:800;text-decoration:none;">Réserver maintenant</a></div>';
+        + '<div style="margin-top:12px;"><a href="forestrangers-reservation.html" style="background:var(--accent);color:white;padding:8px 14px;border-radius:8px;font-family:\'Norwester\',sans-serif;font-size:11px;font-weight:800;text-decoration:none;">Reserver maintenant</a></div>';
       return;
     }
 
     var r = resas[0];
     var svcNames = { walking: 'Dog Walking', daycare: 'Day Care', boarding: 'Boarding' };
     var creneaux = { matin: '09h00', midi: '12h00', apmidi: '14h30' };
-    var dateLabel = new Date(r.date_debut).toLocaleDateString('fr-LU', { weekday: 'long', day: 'numeric', month: 'long' });
+    var dateLabel = new Date(r.date_debut).toLocaleDateString('fr-LU', { weekday: 'long', day: 'numeric', month: 'long' }).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     var cr = creneaux[r.creneau] || '—';
     var badge = r.statut === 'confirme' ? '<span class="badge b-green">Confirmé</span>' : '<span class="badge b-amber">En attente</span>';
 
