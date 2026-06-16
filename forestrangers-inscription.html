@@ -373,6 +373,7 @@ input[type=range]::-webkit-slider-runnable-track {
 .success-icon svg { width: 36px; height: 36px; stroke: var(--green); }
 .success-title {
   font-family: 'Norwester', sans-serif; font-size: 22px; font-weight: 800;
+  color: var(--accent);
   margin-bottom: 10px;
 }
 .success-sub {
@@ -446,17 +447,17 @@ input[type=range]::-webkit-slider-runnable-track {
 .race-autocomplete { position: relative; }
 .race-dropdown {
   position: absolute; top: 100%; left: 0; right: 0; z-index: 200;
-  background: #2f3520; border: 1.5px solid var(--accent);
+  background: var(--kaki); border: 1.5px solid var(--accent);
   border-radius: 10px; max-height: 200px; overflow-y: auto;
   box-shadow: 0 8px 24px rgba(0,0,0,0.3); margin-top: 4px;
 }
 .race-option {
-  padding: 10px 14px; cursor: pointer; font-size: 13px; color: var(--text-dim);
-  border-bottom: 1px solid var(--border); transition: background 0.1s;
+  padding: 10px 14px; cursor: pointer; font-size: 13px; color: #ffffff;
+  border-bottom: 1px solid rgba(255,255,255,0.10); transition: background 0.1s;
 }
 .race-option:last-child { border-bottom: none; }
-.race-option:hover, .race-option.selected { background: var(--accent-dim); color: var(--text); }
-.race-option .race-cat { font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.08em; }
+.race-option:hover, .race-option.selected { background: rgba(255,95,31,0.25); color: #ffffff; }
+.race-option .race-cat { font-size: 10px; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.08em; }
 
 /* ── CHOIX LANGUE ── */
 .lang-choice {
@@ -1074,6 +1075,9 @@ input[type=range]::-webkit-slider-runnable-track {
       </button>
     </div>
   </div>
+
+  <!-- ══════════════════════════════════════
+       PAGE 3b — MOT DE PASSE
   ══════════════════════════════════════ -->
   <div class="page-section" id="page-3b">
     <div id="recap-pre"></div>
@@ -1595,7 +1599,7 @@ function renderPreRecap() {
     ['N° de puce',   v('puce-chien')]
   ];
   var html = '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;">'
-    + '<div style="font-weight:600;font-size:13px;margin-bottom:10px;">Vérifiez vos informations</div>';
+    + '<div style="font-weight:600;font-size:13px;margin-bottom:10px;color:var(--accent);">Vérifiez vos informations</div>';
   rows.forEach(function(r) {
     if (!r[1]) return;
     html += '<div style="display:flex;justify-content:space-between;gap:12px;padding:5px 0;font-size:12.5px;border-bottom:1px solid var(--border);">'
@@ -1678,8 +1682,30 @@ function isHorsZone(commune) {
   return !zonesNormales.some(function(z) { return commune.toLowerCase().includes(z); });
 }
 
+// Retire les accents UNIQUEMENT sur les textes rendus en Norwester (la police
+// d'affichage n'a pas de capitales accentuées → « É » cassé). Le corps de texte
+// (Instrument Sans) garde ses accents normalement.
+function stripDisplayAccents(root) {
+  var scope = root || document.body;
+  if (!scope) return;
+  var nodes = scope.querySelectorAll('*');
+  for (var i = 0; i < nodes.length; i++) {
+    var el = nodes[i];
+    var ff = '';
+    try { ff = window.getComputedStyle(el).fontFamily || ''; } catch(e) {}
+    if (ff.indexOf('Norwester') === -1) continue;
+    for (var j = 0; j < el.childNodes.length; j++) {
+      var node = el.childNodes[j];
+      if (node.nodeType === 3 && /[\u00C0-\u024F]/.test(node.nodeValue)) {
+        node.nodeValue = node.nodeValue.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      }
+    }
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   loadRaces();
+  stripDisplayAccents();
   var params = new URLSearchParams(window.location.search);
   var token  = params.get('token');
   var prenom = params.get('prenom');
@@ -1879,6 +1905,9 @@ async function sauvegarderInscription(motDePasse) {
         + '<div style="display:flex;justify-content:space-between;padding:6px 0;"><span style="color:var(--text-faint);">N° client</span><span style="color:var(--accent);font-family:\'Norwester\',sans-serif;font-size:15px;font-weight:800;">#' + nextNum + '</span></div>'
         + '</div>';
     }
+
+    // Re-traiter les accents des titres Norwester mis à jour dynamiquement
+    stripDisplayAccents(document.getElementById('page-4'));
 
   } catch(e) {
     console.error('Erreur inscription:', e);

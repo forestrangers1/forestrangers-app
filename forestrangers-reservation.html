@@ -161,7 +161,7 @@ html, body {
 .section-head {
   padding: 14px 16px; border-bottom: none;
   display: flex; align-items: center; gap: 10px; overflow: visible;
-  background: #1c1f14; border-radius: 0;
+  background: #3d4429; border-radius: 0;
 }
 .section-icon {
   width: 32px; height: 32px; border-radius: 9px;
@@ -345,8 +345,8 @@ textarea.field-input { resize: vertical; min-height: 80px; }
 /* ── MODE JOUR — textes globaux ── */
 .toggle-option-title { color: #1c1f14 !important; }
 .toggle-option-desc { color: rgba(28,31,20,0.6) !important; }
-.toggle-option.selected .toggle-option-title { color: #eceee6 !important; }
-.toggle-option.selected .toggle-option-desc { color: rgba(236,238,230,0.7) !important; }
+.toggle-option.selected .toggle-option-title { color: #1c1f14 !important; }
+.toggle-option.selected .toggle-option-desc { color: rgba(28,31,20,0.7) !important; }
 
 /* Champs input */
 .field-input, .form-input, select.field-input {
@@ -401,7 +401,7 @@ textarea.field-input { resize: vertical; min-height: 80px; }
     <div class="brand-name">Forest<span>Rangers</span></div>
   </div>
   <div class="header-title">Nouvelle réservation</div>
-  <div class="back-btn">
+  <div class="back-btn" onclick="window.location.href='forestrangers-client.html'" style="cursor:pointer;">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
     Retour
   </div>
@@ -1065,6 +1065,72 @@ let currentService = null;
 const prices = { walking: 28, daycare: 55, boarding: 68 };
 const serviceNames = { walking: 'Dog Walking', daycare: 'Day Care', boarding: 'Boarding' };
 
+// ── CHARGEMENT CLIENT + CHIENS DEPUIS SUPABASE ──
+let clientId = null;
+let chiensData = [];
+
+document.addEventListener('DOMContentLoaded', loadProfileAndDogs);
+
+async function loadProfileAndDogs() {
+  try {
+    const { data: session } = await db.auth.getSession();
+    if (!session || !session.session) {
+      window.location.href = 'forestrangers-login.html';
+      return;
+    }
+    const userId = session.session.user.id;
+
+    const { data: client } = await db.from('clients')
+      .select('id, prenom, nom')
+      .eq('auth_id', userId)
+      .single();
+    if (!client) return;
+    clientId = client.id;
+
+    const { data: chiens } = await db.from('chiens')
+      .select('id, prenom, nom, race, poids')
+      .eq('client_id', client.id);
+    chiensData = chiens || [];
+    renderDogList();
+  } catch (e) {
+    console.log('Mode démo — pas de session active', e);
+  }
+}
+
+function renderDogList() {
+  const list = document.getElementById('dog-list');
+  if (!list) return;
+  if (!chiensData.length) {
+    list.innerHTML = '<div style="font-size:13px;color:var(--text-dim);padding:8px 0;">Aucun chien enregistré. Ajoutez votre chien depuis votre espace client avant de réserver.</div>';
+    return;
+  }
+  list.innerHTML = chiensData.map(function(d, i) {
+    const sel = i === 0;
+    const name = d.prenom || d.nom || 'Chien';
+    const meta = (d.race || '—') + (d.poids ? ' · ' + d.poids + ' kg' : '');
+    return '<div class="dog-check-item" data-chien-id="' + d.id + '" data-dog-name="' + name.replace(/"/g, '&quot;') + '" onclick="toggleDogSelect(this)" '
+      + 'style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface2);border:1.5px solid ' + (sel ? 'var(--accent)' : 'var(--border)') + ';border-radius:var(--radius);cursor:pointer;">'
+      + '<div class="dog-check-box" style="width:22px;height:22px;border-radius:6px;background:' + (sel ? 'var(--accent)' : 'transparent') + ';border:2px solid ' + (sel ? 'var(--accent)' : 'var(--border2)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+      + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="' + (sel ? 'white' : 'var(--text-faint)') + '" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>'
+      + '<div style="flex:1;"><div style="font-size:13px;font-weight:600;' + (sel ? '' : 'color:var(--text-dim);') + '">' + name + '</div>'
+      + '<div style="font-size:11px;color:var(--text-faint);margin-top:1px;">' + meta + '</div></div>'
+      + '<span style="font-size:10px;font-weight:700;color:' + (sel ? 'var(--accent)' : 'var(--text-faint)') + ';background:' + (sel ? 'var(--accent-dim)' : 'rgba(0,0,0,0.05)') + ';padding:3px 8px;border-radius:20px;">' + (sel ? 'Sélectionné' : 'Non sélectionné') + '</span>'
+      + '</div>';
+  }).join('');
+}
+
+function getSelectedDogIds() {
+  const ids = [];
+  document.querySelectorAll('.dog-check-item').forEach(function(el) {
+    const badges = el.querySelectorAll('span');
+    const last = badges[badges.length - 1];
+    if (last && last.textContent.trim() === 'Sélectionné' && el.dataset.chienId) {
+      ids.push(el.dataset.chienId);
+    }
+  });
+  return ids;
+}
+
 // ── SERVICE SELECTION ──
 function selectService(type, el) {
   document.querySelectorAll('.service-card').forEach(c => c.classList.remove('selected'));
@@ -1337,6 +1403,9 @@ function confirmBooking() {
   const svc = currentService;
   const isBoarding = svc === 'boarding';
 
+  // ── Enregistrement réel dans Supabase ──
+  saveReservation(svc, isBoarding);
+
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-5').classList.add('active');
 
@@ -1355,6 +1424,52 @@ function confirmBooking() {
     title.textContent = 'Réservation confirmée !';
     sub.textContent = `Votre ${serviceNames[svc]} a été automatiquement confirmé. Vous recevrez un rappel la veille.`;
     status.innerHTML = '<span class="badge b-green">Confirmé automatiquement</span>';
+  }
+}
+
+async function saveReservation(svc, isBoarding) {
+  if (!clientId) { console.log('Pas de client_id — réservation non enregistrée'); return; }
+
+  // Dates et créneau selon le service
+  let date_debut = null, date_fin = null, creneau = null;
+  if (svc === 'walking') {
+    date_debut = document.getElementById('walk-date')?.value || null;
+    const slot = document.getElementById('walk-slot')?.value || null;
+    creneau = slot === 'apm' ? 'apmidi' : (slot || null);
+    const recur = document.getElementById('recur-walk-recur')?.classList.contains('selected');
+    date_fin = recur ? (document.getElementById('walk-recur-end')?.value || date_debut) : date_debut;
+  } else if (svc === 'daycare') {
+    date_debut = document.getElementById('daycare-date')?.value || null;
+    const recur = document.getElementById('recur-dc-recur')?.classList.contains('selected');
+    date_fin = recur ? (document.getElementById('dc-recur-end')?.value || date_debut) : date_debut;
+  } else if (svc === 'boarding') {
+    date_debut = document.getElementById('boarding-start')?.value || null;
+    date_fin = document.getElementById('boarding-end')?.value || date_debut;
+  }
+
+  const ids = getSelectedDogIds();
+  const notes = document.getElementById('booking-notes')?.value || null;
+
+  const base = {
+    client_id: clientId,
+    service: svc,
+    date_debut: date_debut,
+    date_fin: date_fin,
+    creneau: creneau,
+    notes: notes,
+    statut: isBoarding ? 'en_attente' : 'confirme',
+    ranger_nom: 'Gabriel'
+  };
+
+  try {
+    if (ids.length === 0) {
+      await db.from('reservations').insert(Object.assign({ chien_id: null }, base));
+    } else {
+      const rows = ids.map(function(id) { return Object.assign({ chien_id: id }, base); });
+      await db.from('reservations').insert(rows);
+    }
+  } catch (e) {
+    console.log('Erreur enregistrement réservation:', e);
   }
 }
 
@@ -1391,17 +1506,15 @@ function toggleDogSelect(el) {
 function getSelectedDogs() {
   const dogs = [];
   document.querySelectorAll('.dog-check-item').forEach(el => {
-    // Check if selected - look for orange border or accent badge
     const badges = el.querySelectorAll('span');
     const lastBadge = badges[badges.length - 1];
     const isSelected = lastBadge && lastBadge.textContent.trim() === 'Sélectionné';
     if (isSelected) {
-      const nameEl = el.querySelector('div.flex-1 div:first-child, div[style*="flex:1"] div:first-child');
-      const name = nameEl ? nameEl.textContent.trim() : el.querySelectorAll('div > div')[1]?.textContent.trim();
+      const name = el.dataset.dogName || el.querySelector('div[style*="flex:1"] div:first-child')?.textContent.trim();
       if (name && name !== '+') dogs.push(name);
     }
   });
-  return dogs.length > 0 ? dogs : ['Max'];
+  return dogs.length > 0 ? dogs : (chiensData[0] ? [chiensData[0].prenom || chiensData[0].nom] : ['—']);
 }
 
 function resetForm() {
