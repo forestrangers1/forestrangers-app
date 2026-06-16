@@ -368,6 +368,53 @@ html, body {
   cursor: pointer; transition: all 0.15s; color: var(--text-dim);
 }
 .jour-pill.selected { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
+
+/* ── AVATAR MENU ── */
+.avatar-menu {
+  display: none; position: absolute; top: 48px; right: 0; z-index: 200;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 12px; padding: 6px; min-width: 180px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+}
+.avatar-menu.open { display: block; animation: fadeUp 0.15s ease; }
+.avatar-menu-item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  background: transparent; border: none; cursor: pointer;
+  padding: 11px 12px; border-radius: 8px; color: var(--text);
+  font-family: 'Instrument Sans', sans-serif; font-size: 13.5px; font-weight: 600;
+  text-align: left; transition: background 0.12s;
+}
+.avatar-menu-item:hover { background: rgba(255,255,255,0.05); }
+.avatar-menu-item svg { width: 17px; height: 17px; color: var(--text-dim); flex-shrink: 0; }
+
+/* ── FORM FIELDS (paramètres / chien) ── */
+.field-label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--text-faint); font-weight: 700; display: block; margin-bottom: 6px;
+}
+.field-input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px; color: var(--text);
+  font-family: 'Instrument Sans', sans-serif; font-size: 13.5px; outline: none;
+  transition: border-color 0.15s;
+}
+.field-input:focus { border-color: var(--accent); }
+.field-input:disabled { opacity: 0.55; cursor: not-allowed; }
+.field-group { margin-bottom: 14px; }
+
+/* ── PHOTO CHIEN ── */
+.dog-photo {
+  width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
+  object-fit: cover; border: 2px solid var(--accent);
+}
+.photo-upload-box {
+  width: 84px; height: 84px; border-radius: 16px; flex-shrink: 0;
+  background: var(--surface2); border: 1.5px dashed var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; overflow: hidden; position: relative;
+}
+.photo-upload-box img { width: 100%; height: 100%; object-fit: cover; }
+.photo-upload-box svg { width: 26px; height: 26px; color: var(--text-faint); }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
@@ -412,11 +459,18 @@ html, body {
             <div id="client-date" style="font-size:12px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">Lundi 9 juin</div>
             <div id="client-bonjour" style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;margin-top:2px;">Bonjour, Marie</div>
           </div>
-          <div style="display:flex;align-items:center;gap:10px;">
-            <button onclick="seDeconnecter()" aria-label="Se déconnecter" style="width:38px;height:38px;border-radius:11px;background:transparent;border:1.5px solid var(--border);color:var(--text-dim);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            </button>
-            <div id="client-avatar" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#3d4429,#6b7450);display:flex;align-items:center;justify-content:center;font-family:'Norwester',sans-serif;font-weight:800;font-size:13px;border:2px solid var(--accent);">MD</div>
+          <div style="position:relative;flex-shrink:0;">
+            <div id="client-avatar" onclick="toggleAvatarMenu(event)" aria-label="Menu du compte" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#3d4429,#6b7450);display:flex;align-items:center;justify-content:center;font-family:'Norwester',sans-serif;font-weight:800;font-size:13px;border:2px solid var(--accent);cursor:pointer;">MD</div>
+            <div id="avatarMenu" class="avatar-menu">
+              <button class="avatar-menu-item" onclick="openSettings()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                Paramètres
+              </button>
+              <button class="avatar-menu-item" onclick="seDeconnecter()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Se déconnecter
+              </button>
+            </div>
           </div>
         </div>
 
@@ -733,6 +787,36 @@ html, body {
       </div>
     </div>
 
+    <!-- ══ PARAMÈTRES ══ -->
+    <div class="screen" id="screen-settings">
+      <div class="screen-pad">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;margin-top:4px;">
+          <div class="back-btn" onclick="goTab('screen-home','tab-home')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+          </div>
+          <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;">Paramètres</div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><span class="card-title">Mes coordonnées</span></div>
+          <div class="card-body">
+            <div id="settings-fields">
+              <div style="padding:12px 0;font-size:13px;color:var(--text-faint);">Chargement…</div>
+            </div>
+            <button class="btn-big btn-accent" style="margin-top:6px;" onclick="saveSettings()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              Enregistrer
+            </button>
+          </div>
+        </div>
+
+        <button class="btn-outline-big" style="width:100%;margin-top:4px;color:var(--red);border-color:rgba(224,90,90,0.3);" onclick="seDeconnecter()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Se déconnecter
+        </button>
+      </div>
+    </div>
+
   </div><!-- /screens -->
 
   <!-- BOTTOM NAV -->
@@ -812,6 +896,82 @@ html, body {
   </div>
 </div>
 
+<!-- MODAL ÉDITION CHIEN -->
+<div class="modal-overlay" id="dogEditModal">
+  <div class="modal-full">
+    <div class="modal-close" onclick="closeDogEdit()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </div>
+    <div style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;margin-bottom:16px;">Modifier le chien</div>
+
+    <!-- Photo -->
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">
+      <label class="photo-upload-box" for="dog-photo-input" id="dog-photo-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      </label>
+      <input type="file" id="dog-photo-input" accept="image/*" style="display:none;" onchange="onDogPhotoChange(event)">
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:3px;">Photo du chien</div>
+        <div style="font-size:11.5px;color:var(--text-faint);line-height:1.5;">Touchez le carré pour choisir une photo depuis votre téléphone.</div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Prénom</label>
+      <input class="field-input" id="dog-edit-prenom" type="text" placeholder="Ex : Max">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Race</label>
+      <input class="field-input" id="dog-edit-race" type="text" placeholder="Ex : Berger australien">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="field-group">
+        <label class="field-label">Poids (kg)</label>
+        <input class="field-input" id="dog-edit-poids" type="number" inputmode="decimal" step="0.1" placeholder="0">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Sexe</label>
+        <select class="field-input" id="dog-edit-sexe">
+          <option value="">—</option>
+          <option value="male">Mâle</option>
+          <option value="femelle">Femelle</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="field-group">
+        <label class="field-label">Naissance</label>
+        <input class="field-input" id="dog-edit-naissance" type="date">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Stérilisé</label>
+        <select class="field-input" id="dog-edit-sterilise">
+          <option value="">—</option>
+          <option value="true">Oui</option>
+          <option value="false">Non</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">N° de puce</label>
+      <input class="field-input" id="dog-edit-puce" type="text" inputmode="numeric" maxlength="15" placeholder="15 chiffres">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Comportement / particularités</label>
+      <textarea class="field-input" id="dog-edit-comportement" rows="2" style="resize:none;" placeholder="Ex : sociable, peur de l'orage..."></textarea>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Notes</label>
+      <textarea class="field-input" id="dog-edit-notes" rows="2" style="resize:none;" placeholder="Allergies, vétérinaire, traitement..."></textarea>
+    </div>
+
+    <button class="btn-big btn-accent" style="margin-top:4px;" onclick="saveDogEdit()" id="dog-edit-save">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      Enregistrer
+    </button>
+  </div>
+</div>
+
 <script>
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -831,12 +991,101 @@ async function seDeconnecter() {
   window.location.href = 'forestrangers-login.html';
 }
 
+// ── MENU AVATAR ──
+function toggleAvatarMenu(e) {
+  if (e) e.stopPropagation();
+  document.getElementById('avatarMenu').classList.toggle('open');
+}
+document.addEventListener('click', function(e) {
+  var menu = document.getElementById('avatarMenu');
+  if (menu && menu.classList.contains('open') && !menu.contains(e.target) && e.target.id !== 'client-avatar') {
+    menu.classList.remove('open');
+  }
+});
+
+// ── PARAMÈTRES ──
+var authEmail = null;
+
+function openSettings() {
+  document.getElementById('avatarMenu').classList.remove('open');
+  renderSettings();
+  goTab('screen-settings', 'tab-home');
+}
+
+function renderSettings() {
+  var el = document.getElementById('settings-fields');
+  if (!el) return;
+  if (!clientData) { el.innerHTML = '<div style="padding:12px 0;font-size:13px;color:var(--text-faint);">Profil indisponible.</div>'; return; }
+
+  // Champs candidats : on n'affiche que ceux réellement présents dans la table clients
+  var candidates = [
+    { key: 'prenom',      label: 'Prénom',     type: 'text' },
+    { key: 'nom',         label: 'Nom',        type: 'text' },
+    { key: 'telephone',   label: 'Téléphone',  type: 'tel'  },
+    { key: 'tel',         label: 'Téléphone',  type: 'tel'  },
+    { key: 'adresse',     label: 'Adresse',    type: 'text' },
+    { key: 'commune',     label: 'Commune',    type: 'text' },
+    { key: 'ville',       label: 'Commune',    type: 'text' },
+    { key: 'code_postal', label: 'Code postal',type: 'text' }
+  ];
+
+  var html = '';
+  candidates.forEach(function(c) {
+    if (!(c.key in clientData)) return;
+    var val = clientData[c.key] == null ? '' : clientData[c.key];
+    html += '<div class="field-group"><label class="field-label">' + c.label + '</label>'
+      + '<input class="field-input" id="set-' + c.key + '" type="' + c.type + '" value="' + String(val).replace(/"/g, '&quot;') + '"></div>';
+  });
+
+  // Email : lecture seule (référence du compte)
+  var mail = authEmail || clientData.email || '';
+  html += '<div class="field-group"><label class="field-label">Email (compte)</label>'
+    + '<input class="field-input" type="email" value="' + String(mail).replace(/"/g, '&quot;') + '" disabled></div>';
+
+  el.innerHTML = html;
+}
+
+async function saveSettings() {
+  if (!clientId || !clientData) return;
+  var btn = document.querySelector('#screen-settings .btn-accent');
+  var payload = {};
+  ['prenom','nom','telephone','tel','adresse','commune','ville','code_postal'].forEach(function(k) {
+    if (!(k in clientData)) return;
+    var input = document.getElementById('set-' + k);
+    if (input) payload[k] = input.value.trim() || null;
+  });
+  if (!Object.keys(payload).length) return;
+
+  if (btn) btn.style.opacity = '0.6';
+  try {
+    var { error } = await db.from('clients').update(payload).eq('id', clientId);
+    if (error) throw error;
+    Object.assign(clientData, payload);
+    updateHomeScreen(clientData);
+    showToast('✓ Coordonnées enregistrées');
+  } catch(e) {
+    console.log('Erreur enregistrement paramètres:', e);
+    showToast('✗ Erreur — réessayez', true);
+  }
+  if (btn) btn.style.opacity = '1';
+}
+
+// ── TOAST RÉUTILISABLE ──
+function showToast(msg, isError) {
+  var toast = document.createElement('div');
+  var bg = isError ? 'var(--red)' : 'var(--green)';
+  toast.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:' + bg + ';color:white;padding:12px 20px;border-radius:12px;font-family:Norwester,sans-serif;font-size:13px;font-weight:800;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,0.4);white-space:nowrap;';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(function(){ toast.remove(); }, 3200);
+}
+
 function openPhotoModal()  { document.getElementById('photoModal').classList.add('open'); }
 function closePhotoModal() { document.getElementById('photoModal').classList.remove('open'); }
 function openBookingModal()  { document.getElementById('bookingModal').classList.add('open'); }
 function closeBookingModal() { document.getElementById('bookingModal').classList.remove('open'); }
 
-['photoModal','bookingModal'].forEach(id => {
+['photoModal','bookingModal','dogEditModal'].forEach(id => {
   document.getElementById(id).addEventListener('click', function(e) {
     if (e.target === this) this.classList.remove('open');
   });
@@ -923,6 +1172,7 @@ async function loadClientProfile() {
       return;
     }
     var userId = session.session.user.id;
+    authEmail = session.session.user.email || null;
 
     // Charger le profil client
     var { data: client } = await db.from('clients')
@@ -1075,6 +1325,7 @@ async function loadFactures(id) {
 }
 
 function updateDogScreen(chiens) {
+  window.chiensData = chiens || [];
   var container = document.getElementById('chiens-list');
   if (!container) return;
 
@@ -1098,8 +1349,15 @@ function updateDogScreen(chiens) {
   };
   function fmt(k, v) {
     if (typeof v === 'boolean') return v ? 'Oui' : 'Non';
+    if (v === 'true') return 'Oui';
+    if (v === 'false') return 'Non';
+    if (k === 'sexe') return v === 'male' ? 'Mâle' : (v === 'femelle' ? 'Femelle' : v);
     if (k === 'poids') return v + ' kg';
     if (k === 'age') return v + ' ans';
+    if (k === 'date_naissance') {
+      var d = new Date(v);
+      return isNaN(d) ? v : d.toLocaleDateString('fr-LU', { day:'2-digit', month:'long', year:'numeric' });
+    }
     return v;
   }
 
@@ -1107,6 +1365,11 @@ function updateDogScreen(chiens) {
     var name = d.prenom || d.nom || 'Chien';
     var emoji = (d.poids && d.poids >= 25) ? '🐕' : '🐩';
     var sub = (d.race || '—') + (d.poids ? ' · ' + d.poids + ' kg' : '');
+
+    // Avatar : photo si dispo, sinon emoji
+    var avatar = d.photo_url
+      ? '<img class="dog-photo" src="' + d.photo_url + '" alt="' + name + '">'
+      : '<div style="width:46px;height:46px;border-radius:50%;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-size:23px;flex-shrink:0;">' + emoji + '</div>';
 
     // Lignes de détail : tous les champs connus, non vides
     var rows = '';
@@ -1118,9 +1381,9 @@ function updateDogScreen(chiens) {
     if (!rows) rows = '<div style="padding:12px 0;font-size:12px;color:var(--text-faint);">Aucune information complémentaire enregistrée.</div>';
 
     return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;">'
-      // En-tête cliquable
+      // En-tête cliquable (déplie le détail)
       + '<div onclick="toggleDogDetail(' + idx + ')" style="display:flex;align-items:center;gap:12px;cursor:pointer;">'
-      + '<div style="width:46px;height:46px;border-radius:50%;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-size:23px;flex-shrink:0;">' + emoji + '</div>'
+      + avatar
       + '<div style="flex:1;min-width:0;"><div style="font-family:\'Norwester\',sans-serif;font-size:16px;font-weight:800;">' + name + '</div>'
       + '<div style="font-size:12px;color:var(--text-dim);">' + sub + '</div></div>'
       + '<span class="badge b-green">Actif</span>'
@@ -1133,6 +1396,11 @@ function updateDogScreen(chiens) {
       + '</div>'
       // Détail dépliable
       + '<div id="dog-detail-' + idx + '" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:8px;">' + rows + '</div>'
+      // Bouton Modifier
+      + '<button class="btn-outline-big" style="width:100%;margin-top:12px;font-size:12px;padding:11px;" onclick="openDogEdit(' + idx + ')">'
+      + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z"/></svg>'
+      + 'Modifier'
+      + '</button>'
       + '</div>';
   }).join('');
 }
@@ -1144,6 +1412,121 @@ function toggleDogDetail(idx) {
   var open = panel.style.display !== 'none';
   panel.style.display = open ? 'none' : 'block';
   if (chev) chev.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+
+// ── ÉDITION DU CHIEN ──
+var dogEditIndex = null;
+var dogPendingPhotoFile = null;
+
+function openDogEdit(idx) {
+  var d = (window.chiensData || [])[idx];
+  if (!d) return;
+  dogEditIndex = idx;
+  dogPendingPhotoFile = null;
+
+  function set(id, val) { var e = document.getElementById(id); if (e) e.value = (val == null ? '' : val); }
+  set('dog-edit-prenom', d.prenom || d.nom || '');
+  set('dog-edit-race', d.race || '');
+  set('dog-edit-poids', d.poids != null ? d.poids : '');
+  set('dog-edit-sexe', d.sexe || '');
+  set('dog-edit-naissance', d.date_naissance || '');
+  set('dog-edit-sterilise', (d.sterilise === true || d.sterilise === 'true') ? 'true' : (d.sterilise === false || d.sterilise === 'false') ? 'false' : '');
+  set('dog-edit-puce', d.puce || d.chip || '');
+  set('dog-edit-comportement', d.comportement || '');
+  set('dog-edit-notes', d.notes || '');
+
+  // Aperçu photo
+  var box = document.getElementById('dog-photo-box');
+  if (box) {
+    box.innerHTML = d.photo_url
+      ? '<img src="' + d.photo_url + '" alt="">'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
+  }
+
+  document.getElementById('dogEditModal').classList.add('open');
+}
+
+function closeDogEdit() {
+  document.getElementById('dogEditModal').classList.remove('open');
+  dogEditIndex = null;
+  dogPendingPhotoFile = null;
+}
+
+function onDogPhotoChange(e) {
+  var file = e.target.files && e.target.files[0];
+  if (!file) return;
+  dogPendingPhotoFile = file;
+  var box = document.getElementById('dog-photo-box');
+  if (box) {
+    var url = URL.createObjectURL(file);
+    box.innerHTML = '<img src="' + url + '" alt="">';
+  }
+}
+
+async function uploadDogPhoto(dogId) {
+  if (!dogPendingPhotoFile) return null;
+  var ext = (dogPendingPhotoFile.name.split('.').pop() || 'jpg').toLowerCase();
+  var path = (clientId || 'client') + '/' + dogId + '-' + Date.now() + '.' + ext;
+  var up = await db.storage.from('chiens-photos').upload(path, dogPendingPhotoFile, { upsert: true, contentType: dogPendingPhotoFile.type });
+  if (up.error) throw up.error;
+  var pub = db.storage.from('chiens-photos').getPublicUrl(path);
+  return pub.data.publicUrl;
+}
+
+async function saveDogEdit() {
+  if (dogEditIndex == null) return;
+  var d = (window.chiensData || [])[dogEditIndex];
+  if (!d || !d.id) return;
+  var btn = document.getElementById('dog-edit-save');
+  if (btn) btn.style.opacity = '0.6';
+
+  // On ne met à jour que les colonnes réellement présentes dans la table chiens
+  function val(id) { var e = document.getElementById(id); return e ? e.value.trim() : ''; }
+  var fields = {
+    prenom: val('dog-edit-prenom'),
+    race: val('dog-edit-race'),
+    sexe: val('dog-edit-sexe') || null,
+    date_naissance: val('dog-edit-naissance') || null,
+    comportement: val('dog-edit-comportement') || null,
+    notes: val('dog-edit-notes') || null
+  };
+  var poids = val('dog-edit-poids');
+  if (poids !== '') fields.poids = parseFloat(poids.replace(',', '.'));
+  var ster = val('dog-edit-sterilise');
+  if (ster !== '') fields.sterilise = (ster === 'true');
+  var puceVal = val('dog-edit-puce');
+  if ('puce' in d) fields.puce = puceVal || null;
+  else if ('chip' in d) fields.chip = puceVal || null;
+
+  // Filtrer : ne garder que les clés existant dans la ligne chargée
+  var payload = {};
+  Object.keys(fields).forEach(function(k) { if (k in d) payload[k] = fields[k]; });
+
+  try {
+    // Photo d'abord (si nouvelle)
+    if (dogPendingPhotoFile && ('photo_url' in d)) {
+      try {
+        var url = await uploadDogPhoto(d.id);
+        if (url) payload.photo_url = url;
+      } catch(pe) {
+        console.log('Erreur upload photo:', pe);
+        showToast('✗ Photo non envoyée (bucket ?)', true);
+      }
+    }
+
+    var { error } = await db.from('chiens').update(payload).eq('id', d.id);
+    if (error) throw error;
+
+    // Mise à jour locale + ré-affichage
+    Object.assign(d, payload);
+    updateDogScreen(window.chiensData);
+    closeDogEdit();
+    showToast('✓ Fiche enregistrée');
+  } catch(e) {
+    console.log('Erreur enregistrement chien:', e);
+    showToast('✗ Erreur — réessayez', true);
+  }
+  if (btn) btn.style.opacity = '1';
 }
 </script>
 
