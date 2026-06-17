@@ -472,9 +472,13 @@ async function login() {
 
     if (res.error) throw res.error;
 
-    // Get user role
-    var roleRes = await db.from('user_roles').select('role').eq('id', res.data.user.id).single();
-    var role = roleRes.data ? roleRes.data.role : 'client';
+    // Résolution du rôle depuis la table staff (auth_id).
+    // staff.role = 'admin' -> admin ; 'caretaker'/'walker' -> staff ; pas de fiche staff -> client.
+    var staffRes = await db.from('staff').select('role').eq('auth_id', res.data.user.id).maybeSingle();
+    var role = 'client';
+    if (staffRes.data) {
+      role = (staffRes.data.role === 'admin') ? 'admin' : 'staff';
+    }
 
     // Redirect based on role
     var redirects = {
