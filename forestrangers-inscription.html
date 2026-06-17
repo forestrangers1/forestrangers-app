@@ -1865,7 +1865,9 @@ async function sauvegarderInscription(motDePasse) {
         await db.from('chiens').insert({
           client_id: clientId, nom: nomChien,
           race: race || null, poids_kg: poids ? parseFloat(poids) : null,
-          sexe: sexe || null, sterilise: sterilise, numero_puce: numeroPuce, actif: true
+          sexe: sexe || null, sterilise: sterilise, numero_puce: numeroPuce,
+          grand_chien: (raceGrandGabarit || poidsGrandGabarit),
+          actif: true
         });
       }
       // Chiens supplémentaires
@@ -1885,6 +1887,7 @@ async function sauvegarderInscription(motDePasse) {
             sexe: sx || null,
             sterilise: st === '' ? null : (st === 'true'),
             numero_puce: pu,
+            grand_chien: p ? (parseFloat(p) >= 35) : null,
             actif: true
           });
         }

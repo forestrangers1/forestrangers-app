@@ -679,7 +679,7 @@ html, body {
           </div>
         </div>
 
-        <a href="forestrangers-inscription.html" style="width:100%;margin-top:20px;padding:14px;background:var(--accent);border:1.5px solid var(--accent);border-radius:12px;color:#fff;font-family:'Norwester',sans-serif;font-weight:700;font-size:13px;letter-spacing:0.04em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;">
+        <a href="javascript:void(0)" onclick="openDogAdd()" style="width:100%;margin-top:20px;padding:14px;background:var(--accent);border:1.5px solid var(--accent);border-radius:12px;color:#fff;font-family:'Norwester',sans-serif;font-weight:700;font-size:13px;letter-spacing:0.04em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
           Ajouter un chien
         </a>
@@ -857,7 +857,7 @@ html, body {
     <div class="modal-close" onclick="closeDogEdit()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </div>
-    <div style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;margin-bottom:16px;">Modifier le chien</div>
+    <div id="dog-modal-title" style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;margin-bottom:16px;">Modifier le chien</div>
 
     <!-- Photo -->
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">
@@ -1334,7 +1334,7 @@ function updateDogScreen(chiens) {
       + '<div style="font-size:30px;margin-bottom:8px;">🐾</div>'
       + '<div style="font-size:14px;font-weight:600;margin-bottom:4px;">Aucun chien enregistré</div>'
       + '<div style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">Ajoutez votre chien pour pouvoir réserver une promenade.</div>'
-      + '<a href="forestrangers-inscription.html" style="display:inline-block;background:var(--accent);color:#fff;padding:9px 16px;border-radius:9px;font-family:\'Norwester\',sans-serif;font-size:12px;font-weight:800;text-decoration:none;">Ajouter mon chien</a>'
+      + '<a href="javascript:void(0)" onclick="openDogAdd()" style="display:inline-block;background:var(--accent);color:#fff;padding:9px 16px;border-radius:9px;font-family:\'Norwester\',sans-serif;font-size:12px;font-weight:800;text-decoration:none;cursor:pointer;">Ajouter mon chien</a>'
       + '</div>';
     return;
   }
@@ -1416,13 +1416,16 @@ function toggleDogDetail(idx) {
 
 // ── ÉDITION DU CHIEN ──
 var dogEditIndex = null;
+var dogAddMode = false;
 var dogPendingPhotoFile = null;
 
 function openDogEdit(idx) {
   var d = (window.chiensData || [])[idx];
   if (!d) return;
   dogEditIndex = idx;
+  dogAddMode = false;
   dogPendingPhotoFile = null;
+  var t = document.getElementById('dog-modal-title'); if (t) t.textContent = 'Modifier le chien';
 
   function set(id, val) { var e = document.getElementById(id); if (e) e.value = (val == null ? '' : val); }
   function boolSel(v) { return (v === true || v === 'true') ? 'true' : (v === false || v === 'false') ? 'false' : ''; }
@@ -1455,7 +1458,23 @@ function openDogEdit(idx) {
 function closeDogEdit() {
   document.getElementById('dogEditModal').classList.remove('open');
   dogEditIndex = null;
+  dogAddMode = false;
   dogPendingPhotoFile = null;
+}
+
+function openDogAdd() {
+  dogAddMode = true;
+  dogEditIndex = null;
+  dogPendingPhotoFile = null;
+  var t = document.getElementById('dog-modal-title'); if (t) t.textContent = 'Ajouter un chien';
+  function set(id, val) { var e = document.getElementById(id); if (e) e.value = (val == null ? '' : val); }
+  ['dog-edit-prenom','dog-edit-race','dog-edit-poids','dog-edit-sexe','dog-edit-naissance',
+   'dog-edit-sterilise','dog-edit-puce','dog-edit-vaccins','dog-edit-assurance','dog-edit-chaleur',
+   'dog-edit-dangereux','dog-edit-grand','dog-edit-comportement','dog-edit-notes']
+    .forEach(function(id) { set(id, ''); });
+  var box = document.getElementById('dog-photo-box');
+  if (box) box.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
+  document.getElementById('dogEditModal').classList.add('open');
 }
 
 function onDogPhotoChange(e) {
@@ -1480,6 +1499,77 @@ async function uploadDogPhoto(dogId) {
 }
 
 async function saveDogEdit() {
+  // ── Mode AJOUT d'un nouveau chien ──
+  if (dogAddMode) {
+    function valA(id) { var e = document.getElementById(id); return e ? e.value.trim() : ''; }
+    var nomA = valA('dog-edit-prenom');
+    if (!nomA) { showToast('✗ Le prénom est requis', true); return; }
+    if (!clientId) { showToast('✗ Session expirée — reconnectez-vous', true); return; }
+    var btnA = document.getElementById('dog-edit-save');
+    if (btnA) btnA.style.opacity = '0.6';
+
+    function triA(id) { var v = valA(id); return v === '' ? null : (v === 'true'); }
+    var pA = valA('dog-edit-poids');
+    var poidsA = pA !== '' ? parseFloat(pA.replace(',', '.')) : null;
+    var grdA = valA('dog-edit-grand');
+
+    var ins = {
+      client_id: clientId,
+      nom: nomA,
+      actif: true,
+      race: valA('dog-edit-race') || null,
+      sexe: valA('dog-edit-sexe') || null,
+      date_naissance: valA('dog-edit-naissance') || null,
+      notes_sante: valA('dog-edit-notes') || null,
+      numero_puce: valA('dog-edit-puce').replace(/\s/g, '') || null,
+      sterilise: triA('dog-edit-sterilise'),
+      vaccins_ok: triA('dog-edit-vaccins'),
+      assurance_ok: triA('dog-edit-assurance'),
+      en_chaleur: triA('dog-edit-chaleur'),
+      chien_dangereux: triA('dog-edit-dangereux'),
+      // Grand gabarit : choix explicite, sinon auto si poids >= 35
+      grand_chien: grdA !== '' ? (grdA === 'true') : (poidsA != null ? (poidsA >= 35) : null)
+    };
+    if (poidsA != null && !isNaN(poidsA)) ins.poids_kg = poidsA;
+
+    try {
+      var { data: newDog, error: insErr } = await db.from('chiens').insert(ins).select().single();
+      if (insErr) throw insErr;
+
+      // Comportement (colonne non garantie) → best-effort
+      var compA = valA('dog-edit-comportement');
+      if (compA && ('comportement' in newDog)) {
+        var cr = await db.from('chiens').update({ comportement: compA }).eq('id', newDog.id);
+        if (!cr.error) newDog.comportement = compA;
+      }
+      // Photo (si fournie et colonne présente)
+      if (dogPendingPhotoFile && ('photo_url' in newDog)) {
+        try {
+          var urlA = await uploadDogPhoto(newDog.id);
+          if (urlA) {
+            var pr = await db.from('chiens').update({ photo_url: urlA }).eq('id', newDog.id);
+            if (!pr.error) newDog.photo_url = urlA;
+          }
+        } catch(pe) {
+          console.log('Erreur upload photo:', pe);
+          showToast('✗ Photo non envoyée (bucket ?)', true);
+        }
+      }
+
+      var list = (window.chiensData || []).slice();
+      list.push(newDog);
+      updateDogScreen(list);
+      closeDogEdit();
+      showToast('✓ Chien ajouté');
+    } catch(e) {
+      console.log('Erreur ajout chien:', e);
+      showToast('✗ Erreur — réessayez', true);
+    }
+    if (btnA) btnA.style.opacity = '1';
+    return;
+  }
+
+  // ── Mode ÉDITION d'un chien existant ──
   if (dogEditIndex == null) return;
   var d = (window.chiensData || [])[dogEditIndex];
   if (!d || !d.id) return;
