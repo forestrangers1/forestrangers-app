@@ -2218,18 +2218,44 @@ function filterResasForDay(resas, dateStr) {
   });
 }
 
-function slotHtml(r, clientsMap, dateStr) {
+// Regroupe des lignes de réservation (1 par chien) en réservations distinctes.
+function groupBookings(rows) {
+  var groups = {};
+  (rows||[]).forEach(function(r){
+    var key=[r.client_id,r.service,r.date_debut,r.date_fin,r.creneau,r.statut].join('|');
+    (groups[key]=groups[key]||[]).push(r);
+  });
+  return Object.keys(groups).map(function(k){return groups[k];});
+}
+
+// Noms des chiens d'une réservation. chien_id = null => tous les chiens du client.
+function dogNamesForRows(rows, chiensMap, clientDogsMap) {
+  var names=[]; var clientId=rows[0]&&rows[0].client_id; var hasNull=false;
+  rows.forEach(function(r){
+    if (r.chien_id && chiensMap[r.chien_id]) names.push(chiensMap[r.chien_id].nom);
+    else if (!r.chien_id) hasNull=true;
+  });
+  if (hasNull && clientId && clientDogsMap[clientId]) {
+    clientDogsMap[clientId].forEach(function(n){ names.push(n); });
+  }
+  return [...new Set(names)];
+}
+
+function slotHtml(rows, clientsMap, chiensMap, clientDogsMap, dateStr) {
+  var r = rows[0];
   var color = SVC_COLORS[r.service]||'#ff5f1f';
   var svc   = SVC_NAMES[r.service]||r.service;
   var cr    = r.creneau?(CRENEAUX[r.creneau]||r.creneau):(r.service==='boarding'?'Pension':'—');
   var c     = r.client_id?clientsMap[r.client_id]:null;
-  var client = c?c.prenom+' '+c.nom[0]+'.':'—';
+  var client = c?c.prenom+' '+(c.nom?c.nom[0]+'.':''):'—';
   var isTest = c&&c.is_test;
+  var dogs = dogNamesForRows(rows, chiensMap, clientDogsMap);
+  var dogsTxt = dogs.length?dogs.join(' + '):'Tous les chiens';
   var sc = r.statut==='en_attente'?'#f0b429':color;
   return '<div class="week-slot'+(r.service==='boarding'?' boarding':'')+'" style="border-left:2px solid '+sc+';cursor:pointer;" onclick="openResaDetail(\''+r.id+'\',\''+dateStr+'\')">'
     +'<div class="ws-time" style="color:'+color+';">'+cr+'</div>'
-    +'<div class="ws-title">'+svc+(isTest?' <span style="font-size:8px;opacity:0.5;">TEST</span>':'')+'</div>'
-    +'<div class="ws-meta">'+client+' · '+(r.ranger_nom||'Gabriel')+'</div>'
+    +'<div class="ws-title" style="font-weight:800;">'+dogsTxt+(dogs.length>1?' <span style="font-weight:400;opacity:0.6;">('+dogs.length+')</span>':'')+(isTest?' <span style="font-size:8px;opacity:0.5;">TEST</span>':'')+'</div>'
+    +'<div class="ws-meta">'+svc+' · '+client+'</div>'
     +(r.statut==='en_attente'?'<span style="font-size:9px;color:#f0b429;">⚠ À valider</span>':'')
     +'</div>';
 }
@@ -2269,16 +2295,16 @@ async function loadPlanning() {
     var {data:resas,error} = await query;
     var clientsMap = {};
     var chiensMap = {};
+    var clientDogsMap = {};
     if (resas&&resas.length>0) {
       var ids=[...new Set(resas.filter(function(r){return r.client_id;}).map(function(r){return r.client_id;}))];
       if (ids.length>0) {
         var {data:cls} = await db.from('clients').select('id,prenom,nom,is_test').in('id',ids);
         if (cls) cls.forEach(function(c){clientsMap[c.id]=c;});
-      }
-      var dogIds=[...new Set(resas.filter(function(r){return r.chien_id;}).map(function(r){return r.chien_id;}))];
-      if (dogIds.length>0) {
-        var {data:dogs} = await db.from('chiens').select('id,nom').in('id',dogIds);
-        if (dogs) dogs.forEach(function(d){chiensMap[d.id]=d;});
+        // Tous les chiens des clients de la fenêtre : permet d'afficher les noms,
+        // y compris pour les réservations chien_id = null (= tous les chiens du client).
+        var {data:dogs} = await db.from('chiens').select('id,nom,client_id').in('client_id',ids);
+        if (dogs) dogs.forEach(function(d){ chiensMap[d.id]=d; (clientDogsMap[d.client_id]=clientDogsMap[d.client_id]||[]).push(d.nom); });
       }
     }
     if (filtClient&&resas) {
@@ -2292,9 +2318,9 @@ async function loadPlanning() {
     }
     if (!resas) resas=[];
     if (vuePlanning==='jour') {
-      renderPlanningJour(resas, clientsMap, debut, today);
+      renderPlanningJour(resas, clientsMap, chiensMap, clientDogsMap, debut, today);
     } else if (vuePlanning==='semaine') {
-      renderPlanningSemaine(resas, clientsMap, debut, today);
+      renderPlanningSemaine(resas, clientsMap, chiensMap, clientDogsMap, debut, today);
     } else {
       renderPlanningMois(resas, clientsMap, debut, fin, today);
     }
@@ -2310,7 +2336,7 @@ async function loadPlanning() {
   }
 }
 
-function renderPlanningSemaine(resas, clientsMap, debut, today) {
+function renderPlanningSemaine(resas, clientsMap, chiensMap, clientDogsMap, debut, today) {
   var grid = document.getElementById('planning-grid');
   grid.style.gridTemplateColumns = 'repeat(7,1fr)';
   var mon = new Date(debut+'T00:00:00'); var todayMid = new Date(today+'T00:00:00'); var html='';
@@ -2320,41 +2346,47 @@ function renderPlanningSemaine(resas, clientsMap, debut, today) {
     var isT=ds===today; var isWE=day.getDay()===0||day.getDay()===6;
     var hc=isT?'week-head today':isWE?'week-head weekend':'week-head other';
     var dr=filterResasForDay(resas,ds);
+    var bookings=groupBookings(dr);
     var dayOffset=daysBetween(day,todayMid);
     html+='<div class="week-col" onclick="if(event.target===this||event.target.classList.contains(\'week-col\')){vuePlanning=\'jour\';planningOffset='+dayOffset+';loadPlanning();}" style="cursor:pointer;">';
     html+='<div class="'+hc+'"><div class="week-day">'+JOURS_FR[day.getDay()]+'</div><div class="week-num">'+day.getDate()+'</div></div>';
-    if (!dr.length) html+='<div style="padding:8px 4px;text-align:center;font-size:10px;color:var(--text-faint);">—</div>';
-    else dr.forEach(function(r){html+=slotHtml(r,clientsMap,ds);});
+    if (!bookings.length) html+='<div style="padding:8px 4px;text-align:center;font-size:10px;color:var(--text-faint);">—</div>';
+    else bookings.forEach(function(rows){html+=slotHtml(rows,clientsMap,chiensMap,clientDogsMap,ds);});
     html+='</div>';
   }
   grid.innerHTML=html;
 }
 
-function renderPlanningJour(resas, clientsMap, dateStr, today) {
+function renderPlanningJour(resas, clientsMap, chiensMap, clientDogsMap, dateStr, today) {
   var grid=document.getElementById('planning-grid');
   grid.style.gridTemplateColumns='1fr';
   var day=new Date(dateStr+'T00:00:00');
   var dr=filterResasForDay(resas,dateStr);
+  var bookings=groupBookings(dr);
   var isT=dateStr===today;
   var isWE=day.getDay()===0||day.getDay()===6;
   var hc=isT?'week-head today':isWE?'week-head weekend':'week-head other';
   var html='<div style="width:100%;">';
   html+='<div class="'+hc+'" style="border-radius:10px 10px 0 0;padding:12px 16px;margin-bottom:8px;">';
   html+='<div class="week-day">'+JOURS_FR[day.getDay()]+'</div><div class="week-num" style="font-size:28px;">'+day.getDate()+' '+MOIS_FR[day.getMonth()]+'</div></div>';
-  if (!dr.length) html+='<div style="text-align:center;padding:32px;color:var(--text-faint);font-size:13px;">Aucune reservation ce jour</div>';
-  else dr.forEach(function(r) {
+  if (!bookings.length) html+='<div style="text-align:center;padding:32px;color:var(--text-faint);font-size:13px;">Aucune reservation ce jour</div>';
+  else bookings.forEach(function(rows) {
+    var r=rows[0];
     var color=SVC_COLORS[r.service]||'#ff5f1f';
     var svc=SVC_NAMES[r.service]||r.service;
     var cr=r.creneau?(CRENEAUX[r.creneau]||r.creneau):(r.service==='boarding'?'Pension':'—');
     var c=r.client_id?clientsMap[r.client_id]:null;
     var client=c?c.prenom+' '+c.nom:'—';
-    var sc=r.statut==='en_attente'?'#f0b429':color;
+    var dogs=dogNamesForRows(rows,chiensMap,clientDogsMap);
+    var dogsTxt=dogs.length?dogs.join(' + '):'Tous les chiens';
+    var dogsCount=dogs.length>1?' <span style="font-weight:400;color:var(--text-faint);font-size:12px;">· '+dogs.length+' chiens</span>':'';
     html+='<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid '+color+';border-radius:10px;padding:14px 16px;margin-bottom:8px;cursor:pointer;" onclick="openResaDetail(\''+r.id+'\',\''+dateStr+'\')">';
     html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">';
-    html+='<div style="font-family:Norwester,sans-serif;font-size:14px;color:'+color+';">'+cr+' · '+svc+'</div>';
+    html+='<div style="font-family:Norwester,sans-serif;font-size:13px;color:'+color+';">'+cr+' · '+svc+'</div>';
     html+='<span style="font-size:10px;background:'+(r.statut==='confirme'?'rgba(94,201,122,0.12)':r.statut==='en_attente'?'rgba(240,180,41,0.12)':'rgba(224,90,90,0.12)')+';color:'+(r.statut==='confirme'?'#5ec97a':r.statut==='en_attente'?'#f0b429':'#e05a5a')+';padding:3px 8px;border-radius:10px;font-family:Norwester,sans-serif;font-weight:800;">'+(r.statut==='confirme'?'Confirme':r.statut==='en_attente'?'En attente':'Annule')+'</span>';
-    html+='</div><div style="font-size:13px;font-weight:600;color:var(--text);">'+client+'</div>';
-    html+='<div style="font-size:12px;color:var(--text-faint);margin-top:2px;">👤 '+(r.ranger_nom||'Gabriel')+'</div></div>';
+    html+='</div>';
+    html+='<div style="font-family:Norwester,sans-serif;font-size:16px;font-weight:800;color:var(--text);">🐕 '+dogsTxt+dogsCount+'</div>';
+    html+='<div style="font-size:12px;color:var(--text-faint);margin-top:3px;">'+client+' · 👤 '+(r.ranger_nom||'Gabriel')+'</div></div>';
   });
   html+='</div>';
   grid.innerHTML=html;
@@ -2404,16 +2436,34 @@ async function openResaDetail(id, dateOccurrence) {
       var resC = await db.from('clients').select('prenom,nom,commune,client_fidele').eq('id', r.client_id).single();
       client = resC.data;
     }
-    if (r.chien_id) {
-      var resD = await db.from('chiens').select('nom,race').eq('id', r.chien_id).single();
-      chien = resD.data;
-    }
+    // Tous les chiens de la réservation (1 ligne par chien ; null = tous les chiens du client)
+    var dogList = [];
+    try {
+      var bq = db.from('reservations').select('chien_id')
+        .eq('client_id', r.client_id).eq('service', r.service)
+        .eq('date_debut', r.date_debut).eq('statut', r.statut);
+      bq = r.date_fin ? bq.eq('date_fin', r.date_fin) : bq.is('date_fin', null);
+      bq = r.creneau ? bq.eq('creneau', r.creneau) : bq.is('creneau', null);
+      var bres = await bq;
+      var brows = bres.data || [{ chien_id: r.chien_id }];
+      var cids = brows.filter(function(x){return x.chien_id;}).map(function(x){return x.chien_id;});
+      var hasNull = brows.some(function(x){return !x.chien_id;});
+      if (cids.length) {
+        var dres = await db.from('chiens').select('nom').in('id', cids);
+        (dres.data||[]).forEach(function(d){ dogList.push(d.nom); });
+      }
+      if (hasNull) {
+        var ares = await db.from('chiens').select('nom').eq('client_id', r.client_id);
+        (ares.data||[]).forEach(function(d){ dogList.push(d.nom); });
+      }
+    } catch(e){ console.error('chiens détail:', e); }
+    dogList = [...new Set(dogList)];
 
     document.getElementById('detail-client-info').textContent = client
       ? (client.prenom+' '+client.nom+' · '+(client.commune||'—')+' · '+(client.client_fidele?'⭐ Fidèle':'Nouveau client'))
       : '—';
-    document.getElementById('detail-chien-info').textContent = chien
-      ? (chien.nom+(chien.race?' — '+chien.race:''))
+    document.getElementById('detail-chien-info').textContent = dogList.length
+      ? dogList.join(', ')
       : 'Tous les chiens';
     document.getElementById('detail-service-info').textContent = (SVC_LABELS_FULL[r.service]||r.service) + ' — ' + (SVC_TARIFS[r.service]||'');
 
