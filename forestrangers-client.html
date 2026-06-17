@@ -1315,13 +1315,15 @@ function updateHomeScreen(client) {
 async function loadProchainePromenade(id) {
   var today = new Date().toISOString().split('T')[0];
   try {
-    var { data: resas } = await db.from('reservations')
+    var { data: resas, error } = await db.from('reservations')
       .select('*')
       .eq('client_id', id)
       .gte('date_fin', today)
       .neq('statut', 'annule')
       .order('date_debut', { ascending: true })
       .limit(1);
+
+    if (error) console.log('Erreur prochaine promenade (Supabase):', error);
 
     var el = document.getElementById('prochaine-promenade');
     if (!el) return;
@@ -1349,15 +1351,28 @@ async function loadProchainePromenade(id) {
 }
 
 async function loadReservations(id) {
+  var container = document.getElementById('reservations-list');
   try {
-    var { data: resas } = await db.from('reservations')
+    var { data: resas, error } = await db.from('reservations')
       .select('*')
       .eq('client_id', id)
       .order('date_debut', { ascending: false })
       .limit(20);
 
-    var container = document.getElementById('reservations-list');
-    if (!container || !resas) return;
+    if (!container) return;
+
+    // Si Supabase renvoie une erreur (ex. policy RLS SELECT manquante),
+    // on l'affiche au lieu de rester bloqué sur « Chargement… »
+    if (error) {
+      console.log('Erreur lecture réservations (Supabase):', error);
+      container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--red);font-size:12px;">Lecture impossible : ' + (error.message || 'erreur inconnue') + '</div>';
+      return;
+    }
+
+    if (!resas) {
+      container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-faint);font-size:13px;">Aucune réservation</div>';
+      return;
+    }
 
     if (resas.length === 0) {
       container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-faint);font-size:13px;">Aucune réservation</div>';
