@@ -1042,6 +1042,21 @@ html, body {
   </div>
 </div>
 
+<!-- MODAL FICHE COMPLÈTE (lecture seule) -->
+<div class="modal-overlay" id="dogFullModal">
+  <div class="modal-full">
+    <div class="modal-close" onclick="closeDogFull()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </div>
+    <div id="dog-full-title" style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;margin-bottom:16px;">Fiche complète</div>
+    <div id="dog-full-body"></div>
+    <button class="btn-big btn-accent" style="margin-top:16px;" onclick="closeDogFullToEdit()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z"/></svg>
+      Modifier
+    </button>
+  </div>
+</div>
+
 <script>
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -1476,6 +1491,7 @@ function updateDogScreen(chiens) {
       + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z"/></svg>'
       + 'Modifier'
       + '</button>'
+      + '<button onclick="openDogFull(' + idx + ')" style="width:100%;margin-top:8px;background:transparent;border:none;color:var(--text-dim);font-family:\'Norwester\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;cursor:pointer;padding:6px;">Voir fiche complète</button>'
       + '</div>';
   }).join('');
 }
@@ -1607,6 +1623,62 @@ function dogComputeGrand(raceVal, poidsNum) {
   var raceGrand = !!(m && m.grand);
   return raceGrand || (poidsNum != null && !isNaN(poidsNum) && poidsNum >= 35);
 }
+
+// Insertion résiliente : si une colonne n'existe pas encore dans la table,
+// on la retire et on réessaie, pour que le chien soit créé malgré tout.
+async function insertChienResilient(payload) {
+  var attempt = Object.assign({}, payload);
+  for (var i = 0; i < 8; i++) {
+    var res = await db.from('chiens').insert(attempt).select().single();
+    if (!res.error) return res;
+    var msg = (res.error && res.error.message) || '';
+    var m = /Could not find the '([^']+)' column/.exec(msg) || /column "([^"]+)" of relation/.exec(msg);
+    if (m && (m[1] in attempt)) { delete attempt[m[1]]; continue; }
+    return res; // autre type d'erreur → on remonte
+  }
+  return { data: null, error: { message: 'Trop de colonnes manquantes' } };
+}
+
+// ── FICHE COMPLÈTE (lecture seule) ──
+var dogFullIndex = null;
+function openDogFull(idx) {
+  var d = (window.chiensData || [])[idx];
+  if (!d) return;
+  dogFullIndex = idx;
+  var t = document.getElementById('dog-full-title'); if (t) t.textContent = d.nom || 'Fiche complète';
+  function tri(v) { return (v === true || v === 'true') ? 'Oui' : ((v === false || v === 'false') ? 'Non' : '—'); }
+  function txt(v) { return (v === null || v === undefined || v === '') ? '—' : v; }
+  function row(label, value) {
+    return '<div class="dog-prop-row"><span class="dog-prop-key">' + label + '</span><span style="text-align:right;max-width:62%;">' + value + '</span></div>';
+  }
+  var grand = (d.grand_chien === true || d.grand_chien === 'true') || (d.poids_kg != null && parseFloat(d.poids_kg) >= 35);
+  var naiss = d.date_naissance ? (function() { var x = new Date(d.date_naissance); return isNaN(x) ? d.date_naissance : x.toLocaleDateString('fr-LU', { day:'2-digit', month:'long', year:'numeric' }); })() : '—';
+  var html = '';
+  html += row('Race', txt(d.race));
+  html += row('Poids', (d.poids_kg != null && d.poids_kg !== '') ? d.poids_kg + ' kg' : '—');
+  html += row('Sexe', d.sexe === 'male' ? 'Mâle' : (d.sexe === 'femelle' ? 'Femelle' : '—'));
+  html += row('Naissance', naiss);
+  html += row('Stérilisé', tri(d.sterilise));
+  html += row('N° de puce', txt(d.numero_puce));
+  html += row('Vaccins à jour', tri(d.vaccins_ok));
+  html += row('Assurance', tri(d.assurance_ok));
+  html += row('Grand gabarit', grand ? 'Oui' : 'Non');
+  // Comportement détaillé
+  if (d.comportement) {
+    html += '<div style="padding:10px 0;border-top:1px solid var(--border);"><div class="dog-prop-key" style="margin-bottom:6px;">Comportement</div>';
+    String(d.comportement).split(' · ').forEach(function(seg) {
+      html += '<div style="font-size:13px;color:var(--text);margin:3px 0;">• ' + seg.trim() + '</div>';
+    });
+    html += '</div>';
+  } else {
+    html += row('Comportement', '—');
+  }
+  html += row('Notes santé', txt(d.notes_sante));
+  document.getElementById('dog-full-body').innerHTML = html;
+  document.getElementById('dogFullModal').classList.add('open');
+}
+function closeDogFull() { document.getElementById('dogFullModal').classList.remove('open'); }
+function closeDogFullToEdit() { var i = dogFullIndex; closeDogFull(); if (i != null) openDogEdit(i); }
 
 // ── Section comportement du modal (toggles / peurs / marche / énergie) ──
 var DOG_ENERGY_LABELS = ['', 'Très calme', 'Calme', 'Moyen', 'Énergique', 'Très énergique'];
@@ -1775,7 +1847,8 @@ async function saveDogEdit() {
     if (poidsA != null && !isNaN(poidsA)) ins.poids_kg = poidsA;
 
     try {
-      var { data: newDog, error: insErr } = await db.from('chiens').insert(ins).select().single();
+      var insRes = await insertChienResilient(ins);
+      var newDog = insRes.data, insErr = insRes.error;
       if (insErr) throw insErr;
 
       // Comportement (colonne non garantie) → best-effort
