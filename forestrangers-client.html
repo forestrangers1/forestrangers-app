@@ -1208,9 +1208,10 @@ async function envoyerDemande() {
     return;
   }
 
+  var err = null;
   try {
     if (clientId) {
-      await db.from('reservations').insert({
+      var res = await db.from('reservations').insert({
         client_id:  clientId,
         service:    svc,
         date_debut: debut,
@@ -1218,11 +1219,18 @@ async function envoyerDemande() {
         creneau:    cr,
         jours:      joursSelectionnes.length > 0 ? joursSelectionnes : null,
         notes:      msg || null,
-        statut:     'en_attente',
-        ranger_nom: 'Gabriel'
+        statut:     'en_attente'
+        // ranger_nom / ranger_id : assignés automatiquement par le trigger fr_assign_ranger (§4.4)
       });
+      err = res.error;
     }
-  } catch(e) { console.log('Erreur envoi demande:', e); }
+  } catch(e) { err = e; console.log('Erreur envoi demande:', e); }
+
+  if (err) {
+    console.log('Erreur envoi demande:', err);
+    alert('Demande NON enregistrée.\n\nErreur Supabase : ' + (err.message || JSON.stringify(err)));
+    return; // on ne ferme pas le modal et on n'affiche pas le toast de succès
+  }
 
   closeBookingModal();
 

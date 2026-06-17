@@ -1496,8 +1496,8 @@ async function saveReservation(svc, isBoarding) {
     date_fin: date_fin,
     creneau: creneau,
     notes: notes,
-    statut: isBoarding ? 'en_attente' : 'confirme',
-    ranger_nom: 'Gabriel'
+    statut: isBoarding ? 'en_attente' : 'confirme'
+    // ranger_nom / ranger_id : assignés automatiquement par le trigger fr_assign_ranger (règles §4.4)
   };
 
   try {
