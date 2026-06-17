@@ -994,41 +994,10 @@ textarea.form-control { resize: vertical; }
       <div class="card" style="margin-bottom:14px;">
         <div class="card-head">
           <span class="card-title">Demandes en attente</span>
-          <span class="badge b-red">2 a valider</span>
+          <span class="badge b-red" id="resa-pending-count" style="display:none;"></span>
         </div>
-        <div>
-          <div class="inv-row">
-            <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;"></div>
-            <div style="flex:1;">
-              <div class="inv-client">Jean Klein — Oscar</div>
-              <div class="inv-desc">Dog Walking · Jeudi 12 juin · Matin · Récurrent hebdo</div>
-            </div>
-            <span class="badge b-accent">En attente</span>
-            <div class="inv-actions">
-              <div class="icon-btn" style="background:var(--green-dim);color:var(--green);border-color:rgba(94,201,122,0.3);" title="Accepter">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              </div>
-              <div class="icon-btn" style="background:var(--red-dim);color:var(--red);border-color:rgba(224,90,90,0.3);" title="Refuser">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </div>
-            </div>
-          </div>
-          <div class="inv-row">
-            <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;"></div>
-            <div style="flex:1;">
-              <div class="inv-client">Nouveau client — Luc Becker</div>
-              <div class="inv-desc">Dog Walking · Vendredi 13 juin · Matin · Rex (Labrador)</div>
-            </div>
-            <span class="badge b-blue">Nouveau client</span>
-            <div class="inv-actions">
-              <div class="icon-btn" style="background:var(--green-dim);color:var(--green);border-color:rgba(94,201,122,0.3);">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              </div>
-              <div class="icon-btn" style="background:var(--red-dim);color:var(--red);border-color:rgba(224,90,90,0.3);">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </div>
-            </div>
-          </div>
+        <div id="resa-pending-list">
+          <div style="padding:16px;text-align:center;color:var(--text-faint);font-size:12px;">Chargement…</div>
         </div>
       </div>
       <div class="card">
@@ -1036,11 +1005,8 @@ textarea.form-control { resize: vertical; }
         <div>
           <table class="tbl">
             <thead><tr><th>Client</th><th>Chien(s)</th><th>Service</th><th>Date</th><th>Ranger</th><th>Statut</th><th>Montant</th></tr></thead>
-            <tbody>
-              <tr><td>M. Dupont</td><td>Max</td><td>Dog Walking</td><td>09/06/2026</td><td>Gabriel</td><td><span class="badge b-green">Termine</span></td><td style="color:var(--accent);font-weight:700;">28 €</td></tr>
-              <tr><td>S. Martin</td><td>Bruno</td><td>Boarding</td><td>07→13/06</td><td>Gabriel</td><td><span class="badge b-blue">En cours</span></td><td style="color:var(--accent);font-weight:700;">408 €</td></tr>
-              <tr><td>T. Weber</td><td>Luna, Nala</td><td>Dog Walking</td><td>08/06/2026</td><td>Sophie</td><td><span class="badge b-green">Termine</span></td><td style="color:var(--accent);font-weight:700;">42 €</td></tr>
-              <tr><td>M. Dupont</td><td>Max</td><td>Dog Walking</td><td>11/06/2026</td><td>Gabriel</td><td><span class="badge b-red">Annule tardif</span></td><td style="color:var(--red);font-weight:700;">28 € facture</td></tr>
+            <tbody id="resa-history-tbody">
+              <tr><td colspan="7" style="text-align:center;color:var(--text-faint);padding:18px;font-size:12px;">Chargement…</td></tr>
             </tbody>
           </table>
         </div>
@@ -1401,6 +1367,113 @@ const titles = {
   parametres:   ['Parametres',       'Tarifs & règles'],
 };
 
+async function loadReservationsAdmin() {
+  var pendingList = document.getElementById('resa-pending-list');
+  var pendingCount = document.getElementById('resa-pending-count');
+  var histBody = document.getElementById('resa-history-tbody');
+  var SVC = { walking:'Dog Walking', daycare:'Day Care', boarding:'Boarding' };
+  var CREN = { matin:'Matin', midi:'Midi', apmidi:'Après-midi' };
+  function fmtDate(d){ if(!d) return '—'; var p=d.split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:d; }
+  function fmtPlage(dd,df){ if(!dd) return '—'; if(!df||df===dd) return fmtDate(dd); var a=dd.split('-'),b=df.split('-'); return a[2]+'/'+a[1]+'→'+b[2]+'/'+b[1]; }
+  function euros(n){ return (parseFloat(n)||0).toLocaleString('fr-LU',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
+
+  try {
+    var { data: resas, error } = await db.from('reservations')
+      .select('id,service,creneau,statut,date_debut,date_fin,montant_ttc,ranger_nom,client_id,chien_id')
+      .order('date_debut',{ascending:false})
+      .limit(300);
+
+    if (error) {
+      var msg='<div style="padding:16px;text-align:center;color:var(--red);font-size:12px;">Lecture impossible : '+(error.message||'erreur')+'</div>';
+      if (pendingList) pendingList.innerHTML=msg;
+      if (histBody) histBody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--red);padding:16px;font-size:12px;">'+(error.message||'erreur')+'</td></tr>';
+      return;
+    }
+    resas = resas||[];
+
+    // Maps clients + chiens
+    var clientsMap={}, chiensMap={};
+    var cids=[...new Set(resas.filter(function(r){return r.client_id;}).map(function(r){return r.client_id;}))];
+    if (cids.length){ var rc=await db.from('clients').select('id,prenom,nom').in('id',cids); (rc.data||[]).forEach(function(c){clientsMap[c.id]=c;}); }
+    var dids=[...new Set(resas.filter(function(r){return r.chien_id;}).map(function(r){return r.chien_id;}))];
+    if (dids.length){ var rd=await db.from('chiens').select('id,nom').in('id',dids); (rd.data||[]).forEach(function(d){chiensMap[d.id]=d;}); }
+
+    // Regrouper les lignes (1 par chien) en réservations
+    var groups={};
+    resas.forEach(function(r){
+      var key=[r.client_id,r.service,r.date_debut,r.date_fin,r.creneau,r.statut].join('|');
+      if(!groups[key]) groups[key]={ client_id:r.client_id, service:r.service, creneau:r.creneau, statut:r.statut, date_debut:r.date_debut, date_fin:r.date_fin, ranger_nom:r.ranger_nom, montant:0, dogs:[] };
+      var g=groups[key];
+      g.montant += parseFloat(r.montant_ttc)||0;
+      if (r.chien_id && chiensMap[r.chien_id]) g.dogs.push(chiensMap[r.chien_id].nom);
+    });
+    var list=Object.keys(groups).map(function(k){return groups[k];});
+    list.sort(function(a,b){return (b.date_debut||'').localeCompare(a.date_debut||'');});
+
+    var clientName=function(g){ var c=clientsMap[g.client_id]; return c?(c.prenom+' '+c.nom):'—'; };
+    var dogsName=function(g){ return g.dogs.length?g.dogs.join(', '):'—'; };
+
+    // ── Demandes en attente ──
+    var pending=list.filter(function(g){return g.statut==='en_attente';});
+    window._resaPending=pending;
+    if (pendingCount){
+      if (pending.length){ pendingCount.style.display=''; pendingCount.textContent=pending.length+' a valider'; }
+      else pendingCount.style.display='none';
+    }
+    if (pendingList){
+      if (!pending.length){
+        pendingList.innerHTML='<div style="padding:16px;text-align:center;color:var(--text-faint);font-size:12px;">Aucune demande en attente</div>';
+      } else {
+        pendingList.innerHTML=pending.map(function(g,idx){
+          var cren=g.service==='boarding'?'Pension':(CREN[g.creneau]||'');
+          var desc=(SVC[g.service]||g.service)+' · '+fmtPlage(g.date_debut,g.date_fin)+(cren?' · '+cren:'')+(g.montant>0?' · '+euros(g.montant):'');
+          return '<div class="inv-row">'
+            +'<div style="width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;"></div>'
+            +'<div style="flex:1;"><div class="inv-client">'+clientName(g)+' — '+dogsName(g)+'</div>'
+            +'<div class="inv-desc">'+desc+'</div></div>'
+            +'<span class="badge b-accent">En attente</span>'
+            +'<div class="inv-actions">'
+            +'<div class="icon-btn" style="background:var(--green-dim);color:var(--green);border-color:rgba(94,201,122,0.3);" title="Accepter" onclick="validerResaAdmin('+idx+')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>'
+            +'<div class="icon-btn" style="background:var(--red-dim);color:var(--red);border-color:rgba(224,90,90,0.3);" title="Refuser" onclick="refuserResaAdmin('+idx+')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>'
+            +'</div></div>';
+        }).join('');
+      }
+    }
+
+    // ── Historique (hors en attente) ──
+    var hist=list.filter(function(g){return g.statut!=='en_attente';});
+    if (histBody){
+      if (!hist.length){
+        histBody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text-faint);padding:18px;font-size:12px;">Aucune reservation</td></tr>';
+      } else {
+        var badge={confirme:'<span class="badge b-green">Confirme</span>',termine:'<span class="badge b-green">Termine</span>',annule:'<span class="badge b-red">Annule</span>'};
+        histBody.innerHTML=hist.map(function(g){
+          return '<tr><td>'+clientName(g)+'</td><td>'+dogsName(g)+'</td><td>'+(SVC[g.service]||g.service)+'</td><td>'+fmtPlage(g.date_debut,g.date_fin)+'</td><td>'+(g.ranger_nom||'—')+'</td><td>'+(badge[g.statut]||'<span class="badge b-muted">'+g.statut+'</span>')+'</td><td style="color:var(--accent);font-weight:700;">'+(g.montant>0?euros(g.montant):'—')+'</td></tr>';
+        }).join('');
+      }
+    }
+  } catch(e){
+    console.error('loadReservationsAdmin:', e);
+    if (pendingList) pendingList.innerHTML='<div style="padding:16px;text-align:center;color:var(--text-faint);font-size:12px;">Erreur de chargement</div>';
+  }
+}
+
+// Met à jour TOUTES les lignes d'une réservation (1 ligne par chien), pas seulement la première.
+async function majStatutBooking(g, statut){
+  try{
+    var q=db.from('reservations').update({statut:statut})
+      .eq('client_id',g.client_id).eq('service',g.service)
+      .eq('date_debut',g.date_debut).eq('statut','en_attente');
+    q = g.date_fin ? q.eq('date_fin',g.date_fin) : q.is('date_fin',null);
+    q = g.creneau ? q.eq('creneau',g.creneau) : q.is('creneau',null);
+    var { error } = await q;
+    if (error){ alert('Erreur : '+(error.message||'')); return; }
+    loadReservationsAdmin();
+  }catch(e){ console.error(e); alert('Erreur de mise à jour'); }
+}
+async function validerResaAdmin(i){ var g=(window._resaPending||[])[i]; if(g) majStatutBooking(g,'confirme'); }
+async function refuserResaAdmin(i){ var g=(window._resaPending||[])[i]; if(!g) return; if(confirm('Refuser cette réservation ?')) majStatutBooking(g,'annule'); }
+
 function nav(id, el) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -1412,6 +1485,8 @@ function nav(id, el) {
   // Show back button on all pages except dashboard
   const backBtn = document.getElementById('backBtn');
   if (backBtn) backBtn.style.display = id !== 'dashboard' ? 'flex' : 'none';
+
+  if (id === 'reservations') loadReservationsAdmin();
 }
 
 function genererLien() {
