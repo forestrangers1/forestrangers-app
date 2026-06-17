@@ -736,7 +736,7 @@ textarea.field-input { resize: vertical; min-height: 80px; }
               </div>
               <div class="field">
                 <label class="field-label">Jusqu'au <span class="req">*</span></label>
-                <input type="date" class="field-input">
+                <input type="date" class="field-input" id="dc-recur-end"><div style="font-size:10px;color:var(--accent);margin-top:3px;display:none;" id="dc-recur-end-error">La date de fin est obligatoire.</div>
               </div>
             </div>
             <div class="info-box orange" style="margin-top:8px;margin-bottom:0;">
@@ -1252,30 +1252,36 @@ function updateBoardingDays() {
 
 // ── VALIDATE PAGE 3 AND GO RECAP ──
 function validateAndGoRecap() {
-  // Check recurrence end dates before going to recap
-  const isWalkRecur = document.getElementById('recur-walk-recur')?.classList.contains('selected');
-  const isDcRecur = document.getElementById('recur-dc-recur')?.classList.contains('selected');
-  if (isWalkRecur) {
-    const endEl = document.getElementById('walk-recur-end');
-    const errEl = document.getElementById('walk-recur-end-error');
-    if (!endEl?.value) {
-      if (errEl) errEl.style.display = 'block';
-      goPage(2);
-      setTimeout(() => endEl?.scrollIntoView({behavior:'smooth', block:'center'}), 200);
-      return;
+  const svc = currentService;
+  // Récurrence Dog Walking — vérifiée seulement si on est sur ce service
+  if (svc === 'walking') {
+    const isWalkRecur = document.getElementById('recur-walk-recur')?.classList.contains('selected');
+    if (isWalkRecur) {
+      const endEl = document.getElementById('walk-recur-end');
+      const errEl = document.getElementById('walk-recur-end-error');
+      if (!endEl?.value) {
+        if (errEl) errEl.style.display = 'block';
+        goPage(2);
+        setTimeout(() => endEl?.scrollIntoView({behavior:'smooth', block:'center'}), 200);
+        return;
+      }
+      if (errEl) errEl.style.display = 'none';
     }
-    if (errEl) errEl.style.display = 'none';
   }
-  if (isDcRecur) {
-    const endEl = document.getElementById('dc-recur-end');
-    const errEl = document.getElementById('dc-recur-end-error');
-    if (!endEl?.value) {
-      if (errEl) errEl.style.display = 'block';
-      goPage(2);
-      setTimeout(() => endEl?.scrollIntoView({behavior:'smooth', block:'center'}), 200);
-      return;
+  // Récurrence Crèche — vérifiée seulement si on est sur ce service
+  if (svc === 'daycare') {
+    const isDcRecur = document.getElementById('recur-dc-recur')?.classList.contains('selected');
+    if (isDcRecur) {
+      const endEl = document.getElementById('dc-recur-end');
+      const errEl = document.getElementById('dc-recur-end-error');
+      if (!endEl?.value) {
+        if (errEl) errEl.style.display = 'block';
+        goPage(2);
+        setTimeout(() => endEl?.scrollIntoView({behavior:'smooth', block:'center'}), 200);
+        return;
+      }
+      if (errEl) errEl.style.display = 'none';
     }
-    if (errEl) errEl.style.display = 'none';
   }
   goPage(4);
 }
