@@ -456,6 +456,22 @@ html, body {
 }
 #dog-energy-slider::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--border2); }
 @media (max-width: 380px) { .dog-behavior-grid { grid-template-columns: 1fr; } }
+
+/* Autocomplétion race (modal) */
+.dog-race-autocomplete { position: relative; }
+.dog-race-dropdown {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 200;
+  background: #232a18; border: 1.5px solid var(--accent);
+  border-radius: 10px; max-height: 200px; overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45); margin-top: 4px;
+}
+.dog-race-option {
+  padding: 10px 14px; cursor: pointer; font-size: 13px; color: #fff;
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+}
+.dog-race-option:last-child { border-bottom: none; }
+.dog-race-option:active, .dog-race-option:hover { background: rgba(255,95,31,0.25); }
+.dog-race-option .dog-race-cat { font-size: 10px; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.08em; }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
@@ -918,7 +934,12 @@ html, body {
     </div>
     <div class="field-group">
       <label class="field-label">Race</label>
-      <input class="field-input" id="dog-edit-race" type="text" placeholder="Ex : Berger australien">
+      <div class="dog-race-autocomplete">
+        <input class="field-input" id="dog-edit-race" type="text" placeholder="Cliquez ou tapez pour rechercher..." autocomplete="off"
+               oninput="dogSearchRace(this.value)" onfocus="dogOpenRaceList()"
+               onblur="setTimeout(function(){var d=document.getElementById('dog-race-dropdown');if(d)d.style.display='none';},200)">
+        <div id="dog-race-dropdown" class="dog-race-dropdown" style="display:none;"></div>
+      </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <div class="field-group">
@@ -964,24 +985,6 @@ html, body {
       <div class="field-group">
         <label class="field-label">Assurance</label>
         <select class="field-input" id="dog-edit-assurance">
-          <option value="">—</option>
-          <option value="true">Oui</option>
-          <option value="false">Non</option>
-        </select>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-      <div class="field-group">
-        <label class="field-label">En chaleur</label>
-        <select class="field-input" id="dog-edit-chaleur">
-          <option value="">—</option>
-          <option value="true">Oui</option>
-          <option value="false">Non</option>
-        </select>
-      </div>
-      <div class="field-group">
-        <label class="field-label">Grand gabarit</label>
-        <select class="field-input" id="dog-edit-grand">
           <option value="">—</option>
           <option value="true">Oui</option>
           <option value="false">Non</option>
@@ -1227,6 +1230,7 @@ var clientData = null;
 var clientId = null;
 
 document.addEventListener('DOMContentLoaded', async function() {
+  loadRaces();
   await loadClientProfile();
 });
 
@@ -1412,7 +1416,6 @@ function updateDogScreen(chiens) {
     race: 'Race', sexe: 'Sexe', sterilise: 'Stérilisé', numero_puce: 'N° de puce',
     date_naissance: 'Naissance', grand_chien: 'Grand gabarit',
     vaccins_ok: 'Vaccins à jour', assurance_ok: 'Assurance',
-    en_chaleur: 'En chaleur',
     comportement: 'Comportement', notes_sante: 'Notes santé'
   };
   function fmt(k, v) {
@@ -1491,6 +1494,120 @@ var dogEditIndex = null;
 var dogAddMode = false;
 var dogPendingPhotoFile = null;
 
+// ── RACES (autocomplétion modal + détection grand gabarit) ──
+var RACES_DEFAUT = [
+  {nom:'Croisé / Mix',categorie:'Mixte'}, {nom:'Race inconnue',categorie:'Mixte'},
+  {nom:'Autre',categorie:'Autre'}, {nom:'Labrador Retriever',categorie:'Retrievers',grand:true},
+  {nom:'Golden Retriever',categorie:'Retrievers',grand:true}, {nom:'Flat Coated Retriever',categorie:'Retrievers',grand:true},
+  {nom:'Nova Scotia Duck Tolling Retriever',categorie:'Retrievers'}, {nom:'Berger Allemand',categorie:'Bergers',grand:true},
+  {nom:'Berger Australien',categorie:'Bergers'}, {nom:'Berger Suisse Blanc',categorie:'Bergers',grand:true},
+  {nom:'Berger Belge Malinois',categorie:'Bergers',grand:true}, {nom:'Berger Belge Tervueren',categorie:'Bergers',grand:true},
+  {nom:'Berger Belge Groenendael',categorie:'Bergers',grand:true}, {nom:'Berger Belge Laekenois',categorie:'Bergers',grand:true},
+  {nom:'Berger Hollandais',categorie:'Bergers',grand:true}, {nom:'Berger Catalan',categorie:'Bergers',grand:true},
+  {nom:'Berger des Shetland',categorie:'Bergers'}, {nom:'Border Collie',categorie:'Bergers'},
+  {nom:'Colley',categorie:'Bergers',grand:true}, {nom:'Bouvier Australien',categorie:'Bergers'},
+  {nom:'Bouvier Bernois',categorie:'Bergers',grand:true}, {nom:'Cane da Pastore Maremmano',categorie:'Bergers',grand:true},
+  {nom:'Kangal',categorie:'Bergers',grand:true}, {nom:'Husky Sibérien',categorie:'Nordiques',grand:true},
+  {nom:'Samoyède',categorie:'Nordiques',grand:true}, {nom:'Spitz Nain / Poméranien',categorie:'Nordiques'},
+  {nom:'Akita Inu',categorie:'Asiatiques',grand:true}, {nom:'Shiba Inu',categorie:'Asiatiques'},
+  {nom:'Chow Chow',categorie:'Asiatiques',grand:true}, {nom:'Basenji',categorie:'Asiatiques'},
+  {nom:'Jack Russell Terrier',categorie:'Terriers'}, {nom:'Parson Russell Terrier',categorie:'Terriers'},
+  {nom:'Yorkshire Terrier',categorie:'Terriers'}, {nom:'Airedale Terrier',categorie:'Terriers'},
+  {nom:'Fox Terrier',categorie:'Terriers'}, {nom:'Bull Terrier',categorie:'Terriers'},
+  {nom:'Staffordshire Bull Terrier',categorie:'Terriers'}, {nom:'American Staffordshire Terrier',categorie:'Terriers',grand:true},
+  {nom:'Schnauzer',categorie:'Terriers'}, {nom:'West Highland Terrier',categorie:'Terriers'},
+  {nom:'Pitbull Type',categorie:'Molossoïdes',grand:true}, {nom:'American Bully',categorie:'Molossoïdes',grand:true},
+  {nom:'Cane Corso',categorie:'Molossoïdes',grand:true}, {nom:'Rottweiler',categorie:'Molossoïdes',grand:true},
+  {nom:'Dobermann',categorie:'Molossoïdes',grand:true}, {nom:'Boxer',categorie:'Molossoïdes',grand:true},
+  {nom:'Dogue Allemand',categorie:'Molossoïdes',grand:true}, {nom:'Mastiff',categorie:'Molossoïdes',grand:true},
+  {nom:'Terre-Neuve',categorie:'Molossoïdes',grand:true}, {nom:'Saint-Bernard',categorie:'Molossoïdes',grand:true},
+  {nom:'Shar Pei',categorie:'Molossoïdes'}, {nom:'Bouledogue Français',categorie:'Molossoïdes'},
+  {nom:'Bouledogue Anglais',categorie:'Molossoïdes'}, {nom:'Carlin',categorie:'Petites races'},
+  {nom:'Chihuahua',categorie:'Petites races'}, {nom:'Teckel',categorie:'Petites races'},
+  {nom:'Shih Tzu',categorie:'Petites races'}, {nom:'Bichon Maltais',categorie:'Petites races'},
+  {nom:'Bichon Frisé',categorie:'Petites races'}, {nom:'Cavalier King Charles',categorie:'Petites races'},
+  {nom:'Beagle',categorie:'Chiens courants'}, {nom:'Basset Hound',categorie:'Chiens courants'},
+  {nom:'Cocker Spaniel',categorie:'Spaniels'}, {nom:'Épagneul Breton',categorie:'Spaniels'},
+  {nom:'Setter Anglais',categorie:'Setters',grand:true}, {nom:'Setter Irlandais',categorie:'Setters',grand:true},
+  {nom:'Caniche',categorie:'Caniche'}, {nom:'Cockapoo',categorie:'Croisés populaires'},
+  {nom:'Labradoodle',categorie:'Croisés populaires',grand:true}, {nom:'Goldendoodle',categorie:'Croisés populaires',grand:true},
+  {nom:'Dalmatien',categorie:'Divers',grand:true}, {nom:'Weimaraner',categorie:'Braque',grand:true},
+  {nom:'Vizsla',categorie:'Braque',grand:true}, {nom:'Braque Français',categorie:'Braque',grand:true},
+  {nom:'Rhodesian Ridgeback',categorie:'Divers',grand:true}, {nom:'Lévrier Galgo',categorie:'Lévriers',grand:true},
+  {nom:'Whippet',categorie:'Lévriers'}, {nom:'Greyhound',categorie:'Lévriers',grand:true},
+  {nom:'Podengo Portugais',categorie:'Divers'}, {nom:'Beauceron',categorie:'Bergers',grand:true},
+  {nom:'Briard',categorie:'Bergers',grand:true}, {nom:'Bouvier des Flandres',categorie:'Bergers',grand:true},
+  {nom:'Berger des Pyrénées',categorie:'Bergers'}, {nom:'Bobtail',categorie:'Bergers',grand:true},
+  {nom:'Welsh Corgi Pembroke',categorie:'Bergers'}, {nom:'Schipperke',categorie:'Petites races'},
+  {nom:'Dogue de Bordeaux',categorie:'Molossoïdes',grand:true}, {nom:'Bullmastiff',categorie:'Molossoïdes',grand:true},
+  {nom:'Léonberg',categorie:'Molossoïdes',grand:true}, {nom:'Landseer',categorie:'Molossoïdes',grand:true},
+  {nom:'Dogo Argentino',categorie:'Molossoïdes',grand:true}, {nom:'Mâtin Napolitain',categorie:'Molossoïdes',grand:true},
+  {nom:'Dogue du Tibet',categorie:'Molossoïdes',grand:true}, {nom:'Fila Brasileiro',categorie:'Molossoïdes',grand:true},
+  {nom:'Tosa Inu',categorie:'Molossoïdes',grand:true}, {nom:'Berger du Caucase',categorie:'Bergers',grand:true},
+  {nom:"Berger d'Anatolie",categorie:'Bergers',grand:true}, {nom:"Malamute d'Alaska",categorie:'Nordiques',grand:true},
+  {nom:'Eurasier',categorie:'Nordiques'}, {nom:'Keeshond (Spitz Loup)',categorie:'Nordiques'},
+  {nom:'Épagneul Tibétain',categorie:'Asiatiques'}, {nom:'Lhassa Apso',categorie:'Petites races'},
+  {nom:'Coton de Tuléar',categorie:'Petites races'}, {nom:'Cairn Terrier',categorie:'Terriers'},
+  {nom:'Border Terrier',categorie:'Terriers'}, {nom:'Scottish Terrier',categorie:'Terriers'},
+  {nom:'Welsh Terrier',categorie:'Terriers'}, {nom:'Bichon Havanais',categorie:'Petites races'},
+  {nom:'Boston Terrier',categorie:'Petites races'}, {nom:'Pékinois',categorie:'Petites races'},
+  {nom:'Épagneul Papillon',categorie:'Petites races'}, {nom:'Spitz Japonais',categorie:'Petites races'},
+  {nom:'Petit Lévrier Italien',categorie:'Lévriers'}, {nom:'English Springer Spaniel',categorie:'Spaniels'},
+  {nom:'Cocker Américain',categorie:'Spaniels'}, {nom:'Setter Gordon',categorie:'Setters',grand:true},
+  {nom:'Braque Allemand',categorie:'Braque'}, {nom:'Pointer Anglais',categorie:'Braque'},
+  {nom:'Chesapeake Bay Retriever',categorie:'Retrievers',grand:true}, {nom:'Barzoï',categorie:'Lévriers',grand:true},
+  {nom:'Lévrier Afghan',categorie:'Lévriers'}, {nom:'Lévrier Écossais (Deerhound)',categorie:'Lévriers',grand:true},
+  {nom:'Lévrier Irlandais',categorie:'Lévriers',grand:true}, {nom:"Chien d'eau Portugais",categorie:'Divers'},
+  {nom:'Lagotto Romagnolo',categorie:'Divers'}, {nom:'Barbet',categorie:'Divers'},
+  {nom:'Pinscher Allemand',categorie:'Divers'}, {nom:'Pinscher Nain',categorie:'Petites races'},
+  {nom:'Berger Picard',categorie:'Bergers'}
+];
+var racesCache = RACES_DEFAUT.slice();
+async function loadRaces() {
+  try {
+    var res = await db.from('races').select('nom, categorie, grand_gabarit').eq('actif', true).order('nom');
+    if (res.data && res.data.length) {
+      racesCache = res.data.map(function(r) { return { nom: r.nom, categorie: r.categorie, grand: !!r.grand_gabarit }; });
+    }
+  } catch(e) { racesCache = RACES_DEFAUT.slice(); }
+}
+function dogRenderRaceOptions(list) {
+  return list.map(function(r) {
+    return '<div class="dog-race-option" onmousedown="dogSelectRace(\'' + r.nom.replace(/'/g, "\\'") + '\')">' + r.nom + '<div class="dog-race-cat">' + (r.categorie || '') + '</div></div>';
+  }).join('');
+}
+function dogSearchRace(val) {
+  var dd = document.getElementById('dog-race-dropdown'); if (!dd) return;
+  if (!val || val.length < 2) {
+    dd.innerHTML = dogRenderRaceOptions(racesCache);
+    dd.style.display = racesCache.length ? 'block' : 'none';
+    return;
+  }
+  var q = val.toLowerCase();
+  var results = racesCache.filter(function(r) { return r.nom.toLowerCase().includes(q); });
+  if (!results.length) {
+    dd.innerHTML = '<div class="dog-race-option" onmousedown="dogSelectRace(\'' + val.replace(/'/g, "\\'") + '\')">Ajouter « ' + val + ' »<div class="dog-race-cat">Race personnalisée</div></div>';
+  } else {
+    dd.innerHTML = dogRenderRaceOptions(results);
+  }
+  dd.style.display = 'block';
+}
+function dogOpenRaceList() {
+  var input = document.getElementById('dog-edit-race');
+  dogSearchRace(input ? input.value : '');
+}
+function dogSelectRace(nom) {
+  var input = document.getElementById('dog-edit-race'); if (input) input.value = nom;
+  var dd = document.getElementById('dog-race-dropdown'); if (dd) dd.style.display = 'none';
+}
+// Grand gabarit automatique : race marquée grand gabarit OU poids >= 35 kg
+function dogComputeGrand(raceVal, poidsNum) {
+  var rv = String(raceVal || '').trim().toLowerCase();
+  var m = racesCache.filter(function(r) { return r.nom.toLowerCase() === rv; })[0];
+  var raceGrand = !!(m && m.grand);
+  return raceGrand || (poidsNum != null && !isNaN(poidsNum) && poidsNum >= 35);
+}
+
 // ── Section comportement du modal (toggles / peurs / marche / énergie) ──
 var DOG_ENERGY_LABELS = ['', 'Très calme', 'Calme', 'Moyen', 'Énergique', 'Très énergique'];
 function dogToggle(el) {
@@ -1566,12 +1683,9 @@ function openDogEdit(idx) {
   set('dog-edit-puce', d.numero_puce || '');
   set('dog-edit-vaccins', boolSel(d.vaccins_ok));
   set('dog-edit-assurance', boolSel(d.assurance_ok));
-  set('dog-edit-chaleur', boolSel(d.en_chaleur));
-  var grandDerived = (d.grand_chien === true || d.grand_chien === 'true')
-                     || (d.poids_kg != null && parseFloat(d.poids_kg) >= 35);
-  set('dog-edit-grand', grandDerived ? 'true' : boolSel(d.grand_chien));
   dogFillComportement(d.comportement || '');
   set('dog-edit-notes', d.notes_sante || '');
+  var rdd = document.getElementById('dog-race-dropdown'); if (rdd) rdd.style.display = 'none';
 
   // Aperçu photo
   var box = document.getElementById('dog-photo-box');
@@ -1598,10 +1712,10 @@ function openDogAdd() {
   var t = document.getElementById('dog-modal-title'); if (t) t.textContent = 'Ajouter un chien';
   function set(id, val) { var e = document.getElementById(id); if (e) e.value = (val == null ? '' : val); }
   ['dog-edit-prenom','dog-edit-race','dog-edit-poids','dog-edit-sexe','dog-edit-naissance',
-   'dog-edit-sterilise','dog-edit-puce','dog-edit-vaccins','dog-edit-assurance','dog-edit-chaleur',
-   'dog-edit-grand','dog-edit-notes']
+   'dog-edit-sterilise','dog-edit-puce','dog-edit-vaccins','dog-edit-assurance','dog-edit-notes']
     .forEach(function(id) { set(id, ''); });
   dogFillComportement('');
+  var rdd = document.getElementById('dog-race-dropdown'); if (rdd) rdd.style.display = 'none';
   var box = document.getElementById('dog-photo-box');
   if (box) box.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
   document.getElementById('dogEditModal').classList.add('open');
@@ -1641,13 +1755,13 @@ async function saveDogEdit() {
     function triA(id) { var v = valA(id); return v === '' ? null : (v === 'true'); }
     var pA = valA('dog-edit-poids');
     var poidsA = pA !== '' ? parseFloat(pA.replace(',', '.')) : null;
-    var grdA = valA('dog-edit-grand');
+    var raceA = valA('dog-edit-race');
 
     var ins = {
       client_id: clientId,
       nom: nomA,
       actif: true,
-      race: valA('dog-edit-race') || null,
+      race: raceA || null,
       sexe: valA('dog-edit-sexe') || null,
       date_naissance: valA('dog-edit-naissance') || null,
       notes_sante: valA('dog-edit-notes') || null,
@@ -1655,9 +1769,8 @@ async function saveDogEdit() {
       sterilise: triA('dog-edit-sterilise'),
       vaccins_ok: triA('dog-edit-vaccins'),
       assurance_ok: triA('dog-edit-assurance'),
-      en_chaleur: triA('dog-edit-chaleur'),
-      // Grand gabarit : choix explicite, sinon auto si poids >= 35
-      grand_chien: grdA !== '' ? (grdA === 'true') : (poidsA != null ? (poidsA >= 35) : null)
+      // Grand gabarit automatique : race grand gabarit OU poids >= 35 kg
+      grand_chien: dogComputeGrand(raceA, poidsA)
     };
     if (poidsA != null && !isNaN(poidsA)) ins.poids_kg = poidsA;
 
@@ -1692,7 +1805,8 @@ async function saveDogEdit() {
       showToast('✓ Chien ajouté');
     } catch(e) {
       console.log('Erreur ajout chien:', e);
-      showToast('✗ Erreur — réessayez', true);
+      var msg = (e && (e.message || e.error_description || e.code)) || 'Erreur — réessayez';
+      showToast('✗ ' + msg, true);
     }
     if (btnA) btnA.style.opacity = '1';
     return;
@@ -1716,17 +1830,16 @@ async function saveDogEdit() {
     notes_sante: val('dog-edit-notes') || null
   };
   var poids = val('dog-edit-poids');
-  if (poids !== '') fields.poids_kg = parseFloat(poids.replace(',', '.'));
+  var poidsNum = poids !== '' ? parseFloat(poids.replace(',', '.')) : null;
+  if (poidsNum != null && !isNaN(poidsNum)) fields.poids_kg = poidsNum;
   var ster = val('dog-edit-sterilise');
   if (ster !== '') fields.sterilise = (ster === 'true');
   var vac = val('dog-edit-vaccins');
   if (vac !== '') fields.vaccins_ok = (vac === 'true');
   var ass = val('dog-edit-assurance');
   if (ass !== '') fields.assurance_ok = (ass === 'true');
-  var cha = val('dog-edit-chaleur');
-  if (cha !== '') fields.en_chaleur = (cha === 'true');
-  var grd = val('dog-edit-grand');
-  if (grd !== '') fields.grand_chien = (grd === 'true');
+  // Grand gabarit automatique : race grand gabarit OU poids >= 35 kg
+  fields.grand_chien = dogComputeGrand(val('dog-edit-race'), poidsNum);
   var puceVal = val('dog-edit-puce').replace(/\s/g, '');
   fields.numero_puce = puceVal || null;
 
@@ -1756,7 +1869,8 @@ async function saveDogEdit() {
     showToast('✓ Fiche enregistrée');
   } catch(e) {
     console.log('Erreur enregistrement chien:', e);
-    showToast('✗ Erreur — réessayez', true);
+    var msg = (e && (e.message || e.error_description || e.code)) || 'Erreur — réessayez';
+    showToast('✗ ' + msg, true);
   }
   if (btn) btn.style.opacity = '1';
 }
