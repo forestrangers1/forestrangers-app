@@ -415,6 +415,47 @@ html, body {
 }
 .photo-upload-box img { width: 100%; height: 100%; object-fit: cover; }
 .photo-upload-box svg { width: 26px; height: 26px; color: var(--text-faint); }
+
+/* Section comportement (modal fiche chien) */
+.dog-toggle {
+  width: 40px; height: 22px; border-radius: 11px;
+  background: var(--border2); position: relative;
+  cursor: pointer; transition: background 0.2s; flex-shrink: 0;
+}
+.dog-toggle.on { background: var(--accent); }
+.dog-toggle .toggle-knob {
+  position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: white; transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.dog-toggle.on .toggle-knob { transform: translateX(18px); }
+.dog-behavior-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.dog-behavior-item {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 12px;
+}
+.dog-behavior-label { font-size: 12.5px; color: var(--text); }
+.dog-behavior-item.important { background: var(--accent-dim); border-color: rgba(255,95,31,0.5); }
+.dog-behavior-item.important .dog-behavior-label { font-weight: 800; color: var(--accent); }
+.dog-laisse-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.dog-laisse-pill {
+  padding: 6px 14px; border-radius: 20px;
+  border: 1.5px solid var(--border2); background: var(--surface2);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: all 0.15s; color: var(--text-dim);
+}
+.dog-laisse-pill.selected { background: var(--accent); border-color: var(--accent); color: white; }
+.dog-energy-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-faint); }
+#dog-energy-slider { width: 100%; margin: 4px 0; -webkit-appearance: none; background: transparent; }
+#dog-energy-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 18px; height: 18px;
+  border-radius: 50%; background: var(--accent);
+  border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.2); cursor: pointer;
+}
+#dog-energy-slider::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--border2); }
+@media (max-width: 380px) { .dog-behavior-grid { grid-template-columns: 1fr; } }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
@@ -948,8 +989,43 @@ html, body {
       </div>
     </div>
     <div class="field-group">
-      <label class="field-label">Comportement / particularités</label>
-      <textarea class="field-input" id="dog-edit-comportement" rows="2" style="resize:none;" placeholder="Ex : sociable, peur de l'orage..."></textarea>
+      <label class="field-label">Comportement</label>
+      <div class="dog-behavior-grid" id="dog-behavior-grid" style="margin-bottom:14px;">
+        <div class="dog-behavior-item"><div class="dog-behavior-label">Liberté autorisée</div><div class="dog-toggle" onclick="dogToggle(this)"><div class="toggle-knob"></div></div></div>
+        <div class="dog-behavior-item"><div class="dog-behavior-label">Protection nourriture</div><div class="dog-toggle" onclick="dogToggle(this)"><div class="toggle-knob"></div></div></div>
+        <div class="dog-behavior-item"><div class="dog-behavior-label">Rappel fiable</div><div class="dog-toggle" onclick="dogToggle(this)"><div class="toggle-knob"></div></div></div>
+        <div class="dog-behavior-item"><div class="dog-behavior-label">Dominant</div><div class="dog-toggle" onclick="dogToggle(this)"><div class="toggle-knob"></div></div></div>
+        <div class="dog-behavior-item"><div class="dog-behavior-label">Instinct chasseur</div><div class="dog-toggle" onclick="dogToggle(this)"><div class="toggle-knob"></div></div></div>
+        <div class="dog-behavior-item"><div class="dog-behavior-label">Sociable avec femelles</div><div class="dog-toggle" onclick="dogToggle(this)"><div class="toggle-knob"></div></div></div>
+        <div class="dog-behavior-item"><div class="dog-behavior-label">Réactif en laisse</div><div class="dog-toggle" onclick="dogToggle(this)"><div class="toggle-knob"></div></div></div>
+        <div class="dog-behavior-item"><div class="dog-behavior-label">Sociable avec mâles</div><div class="dog-toggle" onclick="dogToggle(this)"><div class="toggle-knob"></div></div></div>
+        <div class="dog-behavior-item"><div class="dog-behavior-label">Adore l'eau</div><div class="dog-toggle" onclick="dogToggle(this)"><div class="toggle-knob"></div></div></div>
+        <div class="dog-behavior-item important"><div class="dog-behavior-label">Rescue dog</div><div class="dog-toggle" onclick="dogToggle(this)"><div class="toggle-knob"></div></div></div>
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Peurs / Phobies</label>
+      <input class="field-input" id="dog-edit-peurs" type="text" placeholder="Ex : orage, feux d'artifice, voitures...">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Marche en laisse</label>
+      <div class="dog-laisse-pills" id="dog-laisse-pills" style="margin-top:6px;">
+        <div class="dog-laisse-pill" onclick="dogSelectLaisse(this)">Bien</div>
+        <div class="dog-laisse-pill" onclick="dogSelectLaisse(this)">À améliorer</div>
+        <div class="dog-laisse-pill" onclick="dogSelectLaisse(this)">Tire fort</div>
+        <div class="dog-laisse-pill" onclick="dogSelectLaisse(this)">Harnais requis</div>
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Niveau d'énergie</label>
+      <div style="margin-top:8px;">
+        <input type="range" min="1" max="5" value="3" id="dog-energy-slider" oninput="dogUpdateEnergy(this.value)">
+        <div class="dog-energy-labels">
+          <span>Très calme</span>
+          <span id="dog-energy-label" style="color:var(--accent);font-weight:700;">Moyen</span>
+          <span>Très énergique</span>
+        </div>
+      </div>
     </div>
     <div class="field-group">
       <label class="field-label">Notes</label>
@@ -1415,6 +1491,62 @@ var dogEditIndex = null;
 var dogAddMode = false;
 var dogPendingPhotoFile = null;
 
+// ── Section comportement du modal (toggles / peurs / marche / énergie) ──
+var DOG_ENERGY_LABELS = ['', 'Très calme', 'Calme', 'Moyen', 'Énergique', 'Très énergique'];
+function dogToggle(el) {
+  el.classList.toggle('on');
+  if (!el.querySelector('.toggle-knob')) { var k = document.createElement('div'); k.className = 'toggle-knob'; el.appendChild(k); }
+}
+function dogSelectLaisse(el) {
+  document.querySelectorAll('#dog-laisse-pills .dog-laisse-pill').forEach(function(p) { p.classList.remove('selected'); });
+  el.classList.add('selected');
+}
+function dogUpdateEnergy(val) {
+  var e = document.getElementById('dog-energy-label'); if (e) e.textContent = DOG_ENERGY_LABELS[val] || '';
+}
+// Sérialise les contrôles → résumé texte (même format que l'inscription)
+function dogReadComportement() {
+  var parts = [], on = [];
+  document.querySelectorAll('#dog-behavior-grid .dog-behavior-item').forEach(function(it) {
+    var lbl = it.querySelector('.dog-behavior-label'), tg = it.querySelector('.dog-toggle');
+    if (lbl && tg && tg.classList.contains('on')) on.push(lbl.textContent.trim());
+  });
+  if (on.length) parts.push(on.join(', '));
+  var peurs = ((document.getElementById('dog-edit-peurs') || {}).value || '').trim();
+  if (peurs) parts.push('Peurs : ' + peurs);
+  var laisse = document.querySelector('#dog-laisse-pills .dog-laisse-pill.selected');
+  if (laisse) parts.push('Marche en laisse : ' + laisse.textContent.trim());
+  var energy = ((document.getElementById('dog-energy-label') || {}).textContent || '').trim();
+  if (energy) parts.push('Énergie : ' + energy);
+  return parts.join(' · ') || null;
+}
+// Remplit les contrôles depuis le résumé texte stocké
+function dogFillComportement(str) {
+  document.querySelectorAll('#dog-behavior-grid .dog-toggle').forEach(function(t) { t.classList.remove('on'); });
+  var peursEl = document.getElementById('dog-edit-peurs'); if (peursEl) peursEl.value = '';
+  document.querySelectorAll('#dog-laisse-pills .dog-laisse-pill').forEach(function(p) { p.classList.remove('selected'); });
+  var slider = document.getElementById('dog-energy-slider'); if (slider) slider.value = 3;
+  dogUpdateEnergy(3);
+  if (!str) return;
+  String(str).split(' · ').forEach(function(seg) {
+    seg = seg.trim();
+    if (seg.indexOf('Peurs : ') === 0) { if (peursEl) peursEl.value = seg.slice(8).trim(); }
+    else if (seg.indexOf('Marche en laisse : ') === 0) {
+      var v = seg.slice(19).trim();
+      document.querySelectorAll('#dog-laisse-pills .dog-laisse-pill').forEach(function(p) { if (p.textContent.trim() === v) p.classList.add('selected'); });
+    } else if (seg.indexOf('Énergie : ') === 0) {
+      var idx = DOG_ENERGY_LABELS.indexOf(seg.slice(10).trim());
+      if (idx > 0) { if (slider) slider.value = idx; dogUpdateEnergy(idx); }
+    } else {
+      var names = seg.split(',').map(function(s) { return s.trim(); });
+      document.querySelectorAll('#dog-behavior-grid .dog-behavior-item').forEach(function(it) {
+        var lbl = it.querySelector('.dog-behavior-label'), tg = it.querySelector('.dog-toggle');
+        if (lbl && tg && names.indexOf(lbl.textContent.trim()) >= 0) tg.classList.add('on');
+      });
+    }
+  });
+}
+
 function openDogEdit(idx) {
   var d = (window.chiensData || [])[idx];
   if (!d) return;
@@ -1438,7 +1570,7 @@ function openDogEdit(idx) {
   var grandDerived = (d.grand_chien === true || d.grand_chien === 'true')
                      || (d.poids_kg != null && parseFloat(d.poids_kg) >= 35);
   set('dog-edit-grand', grandDerived ? 'true' : boolSel(d.grand_chien));
-  set('dog-edit-comportement', d.comportement || '');
+  dogFillComportement(d.comportement || '');
   set('dog-edit-notes', d.notes_sante || '');
 
   // Aperçu photo
@@ -1467,8 +1599,9 @@ function openDogAdd() {
   function set(id, val) { var e = document.getElementById(id); if (e) e.value = (val == null ? '' : val); }
   ['dog-edit-prenom','dog-edit-race','dog-edit-poids','dog-edit-sexe','dog-edit-naissance',
    'dog-edit-sterilise','dog-edit-puce','dog-edit-vaccins','dog-edit-assurance','dog-edit-chaleur',
-   'dog-edit-grand','dog-edit-comportement','dog-edit-notes']
+   'dog-edit-grand','dog-edit-notes']
     .forEach(function(id) { set(id, ''); });
+  dogFillComportement('');
   var box = document.getElementById('dog-photo-box');
   if (box) box.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
   document.getElementById('dogEditModal').classList.add('open');
@@ -1533,7 +1666,7 @@ async function saveDogEdit() {
       if (insErr) throw insErr;
 
       // Comportement (colonne non garantie) → best-effort
-      var compA = valA('dog-edit-comportement');
+      var compA = dogReadComportement();
       if (compA && ('comportement' in newDog)) {
         var cr = await db.from('chiens').update({ comportement: compA }).eq('id', newDog.id);
         if (!cr.error) newDog.comportement = compA;
@@ -1579,7 +1712,7 @@ async function saveDogEdit() {
     race: val('dog-edit-race'),
     sexe: val('dog-edit-sexe') || null,
     date_naissance: val('dog-edit-naissance') || null,
-    comportement: val('dog-edit-comportement') || null,
+    comportement: dogReadComportement(),
     notes_sante: val('dog-edit-notes') || null
   };
   var poids = val('dog-edit-poids');
