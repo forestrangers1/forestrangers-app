@@ -1764,6 +1764,9 @@ async function sauvegarderInscription(motDePasse) {
     var race      = (document.getElementById('race-value') || document.getElementById('race') || {}).value || '';
     var poids     = (document.getElementById('poids-chien') || {}).value || null;
     var sexe      = (document.getElementById('sexe-chien') || {}).value || null;
+    var sterilPill = document.querySelector("[onclick*=\"'steril'\"].selected");
+    var sterilise = sterilPill ? (sterilPill.textContent.trim() === 'Oui') : null;
+    var numeroPuce = (((document.getElementById('puce-chien') || {}).value || '').trim().replace(/\s/g, '')) || null;
     var horsZone  = isHorsZone(commune);
 
     if (!prenom || !nom || !email) {
@@ -1858,7 +1861,7 @@ async function sauvegarderInscription(motDePasse) {
         await db.from('chiens').insert({
           client_id: clientId, nom: nomChien,
           race: race || null, poids_kg: poids ? parseFloat(poids) : null,
-          sexe: sexe || null, actif: true
+          sexe: sexe || null, sterilise: sterilise, numero_puce: numeroPuce, actif: true
         });
       }
       // Chiens supplémentaires
