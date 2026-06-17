@@ -911,6 +911,50 @@ html, body {
       <label class="field-label">N° de puce</label>
       <input class="field-input" id="dog-edit-puce" type="text" inputmode="numeric" maxlength="15" placeholder="15 chiffres">
     </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="field-group">
+        <label class="field-label">Vaccins à jour</label>
+        <select class="field-input" id="dog-edit-vaccins">
+          <option value="">—</option>
+          <option value="true">Oui</option>
+          <option value="false">Non</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Assurance</label>
+        <select class="field-input" id="dog-edit-assurance">
+          <option value="">—</option>
+          <option value="true">Oui</option>
+          <option value="false">Non</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="field-group">
+        <label class="field-label">En chaleur</label>
+        <select class="field-input" id="dog-edit-chaleur">
+          <option value="">—</option>
+          <option value="true">Oui</option>
+          <option value="false">Non</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Catégorisé / dangereux</label>
+        <select class="field-input" id="dog-edit-dangereux">
+          <option value="">—</option>
+          <option value="true">Oui</option>
+          <option value="false">Non</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Grand gabarit</label>
+      <select class="field-input" id="dog-edit-grand">
+        <option value="">—</option>
+        <option value="true">Oui</option>
+        <option value="false">Non</option>
+      </select>
+    </div>
     <div class="field-group">
       <label class="field-label">Comportement / particularités</label>
       <textarea class="field-input" id="dog-edit-comportement" rows="2" style="resize:none;" placeholder="Ex : sociable, peur de l'orage..."></textarea>
@@ -1297,12 +1341,14 @@ function updateDogScreen(chiens) {
 
   // Libellés lisibles pour les champs détaillés (affichés s'ils existent)
   var labels = {
-    race: 'Race', date_naissance: 'Naissance', grand_chien: 'Grand gabarit',
+    race: 'Race', sexe: 'Sexe', sterilise: 'Stérilisé', numero_puce: 'N° de puce',
+    date_naissance: 'Naissance', grand_chien: 'Grand gabarit',
     vaccins_ok: 'Vaccins à jour', assurance_ok: 'Assurance',
     en_chaleur: 'En chaleur', chien_dangereux: 'Chien dangereux',
-    notes_sante: 'Notes santé'
+    comportement: 'Comportement', notes_sante: 'Notes santé'
   };
   function fmt(k, v) {
+    if (k === 'sexe') return v === 'male' ? 'Mâle' : v === 'femelle' ? 'Femelle' : v;
     if (typeof v === 'boolean') return v ? 'Oui' : 'Non';
     if (v === 'true') return 'Oui';
     if (v === 'false') return 'Non';
@@ -1379,13 +1425,19 @@ function openDogEdit(idx) {
   dogPendingPhotoFile = null;
 
   function set(id, val) { var e = document.getElementById(id); if (e) e.value = (val == null ? '' : val); }
+  function boolSel(v) { return (v === true || v === 'true') ? 'true' : (v === false || v === 'false') ? 'false' : ''; }
   set('dog-edit-prenom', d.nom || '');
   set('dog-edit-race', d.race || '');
   set('dog-edit-poids', d.poids_kg != null ? d.poids_kg : '');
   set('dog-edit-sexe', d.sexe || '');
   set('dog-edit-naissance', d.date_naissance || '');
-  set('dog-edit-sterilise', (d.sterilise === true || d.sterilise === 'true') ? 'true' : (d.sterilise === false || d.sterilise === 'false') ? 'false' : '');
-  set('dog-edit-puce', d.puce || d.chip || '');
+  set('dog-edit-sterilise', boolSel(d.sterilise));
+  set('dog-edit-puce', d.numero_puce || '');
+  set('dog-edit-vaccins', boolSel(d.vaccins_ok));
+  set('dog-edit-assurance', boolSel(d.assurance_ok));
+  set('dog-edit-chaleur', boolSel(d.en_chaleur));
+  set('dog-edit-dangereux', boolSel(d.chien_dangereux));
+  set('dog-edit-grand', boolSel(d.grand_chien));
   set('dog-edit-comportement', d.comportement || '');
   set('dog-edit-notes', d.notes_sante || '');
 
@@ -1448,9 +1500,18 @@ async function saveDogEdit() {
   if (poids !== '') fields.poids_kg = parseFloat(poids.replace(',', '.'));
   var ster = val('dog-edit-sterilise');
   if (ster !== '') fields.sterilise = (ster === 'true');
-  var puceVal = val('dog-edit-puce');
-  if ('puce' in d) fields.puce = puceVal || null;
-  else if ('chip' in d) fields.chip = puceVal || null;
+  var vac = val('dog-edit-vaccins');
+  if (vac !== '') fields.vaccins_ok = (vac === 'true');
+  var ass = val('dog-edit-assurance');
+  if (ass !== '') fields.assurance_ok = (ass === 'true');
+  var cha = val('dog-edit-chaleur');
+  if (cha !== '') fields.en_chaleur = (cha === 'true');
+  var dan = val('dog-edit-dangereux');
+  if (dan !== '') fields.chien_dangereux = (dan === 'true');
+  var grd = val('dog-edit-grand');
+  if (grd !== '') fields.grand_chien = (grd === 'true');
+  var puceVal = val('dog-edit-puce').replace(/\s/g, '');
+  fields.numero_puce = puceVal || null;
 
   // Filtrer : ne garder que les clés existant dans la ligne chargée
   var payload = {};

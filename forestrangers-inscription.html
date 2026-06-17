@@ -1298,6 +1298,10 @@ function ajouterChien() {
     + '<div class="field"><label class="field-label">Poids (kg)</label><input class="field-input chien-poids" type="number" placeholder="25" min="1" max="120"></div>'
     + '<div class="field"><label class="field-label">Sexe</label><select class="field-input chien-sexe"><option value="">Sélectionner...</option><option value="male">Mâle</option><option value="femelle">Femelle</option></select></div>'
     + '</div>'
+    + '<div class="form-row cols-2">'
+    + '<div class="field"><label class="field-label">Stérilisé</label><select class="field-input chien-steril"><option value="">Sélectionner...</option><option value="true">Oui</option><option value="false">Non</option></select></div>'
+    + '<div class="field"><label class="field-label">N° de puce</label><input class="field-input chien-puce" type="text" inputmode="numeric" maxlength="15" placeholder="15 chiffres"></div>'
+    + '</div>'
     + '</div>';
   container.appendChild(div);
 }
@@ -1871,10 +1875,17 @@ async function sauvegarderInscription(motDePasse) {
         var n = (c.querySelector('.chien-nom')  || {}).value;
         var r = (c.querySelector('.chien-race') || {}).value;
         var p = (c.querySelector('.chien-poids')|| {}).value;
+        var sx = (c.querySelector('.chien-sexe')  || {}).value;
+        var st = (c.querySelector('.chien-steril')|| {}).value;
+        var pu = (((c.querySelector('.chien-puce') || {}).value || '').trim().replace(/\s/g, '')) || null;
         if (n) {
           await db.from('chiens').insert({
             client_id: clientId, nom: n,
-            race: r || null, poids_kg: p ? parseFloat(p) : null, actif: true
+            race: r || null, poids_kg: p ? parseFloat(p) : null,
+            sexe: sx || null,
+            sterilise: st === '' ? null : (st === 'true'),
+            numero_puce: pu,
+            actif: true
           });
         }
       }
