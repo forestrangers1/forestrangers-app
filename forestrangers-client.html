@@ -534,56 +534,14 @@ html, body {
         <!-- Prochaine promenade -->
         <div id="prochaine-promenade" style="background:linear-gradient(135deg,rgba(255,95,31,0.15),rgba(255,95,31,0.05));border:1px solid rgba(255,95,31,0.25);border-radius:var(--radius-lg);padding:16px;margin-bottom:16px;">
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--accent);font-weight:700;margin-bottom:8px;">Prochaine promenade</div>
-          <div style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;">Demain · 07:30</div>
-          <div style="font-size:13px;color:var(--text-dim);">Max · Dog Walking · Gabriel</div>
-          <div style="display:flex;gap:8px;margin-top:12px;">
-            <span class="badge b-green">Confirmé</span>
-            <span class="badge b-muted">Forêt de Merl</span>
-          </div>
+          <div style="font-size:13px;color:var(--text-dim);">Chargement…</div>
         </div>
 
-        <!-- Notification nouvelle — promenade terminée -->
+        <!-- Notifications -->
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:var(--text-faint);font-weight:700;margin-bottom:10px;">Notifications</div>
 
-        <div class="notif-card new" onclick="showScreen('screen-walk-detail')">
-          <div class="notif-header">
-            <span class="notif-type">Promenade terminee</span>
-            <span class="notif-time">Il y a 12 min</span>
-          </div>
-          <div class="notif-title">Max est rentré !</div>
-          <div class="notif-sub">Sophie vient de terminer la promenade du matin. Tout s'est bien passé.</div>
-          <div class="notif-stats">
-            <div class="notif-stat">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              <strong>48 min</strong>
-            </div>
-            <div class="notif-stat">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6l3-3M3 18l3 3"/></svg>
-              <strong>3,4 km</strong>
-            </div>
-            <div class="notif-stat">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              <strong>1 photo</strong>
-            </div>
-          </div>
-        </div>
-
-        <div class="notif-card read">
-          <div class="notif-header">
-            <span class="notif-type">Reservation confirmee</span>
-            <span class="notif-time">Hier · 18:04</span>
-          </div>
-          <div class="notif-title">Dog Walking · Mardi 10 juin</div>
-          <div class="notif-sub">Gabriel a confirmé votre demande pour demain matin à 07:30.</div>
-        </div>
-
-        <div class="notif-card read">
-          <div class="notif-header">
-            <span class="notif-type">Facture disponible</span>
-            <span class="notif-time">1 juin · 09:00</span>
-          </div>
-          <div class="notif-title">Facture mai 2026 — 308 €</div>
-          <div class="notif-sub">Votre facture mensuelle est disponible. Échéance : 15 juin.</div>
+        <div id="notifications-list">
+          <div style="padding:24px;text-align:center;color:var(--text-faint);font-size:13px;">Aucune notification pour le moment</div>
         </div>
 
       </div>
@@ -749,52 +707,13 @@ html, body {
       <div class="screen-pad">
         <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;margin-bottom:4px;margin-top:4px;">Mes factures</div>
         <div style="font-size:13px;color:var(--text-dim);margin-bottom:18px;">Suivi de vos paiements</div>
+
+        <!-- Estimation du mois en cours (rempli par loadMoisCourant) -->
+        <div id="facture-mois-courant"></div>
+
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Factures émises</div>
         <div id="factures-list">
-
-        <!-- Résumé -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center;">
-            <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;color:var(--green);">308 €</div>
-            <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:3px;">À payer</div>
-          </div>
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center;">
-            <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;color:var(--text-dim);">15 juin</div>
-            <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:3px;">Échéance</div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="invoice-item">
-            <div class="invoice-detail">
-              <div class="invoice-name">Facture mai 2026</div>
-              <div class="invoice-date">Dog Walking × 11 · mai 2026</div>
-            </div>
-            <span class="badge b-accent" style="margin-right:8px;">À payer</span>
-            <div class="invoice-amount" style="color:var(--accent);">308 €</div>
-          </div>
-          <div class="invoice-item">
-            <div class="invoice-detail">
-              <div class="invoice-name">Facture avril 2026</div>
-              <div class="invoice-date">Dog Walking × 9 · avril 2026</div>
-            </div>
-            <span class="badge b-green" style="margin-right:8px;">Payée</span>
-            <div class="invoice-amount" style="color:var(--green);">252 €</div>
-          </div>
-          <div class="invoice-item">
-            <div class="invoice-detail">
-              <div class="invoice-name">Facture mars 2026</div>
-              <div class="invoice-date">Dog Walking × 10 · mars 2026</div>
-            </div>
-            <span class="badge b-green" style="margin-right:8px;">Payée</span>
-            <div class="invoice-amount" style="color:var(--green);">280 €</div>
-          </div>
-        </div>
-
-        <button class="btn-big btn-accent" style="margin-top:4px;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-          Payer en ligne
-        </button>
-
+          <div style="padding:24px;text-align:center;color:var(--text-faint);font-size:13px;">Chargement…</div>
         </div><!-- /factures-list -->
       </div>
     </div>
@@ -1296,6 +1215,7 @@ async function loadClientProfile() {
     updateDogScreen(chiens);
     await loadReservations(client.id);
     await loadFactures(client.id);
+    await loadMoisCourant(client.id);
     await loadProchainePromenade(client.id);
 
   } catch(e) {
@@ -1406,17 +1326,25 @@ async function loadReservations(id) {
 }
 
 async function loadFactures(id) {
+  var container = document.getElementById('factures-list');
   try {
-    var { data: factures } = await db.from('factures')
+    var { data: factures, error } = await db.from('factures')
       .select('*')
       .eq('client_id', id)
       .order('created_at', { ascending: false })
       .limit(12);
 
-    var container = document.getElementById('factures-list');
-    if (!container || !factures) return;
+    if (!container) return;
 
-    if (factures.length === 0) {
+    // Si Supabase renvoie une erreur (ex. policy RLS SELECT manquante),
+    // on l'affiche au lieu de rester silencieux.
+    if (error) {
+      console.log('Erreur lecture factures (Supabase):', error);
+      container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--red);font-size:12px;">Lecture impossible : ' + (error.message || 'erreur inconnue') + '</div>';
+      return;
+    }
+
+    if (!factures || factures.length === 0) {
       container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-faint);font-size:13px;">Aucune facture</div>';
       return;
     }
@@ -1435,6 +1363,59 @@ async function loadFactures(id) {
     }).join('');
 
   } catch(e) { console.log('Erreur factures:', e); }
+}
+
+// Estimation du montant prévisionnel du mois en cours, calculée à partir
+// des montants stockés sur les réservations (montant_ttc, posé à la réservation).
+async function loadMoisCourant(id) {
+  var el = document.getElementById('facture-mois-courant');
+  if (!el) return;
+
+  var now = new Date();
+  var moisFr = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  var an = now.getFullYear(), mois = now.getMonth();
+  var debut = new Date(an, mois, 1);
+  var debutMoisProchain = new Date(an, mois + 1, 1);
+  var fmtISO = function(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
+
+  try {
+    var { data: resas, error } = await db.from('reservations')
+      .select('montant_ttc, nb_seances, statut, date_debut')
+      .eq('client_id', id)
+      .gte('date_debut', fmtISO(debut))
+      .lt('date_debut', fmtISO(debutMoisProchain))
+      .neq('statut', 'annule');
+
+    // Colonne absente ou lecture impossible → on n'affiche simplement rien.
+    if (error) { console.log('Estimation mois en cours indisponible:', error.message); el.innerHTML = ''; return; }
+    if (!resas || resas.length === 0) { el.innerHTML = ''; return; }
+
+    var totalTTC = 0, nbSeances = 0;
+    resas.forEach(function(r) {
+      totalTTC  += parseFloat(r.montant_ttc) || 0;
+      nbSeances += parseInt(r.nb_seances, 10) || 0;
+    });
+
+    // Aucune réservation chiffrée (ex. anciennes sans montant) → rien à montrer.
+    if (totalTTC <= 0) { el.innerHTML = ''; return; }
+
+    var totalHT = totalTTC / 1.17;
+    var tva = totalTTC - totalHT;
+    var fmt = function(n) { return n.toLocaleString('fr-LU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; };
+    var seanceLabel = nbSeances > 0 ? (nbSeances + (nbSeances > 1 ? ' séances' : ' séance')) : '';
+
+    el.innerHTML =
+      '<div style="background:linear-gradient(135deg,rgba(255,95,31,0.15),rgba(255,95,31,0.05));border:1px solid rgba(255,95,31,0.25);border-radius:var(--radius-lg);padding:16px;margin-bottom:18px;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">'
+      +   '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--accent);font-weight:700;">Estimation · ' + moisFr[mois] + ' ' + an + '</div>'
+      +   (seanceLabel ? '<div style="font-size:11px;color:var(--text-dim);">' + seanceLabel + '</div>' : '')
+      + '</div>'
+      + '<div style="font-family:\'Norwester\',sans-serif;font-size:26px;font-weight:800;color:var(--text);margin-bottom:2px;">' + fmt(totalTTC) + '</div>'
+      + '<div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;">dont ' + fmt(tva) + ' de TVA (17 %) · ' + fmt(totalHT) + ' HT</div>'
+      + '<div style="font-size:11px;color:var(--text-faint);line-height:1.4;">Montant prévisionnel d\'après vos réservations. Il peut évoluer selon les annulations. La facture définitive est émise en fin de mois.</div>'
+      + '</div>';
+
+  } catch(e) { console.log('Erreur estimation mois en cours:', e); el.innerHTML = ''; }
 }
 
 function updateDogScreen(chiens) {

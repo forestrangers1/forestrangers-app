@@ -1463,6 +1463,53 @@ async function confirmBooking() {
   }
 }
 
+// Calcule le montant TTC et le nombre de séances d'une réservation,
+// EXACTEMENT comme l'aperçu (récap) — pour le stocker à l'enregistrement.
+// Renvoie { total: Number, nb: Number }.
+function computeReservationTotal(svc) {
+  if (svc === 'boarding') {
+    const start = document.getElementById('boarding-start')?.value;
+    const end   = document.getElementById('boarding-end')?.value;
+    const nights = start && end ? Math.round((new Date(end) - new Date(start)) / 86400000) : 0;
+    if (nights < 2) return { total: 0, nb: 0 };
+    return { total: nights * prices[svc], nb: nights };
+  }
+
+  // walking / daycare
+  const recurId = svc === 'walking' ? 'recur-walk-recur' : 'recur-dc-recur';
+  const isRecur = document.getElementById(recurId)?.classList.contains('selected');
+
+  if (isRecur) {
+    const allDayBtns = svc === 'walking'
+      ? document.querySelectorAll('#days-selector .day-btn.on')
+      : document.querySelectorAll('#recur-dc-options .day-btn.on');
+    const selectedDays = allDayBtns.length;
+    const endDateEl = svc === 'walking'
+      ? document.getElementById('walk-recur-end')
+      : document.querySelector('#recur-dc-options input[type=date]');
+    const startDateEl = svc === 'walking'
+      ? document.getElementById('walk-date')
+      : document.getElementById('daycare-date');
+    const startD = startDateEl?.value ? new Date(startDateEl.value) : new Date();
+    const endD = endDateEl?.value ? new Date(endDateEl.value) : null;
+    if (selectedDays > 0 && endD) {
+      const diffMs = endD - startD;
+      if (diffMs > 0) {
+        const weeks = Math.ceil(diffMs / (7 * 86400000));
+        const total = weeks * selectedDays;
+        return { total: total * prices[svc], nb: total };
+      }
+    }
+    return { total: prices[svc], nb: 1 }; // repli « par séance »
+  }
+
+  // ponctuelle — réduction 30% sur le 2e chien (identique au récap)
+  const dogCount = getSelectedDogs().length || 1;
+  let total = prices[svc];
+  if (dogCount > 1) total = prices[svc] + Math.round(prices[svc] * 0.7);
+  return { total: total, nb: 1 };
+}
+
 async function saveReservation(svc, isBoarding) {
   if (!clientId) {
     console.log('Pas de client_id — réservation non enregistrée');
@@ -1488,6 +1535,7 @@ async function saveReservation(svc, isBoarding) {
 
   const ids = getSelectedDogIds();
   const notes = document.getElementById('booking-notes')?.value || null;
+  const calc = computeReservationTotal(svc); // { total, nb } — identique au récap
 
   const base = {
     client_id: clientId,
@@ -1500,14 +1548,30 @@ async function saveReservation(svc, isBoarding) {
     // ranger_nom / ranger_id : assignés automatiquement par le trigger fr_assign_ranger (règles §4.4)
   };
 
+  // Construit les lignes à insérer. Le montant n'est porté QUE par la 1re ligne
+  // (1 ligne par chien) pour que la somme sur le mois ne compte pas en double.
+  function buildRows(withMontant) {
+    var extra = withMontant ? { montant_ttc: calc.total, nb_seances: calc.nb } : {};
+    var zero  = withMontant ? { montant_ttc: 0, nb_seances: 0 } : {};
+    if (ids.length === 0) {
+      return [Object.assign({ chien_id: null }, base, extra)];
+    }
+    return ids.map(function(id, i) {
+      return Object.assign({ chien_id: id }, base, i === 0 ? extra : zero);
+    });
+  }
+
   try {
     let error = null;
-    if (ids.length === 0) {
-      ({ error } = await db.from('reservations').insert(Object.assign({ chien_id: null }, base)));
-    } else {
-      const rows = ids.map(function(id) { return Object.assign({ chien_id: id }, base); });
-      ({ error } = await db.from('reservations').insert(rows));
+    ({ error } = await db.from('reservations').insert(buildRows(true)));
+
+    // Repli : si les colonnes montant_ttc / nb_seances n'existent pas encore
+    // dans la table, on réinsère sans elles (la réservation reste enregistrée).
+    if (error && /montant_ttc|nb_seances|column/i.test(error.message || '')) {
+      console.log('Colonnes montant_ttc/nb_seances absentes — insertion sans montant. Ajoute-les pour activer l\'estimation.');
+      ({ error } = await db.from('reservations').insert(buildRows(false)));
     }
+
     if (error) console.log('Erreur enregistrement réservation:', error);
     return error; // null si tout va bien, sinon l'objet erreur Supabase
   } catch (e) {
