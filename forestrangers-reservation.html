@@ -503,7 +503,7 @@ textarea.field-input { resize: vertical; min-height: 80px; }
       <div class="section-body">
         <div style="display:flex;flex-direction:column;gap:8px;" id="dog-list">
           <!-- Chien 1 -->
-          <div class="dog-check-item" data-selected="true" onclick="toggleDogSelect(this)" style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface2);border:1.5px solid var(--accent);border-radius:var(--radius);cursor:pointer;">
+          <div class="dog-check-item" onclick="toggleDogSelect(this)" style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface2);border:1.5px solid var(--accent);border-radius:var(--radius);cursor:pointer;">
             <div class="dog-check-box" style="width:22px;height:22px;border-radius:6px;background:var(--accent);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
@@ -514,7 +514,7 @@ textarea.field-input { resize: vertical; min-height: 80px; }
             <span style="font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-dim);padding:3px 8px;border-radius:20px;">Sélectionné</span>
           </div>
           <!-- Chien 2 (si le client en a plusieurs) -->
-          <div class="dog-check-item" data-selected="false" onclick="toggleDogSelect(this)" style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius);cursor:pointer;">
+          <div class="dog-check-item" onclick="toggleDogSelect(this)" style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius);cursor:pointer;">
             <div class="dog-check-box" style="width:22px;height:22px;border-radius:6px;background:transparent;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
@@ -1087,9 +1087,10 @@ async function loadProfileAndDogs() {
     if (!client) return;
     clientId = client.id;
 
-    const { data: chiens } = await db.from('chiens')
-      .select('id, prenom, nom, race, poids')
+    const { data: chiens, error: chiensErr } = await db.from('chiens')
+      .select('id, nom, race, poids_kg')
       .eq('client_id', client.id);
+    if (chiensErr) console.log('Erreur lecture chiens:', chiensErr);
     chiensData = chiens || [];
     renderDogList();
   } catch (e) {
@@ -1106,9 +1107,9 @@ function renderDogList() {
   }
   list.innerHTML = chiensData.map(function(d, i) {
     const sel = i === 0;
-    const name = d.prenom || d.nom || 'Chien';
-    const meta = (d.race || '—') + (d.poids ? ' · ' + d.poids + ' kg' : '');
-    return '<div class="dog-check-item" data-chien-id="' + d.id + '" data-dog-name="' + name.replace(/"/g, '&quot;') + '" data-selected="' + (sel ? 'true' : 'false') + '" onclick="toggleDogSelect(this)" '
+    const name = d.nom || 'Chien';
+    const meta = (d.race || '—') + (d.poids_kg ? ' · ' + d.poids_kg + ' kg' : '');
+    return '<div class="dog-check-item" data-chien-id="' + d.id + '" data-dog-name="' + name.replace(/"/g, '&quot;') + '" onclick="toggleDogSelect(this)" '
       + 'style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface2);border:1.5px solid ' + (sel ? 'var(--accent)' : 'var(--border)') + ';border-radius:var(--radius);cursor:pointer;">'
       + '<div class="dog-check-box" style="width:22px;height:22px;border-radius:6px;background:' + (sel ? 'var(--accent)' : 'transparent') + ';border:2px solid ' + (sel ? 'var(--accent)' : 'var(--border2)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
       + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="' + (sel ? 'white' : 'var(--text-faint)') + '" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>'
@@ -1122,7 +1123,9 @@ function renderDogList() {
 function getSelectedDogIds() {
   const ids = [];
   document.querySelectorAll('.dog-check-item').forEach(function(el) {
-    if (el.dataset.selected === 'true' && el.dataset.chienId) {
+    const badges = el.querySelectorAll('span');
+    const last = badges[badges.length - 1];
+    if (last && last.textContent.trim() === 'Sélectionné' && el.dataset.chienId) {
       ids.push(el.dataset.chienId);
     }
   });
@@ -1471,54 +1474,48 @@ async function saveReservation(svc, isBoarding) {
   }
 }
 
-// État de sélection explicite via data-selected (fiable, contrairement à la
-// relecture de border-color qui échoue avec les variables CSS dans un raccourci).
-function setDogSelected(el, selected) {
-  el.dataset.selected = selected ? 'true' : 'false';
+function toggleDogSelect(el) {
   const box = el.querySelector('.dog-check-box');
-  const svg = box ? box.querySelector('svg') : null;
-  const badges = el.querySelectorAll('span');
-  const badge = badges[badges.length - 1];
-  const nameEl = el.querySelector('div[style*="flex:1"] > div:first-child');
+  const label = el.querySelectorAll('span')[0] || el.querySelector('span:last-child');
+  const isSelected = el.style.borderColor.includes('accent') || el.style.borderColor === 'var(--accent)';
 
-  if (selected) {
-    el.style.borderColor = 'var(--accent)';
-    el.style.background = 'var(--surface2)';
-    if (box) { box.style.background = 'var(--accent)'; box.style.borderColor = 'var(--accent)'; }
-    if (svg) svg.style.stroke = 'white';
-    if (nameEl) nameEl.style.color = '';
-    if (badge) {
-      badge.textContent = 'Sélectionné';
-      badge.style.color = 'var(--accent)';
-      badge.style.background = 'var(--accent-dim)';
-    }
-  } else {
+  if (isSelected) {
+    // Deselect
     el.style.borderColor = 'var(--border)';
     el.style.background = 'var(--surface2)';
-    if (box) { box.style.background = 'transparent'; box.style.borderColor = 'var(--border2)'; }
-    if (svg) svg.style.stroke = 'var(--text-faint)';
-    if (nameEl) nameEl.style.color = 'var(--text-dim)';
-    if (badge) {
-      badge.textContent = 'Non sélectionné';
-      badge.style.color = 'var(--text-faint)';
-      badge.style.background = 'rgba(255,255,255,0.06)';
-    }
+    box.style.background = 'transparent';
+    box.style.borderColor = 'var(--border2)';
+    box.querySelector('svg').style.stroke = 'var(--text-faint)';
+    const badges = el.querySelectorAll('span');
+    badges[badges.length-1].textContent = 'Non sélectionné';
+    badges[badges.length-1].style.color = 'var(--text-faint)';
+    badges[badges.length-1].style.background = 'rgba(255,255,255,0.06)';
+  } else {
+    // Select
+    el.style.borderColor = 'var(--accent)';
+    el.style.background = 'var(--surface2)';
+    box.style.background = 'var(--accent)';
+    box.style.borderColor = 'var(--accent)';
+    box.querySelector('svg').style.stroke = 'white';
+    const badges = el.querySelectorAll('span');
+    badges[badges.length-1].textContent = 'Sélectionné';
+    badges[badges.length-1].style.color = 'var(--accent)';
+    badges[badges.length-1].style.background = 'var(--accent-dim)';
   }
-}
-
-function toggleDogSelect(el) {
-  setDogSelected(el, el.dataset.selected !== 'true');
 }
 
 function getSelectedDogs() {
   const dogs = [];
   document.querySelectorAll('.dog-check-item').forEach(el => {
-    if (el.dataset.selected === 'true') {
+    const badges = el.querySelectorAll('span');
+    const lastBadge = badges[badges.length - 1];
+    const isSelected = lastBadge && lastBadge.textContent.trim() === 'Sélectionné';
+    if (isSelected) {
       const name = el.dataset.dogName || el.querySelector('div[style*="flex:1"] div:first-child')?.textContent.trim();
       if (name && name !== '+') dogs.push(name);
     }
   });
-  return dogs.length > 0 ? dogs : (chiensData[0] ? [chiensData[0].prenom || chiensData[0].nom] : ['—']);
+  return dogs.length > 0 ? dogs : (chiensData[0] ? [chiensData[0].nom] : ['—']);
 }
 
 function resetForm() {
