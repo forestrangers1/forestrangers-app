@@ -1071,6 +1071,14 @@ textarea.field-input { resize: vertical; min-height: 80px; }
 <script>
 let currentService = null;
 const prices = { walking: 30, daycare: 60, boarding: 75 };
+
+// Prix d'UNE séance pour N chiens : 1er chien plein tarif, chaque chien
+// supplémentaire à -30%. Source unique utilisée par le récap ET le montant stocké.
+function tarifSeance(svc, dogCount) {
+  const p = prices[svc] || 0;
+  const n = Math.max(1, dogCount || 1);
+  return p + (n - 1) * Math.round(p * 0.7);
+}
 const serviceNames = { walking: 'Dog Walking', daycare: 'Day Care', boarding: 'Boarding' };
 
 // ── CHARGEMENT CLIENT + CHIENS DEPUIS SUPABASE ──
@@ -1340,9 +1348,13 @@ function buildRecap() {
     document.getElementById('recap-slot-row').style.display = 'none';
     document.getElementById('recap-recur-row').style.display = 'none';
     document.getElementById('recap-nights').textContent = nights >= 2 ? `${nights} nuits` : 'À définir (min. 2 nuits)';
-    const boTotal = nights >= 2 ? nights * prices[svc] : 0;
+    const boDogCount = getSelectedDogs().length || 1;
+    const boPerNight = tarifSeance(svc, boDogCount); // 1re chien plein tarif, suivants −30%
+    const boTotal = nights >= 2 ? nights * boPerNight : 0;
+    const boFmt = (n) => n % 1 === 0 ? n + ' €' : n.toFixed(2).replace('.',',') + ' €';
+    const boDogNote = boDogCount > 1 ? ` · ${boDogCount} chiens (−30% dès le 2e)` : '';
     document.getElementById('recap-price').innerHTML = nights >= 2
-      ? `<span class="price-main">${prices[svc]} €</span><span class="price-breakdown">par nuit × ${nights} nuits</span><span class="price-total-line">Total : ${boTotal} €</span>`
+      ? `<span class="price-main">${boFmt(boPerNight)}</span><span class="price-breakdown">par nuit × ${nights} nuits${boDogNote}</span><span class="price-total-line">Total : ${boFmt(boTotal)}</span>`
       : '<span class="price-main">—</span><span class="price-breakdown">Minimum 2 nuits requis</span>';
     document.getElementById('recap-validation').innerHTML = '<span class="badge b-amber">Validation Gabriel requise</span>';
     document.getElementById('boarding-manual-alert').classList.remove('hidden');
@@ -1390,8 +1402,12 @@ function buildRecap() {
         if (diffMs > 0) {
           const weeks = Math.ceil(diffMs / (7 * 86400000));
           const total = weeks * selectedDays.length;
-          const totalPrice = total * prices[svc];
-          document.getElementById('recap-price').innerHTML = `<span class="price-main">${prices[svc]} €</span><span class="price-breakdown">par séance × ${total} séances</span><span class="price-total-line">Total : ${totalPrice} €</span>`;
+          const dogCount = getSelectedDogs().length || 1;
+          const perSeance = tarifSeance(svc, dogCount);
+          const totalPrice = total * perSeance;
+          const fmtR = (n) => n % 1 === 0 ? n + ' €' : n.toFixed(2).replace('.',',') + ' €';
+          const dogNote = dogCount > 1 ? ` · ${dogCount} chiens (−30% dès le 2e)` : '';
+          document.getElementById('recap-price').innerHTML = `<span class="price-main">${fmtR(perSeance)}</span><span class="price-breakdown">par séance × ${total} séances${dogNote}</span><span class="price-total-line">Total : ${fmtR(totalPrice)}</span>`;
           if (priceLabel) priceLabel.textContent = 'Total estimé';
         } else {
           document.getElementById('recap-price').textContent = `${prices[svc]} € / séance`;
@@ -1403,12 +1419,10 @@ function buildRecap() {
       document.getElementById('recap-recur').textContent = 'Ponctuelle — une seule fois';
       const selectedDogs = getSelectedDogs();
     const dogCount = selectedDogs.length;
-    let totalPrice = prices[svc];
+    const totalPrice = tarifSeance(svc, dogCount);
     let priceNote = 'par séance';
     if (dogCount > 1) {
-      const secondDog = Math.round(prices[svc] * 0.7);
-      totalPrice = prices[svc] + secondDog;
-      priceNote = `${dogCount} chiens · ${prices[svc]} € + ${secondDog} € (réduction 30% 2e chien)`;
+      priceNote = `${dogCount} chiens · −30% dès le 2e chien`;
     }
     const fmt = (n) => n % 1 === 0 ? n + ' €' : n.toFixed(2).replace('.',',') + ' €';
     document.getElementById('recap-price').innerHTML = `<span class="price-main">${fmt(totalPrice)}</span><span class="price-breakdown">${priceNote}</span>`;
@@ -1472,7 +1486,8 @@ function computeReservationTotal(svc) {
     const end   = document.getElementById('boarding-end')?.value;
     const nights = start && end ? Math.round((new Date(end) - new Date(start)) / 86400000) : 0;
     if (nights < 2) return { total: 0, nb: 0 };
-    return { total: nights * prices[svc], nb: nights };
+    const dogCount = getSelectedDogs().length || 1;
+    return { total: nights * tarifSeance(svc, dogCount), nb: nights };
   }
 
   // walking / daycare
@@ -1497,17 +1512,16 @@ function computeReservationTotal(svc) {
       if (diffMs > 0) {
         const weeks = Math.ceil(diffMs / (7 * 86400000));
         const total = weeks * selectedDays;
-        return { total: total * prices[svc], nb: total };
+        const dogCount = getSelectedDogs().length || 1;
+        return { total: total * tarifSeance(svc, dogCount), nb: total };
       }
     }
-    return { total: prices[svc], nb: 1 }; // repli « par séance »
+    return { total: tarifSeance(svc, getSelectedDogs().length || 1), nb: 1 }; // repli « par séance »
   }
 
-  // ponctuelle — réduction 30% sur le 2e chien (identique au récap)
+  // ponctuelle — réduction 30% sur chaque chien supplémentaire (identique au récap)
   const dogCount = getSelectedDogs().length || 1;
-  let total = prices[svc];
-  if (dogCount > 1) total = prices[svc] + Math.round(prices[svc] * 0.7);
-  return { total: total, nb: 1 };
+  return { total: tarifSeance(svc, dogCount), nb: 1 };
 }
 
 async function saveReservation(svc, isBoarding) {
