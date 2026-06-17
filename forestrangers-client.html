@@ -939,21 +939,13 @@ html, body {
         </select>
       </div>
       <div class="field-group">
-        <label class="field-label">Catégorisé / dangereux</label>
-        <select class="field-input" id="dog-edit-dangereux">
+        <label class="field-label">Grand gabarit</label>
+        <select class="field-input" id="dog-edit-grand">
           <option value="">—</option>
           <option value="true">Oui</option>
           <option value="false">Non</option>
         </select>
       </div>
-    </div>
-    <div class="field-group">
-      <label class="field-label">Grand gabarit</label>
-      <select class="field-input" id="dog-edit-grand">
-        <option value="">—</option>
-        <option value="true">Oui</option>
-        <option value="false">Non</option>
-      </select>
     </div>
     <div class="field-group">
       <label class="field-label">Comportement / particularités</label>
@@ -1344,7 +1336,7 @@ function updateDogScreen(chiens) {
     race: 'Race', sexe: 'Sexe', sterilise: 'Stérilisé', numero_puce: 'N° de puce',
     date_naissance: 'Naissance', grand_chien: 'Grand gabarit',
     vaccins_ok: 'Vaccins à jour', assurance_ok: 'Assurance',
-    en_chaleur: 'En chaleur', chien_dangereux: 'Chien dangereux',
+    en_chaleur: 'En chaleur',
     comportement: 'Comportement', notes_sante: 'Notes santé'
   };
   function fmt(k, v) {
@@ -1375,6 +1367,10 @@ function updateDogScreen(chiens) {
     var rows = '';
     Object.keys(labels).forEach(function(k) {
       var v = d[k];
+      if (k === 'grand_chien') {
+        v = (d.grand_chien === true || d.grand_chien === 'true')
+            || (d.poids_kg != null && parseFloat(d.poids_kg) >= 35);
+      }
       if (v === null || v === undefined || v === '' ) return;
       rows += '<div class="dog-prop-row"><span class="dog-prop-key">' + labels[k] + '</span><span>' + fmt(k, v) + '</span></div>';
     });
@@ -1439,8 +1435,9 @@ function openDogEdit(idx) {
   set('dog-edit-vaccins', boolSel(d.vaccins_ok));
   set('dog-edit-assurance', boolSel(d.assurance_ok));
   set('dog-edit-chaleur', boolSel(d.en_chaleur));
-  set('dog-edit-dangereux', boolSel(d.chien_dangereux));
-  set('dog-edit-grand', boolSel(d.grand_chien));
+  var grandDerived = (d.grand_chien === true || d.grand_chien === 'true')
+                     || (d.poids_kg != null && parseFloat(d.poids_kg) >= 35);
+  set('dog-edit-grand', grandDerived ? 'true' : boolSel(d.grand_chien));
   set('dog-edit-comportement', d.comportement || '');
   set('dog-edit-notes', d.notes_sante || '');
 
@@ -1470,7 +1467,7 @@ function openDogAdd() {
   function set(id, val) { var e = document.getElementById(id); if (e) e.value = (val == null ? '' : val); }
   ['dog-edit-prenom','dog-edit-race','dog-edit-poids','dog-edit-sexe','dog-edit-naissance',
    'dog-edit-sterilise','dog-edit-puce','dog-edit-vaccins','dog-edit-assurance','dog-edit-chaleur',
-   'dog-edit-dangereux','dog-edit-grand','dog-edit-comportement','dog-edit-notes']
+   'dog-edit-grand','dog-edit-comportement','dog-edit-notes']
     .forEach(function(id) { set(id, ''); });
   var box = document.getElementById('dog-photo-box');
   if (box) box.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
@@ -1526,7 +1523,6 @@ async function saveDogEdit() {
       vaccins_ok: triA('dog-edit-vaccins'),
       assurance_ok: triA('dog-edit-assurance'),
       en_chaleur: triA('dog-edit-chaleur'),
-      chien_dangereux: triA('dog-edit-dangereux'),
       // Grand gabarit : choix explicite, sinon auto si poids >= 35
       grand_chien: grdA !== '' ? (grdA === 'true') : (poidsA != null ? (poidsA >= 35) : null)
     };
@@ -1596,8 +1592,6 @@ async function saveDogEdit() {
   if (ass !== '') fields.assurance_ok = (ass === 'true');
   var cha = val('dog-edit-chaleur');
   if (cha !== '') fields.en_chaleur = (cha === 'true');
-  var dan = val('dog-edit-dangereux');
-  if (dan !== '') fields.chien_dangereux = (dan === 'true');
   var grd = val('dog-edit-grand');
   if (grd !== '') fields.grand_chien = (grd === 'true');
   var puceVal = val('dog-edit-puce').replace(/\s/g, '');

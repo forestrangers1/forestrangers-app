@@ -940,7 +940,7 @@ input[type=range]::-webkit-slider-runnable-track {
 
         <div class="field" style="margin-bottom:14px;">
           <label class="field-label">Peurs / Phobies</label>
-          <input class="field-input" type="text" placeholder="Ex : orage, feux d'artifice, voitures...">
+          <input class="field-input" id="peurs-chien" type="text" placeholder="Ex : orage, feux d'artifice, voitures...">
         </div>
 
         <div class="field" style="margin-bottom:14px;">
@@ -978,7 +978,7 @@ input[type=range]::-webkit-slider-runnable-track {
       <div class="form-section-body">
         <div class="field">
           <label class="field-label">Remarques importantes</label>
-          <textarea class="field-input" placeholder="Tout ce qui est utile pour nous : habitudes, préférences, consignes particulières, petites manies (ex : aboie sur tous les bulldogs)..."></textarea>
+          <textarea class="field-input" id="remarques-chien" placeholder="Tout ce qui est utile pour nous : habitudes, préférences, consignes particulières, petites manies (ex : aboie sur tous les bulldogs)..."></textarea>
         </div>
         <div style="margin-top:12px;padding:10px 12px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--text-faint);line-height:1.5;">
           Les informations sur les compatibilités entre chiens seront complétées par Gabriel après votre entretien de bienvenue.
@@ -1862,13 +1862,21 @@ async function sauvegarderInscription(motDePasse) {
     var hasDogsAlready = existing && existing.chiens && existing.chiens.length > 0;
     if (!hasDogsAlready) {
       if (nomChien) {
-        await db.from('chiens').insert({
+        var comportementStr = readComportementPrincipal();
+        var remarquesStr = ((document.getElementById('remarques-chien') || {}).value || '').trim() || null;
+        var insChienRes = await db.from('chiens').insert({
           client_id: clientId, nom: nomChien,
           race: race || null, poids_kg: poids ? parseFloat(poids) : null,
           sexe: sexe || null, sterilise: sterilise, numero_puce: numeroPuce,
           grand_chien: (raceGrandGabarit || poidsGrandGabarit),
+          notes_sante: remarquesStr,
           actif: true
-        });
+        }).select().single();
+        // Comportement : colonne non garantie → mise à jour best-effort (n'empêche pas l'inscription)
+        if (insChienRes && !insChienRes.error && insChienRes.data && comportementStr) {
+          var compUpd = await db.from('chiens').update({ comportement: comportementStr }).eq('id', insChienRes.data.id);
+          if (compUpd.error) console.log('Comportement non enregistré (colonne absente ?):', compUpd.error);
+        }
       }
       // Chiens supplémentaires
       var chiensSupp = document.querySelectorAll('.chien-supplementaire');
@@ -1970,6 +1978,25 @@ function selectPill(el, group) {
 const labels = ['','Très calme','Calme','Moyen','Énergique','Très énergique'];
 function updateEnergy(val) {
   document.getElementById('energyLabel').textContent = labels[val];
+}
+
+// ── LECTURE DU COMPORTEMENT (chien principal) → résumé lisible ──
+function readComportementPrincipal() {
+  var parts = [];
+  var on = [];
+  document.querySelectorAll('.behavior-grid .behavior-item').forEach(function(it) {
+    var lbl = it.querySelector('.behavior-label');
+    var tg = it.querySelector('.toggle');
+    if (lbl && tg && tg.classList.contains('on')) on.push(lbl.textContent.trim());
+  });
+  if (on.length) parts.push(on.join(', '));
+  var peurs = ((document.getElementById('peurs-chien') || {}).value || '').trim();
+  if (peurs) parts.push('Peurs : ' + peurs);
+  var laisse = document.querySelector('[onclick*="\'laisse\'"].selected');
+  if (laisse) parts.push('Marche en laisse : ' + laisse.textContent.trim());
+  var energy = ((document.getElementById('energyLabel') || {}).textContent || '').trim();
+  if (energy) parts.push('Énergie : ' + energy);
+  return parts.join(' · ') || null;
 }
 
 // ── ADD PERSON ──
