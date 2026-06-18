@@ -296,7 +296,7 @@ select.form-input option { background: var(--surface); }
     <div class="topbar">
       <div class="page-title">Paramètres avancés</div>
       <div class="topbar-right">
-        <button class="btn btn-accent" onclick="openModal('modal-add-van')">
+        <button id="topbar-add-van" class="btn btn-accent" onclick="openModal('modal-add-van')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Ajouter camionnette
         </button>
@@ -331,7 +331,7 @@ select.form-input option { background: var(--surface); }
             </div>
             <div style="display:flex;gap:6px;align-items:center;">
               <span class="badge b-green">Active</span>
-              <div class="icon-btn" onclick="openModal('modal-edit-van')">
+              <div class="icon-btn" onclick="openEditVan(this,'Camionnette A')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               </div>
             </div>
@@ -447,7 +447,7 @@ select.form-input option { background: var(--surface); }
             </div>
             <div style="display:flex;gap:6px;align-items:center;">
               <span class="badge b-green">Active</span>
-              <div class="icon-btn" onclick="openModal('modal-edit-van')">
+              <div class="icon-btn" onclick="openEditVan(this,'Camionnette B')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               </div>
             </div>
@@ -545,12 +545,12 @@ select.form-input option { background: var(--surface); }
       <div class="tab-pane" id="tab-attribution">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
           <div>
-            <div style="font-family:'Norwester',sans-serif;font-size:15px;font-weight:800;">Vue d'ensemble — Lundi 9 juin</div>
+            <div id="attrib-date" style="font-family:'Norwester',sans-serif;font-size:15px;font-weight:800;">Vue d'ensemble</div>
             <div style="font-size:12px;color:var(--text-faint);margin-top:2px;">Camionnettes et rangers par créneau</div>
           </div>
           <div style="display:flex;gap:8px;">
-            <button class="btn btn-outline">← Hier</button>
-            <button class="btn btn-outline">Demain →</button>
+            <button class="btn btn-outline" onclick="changeDay(-1)">← Hier</button>
+            <button class="btn btn-outline" onclick="changeDay(1)">Demain →</button>
           </div>
         </div>
 
@@ -689,6 +689,7 @@ select.form-input option { background: var(--surface); }
               </div>
             </div>
           </div>
+          <div id="staff-extra"></div>
         </div>
 
         <div class="card">
@@ -1016,7 +1017,7 @@ select.form-input option { background: var(--surface); }
 <!-- Modal : Modifier camionnette -->
 <div class="modal-overlay" id="modal-edit-van">
   <div class="modal">
-    <div class="modal-title">Modifier — Camionnette A</div>
+    <div class="modal-title">Modifier — <span id="edit-van-name">Camionnette A</span></div>
     <div class="form-row-2">
       <div class="form-group">
         <label class="form-label">Nom</label>
@@ -1052,7 +1053,8 @@ select.form-input option { background: var(--surface); }
       </div>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-red" style="margin-right:auto;">Désactiver</button>
+      <button class="btn btn-red" style="margin-right:auto;" onclick="deactivateVan()">Désactiver</button>
+      <button class="btn btn-outline" onclick="deleteVan()" style="border-color:rgba(224,90,90,0.5);color:var(--red);">Supprimer</button>
       <button class="btn btn-outline" onclick="closeModal('modal-edit-van')">Annuler</button>
       <button class="btn btn-accent" onclick="closeModal('modal-edit-van')">Enregistrer</button>
     </div>
@@ -1136,6 +1138,9 @@ function switchTab(id, el) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + id).classList.add('active');
   el.classList.add('active');
+  // Le bouton "Ajouter camionnette" ne doit apparaître que sur l'onglet Camionnettes
+  var addVanBtn = document.getElementById('topbar-add-van');
+  if (addVanBtn) addVanBtn.style.display = (id === 'camionnettes') ? '' : 'none';
 }
 
 function openModal(id) { document.getElementById(id).classList.add('open'); }
@@ -1143,6 +1148,85 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 document.querySelectorAll('.modal-overlay').forEach(m => {
   m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
 });
+
+// ── CAMIONNETTES : modifier / désactiver / supprimer ──
+var currentVanCard = null;
+var currentVanName = '';
+
+function openEditVan(btn, name) {
+  currentVanCard = btn.closest('.van-card');
+  currentVanName = name;
+  var titleEl = document.getElementById('edit-van-name');
+  if (titleEl) titleEl.textContent = name;
+  openModal('modal-edit-van');
+}
+
+// Désactiver = la camionnette reste enregistrée mais n'est plus assignable (badge "Inactive", grisée)
+function deactivateVan() {
+  if (!currentVanCard) { closeModal('modal-edit-van'); return; }
+  if (!confirm('Désactiver « ' + currentVanName + ' » ?\n\nElle reste enregistrée mais ne pourra plus être assignée à un ranger tant qu\'elle est inactive. Vous pourrez la réactiver à tout moment.')) return;
+  var badge = currentVanCard.querySelector('.badge');
+  if (badge) { badge.textContent = 'Inactive'; badge.className = 'badge b-muted'; }
+  currentVanCard.style.opacity = '0.55';
+  currentVanCard.dataset.inactive = 'true';
+  showToast('Camionnette désactivée', 'amber');
+  closeModal('modal-edit-van');
+}
+
+// Supprimer = retrait définitif de la camionnette
+function deleteVan() {
+  if (!currentVanCard) { closeModal('modal-edit-van'); return; }
+  if (!confirm('Supprimer définitivement « ' + currentVanName + ' » ?\n\nCette action est irréversible. Préférez « Désactiver » si vous souhaitez seulement la mettre de côté.')) return;
+  currentVanCard.remove();
+  currentVanCard = null;
+  showToast('Camionnette supprimée', 'red');
+  closeModal('modal-edit-van');
+}
+
+// ── ATTRIBUTION QUOTIDIENNE : date dynamique ──
+var attribDate = new Date();
+var JOURS_FR = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+var MOIS_FR  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+
+function renderAttribDate() {
+  var el = document.getElementById('attrib-date');
+  if (!el) return;
+  var label = JOURS_FR[attribDate.getDay()] + ' ' + attribDate.getDate() + ' ' + MOIS_FR[attribDate.getMonth()];
+  el.textContent = "Vue d'ensemble — " + label;
+  normalizeNorwester();
+}
+
+function changeDay(delta) {
+  attribDate.setDate(attribDate.getDate() + delta);
+  renderAttribDate();
+}
+
+// ── POLICE NORWESTER : remplacer les lettres accentuées par leur équivalent ASCII majuscule ──
+var ACCENT_MAP = {
+  'à':'A','á':'A','â':'A','ä':'A','ã':'A','å':'A','À':'A','Á':'A','Â':'A','Ä':'A','Ã':'A',
+  'è':'E','é':'E','ê':'E','ë':'E','È':'E','É':'E','Ê':'E','Ë':'E',
+  'ì':'I','í':'I','î':'I','ï':'I','Ì':'I','Í':'I','Î':'I','Ï':'I',
+  'ò':'O','ó':'O','ô':'O','ö':'O','õ':'O','Ò':'O','Ó':'O','Ô':'O','Ö':'O','Õ':'O',
+  'ù':'U','ú':'U','û':'U','ü':'U','Ù':'U','Ú':'U','Û':'U','Ü':'U',
+  'ç':'C','Ç':'C','ñ':'N','Ñ':'N','ý':'Y','ÿ':'Y'
+};
+
+function normalizeNorwester() {
+  try {
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+    var nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(function(n) {
+      var el = n.parentElement;
+      if (!el) return;
+      var ff = (getComputedStyle(el).fontFamily || '').toLowerCase();
+      if (ff.indexOf('norwester') === -1) return;
+      var t = n.nodeValue;
+      var out = t.replace(/[À-ÿ]/g, function(c) { return ACCENT_MAP[c] || c; });
+      if (out !== t) n.nodeValue = out;
+    });
+  } catch(e) { /* noop */ }
+}
 
 // ── CLÔTURE ESTIVALE ──
 var clotureActive = true;
@@ -1288,6 +1372,13 @@ document.addEventListener('DOMContentLoaded', function() {
   loadStaff();
   loadCamionnettes();
   loadZones();
+
+  // Date du jour pour l'attribution quotidienne
+  renderAttribDate();
+  // Le bouton "Ajouter camionnette" n'apparaît que sur l'onglet Camionnettes (actif par défaut)
+  // Normaliser les accents dans la police Norwester sur toute la page
+  normalizeNorwester();
+  setTimeout(normalizeNorwester, 300); // re-passe après chargement des polices/données
 });
 
 // ── CHARGEMENT PARAMÈTRES ──
@@ -1373,24 +1464,37 @@ async function loadStaff() {
   } catch(e) { console.log('Erreur loadStaff:', e); }
 }
 
+function rangerRowHTML(prenom, nom, email, tel, jours) {
+  var initials = ((prenom[0]||'') + (nom[0]||'')).toUpperCase();
+  return '<div class="staff-row">'
+    + '<div class="staff-avatar" style="background:linear-gradient(135deg,var(--surface3),#6b7450);color:var(--text);">' + initials + '</div>'
+    + '<div style="flex:1;min-width:160px;">'
+    + '<div class="staff-name">' + prenom + ' ' + nom + '</div>'
+    + '<div class="staff-role">' + (email || '—') + (tel ? ' · ' + tel : '') + '</div>'
+    + '</div>'
+    + '<div style="display:flex;gap:6px;align-items:center;">'
+    + '<span class="badge b-blue">Ranger</span><span class="badge b-green">Actif</span>'
+    + '</div></div>';
+}
+
+// Rangers connus affichés en statique (Gabriel, Sophie) — on ne les duplique pas.
+function isKnownRanger(s) {
+  var p = (s.prenom || '').toLowerCase();
+  var e = (s.email || '').toLowerCase();
+  return p === 'gabriel' || p === 'sophie'
+      || e === 'forestrangerslux@gmail.com';
+}
+
 function renderStaffList(staff) {
-  var container = document.getElementById('staff-list');
-  if (!container) return;
-  // Si la base ne renvoie aucun ranger, on garde l'affichage statique (Gabriel, Sophie).
-  if (!staff || staff.length === 0) return;
-  container.innerHTML = staff.map(function(s) {
-    var initials = (s.prenom[0] + s.nom[0]).toUpperCase();
+  var extra = document.getElementById('staff-extra');
+  if (!extra) return;
+  if (!staff || staff.length === 0) { extra.innerHTML = ''; return; }
+  var rows = staff.filter(function(s) { return !isKnownRanger(s); });
+  extra.innerHTML = rows.map(function(s) {
     var jours = s.jours_habituels ? s.jours_habituels.join(', ') : '—';
-    return '<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);">'
-      + '<div style="width:38px;height:38px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:\'Norwester\',sans-serif;font-size:13px;font-weight:800;color:white;flex-shrink:0;">' + initials + '</div>'
-      + '<div style="flex:1;">'
-      + '<div style="font-size:13px;font-weight:600;color:var(--text);">' + s.prenom + ' ' + s.nom + '</div>'
-      + '<div style="font-size:11px;color:var(--text-faint);margin-top:2px;">' + (s.email || '—') + ' · ' + (s.telephone || '—') + '</div>'
-      + '<div style="font-size:10px;color:var(--text-faint);margin-top:1px;">Jours : ' + jours + '</div>'
-      + '</div>'
-      + '<button onclick="editStaff(\'' + s.id + '\')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text-dim);font-family:\'Norwester\',sans-serif;font-size:10px;font-weight:800;cursor:pointer;">Modifier</button>'
-      + '</div>';
+    return rangerRowHTML(s.prenom || '', s.nom || '', s.email, s.telephone, jours);
   }).join('');
+  normalizeNorwester();
 }
 
 async function saveNewRanger() {
@@ -1404,19 +1508,24 @@ async function saveNewRanger() {
     return;
   }
 
+  // Affichage immédiat (optimiste) — le ranger apparaît tout de suite
+  var extra = document.getElementById('staff-extra');
+  if (extra) extra.insertAdjacentHTML('beforeend', rangerRowHTML(prenom, nom, email, tel, '—'));
+  normalizeNorwester();
+  document.getElementById('new-ranger-prenom').value = '';
+  document.getElementById('new-ranger-nom').value    = '';
+  document.getElementById('new-ranger-email').value  = '';
+  if (document.getElementById('new-ranger-tel')) document.getElementById('new-ranger-tel').value = '';
+  closeModal('modal-add-ranger');
+  showToast('✓ Ranger ' + prenom + ' ajouté', 'green');
+
+  // Persistance en base (sans bloquer l'affichage)
   try {
     await db.from('staff').insert({
       prenom: prenom, nom: nom, email: email,
       telephone: tel || null, role: 'ranger', actif: true
     });
-    showToast('✓ Ranger ' + prenom + ' ajouté', 'green');
-    document.getElementById('new-ranger-prenom').value = '';
-    document.getElementById('new-ranger-nom').value    = '';
-    document.getElementById('new-ranger-email').value  = '';
-    if (document.getElementById('new-ranger-tel')) document.getElementById('new-ranger-tel').value = '';
-    loadStaff();
-    closeModal('modal-add-ranger');
-  } catch(e) { showToast('Erreur ajout ranger', 'red'); }
+  } catch(e) { console.log('Erreur ajout ranger (base):', e); }
 }
 
 function editStaff(id) {
