@@ -1235,22 +1235,10 @@ textarea.form-control { resize: vertical; }
       </div>
     </div>
 
-    <!-- ══════ PARAMETRES ══════ -->
+    <!-- ══════ PARAMETRES (éditeur intégré) ══════ -->
     <div class="page" id="page-parametres">
-      <div class="g2">
-        <div class="card">
-          <div class="card-head"><span class="card-title">Tarifs</span></div>
-          <div class="card-body" id="params-tarifs">
-            <div style="text-align:center;padding:16px;color:var(--text-faint);font-size:12px;">Chargement…</div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-head"><span class="card-title">Regles operationnelles</span></div>
-          <div class="card-body" id="params-regles">
-            <div style="text-align:center;padding:16px;color:var(--text-faint);font-size:12px;">Chargement…</div>
-          </div>
-        </div>
-      </div>
+      <iframe id="parametres-frame" title="Paramètres"
+        style="width:100%;height:calc(100vh - 150px);min-height:620px;border:0;border-radius:12px;background:var(--surface);display:block;"></iframe>
     </div>
 
   </div><!-- /content -->
@@ -1302,6 +1290,11 @@ var FR_PARAMS = {
   reduction_2e_nouveau: 0.30,
   frais_rappel: 25,
   frais_deplacement_ht: 5,
+  capacite_max_tournee: 10,
+  max_grands_chiens: 3,
+  capacite_max_pension: 5,
+  cloture_debut: '',
+  cloture_fin: '',
   cloture: 'Veille à 9h00',
   delai_annulation: '24 heures',
   distance_min: '3 km',
@@ -1940,38 +1933,42 @@ async function loadFacturesAdmin() {
   }
 }
 
-// ── PARAMETRES (rendu depuis FR_PARAMS) ──
+// ── PARAMETRES (source unique : table Supabase `parametres`, défauts dans FR_PARAMS) ──
+// Lit la table clé/valeur écrite par forestrangers-parametres.html et fusionne dans FR_PARAMS.
+async function chargerParametresLive() {
+  try {
+    var { data } = await db.from('parametres').select('cle,valeur');
+    if (!data) return;
+    var p = {};
+    data.forEach(function(r){ p[r.cle] = r.valeur; });
+    var num = function(v, def){ var n = parseFloat(v); return isNaN(n) ? def : n; };
+    var T = FR_PARAMS.tarifs;
+    if (p.tarif_walking_fidele   != null) T.walking.fidele   = num(p.tarif_walking_fidele,   T.walking.fidele);
+    if (p.tarif_daycare_fidele   != null) T.daycare.fidele   = num(p.tarif_daycare_fidele,   T.daycare.fidele);
+    if (p.tarif_boarding_fidele  != null) T.boarding.fidele  = num(p.tarif_boarding_fidele,  T.boarding.fidele);
+    if (p.tarif_walking_nouveau  != null) T.walking.nouveau  = num(p.tarif_walking_nouveau,  T.walking.nouveau);
+    if (p.tarif_daycare_nouveau  != null) T.daycare.nouveau  = num(p.tarif_daycare_nouveau,  T.daycare.nouveau);
+    if (p.tarif_boarding_nouveau != null) T.boarding.nouveau = num(p.tarif_boarding_nouveau, T.boarding.nouveau);
+    if (p.reduction_2chien_fidele  != null) FR_PARAMS.reduction_2e_fidele  = num(p.reduction_2chien_fidele,  50) / 100;
+    if (p.reduction_2chien_nouveau != null) FR_PARAMS.reduction_2e_nouveau = num(p.reduction_2chien_nouveau, 30) / 100;
+    if (p.supplement_hors_zone != null) FR_PARAMS.supplement_hors_zone = num(p.supplement_hors_zone, FR_PARAMS.supplement_hors_zone);
+    if (p.frais_rappel_impaye  != null) FR_PARAMS.frais_rappel         = num(p.frais_rappel_impaye, FR_PARAMS.frais_rappel);
+    if (p.capacite_max_tournee      != null) FR_PARAMS.capacite_max_tournee = num(p.capacite_max_tournee, FR_PARAMS.capacite_max_tournee);
+    if (p.max_grands_chiens_tournee != null) FR_PARAMS.max_grands_chiens    = num(p.max_grands_chiens_tournee, FR_PARAMS.max_grands_chiens);
+    if (p.capacite_max_pension      != null) FR_PARAMS.capacite_max_pension = num(p.capacite_max_pension, FR_PARAMS.capacite_max_pension);
+    if (p.cloture_debut != null) FR_PARAMS.cloture_debut = p.cloture_debut;
+    if (p.cloture_fin   != null) FR_PARAMS.cloture_fin   = p.cloture_fin;
+  } catch(e) { console.log('chargerParametresLive:', e); }
+}
+
+// ── PARAMETRES (ouvre l'éditeur intégré forestrangers-parametres.html) ──
 function loadParametres() {
-  var t = document.getElementById('params-tarifs');
-  var r = document.getElementById('params-regles');
-  function rule(label, val, color){
-    return '<div class="rule-row"><span style="color:var(--text-dim);">' + label + '</span><strong'
-      + (color ? ' style="color:' + color + ';"' : '') + '>' + val + '</strong></div>';
+  var frame = document.getElementById('parametres-frame');
+  if (frame && !frame.getAttribute('src')) {
+    frame.setAttribute('src', 'forestrangers-parametres.html');
   }
-  if (t) {
-    var rows = Object.keys(FR_PARAMS.tarifs).map(function(k){
-      var s = FR_PARAMS.tarifs[k];
-      return '<tr><td>' + s.label + '</td><td style="color:var(--text-dim);text-align:right;">' + s.fidele + ' €</td><td>' + s.nouveau + ' €</td></tr>';
-    }).join('');
-    t.innerHTML = '<table class="params-table"><thead><tr><th>Service</th><th>Client fidèle</th><th>Nouveau client</th></tr></thead><tbody>' + rows + '</tbody></table>'
-      + '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">'
-      + rule('Supplément hors zone', '+ ' + FR_PARAMS.supplement_hors_zone + ' €')
-      + rule('Réduction 2e chien — fidèle', '— ' + Math.round(FR_PARAMS.reduction_2e_fidele * 100) + ' %', 'var(--green)')
-      + rule('Réduction 2e chien — nouveau', '— ' + Math.round(FR_PARAMS.reduction_2e_nouveau * 100) + ' %', 'var(--green)')
-      + rule('TVA prestations', '+ ' + Math.round(FR_PARAMS.tva * 100) + ' %')
-      + rule('Frais de rappel facture impayée', '+ ' + FR_PARAMS.frais_rappel + ' €', 'var(--red)')
-      + rule('Frais de déplacement (annul. sur place)', '+ ' + FR_PARAMS.frais_deplacement_ht + ' € HT', 'var(--red)')
-      + '</div>';
-  }
-  if (r) {
-    r.innerHTML =
-        rule('Clôture du planning', FR_PARAMS.cloture)
-      + rule('Délai annulation gratuite', FR_PARAMS.delai_annulation)
-      + rule('Distance min. par promenade', FR_PARAMS.distance_min)
-      + '<div class="rule-row" style="background:var(--accent-dim);border:1px solid var(--accent-mid);"><span>Promenades après-midi</span><strong style="color:var(--accent);">Printemps / Été</strong></div>'
-      + rule('Organisation du planning', 'Gabriel uniquement')
-      + rule('Annulation tardive / sur place', 'Prestation facturable');
-  }
+  // Rafraîchit les valeurs live (tarifs, etc.) utilisées par la facturation
+  chargerParametresLive();
 }
 
 // ── STATS PAR MOIS ──
@@ -2776,6 +2773,7 @@ document.addEventListener('DOMContentLoaded', function() {
   loadPlanning();
   loadChiens();
   loadStats();
+  chargerParametresLive();
   setInterval(loadDashboardStats, 5 * 60 * 1000);
 
   // Revenir sur la section d'origine si on arrive depuis la fiche client (?section=...)
@@ -3170,6 +3168,7 @@ async function creerFacture() {
   var clientId = document.getElementById('facture-client-id').value;
   if (!clientId) { showToastAdmin('Sélectionnez un client', 'amber'); return; }
   try {
+    await chargerParametresLive();
     var now = new Date(); var annee = now.getFullYear(); var moisNum = String(now.getMonth()+1).padStart(2,'0');
 
     var periode;
