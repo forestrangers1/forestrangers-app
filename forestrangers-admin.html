@@ -107,6 +107,11 @@ html.light .theme-toggle { background: #d0d4c0; }
   display: flex; align-items: center; justify-content: center;
 }
 html.light .theme-toggle-knob { transform: translateX(20px); }
+/* Mode jour : barre de navigation du bas en kaki foncé (pas noir) */
+html.light .mobile-nav { background: #2f3520; border-top: 1px solid rgba(0,0,0,0.18); }
+html.light .mobile-nav-item { color: rgba(255,255,255,0.58); }
+html.light .mobile-nav-item.active { color: var(--accent); }
+html.light #mobile-more-menu { background: #2f3520 !important; border-top-color: rgba(0,0,0,0.18) !important; }
 .theme-toggle-knob svg { width: 9px; height: 9px; fill: white; }
 
 html, body { height: 100%; font-family: 'Instrument Sans', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; font-size: 14px; }
@@ -218,6 +223,9 @@ html.light .brand-name .rangers { color: var(--accent); }
   /* Contenu prend tout l'écran */
   .main { overflow: visible; }
   .content { overflow: visible; padding: 14px 14px 80px; }
+  /* Dashboard : colonnes empilées sur mobile */
+  .g31 { grid-template-columns: 1fr !important; }
+  .g2  { grid-template-columns: 1fr !important; }
 
   /* Bottom nav mobile */
   .mobile-nav {
@@ -643,7 +651,9 @@ textarea.form-control { resize: vertical; }
     const { createClient } = window.supabase;
     const SUPABASE_URL = 'https://zxzhqptimjvdtvvtnpyw.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_drh_w_i9T4GOZ_AzoqkLcw_SW45X1FT';
-    const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+    const db = createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+    });
     console.log('Supabase connecte', db);
   </script>
   <link rel="manifest" href="/manifest.json">
@@ -766,7 +776,7 @@ textarea.form-control { resize: vertical; }
       <div class="stats-row">
         <div class="stat-card c-accent" onclick="openStatDetail('promenades')" style="cursor:pointer;" title="Voir les réservations du jour">
           <div class="stat-accent-bar"></div>
-          <div class="stat-label">Promenades aujourd'hui</div>
+          <div class="stat-label">Chiens aujourd'hui</div>
           <div class="stat-val" id="stat-promenades">—</div>
           <div class="stat-sub" id="stat-promenades-sub">chargement...</div>
         </div>
@@ -797,56 +807,8 @@ textarea.form-control { resize: vertical; }
             <span class="card-title">Planning du jour</span>
             <button class="btn btn-outline" style="padding:5px 10px;font-size:11px;" onclick="nav('planning',document.querySelectorAll('.nav-item')[1])">Voir semaine</button>
           </div>
-          <div class="card-body">
-            <div class="slot-group-label">Matin</div>
-            <div class="slot">
-              <div class="slot-time">07:30</div>
-              <div class="slot-info">
-                <div class="slot-title">Promenade — Groupe A</div>
-                <div class="slot-tags">
-                  <span class="tag">Max</span><span class="tag">Luna</span><span class="tag">Rocky</span><span class="tag">Bella</span>
-                </div>
-                <div class="slot-meta">Gabriel · Forêt de Merl</div>
-              </div>
-              <span class="badge b-green">Termine</span>
-            </div>
-            <div class="slot">
-              <div class="slot-time">08:00</div>
-              <div class="slot-info">
-                <div class="slot-title">Promenade — Groupe B</div>
-                <div class="slot-tags">
-                  <span class="tag">Charlie</span><span class="tag">Nala</span><span class="tag">Oscar</span>
-                </div>
-                <div class="slot-meta">Sophie · Bambësch</div>
-              </div>
-              <span class="badge b-green">Termine</span>
-            </div>
-
-            <div class="slot-group-label">Midi</div>
-            <div class="slot">
-              <div class="slot-time">12:00</div>
-              <div class="slot-info">
-                <div class="slot-title">Day Care + Pension — Sortie midi</div>
-                <div class="slot-tags">
-                  <span class="tag">Max</span><span class="tag">Simba</span><span class="tag" style="border-color:var(--blue);color:var(--blue);">Bruno ·pension</span>
-                </div>
-                <div class="slot-meta">Gabriel · Parc Merl</div>
-              </div>
-              <span class="badge b-accent">En cours</span>
-            </div>
-
-            <div class="slot-group-label">Apres-midi</div>
-            <div class="slot">
-              <div class="slot-time">16:30</div>
-              <div class="slot-info">
-                <div class="slot-title">Promenade — Groupe C</div>
-                <div class="slot-tags">
-                  <span class="tag">Luna</span><span class="tag">Milo</span>
-                </div>
-                <div class="slot-meta">Sophie · Forêt de Merl</div>
-              </div>
-              <span class="badge b-muted">Planifie</span>
-            </div>
+          <div class="card-body" id="dash-planning-body">
+            <div style="text-align:center;padding:22px;color:var(--text-faint);font-size:12px;">Chargement…</div>
           </div>
         </div>
 
@@ -1276,6 +1238,9 @@ const titles = {
   invitation:   ['Invitations',       'Liens d\'inscription clients'],
   parametres:   ['Parametres',       'Tarifs & règles'],
 };
+// Date du jour dynamique pour le sous-titre du dashboard
+function frJourLong(d){ var x=d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}); return x.charAt(0).toUpperCase()+x.slice(1); }
+titles.dashboard[1] = 'Vue générale · ' + frJourLong(new Date());
 
 // ── PARAMETRES (source unique : tarifs utilisés aussi par la facturation auto) ──
 var FR_PARAMS = {
@@ -1650,18 +1615,32 @@ async function loadDashboardStats() {
   } catch(e) { console.log('stat-clients:', e); }
 
   try {
-    // 2. Réservations du jour
-    var resaRes = await db.from('reservations')
-      .select('*', { count: 'exact', head: true })
+    // 2. Total des chiens gérés aujourd'hui (promenade + day care + pension)
+    var { data: resaJour } = await db.from('reservations')
+      .select('chien_id, client_id')
       .lte('date_debut', today)
       .gte('date_fin', today)
       .neq('statut', 'annule');
-    var nbResa = resaRes.count || 0;
+    resaJour = resaJour || [];
+    var nbChiens = 0, clientsTous = [];
+    resaJour.forEach(function(r) {
+      if (r.chien_id) nbChiens++;            // 1 ligne = 1 chien
+      else if (r.client_id) clientsTous.push(r.client_id);  // résa « tous les chiens »
+    });
+    // Pour les résa « tous les chiens », compter le nombre réel de chiens du client
+    if (clientsTous.length) {
+      var { data: dogsJour } = await db.from('chiens')
+        .select('client_id')
+        .in('client_id', [...new Set(clientsTous)]);
+      var parClient = {};
+      (dogsJour || []).forEach(function(d) { parClient[d.client_id] = (parClient[d.client_id] || 0) + 1; });
+      clientsTous.forEach(function(cid) { nbChiens += (parClient[cid] || 1); });
+    }
     var elP = document.getElementById('stat-promenades');
-    if (elP) elP.textContent = nbResa;
+    if (elP) elP.textContent = nbChiens;
     var elPS = document.getElementById('stat-promenades-sub');
-    if (elPS) elPS.textContent = nbResa + ' réservation' + (nbResa > 1 ? 's' : '') + ' aujourd\'hui';
-  } catch(e) { console.log('stat-promenades:', e); }
+    if (elPS) elPS.textContent = nbChiens + ' chien' + (nbChiens > 1 ? 's' : '') + ' aujourd\'hui';
+  } catch(e) { console.log('stat-chiens:', e); }
 
   try {
     // 3. Factures impayées (hors clients test)
@@ -1700,15 +1679,13 @@ async function loadDashboardStats() {
   try {
     // 5. Charger planning du jour dans le tableau
     var planRes = await db.from('reservations')
-      .select('id, service, creneau, statut, clients(prenom, nom, numero_client)')
+      .select('id, service, creneau, statut, ranger_nom, client_id, chien_id, clients(prenom, nom, numero_client)')
       .lte('date_debut', today)
       .gte('date_fin', today)
       .neq('statut', 'annule')
       .order('creneau', { ascending: true });
 
-    if (planRes.data && planRes.data.length > 0) {
-      loadPlanningToday(planRes.data, today);
-    }
+    loadPlanningToday(planRes.data || [], today);
   } catch(e) { console.log('planning:', e); }
 
   try {
@@ -1725,25 +1702,54 @@ async function loadDashboardStats() {
 }
 
 function loadPlanningToday(reservations, today) {
-  var serviceNames = { walking: 'Dog Walking', daycare: 'Day Care', boarding: 'Boarding' };
-  var creneaux = { matin: 'Matin 09h00', midi: 'Midi 12h00', apmidi: 'Après-midi 14h30' };
-  var statutColors = { confirme: 'b-green', en_attente: 'b-amber', annule: 'b-red' };
-  var statutLabels = { confirme: 'Confirme', en_attente: 'En attente', annule: 'Annule' };
+  var body = document.getElementById('dash-planning-body');
+  if (!body) return;
+  var SVC  = { walking:'Dog Walking', daycare:'Day Care', boarding:'Pension' };
+  var CREN = { matin:['Matin','09:00',0], midi:['Midi','12:00',1], apmidi:['Après-midi','14:30',2] };
+  var BADGE = { confirme:['b-green','Confirmé'], en_attente:['b-amber','En attente'], planifie:['b-muted','Planifié'] };
 
-  // Chercher le tbody du planning d'aujourd'hui
-  var tbody = document.getElementById('planning-today-tbody');
-  if (!tbody) return;
-
-  tbody.innerHTML = '';
-  reservations.forEach(function(r) {
-    var client = r.clients ? r.clients.prenom + ' ' + r.clients.nom : '—';
-    var num = r.clients ? '#' + r.clients.numero_client : '';
-    var svc = serviceNames[r.service] || r.service;
-    var cr = creneaux[r.creneau] || (r.creneau || '—');
-    var badge = statutColors[r.statut] || 'b-muted';
-    var label = statutLabels[r.statut] || r.statut;
-    tbody.innerHTML += '<tr><td class="td-main">' + client + ' <span style="color:var(--accent);font-size:10px;">' + num + '</span></td><td>' + svc + '</td><td>' + cr + '</td><td><span class="badge ' + badge + '">' + label + '</span></td></tr>';
+  // Regroupe les lignes (1 par chien) en missions : client + service + créneau
+  var groups = {};
+  (reservations || []).forEach(function(r) {
+    var key = [r.client_id, r.service, r.creneau].join('|');
+    if (!groups[key]) groups[key] = {
+      creneau: r.creneau, service: r.service, statut: r.statut,
+      ranger: r.ranger_nom || '',
+      client: r.clients ? (r.clients.prenom + ' ' + r.clients.nom) : '—',
+      dogs: 0
+    };
+    groups[key].dogs++;
   });
+  var list = Object.keys(groups).map(function(k) { return groups[k]; });
+
+  if (!list.length) {
+    body.innerHTML = '<div style="text-align:center;padding:22px;color:var(--text-faint);font-size:12px;">Aucune réservation aujourd\'hui</div>';
+    return;
+  }
+
+  list.sort(function(a, b) {
+    var oa = (CREN[a.creneau] || ['', '', 9])[2];
+    var ob = (CREN[b.creneau] || ['', '', 9])[2];
+    return oa - ob;
+  });
+
+  var html = '', lastCren = null;
+  list.forEach(function(g) {
+    var c = CREN[g.creneau] || [g.creneau || '—', '', 9];
+    if (g.creneau !== lastCren) { html += '<div class="slot-group-label">' + c[0] + '</div>'; lastCren = g.creneau; }
+    var b = BADGE[g.statut] || ['b-muted', g.statut || ''];
+    var dogTxt = g.dogs > 1 ? (g.dogs + ' chiens') : (g.dogs + ' chien');
+    var meta = (g.ranger ? g.ranger + ' · ' : '') + dogTxt;
+    html += '<div class="slot">'
+      + '<div class="slot-time">' + c[1] + '</div>'
+      + '<div class="slot-info">'
+      +   '<div class="slot-title">' + (SVC[g.service] || g.service) + ' — ' + g.client + '</div>'
+      +   '<div class="slot-meta">' + meta + '</div>'
+      + '</div>'
+      + '<span class="badge ' + b[0] + '">' + b[1] + '</span>'
+      + '</div>';
+  });
+  body.innerHTML = html;
 }
 
 function loadRecentClients(clients) {
@@ -2432,6 +2438,12 @@ async function loadPlanning() {
   }
   var labelEl = document.getElementById('planning-date-label');
   if (labelEl) labelEl.textContent = labelText;
+  // Header synchronisé avec la période réellement affichée
+  var _subT = labelText;
+  if (vuePlanning==='semaine') _subT = 'Semaine du '+mon.getDate()+' au '+sun.getDate()+' '+MOIS_FR[sun.getMonth()].toLowerCase()+' '+sun.getFullYear();
+  titles.planning[1] = _subT;
+  var _psp = document.getElementById('pageSub');
+  if (_psp && document.getElementById('page-planning').classList.contains('active')) _psp.textContent = _subT;
   var filtSvc    = (document.getElementById('filtre-service')||{}).value||'';
   var filtRanger = (document.getElementById('filtre-ranger') ||{}).value||'';
   var filtClient = ((document.getElementById('filtre-client')||{}).value||'').toLowerCase().trim();
@@ -2768,6 +2780,7 @@ async function confirmerAnnulationResa() {
 // Charger au démarrage
 document.addEventListener('DOMContentLoaded', function() {
   loadDashboardStats();
+  var _ps=document.getElementById('pageSub'); if(_ps) _ps.textContent = titles.dashboard[1];
   loadInvitations();
   loadClients();
   loadPlanning();
@@ -2970,9 +2983,9 @@ if ('serviceWorker' in navigator) {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
     Planning
   </div>
-  <div class="mobile-nav-item" id="mnav-clients" onclick="nav('clients',this);setMobileNav(this)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-    Clients
+  <div class="mobile-nav-item" id="mnav-staff" onclick="nav('staff',this);setMobileNav(this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    Staff
   </div>
   <div class="mobile-nav-item" id="mnav-reservations" onclick="nav('reservations',this);setMobileNav(this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
@@ -2987,6 +3000,9 @@ if ('serviceWorker' in navigator) {
 <!-- MENU PLUS MOBILE -->
 <div id="mobile-more-menu" style="display:none;position:fixed;bottom:65px;left:0;right:0;background:var(--k800);border-top:1px solid var(--border);z-index:199;padding:12px 14px;">
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div onclick="nav('clients',this);toggleMobileMenu()" style="padding:12px;background:var(--k700);border-radius:10px;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text);">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Clients
+    </div>
     <div onclick="nav('factures',this);toggleMobileMenu()" style="padding:12px;background:var(--k700);border-radius:10px;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text);">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>Factures
     </div>
