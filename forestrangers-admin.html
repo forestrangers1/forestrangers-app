@@ -1044,37 +1044,16 @@ textarea.form-control { resize: vertical; }
 
     <!-- ══════ STAFF ══════ -->
     <div class="page" id="page-staff">
-      <div class="g2" style="margin-bottom:14px;">
-        <div class="ranger-card">
-          <div class="ranger-head">
-            <div class="r-avatar" style="background:linear-gradient(135deg,var(--accent),#c44010);color:white;">GQ</div>
-            <div><div class="r-name">Gabriel Quiaios</div><div class="r-role">Fondateur · Administrateur</div></div>
-            <span class="badge b-accent" style="margin-left:auto;">En mission</span>
-          </div>
-          <div style="font-size:11px;color:var(--text-faint);margin-bottom:8px;">Aujourd'hui · 3 missions · 11 chiens</div>
-          <div class="r-mission"><div class="r-dot" style="background:var(--green);"></div>07:30 — Groupe A (4 chiens)<span class="badge b-green" style="margin-left:auto;font-size:9px;">Termine</span></div>
-          <div class="r-mission"><div class="r-dot" style="background:var(--accent);"></div>12:00 — Day Care sortie (3 chiens)<span class="badge b-accent" style="margin-left:auto;font-size:9px;">En cours</span></div>
-          <div class="r-mission"><div class="r-dot" style="background:var(--k400);"></div>18:00 — Restitution chiens pension</div>
-        </div>
-        <div class="ranger-card">
-          <div class="ranger-head">
-            <div class="r-avatar" style="background:linear-gradient(135deg,var(--k400),var(--k300));color:var(--k800);">SM</div>
-            <div><div class="r-name">Sophie Müller</div><div class="r-role">Ranger · Terrain</div></div>
-            <span class="badge b-green" style="margin-left:auto;">Disponible</span>
-          </div>
-          <div style="font-size:11px;color:var(--text-faint);margin-bottom:8px;">Aujourd'hui · 2 missions · 5 chiens</div>
-          <div class="r-mission"><div class="r-dot" style="background:var(--green);"></div>08:00 — Groupe B (3 chiens)<span class="badge b-green" style="margin-left:auto;font-size:9px;">Termine</span></div>
-          <div class="r-mission"><div class="r-dot" style="background:var(--k400);"></div>16:30 — Groupe C (2 chiens)<span class="badge b-muted" style="margin-left:auto;font-size:9px;">Planifie</span></div>
-        </div>
+      <div class="g2" id="staff-cards" style="margin-bottom:14px;">
+        <div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--text-faint);font-size:12px;">Chargement…</div>
       </div>
       <div class="card">
         <div class="card-head"><span class="card-title">Performances — semaine en cours</span></div>
         <div>
           <table class="tbl">
-            <thead><tr><th>Ranger</th><th>Missions</th><th>Chiens accompagnés</th><th>Km parcourus</th><th>Photos</th><th>Annulations</th></tr></thead>
-            <tbody>
-              <tr><td>Gabriel Q.</td><td>12</td><td>38</td><td style="color:var(--green);font-weight:600;">47,2 km</td><td>12</td><td><span class="badge b-muted">0</span></td></tr>
-              <tr><td>Sophie M.</td><td>8</td><td>22</td><td style="color:var(--green);font-weight:600;">31,6 km</td><td>8</td><td><span class="badge b-muted">0</span></td></tr>
+            <thead><tr><th>Ranger</th><th>Missions</th><th>Chiens accompagnés</th><th>Annulations</th><th>Présence</th></tr></thead>
+            <tbody id="staff-perf-tbody">
+              <tr><td colspan="5" style="text-align:center;color:var(--text-faint);padding:16px;font-size:12px;">Chargement…</td></tr>
             </tbody>
           </table>
         </div>
@@ -1083,58 +1062,19 @@ textarea.form-control { resize: vertical; }
 
     <!-- ══════ FACTURES ══════ -->
     <div class="page" id="page-factures">
-      <div class="stats-row" style="margin-bottom:14px;">
-        <div class="stat-card c-green"><div class="stat-accent-bar"></div><div class="stat-label">Payees ce mois</div><div class="stat-val">2 154 €</div></div>
-        <div class="stat-card c-red"><div class="stat-accent-bar"></div><div class="stat-label">Impayees</div><div class="stat-val">186 €</div><div class="stat-sub">3 factures</div></div>
-        <div class="stat-card c-accent"><div class="stat-accent-bar"></div><div class="stat-label">En attente</div><div class="stat-val">420 €</div><div class="stat-sub">6 factures</div></div>
-        <div class="stat-card c-blue"><div class="stat-accent-bar"></div><div class="stat-label">Total juin</div><div class="stat-val">2 760 €</div></div>
+      <div class="stats-row" id="factures-stats" style="margin-bottom:14px;">
+        <div class="stat-card c-green"><div class="stat-accent-bar"></div><div class="stat-label">Payées ce mois</div><div class="stat-val">—</div></div>
+        <div class="stat-card c-red"><div class="stat-accent-bar"></div><div class="stat-label">Impayées</div><div class="stat-val">—</div></div>
+        <div class="stat-card c-accent"><div class="stat-accent-bar"></div><div class="stat-label">Émises ce mois</div><div class="stat-val">—</div></div>
+        <div class="stat-card c-blue"><div class="stat-accent-bar"></div><div class="stat-label">Total facturé</div><div class="stat-val">—</div></div>
       </div>
       <div class="card">
         <div class="card-head">
           <span class="card-title">Toutes les factures</span>
           <button class="btn btn-accent" style="padding:5px 12px;font-size:11px;" onclick="ouvrirNouvelleFacture()">+ Nouvelle facture</button>
         </div>
-        <div>
-          <div class="inv-row">
-            <span class="inv-num">FR-2026-041</span>
-            <div style="flex:1;"><div class="inv-client">Marie Dupont</div><div class="inv-desc">Dog Walking × 12 · juin 2026</div></div>
-            <span class="badge b-red">Impayee +15 j</span>
-            <span class="inv-amount" style="color:var(--red);">336 €</span>
-            <div class="inv-actions">
-              <div class="icon-btn" title="Envoyer rappel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
-              <div class="icon-btn" title="Voir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
-            </div>
-          </div>
-          <div class="inv-row">
-            <span class="inv-num">FR-2026-040</span>
-            <div style="flex:1;"><div class="inv-client">Thomas Weber</div><div class="inv-desc">Dog Walking × 4 + réduction multi · juin 2026</div></div>
-            <span class="badge b-red">Impayee</span>
-            <span class="inv-amount" style="color:var(--red);">84 €</span>
-            <div class="inv-actions">
-              <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
-              <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
-            </div>
-          </div>
-          <div class="inv-row">
-            <span class="inv-num">FR-2026-039</span>
-            <div style="flex:1;"><div class="inv-client">Sophie Martin</div><div class="inv-desc">Boarding 5 nuits · juin 2026</div></div>
-            <span class="badge b-accent">En attente</span>
-            <span class="inv-amount">375 €</span>
-            <div class="inv-actions">
-              <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
-              <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
-            </div>
-          </div>
-          <div class="inv-row">
-            <span class="inv-num">FR-2026-038</span>
-            <div style="flex:1;"><div class="inv-client">Jean Klein</div><div class="inv-desc">Dog Walking × 7 · mai 2026</div></div>
-            <span class="badge b-green">Payee</span>
-            <span class="inv-amount" style="color:var(--green);">196 €</span>
-            <div class="inv-actions">
-              <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
-              <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
-            </div>
-          </div>
+        <div id="factures-list">
+          <div style="padding:16px;text-align:center;color:var(--text-faint);font-size:12px;">Chargement…</div>
         </div>
       </div>
     </div>
@@ -1300,32 +1240,14 @@ textarea.form-control { resize: vertical; }
       <div class="g2">
         <div class="card">
           <div class="card-head"><span class="card-title">Tarifs</span></div>
-          <div class="card-body">
-            <table class="params-table">
-              <thead><tr><th>Service</th><th>Client fidèle</th><th>Nouveau client</th></tr></thead>
-              <tbody>
-                <tr><td>Dog Walking</td><td style="color:var(--text-dim);text-align:right;">28 €</td><td>30 €</td></tr>
-                <tr><td>Day Care</td><td style="color:var(--text-dim);text-align:right;">55 €</td><td>60 €</td></tr>
-                <tr><td>Boarding</td><td style="color:var(--text-dim);text-align:right;">68 €</td><td>75 €</td></tr>
-              </tbody>
-            </table>
-            <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
-              <div class="rule-row"><span style="color:var(--text-dim);">Supplément hors zone</span><strong>+ 5 €</strong></div>
-              <div class="rule-row"><span style="color:var(--text-dim);">Réduction 2e chien — fidèle</span><strong style="color:var(--green);">— 50 %</strong></div>
-              <div class="rule-row"><span style="color:var(--text-dim);">Réduction 2e chien — nouveau</span><strong style="color:var(--green);">— 30 %</strong></div>
-              <div class="rule-row"><span style="color:var(--text-dim);">Frais de rappel facture impayée</span><strong style="color:var(--red);">+ 25 €</strong></div>
-            </div>
+          <div class="card-body" id="params-tarifs">
+            <div style="text-align:center;padding:16px;color:var(--text-faint);font-size:12px;">Chargement…</div>
           </div>
         </div>
         <div class="card">
           <div class="card-head"><span class="card-title">Regles operationnelles</span></div>
-          <div class="card-body">
-            <div class="rule-row"><span style="color:var(--text-dim);">Clôture du planning</span><strong>Veille à 9h00</strong></div>
-            <div class="rule-row"><span style="color:var(--text-dim);">Délai annulation gratuite</span><strong>24 heures</strong></div>
-            <div class="rule-row"><span style="color:var(--text-dim);">Distance min. par promenade</span><strong>3 km</strong></div>
-            <div class="rule-row" style="background:var(--accent-dim);border:1px solid var(--accent-mid);"><span>Promenades après-midi</span><strong style="color:var(--accent);">Printemps / Été</strong></div>
-            <div class="rule-row"><span style="color:var(--text-dim);">Organisation du planning</span><strong>Gabriel uniquement</strong></div>
-            <div class="rule-row"><span style="color:var(--text-dim);">Annulation tardive / sur place</span><strong>Prestation facturable</strong></div>
+          <div class="card-body" id="params-regles">
+            <div style="text-align:center;padding:16px;color:var(--text-faint);font-size:12px;">Chargement…</div>
           </div>
         </div>
       </div>
@@ -1365,6 +1287,24 @@ const titles = {
   messages:     ['Messages',         'Communication clients'],
   invitation:   ['Invitations',       'Liens d\'inscription clients'],
   parametres:   ['Parametres',       'Tarifs & règles'],
+};
+
+// ── PARAMETRES (source unique : tarifs utilisés aussi par la facturation auto) ──
+var FR_PARAMS = {
+  tarifs: {
+    walking:  { label: 'Dog Walking', fidele: 28, nouveau: 30 },
+    daycare:  { label: 'Day Care',    fidele: 55, nouveau: 60 },
+    boarding: { label: 'Boarding',    fidele: 68, nouveau: 75 },
+  },
+  tva: 0.17,
+  supplement_hors_zone: 5,
+  reduction_2e_fidele: 0.50,
+  reduction_2e_nouveau: 0.30,
+  frais_rappel: 25,
+  frais_deplacement_ht: 5,
+  cloture: 'Veille à 9h00',
+  delai_annulation: '24 heures',
+  distance_min: '3 km',
 };
 
 async function loadReservationsAdmin() {
@@ -1487,6 +1427,9 @@ function nav(id, el) {
   if (backBtn) backBtn.style.display = id !== 'dashboard' ? 'flex' : 'none';
 
   if (id === 'reservations') loadReservationsAdmin();
+  if (id === 'staff')        loadStaff();
+  if (id === 'factures')     loadFacturesAdmin();
+  if (id === 'parametres')   loadParametres();
 }
 
 function genererLien() {
@@ -1822,6 +1765,213 @@ function loadRecentClients(clients) {
       + '<div style="flex:1;"><div style="font-size:13px;color:var(--text);font-weight:500;">' + c.prenom + ' ' + c.nom + '</div><div style="font-size:11px;color:var(--text-faint);">' + (c.commune || '') + ' · ' + date + '</div></div>'
       + '<span style="font-family:Norwester,sans-serif;font-size:11px;color:var(--accent);">#' + c.numero_client + '</span></div>';
   });
+}
+
+// ── STAFF / RANGERS (réel) ──
+async function loadStaff() {
+  var cards = document.getElementById('staff-cards');
+  var perf  = document.getElementById('staff-perf-tbody');
+  if (cards) cards.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--text-faint);font-size:12px;">Chargement…</div>';
+  var SVC = { walking:'Dog Walking', daycare:'Day Care', boarding:'Boarding' };
+  var CREN = { matin:'09h00', midi:'12h00', apmidi:'14h30' };
+  try {
+    var today = formatDateISO(new Date());
+    // Membres du staff
+    var { data: staff, error } = await db.from('staff').select('*').order('prenom');
+    if (error) throw error;
+    staff = (staff || []).filter(function(s){ return s.actif !== false; });
+
+    // Semaine courante (lundi → dimanche)
+    var now = new Date();
+    var dow = (now.getDay() + 6) % 7;
+    var mon = new Date(now); mon.setDate(now.getDate() - dow);
+    var sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+    var debutSem = formatDateISO(mon), finSem = formatDateISO(sun);
+
+    var { data: resas } = await db.from('reservations')
+      .select('id,service,creneau,statut,date_debut,ranger_nom,client_id,chien_id')
+      .gte('date_debut', debutSem).lte('date_debut', finSem);
+    resas = resas || [];
+
+    // Regroupe les lignes (1 par chien) en missions, filtré par ranger
+    function groupe(rows){
+      var g = {};
+      rows.forEach(function(r){
+        var key = [r.client_id, r.service, r.date_debut, r.creneau].join('|');
+        if (!g[key]) g[key] = { annule: r.statut === 'annule', dogs: 0, service: r.service, creneau: r.creneau, date: r.date_debut };
+        if (r.chien_id) g[key].dogs++;
+      });
+      return Object.keys(g).map(function(k){ return g[k]; });
+    }
+
+    if (!staff.length) {
+      if (cards) cards.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--text-faint);font-size:13px;">Aucun membre dans la table <code>staff</code>.</div>';
+      if (perf) perf.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-faint);padding:16px;font-size:12px;">—</td></tr>';
+      return;
+    }
+
+    var cardsHtml = '', perfHtml = '';
+    staff.forEach(function(s, i){
+      var prenom = s.prenom || '—';
+      var nom = s.nom || '';
+      var nomComplet = (prenom + ' ' + nom).trim();
+      var role = s.role || (i === 0 ? 'Administrateur' : 'Ranger · Terrain');
+      var initiales = ((prenom[0] || '') + (nom[0] || prenom[1] || '')).toUpperCase();
+
+      var mine = resas.filter(function(r){ return (r.ranger_nom || '') === prenom; });
+      var missions = groupe(mine);
+      var actives = missions.filter(function(m){ return !m.annule; });
+      var annulees = missions.filter(function(m){ return m.annule; });
+      var nbChiens = actives.reduce(function(t, m){ return t + m.dogs; }, 0);
+      var presence = missions.length ? Math.round(actives.length / missions.length * 100) : 100;
+
+      var todayM = actives.filter(function(m){ return m.date === today; })
+                          .sort(function(a, b){ return (a.creneau || '').localeCompare(b.creneau || ''); });
+      var todayChiens = todayM.reduce(function(t, m){ return t + m.dogs; }, 0);
+
+      var grad = i === 0
+        ? 'linear-gradient(135deg,var(--accent),#c44010);color:white;'
+        : 'linear-gradient(135deg,var(--k400),var(--k300));color:var(--k800);';
+      var dispo = todayM.length
+        ? '<span class="badge b-accent" style="margin-left:auto;">En mission</span>'
+        : '<span class="badge b-green" style="margin-left:auto;">Disponible</span>';
+
+      var missionsHtml = todayM.length
+        ? todayM.map(function(m){
+            return '<div class="r-mission"><div class="r-dot" style="background:var(--accent);"></div>'
+              + (CREN[m.creneau] || '') + ' — ' + (SVC[m.service] || m.service)
+              + ' (' + m.dogs + ' chien' + (m.dogs > 1 ? 's' : '') + ')</div>';
+          }).join('')
+        : '<div style="font-size:11px;color:var(--text-faint);padding:6px 0;">Aucune mission planifiée aujourd\'hui.</div>';
+
+      cardsHtml += '<div class="ranger-card">'
+        + '<div class="ranger-head">'
+        + '<div class="r-avatar" style="background:' + grad + '">' + (initiales || '–') + '</div>'
+        + '<div><div class="r-name">' + nomComplet + '</div><div class="r-role">' + role + '</div></div>'
+        + dispo + '</div>'
+        + '<div style="font-size:11px;color:var(--text-faint);margin-bottom:8px;">Aujourd\'hui · '
+        + todayM.length + ' mission' + (todayM.length > 1 ? 's' : '') + ' · ' + todayChiens + ' chien' + (todayChiens > 1 ? 's' : '') + '</div>'
+        + missionsHtml + '</div>';
+
+      perfHtml += '<tr><td>' + nomComplet + '</td><td>' + actives.length + '</td><td>' + nbChiens + '</td>'
+        + '<td><span class="badge ' + (annulees.length ? 'b-red' : 'b-muted') + '">' + annulees.length + '</span></td>'
+        + '<td style="color:' + (presence >= 90 ? 'var(--green)' : 'var(--accent)') + ';font-weight:600;">' + presence + ' %</td></tr>';
+    });
+
+    if (cards) cards.innerHTML = cardsHtml;
+    if (perf)  perf.innerHTML  = perfHtml;
+  } catch(e) {
+    if (cards) cards.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--red);font-size:12px;">Lecture impossible : ' + (e.message || 'erreur') + '</div>';
+    if (perf)  perf.innerHTML  = '<tr><td colspan="5" style="text-align:center;color:var(--red);padding:16px;font-size:12px;">' + (e.message || 'erreur') + '</td></tr>';
+    console.error('loadStaff:', e);
+  }
+}
+
+// ── FACTURES (réel) ──
+async function loadFacturesAdmin() {
+  var statsRow = document.getElementById('factures-stats');
+  var list = document.getElementById('factures-list');
+  if (list) list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-faint);font-size:12px;">Chargement…</div>';
+  var mois = new Date().toISOString().slice(0, 7);
+  function euros(n){ return (parseFloat(n) || 0).toLocaleString('fr-LU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; }
+  function euros0(n){ return (parseFloat(n) || 0).toLocaleString('fr-LU', { maximumFractionDigits: 0 }) + ' €'; }
+  function card(cls, label, val, sub){
+    return '<div class="stat-card ' + cls + '"><div class="stat-accent-bar"></div><div class="stat-label">' + label
+      + '</div><div class="stat-val">' + val + '</div>' + (sub ? '<div class="stat-sub">' + sub + '</div>' : '') + '</div>';
+  }
+  try {
+    // Factures hors clients test (is_test = false)
+    var { data: factures, error } = await db.from('factures')
+      .select('id,numero,statut,total_ht,total_ttc,periode,notes,created_at,client_id,clients!inner(prenom,nom,email,is_test)')
+      .eq('clients.is_test', false)
+      .order('created_at', { ascending: false })
+      .limit(300);
+    if (error) throw error;
+    factures = factures || [];
+
+    var payeesMois = 0, impayeesTot = 0, nbImpayees = 0, totalMois = 0, nbMois = 0;
+    factures.forEach(function(f){
+      var ttc = parseFloat(f.total_ttc) || 0;
+      var dansMois = (f.periode || '').slice(0, 7) === mois;
+      if (dansMois) { totalMois += ttc; nbMois++; }
+      if (f.statut === 'payee' && dansMois) payeesMois += ttc;
+      if (f.statut === 'impayee') { impayeesTot += ttc; nbImpayees++; }
+    });
+
+    if (statsRow) statsRow.innerHTML =
+        card('c-green', 'Payées ce mois', euros0(payeesMois), 'TVA incl.')
+      + card('c-red',   'Impayées',       euros0(impayeesTot), nbImpayees + ' facture' + (nbImpayees > 1 ? 's' : ''))
+      + card('c-accent','Émises ce mois',  nbMois + '',         nbMois > 1 ? 'factures' : 'facture')
+      + card('c-blue',  'Total facturé',   euros0(totalMois),   mois);
+
+    if (!factures.length) {
+      if (list) list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-faint);font-size:13px;">Aucune facture pour le moment.</div>';
+      return;
+    }
+
+    var STA = { payee:['b-green','Payée'], impayee:['b-red','Impayée'], en_attente:['b-accent','En attente'] };
+    if (list) list.innerHTML = factures.map(function(f){
+      var cl = f.clients ? (f.clients.prenom + ' ' + f.clients.nom) : '—';
+      var email = f.clients ? (f.clients.email || '') : '';
+      var st = STA[f.statut] || ['b-muted', f.statut || '—'];
+      var color = f.statut === 'payee' ? 'var(--green)' : f.statut === 'impayee' ? 'var(--red)' : 'var(--text)';
+      var desc = ((f.notes || '').replace(/</g, '&lt;')) || (f.periode || '');
+      var mt = euros(f.total_ttc);
+      var actions = '';
+      if (f.statut !== 'payee') {
+        actions += '<button onclick="marquerPayee(\'' + f.id + '\')" style="font-size:11px;background:var(--green-dim);border:1px solid rgba(94,201,122,0.3);border-radius:6px;padding:5px 10px;color:var(--green);cursor:pointer;font-family:Norwester,sans-serif;font-weight:700;">✓ Payée</button>';
+      }
+      if (f.statut === 'impayee' && email) {
+        actions += '<a href="mailto:' + email + '?subject=' + encodeURIComponent('Rappel facture ' + (f.numero || ''))
+          + '&body=' + encodeURIComponent('Bonjour,\nVotre facture ' + (f.numero || '') + ' de ' + mt + ' est en attente de règlement.\nMerci,\nForest Rangers')
+          + '" style="font-size:11px;background:var(--accent-dim);border:1px solid var(--accent-mid);border-radius:6px;padding:5px 10px;color:var(--accent);cursor:pointer;font-family:Norwester,sans-serif;font-weight:700;text-decoration:none;">✉ Rappel</a>';
+      }
+      return '<div class="inv-row">'
+        + '<span class="inv-num">' + (f.numero || '—') + '</span>'
+        + '<div style="flex:1;"><div class="inv-client">' + cl + '</div><div class="inv-desc">' + desc + '</div></div>'
+        + '<span class="badge ' + st[0] + '">' + st[1] + '</span>'
+        + '<span class="inv-amount" style="color:' + color + ';">' + mt + '</span>'
+        + '<div class="inv-actions">' + actions + '</div>'
+        + '</div>';
+    }).join('');
+  } catch(e) {
+    if (list) list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--red);font-size:12px;">Lecture impossible : ' + (e.message || 'erreur') + '</div>';
+    console.error('loadFacturesAdmin:', e);
+  }
+}
+
+// ── PARAMETRES (rendu depuis FR_PARAMS) ──
+function loadParametres() {
+  var t = document.getElementById('params-tarifs');
+  var r = document.getElementById('params-regles');
+  function rule(label, val, color){
+    return '<div class="rule-row"><span style="color:var(--text-dim);">' + label + '</span><strong'
+      + (color ? ' style="color:' + color + ';"' : '') + '>' + val + '</strong></div>';
+  }
+  if (t) {
+    var rows = Object.keys(FR_PARAMS.tarifs).map(function(k){
+      var s = FR_PARAMS.tarifs[k];
+      return '<tr><td>' + s.label + '</td><td style="color:var(--text-dim);text-align:right;">' + s.fidele + ' €</td><td>' + s.nouveau + ' €</td></tr>';
+    }).join('');
+    t.innerHTML = '<table class="params-table"><thead><tr><th>Service</th><th>Client fidèle</th><th>Nouveau client</th></tr></thead><tbody>' + rows + '</tbody></table>'
+      + '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">'
+      + rule('Supplément hors zone', '+ ' + FR_PARAMS.supplement_hors_zone + ' €')
+      + rule('Réduction 2e chien — fidèle', '— ' + Math.round(FR_PARAMS.reduction_2e_fidele * 100) + ' %', 'var(--green)')
+      + rule('Réduction 2e chien — nouveau', '— ' + Math.round(FR_PARAMS.reduction_2e_nouveau * 100) + ' %', 'var(--green)')
+      + rule('TVA prestations', '+ ' + Math.round(FR_PARAMS.tva * 100) + ' %')
+      + rule('Frais de rappel facture impayée', '+ ' + FR_PARAMS.frais_rappel + ' €', 'var(--red)')
+      + rule('Frais de déplacement (annul. sur place)', '+ ' + FR_PARAMS.frais_deplacement_ht + ' € HT', 'var(--red)')
+      + '</div>';
+  }
+  if (r) {
+    r.innerHTML =
+        rule('Clôture du planning', FR_PARAMS.cloture)
+      + rule('Délai annulation gratuite', FR_PARAMS.delai_annulation)
+      + rule('Distance min. par promenade', FR_PARAMS.distance_min)
+      + '<div class="rule-row" style="background:var(--accent-dim);border:1px solid var(--accent-mid);"><span>Promenades après-midi</span><strong style="color:var(--accent);">Printemps / Été</strong></div>'
+      + rule('Organisation du planning', 'Gabriel uniquement')
+      + rule('Annulation tardive / sur place', 'Prestation facturable');
+  }
 }
 
 // ── STATS PAR MOIS ──
@@ -2989,7 +3139,8 @@ async function marquerPayee(factureId) {
     await db.from('factures').update({ statut: 'payee' }).eq('id', factureId);
     showToastAdmin('✓ Facture marquée payée', 'green');
     loadDashboardStats();
-    openStatDetail('impayes');
+    if (document.getElementById('page-factures').classList.contains('active')) loadFacturesAdmin();
+    else openStatDetail('impayes');
   } catch(e) { showToastAdmin('Erreur', 'red'); }
 }
 
@@ -3048,7 +3199,7 @@ async function creerFacture() {
       var moisParts = periode.split('-');
       var finMoisFact = formatDateISO(new Date(parseInt(moisParts[0],10), parseInt(moisParts[1],10), 0));
       var { data: resas } = await db.from('reservations').select('service').eq('client_id', clientId).gte('date_debut', periode + '-01').lte('date_debut', finMoisFact).neq('statut', 'annule');
-      var tarifs = { walking: 28, daycare: 55, boarding: 68 };
+      var tarifs = { walking: FR_PARAMS.tarifs.walking.fidele, daycare: FR_PARAMS.tarifs.daycare.fidele, boarding: FR_PARAMS.tarifs.boarding.fidele };
       total_ht = (resas||[]).reduce(function(s,r) { return s + (tarifs[r.service]||0); }, 0);
       payload.notes = 'Auto — ' + (resas||[]).length + ' réservation(s)';
     } else {
@@ -3057,15 +3208,16 @@ async function creerFacture() {
       if (!desc || !total_ht) { showToastAdmin('Description et montant obligatoires', 'amber'); return; }
       payload.notes = desc;
     }
-    // TVA 17% sur les prestations (services à la personne hors zone à TVA réduite/exonérée non concernés ici)
+    // TVA sur les prestations (taux centralisé dans FR_PARAMS)
     payload.total_ht = total_ht;
-    payload.total_ttc = Math.round(total_ht * 1.17 * 100) / 100;
+    payload.total_ttc = Math.round(total_ht * (1 + FR_PARAMS.tva) * 100) / 100;
 
     var { error: errFact } = await db.from('factures').insert(payload);
     if (errFact) throw errFact;
     document.getElementById('modal-nouvelle-facture').classList.remove('open');
     showToastAdmin('✓ Facture ' + numero + ' creee', 'green');
     loadDashboardStats();
+    if (document.getElementById('page-factures').classList.contains('active')) loadFacturesAdmin();
   } catch(e) { showToastAdmin('Erreur creation facture : '+e.message, 'red'); console.error(e); }
 }
 
