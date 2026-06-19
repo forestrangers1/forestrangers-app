@@ -11,7 +11,20 @@
   const { createClient } = window.supabase;
   const SUPABASE_URL = 'https://zxzhqptimjvdtvvtnpyw.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_drh_w_i9T4GOZ_AzoqkLcw_SW45X1FT';
-  const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+  // ⚠️ Config IDENTIQUE à celle de toutes les autres pages (admin, staff, client…).
+  // Le storageKey partagé 'fr-auth' permet à la session de connexion d'être reconnue
+  // partout → une seule connexion pour toute la PWA.
+  const db = createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: false,
+      storageKey: 'fr-auth',
+      storage: window.localStorage,
+      // verrou neutralisé : évite les erreurs Navigator Lock / DataCloneError sur mobile
+      lock: async (_name, _acquireTimeout, fn) => await fn()
+    }
+  });
 </script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
