@@ -652,7 +652,15 @@ textarea.form-control { resize: vertical; }
     const SUPABASE_URL = 'https://zxzhqptimjvdtvvtnpyw.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_drh_w_i9T4GOZ_AzoqkLcw_SW45X1FT';
     const db = createClient(SUPABASE_URL, SUPABASE_KEY, {
-      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: false,
+        storageKey: 'fr-auth',
+        storage: window.localStorage,
+        // verrou neutralisé : évite les erreurs Navigator Lock / DataCloneError vues sur mobile
+        lock: async (_name, _acquireTimeout, fn) => await fn()
+      }
     });
     console.log('Supabase connecte', db);
   </script>
@@ -738,10 +746,11 @@ textarea.form-control { resize: vertical; }
 
   <div class="sidebar-footer">
     <div class="avatar">GQ</div>
-    <div>
+    <div style="flex:1;">
       <div class="avatar-name">Gabriel Q.</div>
       <div class="avatar-role">Administrateur</div>
     </div>
+    <button onclick="frLogout()" title="Se déconnecter" style="background:transparent;border:1px solid var(--border,rgba(255,255,255,0.12));border-radius:8px;color:var(--text-faint,#9aa08c);padding:6px 10px;font-size:11px;cursor:pointer;">Quitter</button>
   </div>
 </aside>
 
@@ -3437,6 +3446,80 @@ document.addEventListener('click', function(e) {
     </div>
   </div>
 </div>
+
+<!-- ════════ ÉCRAN DE CONNEXION (sécurité admin) ════════ -->
+<div id="fr-login" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#1c1f14;padding:20px;">
+  <div style="width:100%;max-width:360px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);border-radius:18px;padding:28px;">
+    <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:#eceee6;letter-spacing:0.5px;">FOREST<span style="color:#ff5f1f;">RANGERS</span></div>
+    <div style="font-size:12px;color:#9aa08c;margin:4px 0 22px;">Administration — connexion requise</div>
+
+    <label style="display:block;font-size:11px;color:#9aa08c;margin-bottom:6px;">Email</label>
+    <input id="fr-login-email" type="email" autocomplete="username" placeholder="forestrangerslux@gmail.com"
+      style="width:100%;box-sizing:border-box;background:#22271a;border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:12px 14px;color:#eceee6;font-size:14px;margin-bottom:14px;outline:none;">
+
+    <label style="display:block;font-size:11px;color:#9aa08c;margin-bottom:6px;">Mot de passe</label>
+    <input id="fr-login-pass" type="password" autocomplete="current-password" placeholder="••••••••"
+      style="width:100%;box-sizing:border-box;background:#22271a;border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:12px 14px;color:#eceee6;font-size:14px;margin-bottom:8px;outline:none;">
+
+    <div id="fr-login-error" style="display:none;color:#e05a5a;font-size:12px;margin:6px 0 0;"></div>
+
+    <button id="fr-login-btn" onclick="frLogin()"
+      style="width:100%;margin-top:18px;background:#ff5f1f;border:none;border-radius:10px;padding:13px;color:#fff;font-family:'Norwester',sans-serif;font-size:14px;font-weight:800;letter-spacing:0.5px;cursor:pointer;">SE CONNECTER</button>
+  </div>
+</div>
+
+<script>
+// ── Garde d'authentification de l'admin ──
+async function frShowApp() {
+  var ov = document.getElementById('fr-login');
+  if (ov) ov.style.display = 'none';
+}
+function frShowLogin() {
+  var ov = document.getElementById('fr-login');
+  if (ov) ov.style.display = 'flex';
+}
+async function frLogin() {
+  var email = (document.getElementById('fr-login-email').value || '').trim();
+  var pass  = document.getElementById('fr-login-pass').value || '';
+  var errEl = document.getElementById('fr-login-error');
+  var btn   = document.getElementById('fr-login-btn');
+  errEl.style.display = 'none';
+  if (!email || !pass) { errEl.textContent = 'Entrez votre email et votre mot de passe.'; errEl.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'CONNEXION…';
+  try {
+    var { error } = await db.auth.signInWithPassword({ email: email, password: pass });
+    if (error) {
+      errEl.textContent = 'Email ou mot de passe incorrect.';
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'SE CONNECTER';
+      return;
+    }
+    // Connexion réussie : on recharge pour afficher l'admin avec la session active
+    location.reload();
+  } catch (e) {
+    errEl.textContent = 'Erreur de connexion. Réessayez.';
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'SE CONNECTER';
+  }
+}
+async function frLogout() {
+  try { await db.auth.signOut(); } catch (e) {}
+  location.reload();
+}
+// Permettre la connexion avec la touche Entrée
+document.addEventListener('keydown', function(e) {
+  var ov = document.getElementById('fr-login');
+  if (e.key === 'Enter' && ov && ov.style.display !== 'none') frLogin();
+});
+// Au chargement : session présente → on montre l'admin ; sinon → écran de connexion
+(async function frAuthGate() {
+  try {
+    var { data } = await db.auth.getSession();
+    if (data && data.session) { frShowApp(); }
+    else { frShowLogin(); }
+  } catch (e) { frShowLogin(); }
+})();
+</script>
 
 </body>
 </html>
