@@ -259,7 +259,16 @@ html, body {
     const { createClient } = window.supabase;
     const SUPABASE_URL = 'https://zxzhqptimjvdtvvtnpyw.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_drh_w_i9T4GOZ_AzoqkLcw_SW45X1FT';
-    const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+    const db = createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: false,
+        storageKey: 'fr-auth',
+        storage: window.localStorage,
+        lock: async (_name, _acquireTimeout, fn) => await fn()
+      }
+    });
     console.log('Supabase connecte', db);
   </script>
   <link rel="manifest" href="/manifest.json">

@@ -195,7 +195,16 @@ html, body { min-height: 100vh; font-family: 'Instrument Sans', sans-serif; back
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const { createClient } = window.supabase;
-const db = createClient('https://zxzhqptimjvdtvvtnpyw.supabase.co', 'sb_publishable_drh_w_i9T4GOZ_AzoqkLcw_SW45X1FT');
+const db = createClient('https://zxzhqptimjvdtvvtnpyw.supabase.co', 'sb_publishable_drh_w_i9T4GOZ_AzoqkLcw_SW45X1FT', {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: false,
+    storageKey: 'fr-auth',
+    storage: window.localStorage,
+    lock: async (_name, _acquireTimeout, fn) => await fn()
+  }
+});
 
 // ── ÉTAT GLOBAL ──
 var statsData = {

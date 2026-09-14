@@ -488,6 +488,10 @@ async function login() {
     // Résolution du rôle depuis la table staff (auth_id).
     // staff.role = 'admin' -> admin ; 'caretaker'/'walker' -> staff ; pas de fiche staff -> client.
     var staffRes = await db.from('staff').select('role').eq('auth_id', res.data.user.id).maybeSingle();
+    if (staffRes.error) {
+      console.error('Lecture staff refusee:', staffRes.error);
+      throw { message: 'Impossible de determiner votre profil (' + staffRes.error.message + ').' };
+    }
     var role = 'client';
     if (staffRes.data) {
       role = (staffRes.data.role === 'admin') ? 'admin' : 'staff';
@@ -532,13 +536,23 @@ function forgotPassword() {
     document.getElementById('email').focus();
     return;
   }
-  db.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/reset-password' });
   var errorEl = document.getElementById('error-msg');
-  errorEl.style.background = 'rgba(94,201,122,0.12)';
-  errorEl.style.borderColor = 'rgba(94,201,122,0.25)';
-  errorEl.style.color = '#5ec97a';
-  errorEl.textContent = 'Email de réinitialisation envoyé à ' + email;
-  errorEl.style.display = 'block';
+  db.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + '/reset-password.html'
+  }).then(function(r) {
+    if (r.error) {
+      errorEl.style.background = '';
+      errorEl.style.borderColor = '';
+      errorEl.style.color = '';
+      errorEl.textContent = 'Envoi impossible : ' + r.error.message;
+    } else {
+      errorEl.style.background = 'rgba(94,201,122,0.12)';
+      errorEl.style.borderColor = 'rgba(94,201,122,0.25)';
+      errorEl.style.color = '#5ec97a';
+      errorEl.textContent = 'Email de réinitialisation envoyé à ' + email;
+    }
+    errorEl.style.display = 'block';
+  });
 }
 
 function firstLogin() {
