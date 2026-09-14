@@ -2,7 +2,6 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="refresh" content="0; url=forestrangers-login.html">
 <title>Forest Rangers</title>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#ff5f1f">
@@ -12,7 +11,29 @@
   <link rel="apple-touch-icon" href="/icon-192.png">
 </head>
 <body>
-<script>window.location.href = 'forestrangers-login.html';</script>
+<script>
+// Les liens envoyes par Supabase (reinitialisation, invitation, confirmation)
+// arrivent sur la racine du site avec le jeton dans le fragment (#access_token=...)
+// ou en parametre (?code=...). Une redirection seche perdrait ce jeton :
+// on le transmet donc tel quel a la page concernee.
+(function () {
+  var hash   = window.location.hash || '';
+  var search = window.location.search || '';
+
+  var isRecovery =
+    hash.indexOf('type=recovery') !== -1 ||
+    search.indexOf('type=recovery') !== -1 ||
+    hash.indexOf('access_token=') !== -1 ||
+    search.indexOf('code=') !== -1 ||
+    search.indexOf('error_description=') !== -1;
+
+  if (isRecovery) {
+    window.location.replace('reset-password.html' + search + hash);
+  } else {
+    window.location.replace('forestrangers-login.html');
+  }
+})();
+</script>
 
 <script>
 if ('serviceWorker' in navigator) {
