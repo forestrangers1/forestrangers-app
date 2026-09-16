@@ -64,40 +64,7 @@ html, body {
   background: #0e0f0a; color: var(--text); overflow: hidden; height: 100%;
 }
 
-/* ── MISE EN PAGE ORDINATEUR (≥ 900 px) ──
-   Le châssis téléphone laisse place à une fenêtre large,
-   la barre d'onglets devient une colonne latérale. */
-@media (min-width: 900px) {
-  .phone-shell {
-    width: min(1120px, 96vw);
-    height: min(900px, 94vh);
-    max-height: none;
-    border-radius: 22px;
-    flex-direction: row;
-  }
-  .notch, .status-bar { display: none; }
-  .bottom-nav {
-    order: -1;
-    width: 216px; height: 100%; flex-shrink: 0;
-    flex-direction: column; align-items: stretch;
-    border-top: none; border-right: 1px solid var(--border);
-    padding: 22px 12px; gap: 6px;
-  }
-  .nav-tab {
-    flex: 0 0 auto; flex-direction: row; justify-content: flex-start;
-    gap: 12px; padding: 12px 14px; border-radius: 10px;
-  }
-  .nav-tab span { font-size: 13px; font-weight: 600; letter-spacing: 0; }
-  .nav-tab svg { width: 19px; height: 19px; }
-  .notif-dot { top: 10px; right: 10px; }
-  .screens { flex: 1; }
-  .screen { padding-bottom: 28px; }
-  .screen-pad { padding: 30px 38px; max-width: 760px; }
-  .modal-overlay { position: fixed; }
-  .modal-full { width: 520px; max-width: 90vw; max-height: 86vh; }
-  #screen-messages .screen-pad { max-width: 760px; }
-  .msg-composer { bottom: 0; }
-}
+/* La mise en page ordinateur est définie en fin de feuille (voir « MODE ORDINATEUR »). */
 
 /* Bouton d'apparence dans le menu du compte */
 .theme-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -111,6 +78,9 @@ html, body {
   border-radius: 50%; background: #fff; transition: transform .2s; display: block;
 }
 .theme-switch.on i { transform: translateX(19px); }
+
+/* Éléments propres à la mise en page ordinateur : masqués sur mobile */
+.nav-brand, .nav-label, .nav-spacer, .nav-account, .nav-tab.nav-desk { display: none; }
 
 /* ── PHONE SHELL ── */
 .phone-shell {
@@ -618,6 +588,228 @@ html, body {
 .warn-green { background: var(--green-dim); border: 1px solid rgba(94,201,122,0.28); color: var(--green); }
 .warn-red   { background: var(--red-dim);   border: 1px solid rgba(224,90,90,0.28);  color: var(--red); }
 
+
+/* ══════════════════════════════════════════════════════════════
+   MODE ORDINATEUR (≥ 1000 px)
+   Placé en fin de feuille : ces règles écrasent volontairement
+   les règles « téléphone » ci-dessus.
+   - le châssis iPhone disparaît, l'app occupe toute la fenêtre
+   - la barre d'onglets devient une colonne latérale complète
+     (marque, navigation, messagerie, compte)
+   - le contenu est centré et passe en multi-colonnes
+   ══════════════════════════════════════════════════════════════ */
+@media (min-width: 1000px) {
+
+  /* ── Châssis ── */
+  body > div[style*="min-height:100vh"] {
+    padding: 0 !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+    background: var(--bg) !important;
+  }
+  html.light body > div[style*="min-height:100vh"] { background: var(--bg) !important; }
+  .phone-shell {
+    width: 100%; height: 100vh; max-height: 100vh;
+    margin: 0; border: none; border-radius: 0; box-shadow: none;
+    flex-direction: row;
+  }
+  .notch { display: none; }
+  .status-bar { display: none; }
+
+  /* ── Colonne latérale ── */
+  .bottom-nav {
+    order: -1; position: static;
+    width: 258px; height: 100vh; flex-shrink: 0;
+    flex-direction: column; align-items: stretch;
+    gap: 2px; padding: 20px 14px 14px;
+    background: var(--surface);
+    border-top: none; border-right: 1px solid var(--border);
+    overflow-y: auto; overflow-x: hidden;
+  }
+
+  .nav-brand {
+    display: flex; align-items: center; gap: 11px;
+    padding: 4px 10px 16px; margin-bottom: 4px;
+  }
+  .nav-brand-mark {
+    width: 38px; height: 38px; border-radius: 12px; flex-shrink: 0;
+    background: var(--accent); display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 18px rgba(255,95,31,0.28);
+  }
+  .nav-brand-mark svg { width: 21px; height: 21px; color: #fff; }
+  .nav-brand-name {
+    font-family: 'Norwester', sans-serif; font-size: 15px; font-weight: 800;
+    letter-spacing: 0.06em; line-height: 1.1; white-space: nowrap;
+  }
+  .nav-brand-sub {
+    font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--text-faint); font-weight: 700; margin-top: 2px;
+  }
+
+  .nav-label {
+    display: block; padding: 14px 12px 6px;
+    font-size: 9px; font-weight: 700; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--text-faint);
+  }
+  .nav-spacer { display: block; flex: 1; min-height: 12px; }
+
+  /* ── Onglets ── */
+  .nav-tab {
+    flex: 0 0 auto; flex-direction: row; justify-content: flex-start;
+    gap: 12px; padding: 11px 12px; border-radius: 10px;
+    color: var(--text-dim); transition: background .14s, color .14s;
+  }
+  .nav-tab.nav-desk { display: flex; }
+  .nav-tab:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+  html.light .nav-tab:hover { background: rgba(28,31,20,0.05); }
+  .nav-tab.active, html.light .nav-tab.active { color: var(--accent); background: var(--accent-dim); }
+  .nav-tab.active::before {
+    content: ''; position: absolute; left: -14px; top: 50%;
+    transform: translateY(-50%); width: 3px; height: 22px;
+    border-radius: 0 3px 3px 0; background: var(--accent);
+  }
+  .nav-tab svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .nav-tab span { font-size: 13.5px; font-weight: 600; letter-spacing: 0; }
+  .notif-dot {
+    position: static; margin-left: auto; border: none;
+    width: 7px; height: 7px; flex-shrink: 0;
+  }
+  .nav-badge {
+    margin-left: auto; background: var(--accent); color: #fff;
+    font-family: 'Norwester', sans-serif; font-size: 10px; font-weight: 800;
+    min-width: 19px; height: 19px; border-radius: 10px; padding: 0 6px;
+    display: none; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+
+  /* ── Bloc compte (bas de colonne) ── */
+  .nav-account {
+    display: block; border-top: 1px solid var(--border);
+    margin-top: 8px; padding-top: 10px;
+  }
+  .nav-user { display: flex; align-items: center; gap: 10px; padding: 6px 10px 10px; min-width: 0; }
+  .nav-user-av {
+    width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+    background: linear-gradient(135deg, #3d4429, #6b7450);
+    border: 2px solid var(--accent); display: flex; align-items: center; justify-content: center;
+    font-family: 'Norwester', sans-serif; font-size: 12px; font-weight: 800; color: var(--text);
+  }
+  html.light .nav-user-av { color: #fff; }
+  .nav-user-txt { min-width: 0; }
+  .nav-user-name {
+    font-size: 13px; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .nav-user-role { font-size: 10px; color: var(--text-faint); letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; }
+  .nav-actions { display: flex; gap: 6px; }
+  .nav-act {
+    flex: 1; height: 34px; border-radius: 9px; cursor: pointer;
+    background: var(--surface2); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-dim); transition: all .14s;
+  }
+  .nav-act:hover { border-color: var(--accent); color: var(--accent); }
+  .nav-act.danger:hover { border-color: var(--red); color: var(--red); }
+  .nav-act svg { width: 16px; height: 16px; }
+
+  /* Mode clair : le châssis n'a plus ni ombre ni bordure */
+  html.light .phone-shell { box-shadow: none; border: none; }
+
+  /* ── Zone de contenu ── */
+  .screens { flex: 1; min-width: 0; background: var(--bg); }
+  .screen { padding-bottom: 40px; }
+  .screen-pad { padding: 34px 44px 24px; max-width: 1060px; margin: 0 auto; }
+  .home-account { display: none; }              /* compte déplacé dans la colonne */
+  #client-bonjour { font-size: 27px !important; }
+  #client-date { font-size: 12.5px !important; }
+  #screen-messages .back-btn, #screen-settings .back-btn { display: none; }
+  #screen-messages .screen-pad > div:first-child > div:last-child,
+  #screen-settings .screen-pad > div:first-child > div:last-child { font-size: 27px !important; }
+  .msg-sub { padding-left: 0 !important; }
+
+  /* Titres d'écran un peu plus présents */
+  .screen-pad > div[style*="font-size:20px"] { font-size: 26px !important; }
+
+  /* Barres de défilement visibles (on n'est plus sur un écran tactile) */
+  .screen, .modal-full, .bottom-nav { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+  .screen::-webkit-scrollbar, .modal-full::-webkit-scrollbar, .bottom-nav::-webkit-scrollbar {
+    display: block; width: 11px; height: 11px;
+  }
+  .screen::-webkit-scrollbar-thumb, .modal-full::-webkit-scrollbar-thumb, .bottom-nav::-webkit-scrollbar-thumb {
+    background: var(--border2); border-radius: 10px;
+    border: 3px solid transparent; background-clip: content-box;
+  }
+  .screen::-webkit-scrollbar-thumb:hover { background: var(--text-faint); background-clip: content-box; }
+
+  /* ── ACCUEIL ── */
+  #screen-home .screen-pad { max-width: 1060px; }
+  #notifications-list {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px; align-items: start;
+  }
+  #notifications-list > * { margin-bottom: 0 !important; }
+  #notifications-list > *:only-child { grid-column: 1 / -1; }
+  #home-alertes > div { max-width: none; }
+  .notif-card { transition: border-color .15s, transform .15s, box-shadow .15s; }
+  .notif-card:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(0,0,0,0.25); }
+  html.light .notif-card:hover { box-shadow: 0 10px 24px rgba(28,31,20,0.10); }
+
+  /* ── RÉSERVATIONS / FACTURES : rendu tableau ── */
+  #reservations-list, #factures-list {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  #reservations-list > div:last-child, #factures-list > div:last-child { border-bottom: none; }
+  #reservations-list > div[onclick]:hover, #factures-list .invoice-item:hover { background: rgba(255,255,255,0.03); }
+  html.light #reservations-list > div[onclick]:hover, html.light #factures-list .invoice-item:hover { background: rgba(28,31,20,0.03); }
+  #resa-calendar .cal-wrap { max-width: 620px; }
+  #resa-jour { max-width: 620px; }
+  .desk-inline { width: auto !important; display: inline-flex !important; padding: 13px 22px !important; }
+
+  /* ── MON CHIEN ── */
+  #chiens-list {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+    gap: 14px; align-items: start; margin-bottom: 20px;
+  }
+  #chiens-list > div { margin-bottom: 0 !important; }
+  .photos-grid { grid-template-columns: repeat(6, 1fr) !important; max-width: 660px; }
+
+  /* ── DÉTAIL PROMENADE ── */
+  #screen-walk-detail > div { max-width: 1060px; margin: 0 auto; }
+  .walk-photo { height: 300px; }
+
+  /* ── PARAMÈTRES ── */
+  #screen-settings .screen-pad { max-width: 760px; }
+  #settings-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  #screen-settings .btn-big, #screen-settings .btn-outline-big { width: auto !important; display: inline-flex; padding: 13px 22px; }
+
+  /* ── MESSAGERIE ── */
+  #screen-messages .screen-pad { max-width: 860px; }
+  .msg-composer { bottom: 0; background: var(--bg); padding-bottom: 14px; }
+
+  /* ── MODALES ── */
+  .modal-overlay { position: fixed; padding: 28px; }
+  .modal-full {
+    width: 600px; max-width: 92vw; max-height: 88vh;
+    padding: 26px 28px; border-radius: 18px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+  }
+  #dogEditModal .modal-full { width: 780px; }
+  #dogEditModal .dog-behavior-grid { grid-template-columns: repeat(3, 1fr); }
+  #photoModal .modal-full { width: 820px; }
+  .modal-close:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Confort général ── */
+  .booking-item:hover, .invoice-item:hover { background: rgba(255,255,255,0.03); }
+  .field-input, .comment-input { font-size: 14px; }
+  .btn-big { transition: all .18s; }
+}
+
+/* Très grands écrans : on aère un peu plus */
+@media (min-width: 1500px) {
+  .screen-pad { max-width: 1180px; padding-left: 56px; padding-right: 56px; }
+  #screen-home .screen-pad { max-width: 1180px; }
+}
+
 /* ── BLOC FACTURE (fond blanc — sert aussi au PDF) ── */
 .inv-doc { background: #ffffff; color: #1c1f14; border-radius: 12px; padding: 20px; }
 .inv-doc .inv-h1 { font-family: 'Norwester', sans-serif; font-size: 18px; font-weight: 800; color: #1c1f14; }
@@ -682,7 +874,7 @@ html, body {
             <div id="client-date" style="font-size:12px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">&nbsp;</div>
             <div id="client-bonjour" style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;margin-top:2px;">Chargement…</div>
           </div>
-          <div style="position:relative;flex-shrink:0;">
+          <div class="home-account" style="position:relative;flex-shrink:0;">
             <div id="client-avatar" onclick="toggleAvatarMenu(event)" aria-label="Menu du compte" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#3d4429,#6b7450);display:flex;align-items:center;justify-content:center;font-family:'Norwester',sans-serif;font-weight:800;font-size:13px;border:2px solid var(--accent);cursor:pointer;"></div>
             <div id="avatarMenu" class="avatar-menu">
               <button class="avatar-menu-item" onclick="openMessages()">
@@ -851,7 +1043,7 @@ html, body {
         <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;margin-bottom:4px;margin-top:4px;">Mes reservations</div>
         <div style="font-size:13px;color:var(--text-dim);margin-bottom:18px;">Historique et à venir</div>
 
-        <button class="btn-big btn-accent" style="margin-bottom:16px;" onclick="window.location.href='forestrangers-reservation.html'">
+        <button class="btn-big btn-accent desk-inline" style="margin-bottom:16px;" onclick="window.location.href='forestrangers-reservation.html'">
           <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Nouvelle reservation
         </button>
@@ -889,7 +1081,7 @@ html, body {
         </div><!-- /chiens-list -->
         <!-- Dernières photos -->
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Dernières photos</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px;">
+        <div class="photos-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px;">
           <div style="aspect-ratio:1;background:linear-gradient(135deg,#2f3520,#3d4429);border-radius:10px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="openPhotoModal()">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
           </div>
@@ -901,7 +1093,7 @@ html, body {
           </div>
         </div>
 
-        <a href="javascript:void(0)" onclick="openDogAdd()" style="width:100%;margin-top:20px;padding:14px;background:var(--accent);border:1.5px solid var(--accent);border-radius:12px;color:#fff;font-family:'Norwester',sans-serif;font-weight:700;font-size:13px;letter-spacing:0.04em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;">
+        <a href="javascript:void(0)" class="desk-inline" onclick="openDogAdd()" style="width:100%;margin-top:20px;padding:14px;background:var(--accent);border:1.5px solid var(--accent);border-radius:12px;color:#fff;font-family:'Norwester',sans-serif;font-weight:700;font-size:13px;letter-spacing:0.04em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
           Ajouter un chien
         </a>
@@ -942,7 +1134,7 @@ html, body {
           </div>
           <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;">Messages</div>
         </div>
-        <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:16px;padding-left:46px;">Gabriel vous répond directement ici.</div>
+        <div class="msg-sub" style="font-size:12.5px;color:var(--text-dim);margin-bottom:16px;padding-left:46px;">Gabriel vous répond directement ici.</div>
 
         <div id="msg-thread-client" style="margin-bottom:14px;">
           <div style="padding:24px;text-align:center;color:var(--text-faint);font-size:13px;">Chargement…</div>
@@ -994,8 +1186,22 @@ html, body {
 
   </div><!-- /screens -->
 
-  <!-- BOTTOM NAV -->
+  <!-- BARRE D'ONGLETS (mobile) / COLONNE LATÉRALE (ordinateur) -->
   <div class="bottom-nav">
+
+    <!-- Marque — visible uniquement en mode ordinateur -->
+    <div class="nav-brand">
+      <div class="nav-brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 5.172C10 3.782 8.423 2.679 6.5 3c-2 .336-3.5 2.332-3.5 4.327 0 .644.198 1.885.5 2.669L10 21v-3.164"/><path d="M14 5.172C14 3.782 15.577 2.679 17.5 3c2 .336 3.5 2.332 3.5 4.327 0 .644-.198 1.885-.5 2.669L14 21v-3.164"/><path d="M12 12a2 2 0 100-4 2 2 0 000 4z"/></svg>
+      </div>
+      <div>
+        <div class="nav-brand-name">FOREST RANGERS</div>
+        <div class="nav-brand-sub">Espace client</div>
+      </div>
+    </div>
+
+    <div class="nav-label">Navigation</div>
+
     <div class="nav-tab active" id="tab-home" onclick="goTab('screen-home','tab-home')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       <span>Accueil</span>
@@ -1013,6 +1219,43 @@ html, body {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       <span>Factures</span>
     </div>
+
+    <!-- Entrées réservées au mode ordinateur -->
+    <div class="nav-label nav-desk-label">Mon compte</div>
+    <div class="nav-tab nav-desk" id="tab-messages" onclick="openMessages()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      <span>Messages</span>
+      <span class="nav-badge" id="desk-msg-badge">0</span>
+    </div>
+    <div class="nav-tab nav-desk" id="tab-settings" onclick="openSettings()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      <span>Paramètres</span>
+    </div>
+
+    <div class="nav-spacer"></div>
+
+    <!-- Compte — visible uniquement en mode ordinateur -->
+    <div class="nav-account">
+      <div class="nav-user">
+        <div class="nav-user-av" id="desk-avatar"></div>
+        <div class="nav-user-txt">
+          <div class="nav-user-name" id="desk-name">Chargement…</div>
+          <div class="nav-user-role">Client</div>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <div class="nav-act" onclick="basculerTheme(event)" id="desk-theme-btn" title="Changer d'apparence">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="desk-theme-icon"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        </div>
+        <div class="nav-act" onclick="window.location.href='forestrangers-reservation.html'" title="Nouvelle réservation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+        <div class="nav-act danger" onclick="seDeconnecter()" title="Se déconnecter">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </div>
+      </div>
+    </div>
+
   </div>
 
 </div><!-- /phone-shell -->
@@ -1279,9 +1522,11 @@ document.addEventListener('click', function(e) {
 var authEmail = null;
 
 function openSettings() {
-  document.getElementById('avatarMenu').classList.remove('open');
+  var menu = document.getElementById('avatarMenu');
+  if (menu) menu.classList.remove('open');
   renderSettings();
-  goTab('screen-settings', 'tab-home');
+  // En mode ordinateur, l'onglet « Paramètres » existe dans la colonne latérale
+  goTab('screen-settings', document.getElementById('tab-settings') ? 'tab-settings' : 'tab-home');
 }
 
 function renderSettings() {
@@ -1357,10 +1602,20 @@ function closePhotoModal() { document.getElementById('photoModal').classList.rem
 function openBookingModal()  { document.getElementById('bookingModal').classList.add('open'); }
 function closeBookingModal() { document.getElementById('bookingModal').classList.remove('open'); }
 
-['photoModal','bookingModal','dogEditModal','resaModal','factureModal'].forEach(id => {
-  document.getElementById(id).addEventListener('click', function(e) {
+['photoModal','bookingModal','dogEditModal','resaModal','factureModal','dogFullModal'].forEach(id => {
+  var m = document.getElementById(id);
+  if (m) m.addEventListener('click', function(e) {
     if (e.target === this) this.classList.remove('open');
   });
+});
+
+// Échap ferme la modale ouverte (clavier = usage ordinateur)
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Escape') return;
+  var ouverte = document.querySelector('.modal-overlay.open');
+  if (ouverte) { ouverte.classList.remove('open'); return; }
+  var menu = document.getElementById('avatarMenu');
+  if (menu && menu.classList.contains('open')) menu.classList.remove('open');
 });
 
 function updateModalPrix() {
@@ -1547,8 +1802,15 @@ function updateHomeScreen(client) {
   if (bonjourEl) bonjourEl.textContent = 'Bonjour, ' + client.prenom;
 
   // Avatar
+  var initiales = ((client.prenom || ' ')[0] + (client.nom || ' ')[0]).toUpperCase();
   var avatarEl = document.getElementById('client-avatar');
-  if (avatarEl) avatarEl.textContent = (client.prenom[0] + client.nom[0]).toUpperCase();
+  if (avatarEl) avatarEl.textContent = initiales;
+
+  // Colonne latérale (mode ordinateur)
+  var dAv = document.getElementById('desk-avatar');
+  if (dAv) dAv.textContent = initiales;
+  var dNm = document.getElementById('desk-name');
+  if (dNm) dNm.textContent = ((client.prenom || '') + ' ' + (client.nom || '')).trim() || 'Mon compte';
 }
 
 
@@ -1562,8 +1824,8 @@ function openMessages() {
   if (menu) menu.classList.remove('open');
   showScreen('screen-messages');
   document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
-  var home = document.getElementById('tab-home');
-  if (home) home.classList.add('active');
+  var cible = document.getElementById('tab-messages') || document.getElementById('tab-home');
+  if (cible) cible.classList.add('active');
   renderMessagesClient();
   marquerMessagesLus();
   setTimeout(scrollFilEnBas, 60);
@@ -1610,7 +1872,7 @@ function nbMessagesNonLusClient() {
 
 function majBadgesMessages() {
   var n = nbMessagesNonLusClient();
-  [['home-msg-badge', 'badge'], ['avatar-msg-badge', 'flex']].forEach(function(pair) {
+  [['home-msg-badge', 'badge'], ['avatar-msg-badge', 'flex'], ['desk-msg-badge', 'flex']].forEach(function(pair) {
     var b = document.getElementById(pair[0]);
     if (!b) return;
     if (n > 0) { b.textContent = n; b.style.display = (pair[1] === 'flex' ? 'flex' : 'inline-flex'); }
@@ -1706,9 +1968,14 @@ function majBoutonTheme() {
   var ic = document.getElementById('theme-icon');
   if (sw) sw.classList.toggle('on', clair);
   if (lb) lb.textContent = clair ? 'Mode sombre' : 'Mode clair';
-  if (ic) ic.innerHTML = clair
+  var svgThm = clair
     ? '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'
     : '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>';
+  if (ic) ic.innerHTML = svgThm;
+  var di = document.getElementById('desk-theme-icon');
+  if (di) di.innerHTML = svgThm;
+  var db2 = document.getElementById('desk-theme-btn');
+  if (db2) db2.title = clair ? 'Passer en mode sombre' : 'Passer en mode clair';
 }
 
 function basculerTheme(e) {
