@@ -752,9 +752,14 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <div class="form-group" id="annulation-portee-group" style="display:none;">
       <label class="form-label">Que voulez-vous annuler ?</label>
       <select class="form-control" id="annulation-portee" onchange="majSuggestionAnnulation()">
-        <option value="occurrence">Seulement cette occurrence</option>
+        <option value="occurrence">Seulement une date</option>
         <option value="serie">Toute la récurrence</option>
       </select>
+    </div>
+
+    <div class="form-group" id="annulation-date-group" style="display:none;">
+      <label class="form-label">Quelle date ?</label>
+      <select class="form-control" id="annulation-date" onchange="majSuggestionAnnulation()"></select>
     </div>
 
     <div class="modal-section" id="annulation-raison"></div>
@@ -1509,12 +1514,81 @@ async function saveChienNotes() {
 }
 
 // ════════════════════════════════════════
+// ── RÉCURRENCE : séances réelles ──
+// Walking et Day Care : lundi au vendredi uniquement.
+// ════════════════════════════════════════
+var JOUR_IDX_FR = { lun:1, mar:2, mer:3, jeu:4, ven:5, sam:6, dim:0 };
+
+function isoDateFR(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function occurrencesResa(r) {
+  var out = [];
+  if (!r || !r.date_debut) return out;
+  var d0 = new Date(r.date_debut + 'T00:00:00');
+  var finStr = r.date_fin_recurrence || r.date_fin || r.date_debut;
+  var d1 = new Date(finStr + 'T00:00:00');
+  if (isNaN(d0)) return out;
+  if (isNaN(d1) || d1 < d0) d1 = new Date(d0);
+  var exclues = (r.dates_exclues || '').split(',').map(function(x){ return x.trim(); }).filter(Boolean);
+
+  if (r.service === 'boarding') {
+    for (var b = new Date(d0); b <= d1 && out.length < 500; b.setDate(b.getDate()+1)) {
+      var isoB = isoDateFR(b);
+      if (exclues.indexOf(isoB) === -1) out.push(isoB);
+    }
+    return out;
+  }
+  var idx = (r.jours_recurrence || '').split(',').map(function(j){ return JOUR_IDX_FR[j.trim()]; })
+              .filter(function(i){ return i >= 1 && i <= 5; });
+  for (var d = new Date(d0); d <= d1 && out.length < 500; d.setDate(d.getDate()+1)) {
+    var wd = d.getDay();
+    if (wd === 0 || wd === 6) continue;
+    if (idx.length && idx.indexOf(wd) === -1) continue;
+    var iso = isoDateFR(d);
+    if (exclues.indexOf(iso) !== -1) continue;
+    out.push(iso);
+  }
+  if (!out.length) out.push(isoDateFR(d0));
+  return out;
+}
+
+// Toutes les lignes d'une même réservation (1 ligne par chien)
+function lignesMemeResa(r) {
+  return (currentReservationsList || []).filter(function(x) {
+    return x.client_id === r.client_id
+      && x.service === r.service
+      && x.date_debut === r.date_debut
+      && (x.date_fin || null) === (r.date_fin || null)
+      && (x.creneau || null) === (r.creneau || null)
+      && x.statut === r.statut;
+  });
+}
+
+// Applique une mise à jour à TOUTES les lignes et refuse le faux succès :
+// sur un UPDATE, RLS ne renvoie pas d'erreur, il modifie simplement 0 ligne.
+async function majLignesReservation(r, payload) {
+  var ids = lignesMemeResa(r).map(function(x){ return x.id; });
+  if (ids.indexOf(r.id) === -1) ids.push(r.id);
+  var { data, error } = await db.from('reservations').update(payload).in('id', ids).select('id');
+  if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error("Aucune ligne modifiee. Verifiez la politique RLS UPDATE sur reservations pour le compte admin (fr_rls_reservations.sql).");
+  }
+  lignesMemeResa(r).forEach(function(x){ Object.assign(x, payload); });
+  Object.assign(r, payload);
+  return data.length;
+}
+
+// ════════════════════════════════════════
 // ── MODALE DÉTAIL RÉSERVATION ──
 // ════════════════════════════════════════
-async function openResaDetail(id) {
+async function openResaDetail(id, dateOccurrence) {
   var r = currentReservationsList.find(function(x) { return x.id === id; });
   if (!r) return;
   currentResaDetail = r;
+  currentResaDetail._occurrenceDate = dateOccurrence || null;
 
   var svc = SVC_NAMES[r.service] || r.service;
   var chien = chienNom(r.chien_id);
@@ -1531,11 +1605,28 @@ async function openResaDetail(id) {
     if (r.date_fin_recurrence) datesTxt += ' jusqu\'au ' + formatDateFR(r.date_fin_recurrence);
   }
 
+  var lignes = lignesMemeResa(r);
+  var chiensTxt = lignes.map(function(x){ return chienNom(x.chien_id); })
+                        .filter(function(v, i, a){ return v && a.indexOf(v) === i; }).join(', ') || chien;
+  var totalTTC = 0, nbSeances = 0;
+  lignes.forEach(function(x) {
+    totalTTC  += parseFloat(x.montant_ttc) || 0;
+    nbSeances += parseInt(x.nb_seances, 10) || 0;
+  });
+  var occ = occurrencesResa(r);
+  var euro = function(n) { return n.toLocaleString('fr-LU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; };
+
   var infoHtml = '<strong>' + svc + '</strong><br>'
-    + 'Chien : ' + chien + '<br>'
+    + 'Chien(s) : ' + chiensTxt + (lignes.length > 1 ? ' <span style="color:var(--tf);">(' + lignes.length + ' lignes)</span>' : '') + '<br>'
     + datesTxt
+    + '<br>Séances à venir ou passées : ' + occ.length
     + (r.ranger_nom ? '<br>Ranger : ' + r.ranger_nom : '')
     + '<br>Statut : <span class="badge ' + (STATUT_BADGES[r.statut] || 'b-muted') + '">' + (STATUT_LABELS[r.statut] || r.statut) + '</span>'
+    + (totalTTC > 0
+        ? '<br><br><span style="color:var(--accent);font-weight:700;">Total : ' + euro(totalTTC) + ' TTC</span>'
+          + ' <span style="color:var(--tf);font-size:11.5px;">(' + euro(totalTTC/1.17) + ' HT + ' + euro(totalTTC - totalTTC/1.17) + ' TVA 17 %'
+          + (nbSeances > 0 ? ' · ' + nbSeances + (nbSeances > 1 ? ' séances' : ' séance') : '') + ')</span>'
+        : '<br><br><span style="color:var(--tf);">Montant non chiffré sur cette réservation</span>')
     + (r.notes ? '<br><br>Notes : ' + r.notes : '');
   document.getElementById('resa-detail-info').innerHTML = infoHtml;
 
@@ -1665,14 +1756,13 @@ async function saveResaEdit() {
   btn.textContent = '...';
   btn.disabled = true;
   try {
-    var { error } = await db.from('reservations').update(update).eq('id', r.id);
-    if (error) throw error;
-    Object.assign(r, update);
+    var n = await majLignesReservation(r, update);
     document.getElementById('modal-resa-detail').classList.remove('open');
     loadReservations(currentReservationsList);
+    alert('✓ ' + n + ' ligne' + (n > 1 ? 's' : '') + ' mise' + (n > 1 ? 's' : '') + ' à jour.');
   } catch(e) {
     console.error('Erreur sauvegarde réservation:', e);
-    alert("Erreur lors de l'enregistrement de la réservation.");
+    alert("Erreur lors de l'enregistrement : " + (e.message || ''));
   } finally {
     btn.textContent = orig;
     btn.disabled = false;
@@ -1712,9 +1802,20 @@ function openAnnulationResa() {
   var estRecurrente = r.service !== 'boarding' && r.jours_recurrence && r.jours_recurrence.length > 0;
   var porteeGroup = document.getElementById('annulation-portee-group');
   var porteeSelect = document.getElementById('annulation-portee');
-  if (estRecurrente) {
+
+  // Dates encore annulables : les séances à venir
+  var today = isoDateFR(new Date());
+  var aVenir = occurrencesResa(r).filter(function(d) { return d >= today; });
+  var dateSelect = document.getElementById('annulation-date');
+  dateSelect.innerHTML = aVenir.map(function(d) {
+    return '<option value="' + d + '"' + (d === r._occurrenceDate ? ' selected' : '') + '>' + formatDateFR(d) + '</option>';
+  }).join('');
+
+  if (estRecurrente && aVenir.length) {
     porteeGroup.style.display = 'block';
-    porteeSelect.value = 'occurrence';
+    // Par défaut on annule TOUTE la série : le bouton s'appelle « Annuler la
+    // réservation ». L'annulation d'une seule date reste un choix explicite.
+    porteeSelect.value = r._occurrenceDate ? 'occurrence' : 'serie';
   } else {
     porteeGroup.style.display = 'none';
     porteeSelect.value = 'serie';
@@ -1724,11 +1825,21 @@ function openAnnulationResa() {
   document.getElementById('modal-annulation').classList.add('open');
 }
 
+function dateRefAnnulation() {
+  var r = currentResaDetail;
+  var portee = document.getElementById('annulation-portee').value;
+  if (portee !== 'occurrence') return r.date_debut;
+  var sel = document.getElementById('annulation-date');
+  return (sel && sel.value) || r._occurrenceDate || r.date_debut;
+}
+
 function majSuggestionAnnulation() {
   if (!currentResaDetail) return;
   var r = currentResaDetail;
   var portee = document.getElementById('annulation-portee').value;
-  var dateRef = portee === 'occurrence' ? (r._occurrenceDate || r.date_debut) : r.date_debut;
+  var dateGroup = document.getElementById('annulation-date-group');
+  if (dateGroup) dateGroup.style.display = (portee === 'occurrence') ? 'block' : 'none';
+  var dateRef = dateRefAnnulation();
   var sugg = calculerSuggestionAnnulation(r, dateRef);
   var raisonTxt = sugg.raison;
   if (portee === 'occurrence') raisonTxt = 'Pour le ' + formatDateFR(dateRef) + ' : ' + raisonTxt;
@@ -1744,11 +1855,11 @@ async function confirmerAnnulationResa() {
   var pct = parseInt(document.getElementById('annulation-pourcentage').value, 10) || 0;
   var estRecurrente = r.service !== 'boarding' && r.jours_recurrence && r.jours_recurrence.length > 0;
   var portee = estRecurrente ? document.getElementById('annulation-portee').value : 'serie';
-  var dateRef = portee === 'occurrence' ? (r._occurrenceDate || r.date_debut) : r.date_debut;
+  var dateRef = dateRefAnnulation();
   var sugg = currentResaDetail._suggestion || calculerSuggestionAnnulation(r, dateRef);
   try {
     if (portee === 'occurrence') {
-      // 1. Enregistrer l'annulation de cette occurrence (pour les stats)
+      // 1. Trace de l'annulation (statistiques + facturation)
       var { error: errOcc } = await db.from('annulations_occurrences').insert({
         reservation_id: r.id,
         date_occurrence: dateRef,
@@ -1757,24 +1868,19 @@ async function confirmerAnnulationResa() {
         facture_pourcentage: pct
       });
       if (errOcc) throw errOcc;
-      // 2. Exclure cette date de la récurrence
+      // 2. Exclure cette date sur TOUTES les lignes de la réservation
       var exclues = (r.dates_exclues || '').split(',').map(function(x) { return x.trim(); }).filter(Boolean);
       if (exclues.indexOf(dateRef) === -1) exclues.push(dateRef);
-      var { error: errExcl } = await db.from('reservations').update({ dates_exclues: exclues.join(',') }).eq('id', r.id);
-      if (errExcl) throw errExcl;
-      r.dates_exclues = exclues.join(',');
+      await majLignesReservation(r, { dates_exclues: exclues.join(',') });
+      alert('✓ Séance du ' + formatDateFR(dateRef) + ' annulée.');
     } else {
-      var { error } = await db.from('reservations').update({
+      var n = await majLignesReservation(r, {
         statut: 'annule',
         annule_par: qui,
         annulation_tardive: sugg.tardive,
         facture_pourcentage: pct
-      }).eq('id', r.id);
-      if (error) throw error;
-      r.statut = 'annule';
-      r.annule_par = qui;
-      r.annulation_tardive = sugg.tardive;
-      r.facture_pourcentage = pct;
+      });
+      alert('✓ Réservation annulée (' + n + ' ligne' + (n > 1 ? 's' : '') + ').');
     }
     document.getElementById('modal-annulation').classList.remove('open');
     document.getElementById('modal-resa-detail').classList.remove('open');
@@ -1784,7 +1890,7 @@ async function confirmerAnnulationResa() {
     document.getElementById('stat-annulations').textContent = nbAnnulations;
   } catch(e) {
     console.error('Erreur annulation réservation:', e);
-    alert("Erreur lors de l'annulation de la réservation.");
+    alert("Erreur lors de l'annulation : " + (e.message || ''));
   }
 }
 

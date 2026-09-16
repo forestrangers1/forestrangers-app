@@ -473,6 +473,20 @@ html, body {
 .dog-race-option:active, .dog-race-option:hover { background: rgba(255,95,31,0.25); }
 .dog-race-option .dog-race-cat { font-size: 10px; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.08em; }
 
+/* ── MESSAGERIE : saisie ancrée en bas ── */
+#screen-messages .screen-pad { display: flex; flex-direction: column; min-height: 100%; }
+#msg-thread-client { flex: 1; }
+.msg-composer {
+  position: sticky; bottom: 0; z-index: 5;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  padding: 10px 0 8px;
+  margin-top: 10px;
+}
+@media (max-width: 480px) {
+  .msg-composer { bottom: calc(72px + env(safe-area-inset-bottom)); }
+}
+
 /* ── RECHERCHE ── */
 .search-wrap { position: relative; flex: 1; }
 .search-wrap svg {
@@ -572,7 +586,7 @@ html, body {
   <div class="notch"></div>
 
   <div class="status-bar">
-    <span class="status-time">16:42</span>
+    <span class="status-time" id="status-time">--:--</span>
     <div class="status-icons">
       <svg viewBox="0 0 24 24"><rect x="2" y="16" width="3" height="6" rx="1"/><rect x="7" y="12" width="3" height="10" rx="1"/><rect x="12" y="7" width="3" height="15" rx="1"/><rect x="17" y="3" width="3" height="19" rx="1"/></svg>
       <svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0114.08 0M1.42 9a16 16 0 0121.16 0M8.53 16.11a6 6 0 016.95 0M12 20h.01"/></svg>
@@ -589,11 +603,11 @@ html, body {
         <!-- Header -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;margin-top:4px;">
           <div>
-            <div id="client-date" style="font-size:12px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">Lundi 9 juin</div>
-            <div id="client-bonjour" style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;margin-top:2px;">Bonjour, Marie</div>
+            <div id="client-date" style="font-size:12px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">&nbsp;</div>
+            <div id="client-bonjour" style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;margin-top:2px;">Chargement…</div>
           </div>
           <div style="position:relative;flex-shrink:0;">
-            <div id="client-avatar" onclick="toggleAvatarMenu(event)" aria-label="Menu du compte" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#3d4429,#6b7450);display:flex;align-items:center;justify-content:center;font-family:'Norwester',sans-serif;font-weight:800;font-size:13px;border:2px solid var(--accent);cursor:pointer;">MD</div>
+            <div id="client-avatar" onclick="toggleAvatarMenu(event)" aria-label="Menu du compte" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#3d4429,#6b7450);display:flex;align-items:center;justify-content:center;font-family:'Norwester',sans-serif;font-weight:800;font-size:13px;border:2px solid var(--accent);cursor:pointer;"></div>
             <div id="avatarMenu" class="avatar-menu">
               <button class="avatar-menu-item" onclick="openMessages()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
@@ -850,14 +864,16 @@ html, body {
           <div style="padding:24px;text-align:center;color:var(--text-faint);font-size:13px;">Chargement…</div>
         </div>
 
-        <div class="comment-input-row" style="margin-bottom:10px;">
-          <textarea class="comment-input" id="msg-input-client" rows="2" placeholder="Votre message à Gabriel…"></textarea>
-          <button class="send-btn" onclick="envoyerMessageClient()" aria-label="Envoyer">
-            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          </button>
-        </div>
-        <div style="font-size:11px;color:var(--text-faint);line-height:1.5;">
-          Pour une annulation, utilisez plutôt l'onglet Réservations : la règle de facturation s'applique automatiquement.
+        <div class="msg-composer">
+          <div class="comment-input-row">
+            <textarea class="comment-input" id="msg-input-client" rows="2" placeholder="Votre message à Gabriel…"></textarea>
+            <button class="send-btn" onclick="envoyerMessageClient()" aria-label="Envoyer">
+              <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+          <div style="font-size:10.5px;color:var(--text-faint);line-height:1.4;margin-top:6px;">
+            Pour une annulation, passez par l'onglet Réservations : la règle de facturation s'applique automatiquement.
+          </div>
         </div>
       </div>
     </div>
@@ -1351,9 +1367,20 @@ var clientData = null;
 var clientId = null;
 
 document.addEventListener('DOMContentLoaded', async function() {
+  majDateHeure();
+  setInterval(majDateHeure, 30000);
   loadRaces();
   await loadClientProfile();
 });
+
+// Date et heure réelles — indépendantes du chargement du profil
+function majDateHeure() {
+  var now = new Date();
+  var d = document.getElementById('client-date');
+  if (d) d.textContent = JOURS_LONG[now.getDay()] + ' ' + now.getDate() + ' ' + MOIS_LONG[now.getMonth()];
+  var h = document.getElementById('status-time');
+  if (h) h.textContent = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+}
 
 async function loadClientProfile() {
   try {
@@ -1367,12 +1394,16 @@ async function loadClientProfile() {
     authEmail = session.session.user.email || null;
 
     // Charger le profil client
-    var { data: client } = await db.from('clients')
+    var { data: client, error: errClient } = await db.from('clients')
       .select('*, chiens(*)')
       .eq('auth_id', userId)
       .single();
 
-    if (!client) return;
+    if (errClient || !client) {
+      console.log('Profil client introuvable:', errClient);
+      profilIndisponible(errClient ? errClient.message : 'Aucune fiche client rattachée à ce compte');
+      return;
+    }
     clientData = client;
     clientId = client.id;
 
@@ -1396,7 +1427,24 @@ async function loadClientProfile() {
     setInterval(function() { if (clientId) loadMessages(clientId); }, 60 * 1000);
 
   } catch(e) {
-    console.log('Mode démo — pas de session active');
+    console.log('Erreur chargement profil:', e);
+    profilIndisponible((e && e.message) || 'Erreur de chargement');
+  }
+}
+
+function profilIndisponible(msg) {
+  var b = document.getElementById('client-bonjour');
+  if (b) b.textContent = 'Profil indisponible';
+  var el = document.getElementById('prochaine-promenade');
+  if (el) {
+    el.onclick = null;
+    el.style.cursor = 'default';
+    el.innerHTML = '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--accent);font-weight:700;margin-bottom:8px;">Prochaine promenade</div>'
+      + '<div style="font-size:13px;color:var(--text-dim);line-height:1.5;">Impossible de charger vos données.<br><span style="color:var(--text-faint);font-size:11.5px;">' + esc(msg) + '</span></div>'
+      + '<div style="margin-top:12px;display:flex;gap:8px;">'
+      +   '<button class="btn-outline-big" style="flex:1;" onclick="window.location.reload()">Réessayer</button>'
+      +   '<button class="btn-outline-big" style="flex:1;" onclick="seDeconnecter()">Se reconnecter</button>'
+      + '</div>';
   }
 }
 
@@ -1432,6 +1480,12 @@ function openMessages() {
   if (home) home.classList.add('active');
   renderMessagesClient();
   marquerMessagesLus();
+  setTimeout(scrollFilEnBas, 60);
+}
+
+function scrollFilEnBas() {
+  var sc = document.getElementById('screen-messages');
+  if (sc) sc.scrollTop = sc.scrollHeight;
 }
 
 function msgHeure(v) {
@@ -1514,8 +1568,7 @@ async function envoyerMessageClient() {
     if (error) throw error;
     showToast('✓ Message envoyé à Gabriel');
     await loadMessages(clientId);
-    var th = document.getElementById('msg-thread-client');
-    if (th) th.scrollIntoView({ block: 'end' });
+    scrollFilEnBas();
   } catch(e) {
     console.log('Erreur envoi message:', e);
     el.value = txt;
@@ -1556,7 +1609,9 @@ function renderNotifications() {
 //  RÉFÉRENTIELS PARTAGÉS
 // ══════════════════════════════════════════════════════════════
 var SVC_NAMES  = { walking: 'Dog Walking', daycare: 'Day Care', boarding: 'Boarding' };
-var SVC_COLORS = { walking: '#ff5f1f', daycare: '#5ec97a', boarding: '#5a9ae0' };
+// Couleurs de service — identiques au planning admin :
+// vert = Dog Walking, orange = Day Care, bleu = Boarding
+var SVC_COLORS = { walking: '#5ec97a', daycare: '#ff5f1f', boarding: '#5a9ae0' };
 var CRENEAUX   = { matin: 'Matin · 09h00', midi: 'Midi · 12h00', apmidi: 'Après-midi · 14h30' };
 var CRENEAUX_H = { matin: '09h00', midi: '12h00', apmidi: '14h30' };
 var STATUT_BADGES = {
