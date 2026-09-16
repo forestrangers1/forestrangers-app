@@ -1125,6 +1125,75 @@ textarea.form-control { resize: vertical; }
 
     <!-- ══════ MESSAGES ══════ -->
     <div class="page" id="page-messages">
+
+      <!-- ── Alertes meteo & diffusion (regles v1.9 §19) ── -->
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-head">
+          <span class="card-title">Alertes meteo &amp; diffusion</span>
+          <span id="alerte-count" style="font-size:11px;color:var(--text-faint);">—</span>
+        </div>
+        <div class="card-body">
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:12px;">
+            <div class="form-group" style="margin:0;">
+              <label class="form-label">Date concernee</label>
+              <input class="form-control" type="date" id="alerte-date" onchange="appliquerModeleAlerte();chargerDestinatairesAlerte();chargerBanniereActive();">
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label">Modele MeteoLux</label>
+              <select class="form-control" id="alerte-modele" onchange="appliquerModeleAlerte()"></select>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label">Destinataires</label>
+              <select class="form-control" id="alerte-cible" onchange="chargerDestinatairesAlerte()">
+                <option value="jour">Clients avec une prestation ce jour</option>
+                <option value="tous">Tous les clients actifs</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="alerte-note" style="display:none;font-size:11px;padding:8px 10px;border-radius:8px;margin-bottom:12px;"></div>
+
+          <div class="form-group">
+            <label class="form-label" style="display:flex;justify-content:space-between;align-items:center;">
+              <span>Message envoye dans l'espace client</span>
+              <span id="alerte-compteur" style="font-size:10.5px;color:var(--text-faint);font-weight:400;"></span>
+            </label>
+            <textarea class="form-control" id="alerte-texte" rows="6" placeholder="Votre message..." oninput="majCompteurAlerte()"></textarea>
+            <div style="font-size:10.5px;color:var(--text-faint);margin-top:5px;">
+              Variables : <code>{prenom}</code> · <code>{date}</code> — remplacees a l'envoi pour chaque client.
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="display:flex;justify-content:space-between;align-items:center;">
+              <span>Version SMS &amp; banniere</span>
+              <span id="alerte-sms-compteur" style="font-size:10.5px;color:var(--text-faint);font-weight:400;">0/160</span>
+            </label>
+            <textarea class="form-control" id="alerte-sms" rows="2" placeholder="Version courte (160 caracteres max)..." oninput="majCompteurAlerte()"></textarea>
+          </div>
+
+          <label style="display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--text-dim);margin-bottom:10px;cursor:pointer;">
+            <input type="checkbox" id="alerte-banniere" checked style="width:15px;height:15px;accent-color:#ff5f1f;">
+            Afficher aussi la banniere dans l'espace client et sur la page de reservation
+          </label>
+
+          <div id="alerte-banniere-etat" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:12px;"></div>
+
+          <div id="alerte-liste" style="max-height:120px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px;">
+            <span style="font-size:11.5px;color:var(--text-faint);">Chargement des destinataires…</span>
+          </div>
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-accent" id="alerte-btn-envoi" style="padding:9px 16px;" onclick="envoyerAlerte()">Envoyer l'alerte</button>
+            <button class="btn btn-outline" style="padding:9px 16px;" onclick="chargerDestinatairesAlerte()">Actualiser la liste</button>
+            <button class="btn btn-outline" style="padding:9px 16px;" onclick="copierSmsAlerte()">Copier le SMS</button>
+            <button class="btn btn-outline" style="padding:9px 16px;" onclick="copierTelephonesAlerte()">Copier les numeros</button>
+          </div>
+
+        </div>
+      </div>
+
       <div class="g2">
         <div class="card">
           <div class="card-head">
@@ -1392,7 +1461,7 @@ function nav(id, el) {
   const backBtn = document.getElementById('backBtn');
   if (backBtn) backBtn.style.display = id !== 'dashboard' ? 'flex' : 'none';
 
-  if (id === 'messages')     chargerMessages(true);
+  if (id === 'messages')     { chargerMessages(true); initAlerteMeteo(); }
   if (id === 'reservations') { loadReservationsAdmin(); chargerAnnulationsOccurrences(); }
   if (id === 'staff')        loadStaff();
   if (id === 'factures')     loadFacturesAdmin();
@@ -3018,6 +3087,357 @@ async function envoyerReponse() {
     await chargerMessages(true);
     ouvrirConversation(msgClientSel, true);
   } catch(e) { showToastAdmin('Erreur : ' + e.message, 'red'); console.error(e); }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ALERTES METEO & DIFFUSION  (document maitre v1.9 §19)
+//  Le message part dans la messagerie de chaque client concerne
+//  (table `messages`). En option, une banniere est publiee dans
+//  l'espace client pour la journee (table `alertes_meteo`).
+//  Ciblage par defaut : clients ayant une prestation ce jour-la.
+// ══════════════════════════════════════════════════════════════
+var alerteDestinataires = [];
+var alerteInitFait = false;
+var alerteBanniereActive = null;
+
+// niveau : pilote la couleur de la banniere et la regle §19
+//   orange     → notification seule, promenade maintenue
+//   canicule   → notification seule, promenade adaptee (30 min)
+//   annulation → notification + SMS, promenade annulee
+var MODELES_ALERTE = {
+  'orange-chaleur': {
+    label: 'Orange — chaleur (+25 °C)', niveau: 'orange',
+    texte: "Alerte orange chaleur — {date}\n\n"
+         + "Bonjour {prenom},\n\n"
+         + "MétéoLux a émis une alerte orange chaleur pour aujourd'hui. Les promenades sont maintenues "
+         + "mais la durée et la distance sont réduites, à l'ombre et à proximité d'un point d'eau.\n\n"
+         + "Pensez à laisser de l'eau fraîche à disposition de votre chien.\n\n"
+         + "L'équipe Forest Rangers",
+    sms: "Forest Rangers : MeteoLux alerte orange chaleur. Promenades maintenues, duree reduite. Laissez de l'eau fraiche a votre chien."
+  },
+  'orange-froid': {
+    label: 'Orange — froid / neige', niveau: 'orange',
+    texte: "Alerte orange froid et neige — {date}\n\n"
+         + "Bonjour {prenom},\n\n"
+         + "MétéoLux a émis une alerte orange froid et neige pour aujourd'hui. Les promenades sont maintenues "
+         + "mais la durée est adaptée et les rangers évitent les surfaces glissantes.\n\n"
+         + "En dessous de 5 °C, le manteau est obligatoire pour les petits chiens — merci de le prévoir.\n\n"
+         + "L'équipe Forest Rangers",
+    sms: "Forest Rangers : MeteoLux alerte orange froid/neige. Promenades maintenues, duree adaptee. Manteau obligatoire pour les petits chiens (-5C)."
+  },
+  'orange-pluie': {
+    label: 'Orange — pluie / vent', niveau: 'orange',
+    texte: "Alerte orange pluie et vent — {date}\n\n"
+         + "Bonjour {prenom},\n\n"
+         + "MétéoLux a émis une alerte orange pluie et vent pour aujourd'hui. Les promenades sont maintenues : "
+         + "les rangers adaptent l'itinéraire et évitent les zones boisées exposées.\n\n"
+         + "Une veste imperméable est conseillée pour votre chien.\n\n"
+         + "L'équipe Forest Rangers",
+    sms: "Forest Rangers : MeteoLux alerte orange pluie et vent. Promenades maintenues, zones boisees evitees. Veste impermeable conseillee."
+  },
+  'orange-grele': {
+    label: 'Orange — grêle / orages', niveau: 'orange',
+    texte: "Alerte orange grêle et orages — {date}\n\n"
+         + "Bonjour {prenom},\n\n"
+         + "MétéoLux a émis une alerte orange grêle et orages pour aujourd'hui. Les promenades sont maintenues "
+         + "mais peuvent être écourtées ou décalées de quelques heures selon les conditions.\n\n"
+         + "Vos chiens sont mis à l'abri immédiatement en cas d'averse de grêle.\n\n"
+         + "L'équipe Forest Rangers",
+    sms: "Forest Rangers : MeteoLux alerte orange grele. Promenades maintenues mais ecourtees si besoin. Vos chiens seront mis a abri."
+  },
+  'rouge-canicule': {
+    label: 'Rouge — canicule (promenade adaptée)', niveau: 'canicule',
+    texte: "Alerte rouge canicule — {date}\n\n"
+         + "Bonjour {prenom},\n\n"
+         + "MétéoLux a émis une alerte rouge canicule. La promenade est maintenue mais adaptée : "
+         + "durée réduite à environ 30 minutes, à proximité d'un point d'eau, aux heures les moins chaudes. "
+         + "Les sorties sur bitume sont supprimées.\n\n"
+         + "Pensez à bien hydrater votre chien avant et après la promenade, et laissez-lui de l'eau fraîche "
+         + "à disposition.\n\n"
+         + "L'équipe Forest Rangers",
+    sms: "Forest Rangers : alerte rouge canicule. Promenade maintenue mais reduite a 30 min, pres d'un point d'eau. Hydratez bien votre chien."
+  },
+  'rouge-tempete': {
+    label: 'Rouge — tempête (annulation)', niveau: 'annulation',
+    texte: "Alerte rouge tempête — promenades annulées — {date}\n\n"
+         + "Bonjour {prenom},\n\n"
+         + "MétéoLux a émis une alerte rouge tempête. Pour la sécurité de vos chiens et de notre équipe, "
+         + "toutes les promenades prévues ce jour sont annulées.\n\n"
+         + "Conformément à nos conditions générales (cas de force majeure), aucune facturation ne sera appliquée "
+         + "pour les séances annulées. Nous reprenons le service dès la levée de l'alerte.\n\n"
+         + "Merci de votre compréhension.\n\n"
+         + "L'équipe Forest Rangers",
+    sms: "Forest Rangers : alerte rouge tempete. Toutes les promenades du jour sont annulees. Aucune facturation (force majeure)."
+  },
+  'rouge-verglas': {
+    label: 'Rouge — verglas (annulation)', niveau: 'annulation',
+    texte: "Alerte rouge verglas — promenades annulées — {date}\n\n"
+         + "Bonjour {prenom},\n\n"
+         + "MétéoLux a émis une alerte rouge verglas. Les routes de notre secteur ne permettent pas de circuler "
+         + "en sécurité : toutes les promenades prévues ce jour sont annulées.\n\n"
+         + "Conformément à nos conditions générales (cas de force majeure), aucune facturation ne sera appliquée. "
+         + "Nous reprenons le service dès la levée de l'alerte.\n\n"
+         + "L'équipe Forest Rangers",
+    sms: "Forest Rangers : alerte rouge verglas. Routes dangereuses, toutes les promenades du jour sont annulees. Aucune facturation."
+  },
+  'rouge-inondation': {
+    label: 'Rouge — inondation (annulation)', niveau: 'annulation',
+    texte: "Alerte rouge inondation — promenades annulées — {date}\n\n"
+         + "Bonjour {prenom},\n\n"
+         + "MétéoLux a émis une alerte rouge inondation et des zones de notre secteur sont impraticables : "
+         + "toutes les promenades prévues ce jour sont annulées.\n\n"
+         + "Conformément à nos conditions générales (cas de force majeure), aucune facturation ne sera appliquée. "
+         + "Nous reprenons le service dès que les accès sont dégagés.\n\n"
+         + "L'équipe Forest Rangers",
+    sms: "Forest Rangers : alerte rouge inondation. Zones impraticables, toutes les promenades du jour sont annulees. Aucune facturation."
+  },
+  'retard': {
+    label: 'Retard de tournée', niveau: 'info',
+    texte: "Retard sur la tournée — {date}\n\n"
+         + "Bonjour {prenom},\n\n"
+         + "Nous vous informons d'un retard sur notre tournée. La récupération de votre chien aura lieu vers "
+         + "[heure estimée] au lieu de l'horaire habituel.\n\n"
+         + "Nous faisons au mieux pour limiter ce retard. Merci de votre compréhension.\n\n"
+         + "L'équipe Forest Rangers",
+    sms: "Forest Rangers : retard sur la tournee du jour. Recuperation de votre chien vers [heure]. Merci de votre comprehension."
+  },
+  'libre': { label: 'Message libre (annonce, congés…)', niveau: 'info', texte: '', sms: '' }
+};
+
+var NIVEAU_INFO = {
+  orange:     { couleur: '#f0b429', note: "Alerte orange : notification seule, la promenade est maintenue." },
+  canicule:   { couleur: '#f0b429', note: "Rouge canicule : promenade maintenue mais reduite a 30 minutes, a proximite d'un point d'eau." },
+  annulation: { couleur: '#e05a5a', note: "Rouge annulation : le document maitre prevoit notification + SMS. L'envoi SMS automatique n'est pas branche — utilisez « Copier le SMS » et « Copier les numeros » pour doubler le message." },
+  info:       { couleur: '#5a9ae0', note: "Message d'information — aucune regle meteo appliquee." }
+};
+
+function alerteModeleCourant() {
+  var k = (document.getElementById('alerte-modele') || {}).value || 'libre';
+  return MODELES_ALERTE[k] || MODELES_ALERTE.libre;
+}
+
+function initAlerteMeteo() {
+  var d = document.getElementById('alerte-date');
+  if (d && !d.value) d.value = formatDateISO(new Date());
+  if (!alerteInitFait) {
+    alerteInitFait = true;
+    var sel = document.getElementById('alerte-modele');
+    if (sel && !sel.options.length) {
+      Object.keys(MODELES_ALERTE).forEach(function(k) {
+        var o = document.createElement('option');
+        o.value = k; o.textContent = MODELES_ALERTE[k].label;
+        sel.appendChild(o);
+      });
+    }
+    appliquerModeleAlerte();
+  }
+  chargerDestinatairesAlerte();
+  chargerBanniereActive();
+}
+
+function appliquerModeleAlerte() {
+  var mod = alerteModeleCourant();
+  var ta = document.getElementById('alerte-texte');
+  if (ta) ta.value = alerteRemplacerDate(mod.texte);
+  var sms = document.getElementById('alerte-sms');
+  if (sms) sms.value = mod.sms || '';
+
+  var note = document.getElementById('alerte-note');
+  var inf = NIVEAU_INFO[mod.niveau] || NIVEAU_INFO.info;
+  if (note) {
+    note.style.display = 'block';
+    note.style.color = inf.couleur;
+    note.style.border = '1px solid ' + inf.couleur;
+    note.textContent = inf.note;
+  }
+  majCompteurAlerte();
+}
+
+function alerteRemplacerDate(txt) {
+  var ds = (document.getElementById('alerte-date') || {}).value || formatDateISO(new Date());
+  var d = new Date(ds + 'T00:00:00');
+  var lbl = isNaN(d) ? ds : d.toLocaleDateString('fr-LU', { weekday:'long', day:'numeric', month:'long' });
+  return String(txt || '').replace(/\{date\}/g, lbl);
+}
+
+function majCompteurAlerte() {
+  var ta = document.getElementById('alerte-texte');
+  var el = document.getElementById('alerte-compteur');
+  if (el && ta) el.textContent = (ta.value || '').length + ' caracteres';
+
+  var sms = document.getElementById('alerte-sms');
+  var els = document.getElementById('alerte-sms-compteur');
+  if (els && sms) {
+    var n = (sms.value || '').length;
+    els.textContent = n + '/160';
+    els.style.color = n > 160 ? 'var(--red)' : (n ? 'var(--green)' : 'var(--text-faint)');
+  }
+}
+
+// Destinataires : clients avec une prestation le jour choisi, ou tous les clients actifs
+async function chargerDestinatairesAlerte() {
+  var box = document.getElementById('alerte-liste');
+  var cpt = document.getElementById('alerte-count');
+  if (!box) return;
+  var ds = (document.getElementById('alerte-date') || {}).value || formatDateISO(new Date());
+  var cible = (document.getElementById('alerte-cible') || {}).value || 'jour';
+  box.innerHTML = '<span style="font-size:11.5px;color:var(--text-faint);">Chargement…</span>';
+  alerteDestinataires = [];
+  try {
+    if (cible === 'tous') {
+      var rt = await db.from('clients').select('id,prenom,nom,telephone')
+        .eq('actif', true).eq('is_test', false).order('nom');
+      if (rt.error) throw rt.error;
+      alerteDestinataires = rt.data || [];
+    } else {
+      var rr = await db.from('reservations')
+        .select('id,service,statut,date_debut,date_fin,jours_recurrence,dates_exclues,client_id')
+        .lte('date_debut', ds).gte('date_fin', ds);
+      if (rr.error) throw rr.error;
+      var duJour = filterResasForDay(rr.data || [], ds)
+        .filter(function(r){ return r.statut !== 'en_attente'; });
+      var ids = [];
+      duJour.forEach(function(r){ if (r.client_id && ids.indexOf(r.client_id) === -1) ids.push(r.client_id); });
+      if (ids.length) {
+        var rc = await db.from('clients').select('id,prenom,nom,telephone')
+          .in('id', ids).eq('is_test', false).order('nom');
+        if (rc.error) throw rc.error;
+        alerteDestinataires = rc.data || [];
+      }
+    }
+  } catch(e) {
+    console.error('destinataires alerte:', e);
+    box.innerHTML = '<span style="font-size:11.5px;color:var(--red);">Lecture impossible : ' + msgEsc(e.message || 'erreur') + '</span>';
+    if (cpt) cpt.textContent = '—';
+    return;
+  }
+  var n = alerteDestinataires.length;
+  if (cpt) cpt.textContent = n + ' destinataire' + (n > 1 ? 's' : '');
+  if (!n) {
+    box.innerHTML = '<span style="font-size:11.5px;color:var(--text-faint);">Aucune prestation ce jour — personne a prevenir.</span>';
+    return;
+  }
+  box.innerHTML = alerteDestinataires.map(function(c) {
+    var sansTel = !c.telephone;
+    return '<span class="badge ' + (sansTel ? 'b-muted' : 'b-green') + '" style="font-size:10px;" title="'
+      + (sansTel ? 'Pas de numero enregistre' : msgEsc(c.telephone)) + '">'
+      + msgEsc(c.prenom + ' ' + c.nom) + '</span>';
+  }).join('');
+}
+
+function personnaliserAlerte(txt, client) {
+  return alerteRemplacerDate(txt).replace(/\{prenom\}/g, client.prenom || '');
+}
+
+async function envoyerAlerte() {
+  var ta = document.getElementById('alerte-texte');
+  var txt = ((ta || {}).value || '').trim();
+  if (!txt) { showToastAdmin('Message vide', 'amber'); return; }
+  if (!alerteDestinataires.length) { showToastAdmin('Aucun destinataire', 'amber'); return; }
+  var n = alerteDestinataires.length;
+  var avecBanniere = !!(document.getElementById('alerte-banniere') || {}).checked;
+  if (!confirm('Envoyer ce message a ' + n + ' client' + (n > 1 ? 's' : '') + ' ?'
+      + (avecBanniere ? '\n\nUne banniere sera aussi affichee dans l\'espace client.' : ''))) return;
+
+  var btn = document.getElementById('alerte-btn-envoi');
+  if (btn) { btn.disabled = true; btn.textContent = 'Envoi…'; }
+  try {
+    var rows = alerteDestinataires.map(function(c) {
+      return { client_id: c.id, expediteur: 'admin', contenu: personnaliserAlerte(txt, c), lu: false };
+    });
+    // Insertion par paquets de 50 : evite les requetes trop lourdes
+    for (var i = 0; i < rows.length; i += 50) {
+      var r = await db.from('messages').insert(rows.slice(i, i + 50));
+      if (r.error) throw r.error;
+    }
+    showToastAdmin('✓ Alerte envoyee a ' + n + ' client' + (n > 1 ? 's' : ''), 'green');
+    if (avecBanniere) await publierBanniere();
+    await chargerMessages(true);
+  } catch(e) {
+    showToastAdmin('Erreur : ' + (e.message || ''), 'red');
+    console.error('envoi alerte:', e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Envoyer l'alerte"; }
+  }
+}
+
+// ── Banniere espace client (table `alertes_meteo`, document maitre §19.2) ──
+async function publierBanniere() {
+  var mod = alerteModeleCourant();
+  var ds = (document.getElementById('alerte-date') || {}).value || formatDateISO(new Date());
+  var court = ((document.getElementById('alerte-sms') || {}).value || '').trim()
+           || ((document.getElementById('alerte-texte') || {}).value || '').trim().split('\n')[0];
+  try {
+    // Une seule banniere active par journee : on desactive les precedentes
+    await db.from('alertes_meteo').update({ actif: false }).eq('date_alerte', ds).eq('actif', true);
+    var r = await db.from('alertes_meteo').insert({
+      date_alerte: ds, niveau: mod.niveau || 'info',
+      titre: mod.label, message: alerteRemplacerDate(court), actif: true
+    });
+    if (r.error) throw r.error;
+    chargerBanniereActive();
+  } catch(e) {
+    console.error('banniere:', e);
+    showToastAdmin('Banniere non publiee : ' + (e.message || '') + ' — executez fr_migration_v20_alertes_meteo.sql', 'amber');
+  }
+}
+
+async function chargerBanniereActive() {
+  var box = document.getElementById('alerte-banniere-etat');
+  if (!box) return;
+  var ds = (document.getElementById('alerte-date') || {}).value || formatDateISO(new Date());
+  try {
+    var r = await db.from('alertes_meteo').select('*')
+      .eq('date_alerte', ds).eq('actif', true)
+      .order('created_at', { ascending: false }).limit(1);
+    if (r.error) throw r.error;
+    alerteBanniereActive = (r.data || [])[0] || null;
+  } catch(e) {
+    box.innerHTML = '<span style="font-size:11px;color:var(--text-faint);">Banniere indisponible — table `alertes_meteo` absente (fr_migration_v20_alertes_meteo.sql).</span>';
+    return;
+  }
+  if (!alerteBanniereActive) {
+    box.innerHTML = '<span style="font-size:11px;color:var(--text-faint);">Aucune banniere affichee dans l\'espace client pour cette date.</span>';
+    return;
+  }
+  var inf = NIVEAU_INFO[alerteBanniereActive.niveau] || NIVEAU_INFO.info;
+  box.innerHTML = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:11.5px;">'
+    + '<span style="width:9px;height:9px;border-radius:50%;background:' + inf.couleur + ';flex-shrink:0;"></span>'
+    + '<strong style="color:' + inf.couleur + ';">Banniere en ligne</strong>'
+    + '<span style="color:var(--text-dim);">' + msgEsc(alerteBanniereActive.titre) + '</span>'
+    + '<button class="btn btn-outline" style="padding:4px 10px;font-size:10.5px;" onclick="retirerBanniere()">Retirer</button>'
+    + '</div>';
+}
+
+async function retirerBanniere() {
+  if (!alerteBanniereActive) return;
+  try {
+    var r = await db.from('alertes_meteo').update({ actif: false }).eq('id', alerteBanniereActive.id);
+    if (r.error) throw r.error;
+    showToastAdmin('✓ Banniere retiree', 'green');
+    alerteBanniereActive = null;
+    chargerBanniereActive();
+  } catch(e) { showToastAdmin('Erreur : ' + (e.message || ''), 'red'); }
+}
+
+function copierSmsAlerte() {
+  var txt = ((document.getElementById('alerte-sms') || {}).value || '').trim();
+  if (!txt) { showToastAdmin('Aucun texte SMS', 'amber'); return; }
+  copierPressePapier(alerteRemplacerDate(txt), 'Texte SMS copie');
+}
+
+function copierTelephonesAlerte() {
+  var tels = alerteDestinataires.filter(function(c){ return c.telephone; })
+                                .map(function(c){ return c.telephone; });
+  if (!tels.length) { showToastAdmin('Aucun numero disponible', 'amber'); return; }
+  copierPressePapier(tels.join(', '), tels.length + ' numero(s) copie(s)');
+}
+
+function copierPressePapier(txt, msg) {
+  var ok = function(){ showToastAdmin('✓ ' + msg, 'green'); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(ok).catch(function(){ alert(txt); });
+  } else { alert(txt); }
 }
 
 // ══════════════════════════════════════════════════════════════

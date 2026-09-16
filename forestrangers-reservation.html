@@ -438,6 +438,9 @@ textarea.field-input { resize: vertical; min-height: 80px; }
     </div>
   </div>
 
+  <!-- Banniere alerte meteo du jour (publiee depuis l'admin) -->
+  <div id="alerte-meteo-banner"></div>
+
   <!-- ══════════════════════
        PAGE 1 — CHOIX SERVICE
   ══════════════════════ -->
@@ -1095,6 +1098,28 @@ let clientId = null;
 let chiensData = [];
 
 document.addEventListener('DOMContentLoaded', loadProfileAndDogs);
+document.addEventListener('DOMContentLoaded', chargerAlerteMeteoBanner);
+
+// Alerte meteo du jour publiee par l'admin (table `alertes_meteo`)
+async function chargerAlerteMeteoBanner() {
+  var el = document.getElementById('alerte-meteo-banner');
+  if (!el) return;
+  try {
+    var now = new Date();
+    var jour = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+    var r = await db.from('alertes_meteo').select('*')
+      .eq('date_alerte', jour).eq('actif', true)
+      .order('created_at', { ascending: false }).limit(1);
+    var a = (r && !r.error && r.data) ? r.data[0] : null;
+    if (!a) { el.innerHTML = ''; return; }
+    var cls = a.niveau === 'annulation' ? 'red' : (a.niveau === 'info' ? 'orange' : 'amber');
+    var t = String(a.titre || 'Alerte meteo').replace(/</g, '&lt;');
+    var m = String(a.message || '').replace(/</g, '&lt;');
+    el.innerHTML = '<div class="info-box ' + cls + '" style="margin-bottom:16px;">'
+      + '<svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+      + '<div><strong>' + t + '</strong><br>' + m + '</div></div>';
+  } catch(e) { el.innerHTML = ''; }
+}
 
 async function loadProfileAndDogs() {
   try {
