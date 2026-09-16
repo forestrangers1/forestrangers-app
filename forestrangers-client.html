@@ -81,8 +81,8 @@ html, body {
 
 /* ── LOGO ── */
 .home-logo {
-  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
-  object-fit: cover; display: block; border: 1px solid var(--border);
+  width: 36px; height: 36px; flex-shrink: 0;
+  object-fit: contain; display: block; background: transparent; border: 0;
 }
 
 /* Éléments propres à la mise en page ordinateur : masqués sur mobile */
@@ -639,16 +639,16 @@ html, body {
     padding: 4px 10px 16px; margin-bottom: 4px;
   }
   .nav-brand-mark {
-    width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
-    object-fit: cover; display: block;
-    border: 1px solid rgba(255,255,255,0.10);
-    box-shadow: 0 6px 18px rgba(255,95,31,0.18);
+    width: 36px; height: 36px; flex-shrink: 0;
+    object-fit: contain; display: block;
+    background: transparent; border: 0; box-shadow: none;
   }
-  html.light .nav-brand-mark { border-color: rgba(28,31,20,0.12); }
   .nav-brand-name {
-    font-family: 'Norwester', sans-serif; font-size: 15px; font-weight: 800;
-    letter-spacing: 0.06em; line-height: 1.1; white-space: nowrap;
+    font-family: 'Norwester', sans-serif; font-size: 13px; font-weight: 800;
+    letter-spacing: 0.03em; line-height: 1.2; white-space: nowrap;
   }
+  .nav-brand-name .forest  { color: var(--text); }
+  .nav-brand-name .rangers { color: var(--accent); }
   .nav-brand-sub {
     font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase;
     color: var(--text-faint); font-weight: 700; margin-top: 2px;
@@ -1146,7 +1146,14 @@ html, body {
           </div>
           <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;">Messages</div>
         </div>
-        <div class="msg-sub" style="font-size:12.5px;color:var(--text-dim);margin-bottom:16px;padding-left:46px;">Gabriel vous répond directement ici.</div>
+        <div class="msg-sub" style="font-size:12.5px;color:var(--text-dim);margin-bottom:12px;padding-left:46px;">Gabriel vous répond directement ici. Les avis automatiques (annulations, météo) restent sur l'accueil.</div>
+
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <div class="search-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="field-input" id="msg-search-client" type="search" placeholder="Rechercher dans la conversation…" oninput="renderMessagesClient()">
+          </div>
+        </div>
 
         <div id="msg-thread-client" style="margin-bottom:14px;">
           <div style="padding:24px;text-align:center;color:var(--text-faint);font-size:13px;">Chargement…</div>
@@ -1205,7 +1212,7 @@ html, body {
     <div class="nav-brand">
       <img class="nav-brand-mark" alt="Forest Rangers" src="data:image/png;base64,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">
       <div>
-        <div class="nav-brand-name">FOREST RANGERS</div>
+        <div class="nav-brand-name"><span class="forest">Forest</span><span class="rangers">Rangers</span></div>
         <div class="nav-brand-sub">Espace client</div>
       </div>
     </div>
@@ -1222,7 +1229,7 @@ html, body {
       <span>Réservations</span>
     </div>
     <div class="nav-tab" id="tab-dog" onclick="goTab('screen-dog','tab-dog')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.1 6.6C5.9 5.7 4.2 5.8 3.5 7c-.9 1.6-.3 4.4 1.2 5.9"/><path d="M16.9 6.6c1.2-.9 2.9-.8 3.6.4.9 1.6.3 4.4-1.2 5.9"/><path d="M12 4.8c-2.9 0-5 2-5 4.9v2.5c0 2.8 2.2 5 5 5s5-2.2 5-5V9.7c0-2.9-2.1-4.9-5-4.9Z"/><path d="M10.2 10.8h.01"/><path d="M13.8 10.8h.01"/><path d="M12 14h.01" stroke-width="2.4"/><path d="M10.7 15.9c.4.4.8.6 1.3.6s.9-.2 1.3-.6"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 15.8C4.4 12.8 5.2 10 6.8 8.4L8.2 5.9C8.4 5.6 8.8 5.6 9 5.9L10.8 8.4C12.6 8.1 14.2 8.7 15.2 10.1L20.6 12.1C21.7 12.5 21.8 13.8 20.8 14.3L17.4 15.6C16.6 15.9 16.1 16.6 16 17.4L15.8 18.8C15.7 19.5 15.1 20 14.4 20L8.8 20C6.6 20 5.2 18.2 4.8 15.8Z"/><circle cx="13.2" cy="11.6" r="0.55" fill="currentColor" stroke="none"/><circle cx="20.2" cy="13.2" r="0.6" fill="currentColor" stroke="none"/></svg>
       <span>Mon chien</span>
     </div>
     <div class="nav-tab" id="tab-invoices" onclick="goTab('screen-invoices','tab-invoices')">
@@ -1892,8 +1899,31 @@ async function loadMessages(id) {
   } catch(e) { console.log('Erreur messages:', e); }
 }
 
+// Un avis automatique (annulation, alerte meteo) n'est pas une conversation.
+// La colonne `messages.type` fait foi ; pour les lignes anterieures a la
+// migration v2.1, on retombe sur la forme du texte.
+var RE_NOTIF = /(a été annulée|a ete annulee|alerte météo|alerte meteo|alerte orange|alerte rouge|promenades? annulées?|meteolux|météolux)/i;
+
+function estNotification(m) {
+  if (!m || m.expediteur !== 'admin') return false;
+  if (m.type) return m.type === 'notification';
+  return RE_NOTIF.test(m.contenu || '');
+}
+
+function messagesConversation() {
+  return messagesClient.filter(function(m) { return !estNotification(m); });
+}
+
+function messagesNotifications() {
+  return messagesClient.filter(estNotification);
+}
+
 function nbMessagesNonLusClient() {
-  return messagesClient.filter(function(m) { return m.expediteur === 'admin' && !m.lu; }).length;
+  return messagesConversation().filter(function(m) { return m.expediteur === 'admin' && !m.lu; }).length;
+}
+
+function nbNotificationsNonLues() {
+  return messagesNotifications().filter(function(m) { return !m.lu; }).length;
 }
 
 function majBadgesMessages() {
@@ -1909,17 +1939,22 @@ function majBadgesMessages() {
     ? (n > 1 ? n + ' nouvelles réponses de Gabriel' : 'Nouvelle réponse de Gabriel')
     : 'Une question, un changement, une info sur votre chien';
   var dot = document.getElementById('notifDot');
-  if (dot) dot.style.display = n > 0 ? 'block' : 'none';
+  if (dot) dot.style.display = (n + nbNotificationsNonLues()) > 0 ? 'block' : 'none';
 }
 
 function renderMessagesClient() {
   var el = document.getElementById('msg-thread-client');
   if (!el) return;
-  if (!messagesClient.length) {
-    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-faint);font-size:13px;line-height:1.6;">Aucun message pour le moment.<br>Écrivez à Gabriel ci-dessous.</div>';
+  var q = ((document.getElementById('msg-search-client') || {}).value || '').trim().toLowerCase();
+  var fil = messagesConversation();
+  if (q) fil = fil.filter(function(m) { return (m.contenu || '').toLowerCase().indexOf(q) !== -1; });
+  if (!fil.length) {
+    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-faint);font-size:13px;line-height:1.6;">'
+      + (q ? 'Aucun message ne correspond à « ' + esc(q) + ' ».' : 'Aucun message pour le moment.<br>Écrivez à Gabriel ci-dessous.')
+      + '</div>';
     return;
   }
-  el.innerHTML = messagesClient.map(function(m) {
+  el.innerHTML = fil.map(function(m) {
     var moi = m.expediteur === 'client';
     return '<div style="display:flex;justify-content:' + (moi ? 'flex-end' : 'flex-start') + ';margin-bottom:8px;">'
       + '<div style="max-width:80%;background:' + (moi ? 'var(--accent-dim)' : 'var(--surface2)') + ';border:1px solid ' + (moi ? 'rgba(255,95,31,0.28)' : 'var(--border)') + ';border-radius:14px;padding:10px 13px;">'
@@ -1951,7 +1986,7 @@ async function envoyerMessageClient() {
 }
 
 async function marquerMessagesLus() {
-  var ids = messagesClient.filter(function(m) { return m.expediteur === 'admin' && !m.lu; }).map(function(m) { return m.id; });
+  var ids = messagesConversation().filter(function(m) { return m.expediteur === 'admin' && !m.lu; }).map(function(m) { return m.id; });
   if (!ids.length) return;
   try {
     await db.from('messages').update({ lu: true }).in('id', ids);
@@ -1965,18 +2000,33 @@ async function marquerMessagesLus() {
 function renderNotifications() {
   var el = document.getElementById('notifications-list');
   if (!el) return;
-  var recus = messagesClient.filter(function(m) { return m.expediteur === 'admin'; }).slice(-5).reverse();
+  var recus = messagesNotifications().slice(-5).reverse();
   if (!recus.length) {
     el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-faint);font-size:13px;">Aucune notification pour le moment</div>';
     return;
   }
   el.innerHTML = recus.map(function(m) {
-    return '<div class="notif-card ' + (m.lu ? 'read' : 'new') + '" onclick="openMessages()">'
-      + '<div class="notif-header"><span class="notif-type">Message de Gabriel</span>'
+    var titre = /(météo|meteo|meteolux|alerte)/i.test(m.contenu || '') ? 'Alerte météo' : 'Réservation';
+    return '<div class="notif-card ' + (m.lu ? 'read' : 'new') + '" onclick="ouvrirNotification(\'' + m.id + '\')">'
+      + '<div class="notif-header"><span class="notif-type">' + titre + '</span>'
       +   '<span class="notif-time">' + msgHeure(m.created_at) + '</span></div>'
       + '<div class="notif-sub">' + esc((m.contenu || '').slice(0, 140)) + ((m.contenu || '').length > 140 ? '…' : '') + '</div>'
       + '</div>';
   }).join('');
+}
+
+
+async function ouvrirNotification(id) {
+  var m = null;
+  for (var i = 0; i < messagesClient.length; i++) if (String(messagesClient[i].id) === String(id)) m = messagesClient[i];
+  goTab('screen-bookings', 'tab-bookings');
+  if (!m || m.lu) return;
+  try {
+    await db.from('messages').update({ lu: true }).eq('id', m.id);
+    m.lu = true;
+    majBadgesMessages();
+    renderNotifications();
+  } catch(e) { console.log('maj lu notification:', e); }
 }
 
 
@@ -2296,25 +2346,28 @@ var prochaineResaId = null;
 async function loadProchainePromenade(id) {
   var today = isoDate(new Date());
   try {
+    // Les reservations annulees sont volontairement incluses : le client doit
+    // continuer a voir la seance, avec le statut Annule (et non la voir disparaitre).
     var { data: resas, error } = await db.from('reservations')
       .select('*')
       .eq('client_id', id)
       .gte('date_fin', today)
-      .neq('statut', 'annule')
       .order('date_debut', { ascending: true })
-      .limit(10);
+      .limit(20);
 
     if (error) console.log('Erreur prochaine promenade (Supabase):', error);
 
     var el = document.getElementById('prochaine-promenade');
     if (!el) return;
 
-    // On retient la réservation dont la prochaine séance réelle est la plus proche
-    var best = null, bestDate = null;
+    // On retient la réservation dont la prochaine séance réelle est la plus proche,
+    // annulée ou non ; on garde aussi la suivante encore valide pour l'afficher dessous.
+    var best = null, bestDate = null, suivante = null, suivanteDate = null;
     (resas || []).forEach(function(r) {
       var occ = prochaineOccurrence(r);
       if (!occ || occ < today) return;
       if (!bestDate || occ < bestDate) { best = r; bestDate = occ; }
+      if (r.statut !== 'annule' && (!suivanteDate || occ < suivanteDate)) { suivante = r; suivanteDate = occ; }
     });
 
     if (!best) {
@@ -2330,15 +2383,36 @@ async function loadProchainePromenade(id) {
     prochaineResaId = best.id;
     var cr = CRENEAUX_H[best.creneau] || '—';
     var badge = STATUT_BADGES[best.statut] || '';
+    var annulee = best.statut === 'annule';
+
+    // Séance annulée : cadre rouge, motif et facturation, et la date suivante encore valable
+    var infoAnnul = '';
+    if (annulee) {
+      var qui = best.annule_par === 'client' ? 'Annulée à votre demande' : 'Annulée par Forest Rangers';
+      var pc = best.facture_pourcentage == null ? null : (parseInt(best.facture_pourcentage, 10) || 0);
+      var fact = pc == null ? '' : (pc > 0 ? ' · facturée à ' + pc + ' %' : ' · non facturée');
+      infoAnnul = '<div style="font-size:11.5px;color:var(--red);margin-top:8px;">' + esc(qui + fact) + '</div>';
+      if (suivanteDate && suivanteDate !== bestDate) {
+        infoAnnul += '<div style="font-size:11.5px;color:var(--text-dim);margin-top:4px;">Prochaine séance maintenue : '
+          + esc(dateLongue(suivanteDate)) + '</div>';
+      }
+      el.style.background = 'linear-gradient(135deg,rgba(224,90,90,0.15),rgba(224,90,90,0.05))';
+      el.style.borderColor = 'rgba(224,90,90,0.3)';
+    } else {
+      el.style.background = 'linear-gradient(135deg,rgba(255,95,31,0.15),rgba(255,95,31,0.05))';
+      el.style.borderColor = 'rgba(255,95,31,0.25)';
+    }
+    var teinte = annulee ? 'var(--red)' : 'var(--accent)';
 
     el.style.cursor = 'pointer';
     el.onclick = function() { ouvrirResaDepuisAccueil(best.id); };
     el.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
-      +   '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--accent);font-weight:700;">Prochaine promenade</div>'
-      +   '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>'
+      +   '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:' + teinte + ';font-weight:700;">Prochaine promenade</div>'
+      +   '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="' + teinte + '" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>'
       + '</div>'
-      + '<div style="font-family:\'Norwester\',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;">' + esc(dateLongue(bestDate)) + (cr !== '—' ? ' · ' + cr : '') + '</div>'
+      + '<div style="font-family:\'Norwester\',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;' + (annulee ? 'text-decoration:line-through;text-decoration-color:rgba(224,90,90,0.6);' : '') + '">' + esc(dateLongue(bestDate)) + (cr !== '—' ? ' · ' + cr : '') + '</div>'
       + '<div style="font-size:13px;color:var(--text-dim);">' + esc(SVC_NAMES[best.service] || best.service) + ' · ' + esc(best.ranger_nom || 'Gabriel') + '</div>'
+      + infoAnnul
       + '<div style="display:flex;gap:8px;margin-top:12px;align-items:center;">' + badge
       +   '<span style="font-size:11px;color:var(--text-faint);">Touchez pour voir le détail</span></div>';
 
@@ -2617,6 +2691,18 @@ function openResaDetail(id, dateOcc) {
 
   var rows = '';
   rows += detailRow('Statut', STATUT_BADGES[r.statut] || esc(r.statut || '—'), true);
+  // Réservation annulée en entier : qui a annulé, et ce qui est facturé
+  if (r.statut === 'annule') {
+    rows += detailRow('Annulée par', esc(r.annule_par === 'client' ? 'Vous' : 'Forest Rangers'));
+    var pcR = r.facture_pourcentage == null ? null : (parseInt(r.facture_pourcentage, 10) || 0);
+    var factR;
+    if (pcR == null)     factR = '<span style="color:var(--text-faint);">à confirmer par Gabriel</span>';
+    else if (pcR === 0)  factR = '<span style="color:var(--green);">Non facturée</span>';
+    else                 factR = '<span style="color:var(--red);">Facturée à ' + pcR + ' %'
+                                + (r.montant_ttc ? ' · ' + eur((parseFloat(r.montant_ttc) || 0) * pcR / 100) : '') + '</span>';
+    rows += detailRow('Facturation', factR, true);
+    if (r.annulation_tardive) rows += detailRow('Motif', '<span style="color:var(--text-dim);">Annulation tardive (après 9h la veille)</span>', true);
+  }
   if (r.service === 'boarding') {
     rows += detailRow('Arrivée', esc(dateLongue(r.date_debut)));
     rows += detailRow('Départ',  esc(dateLongue(r.date_fin || r.date_debut)));
@@ -2630,7 +2716,11 @@ function openResaDetail(id, dateOcc) {
   } else {
     rows += detailRow('Date', esc(dateLongue(r.date_debut)));
   }
-  if (occurrenceOuverte) rows += detailRow('Séance choisie', '<strong>' + esc(dateLongue(occurrenceOuverte)) + '</strong>', true);
+  // Séance concernée : seulement si on vient du calendrier, sur une date réelle
+  // et différente de la date déjà affichée au-dessus.
+  if (occurrenceOuverte && recurrente && dateLongue(occurrenceOuverte) !== '—') {
+    rows += detailRow('Séance concernée', '<strong>' + esc(dateLongue(occurrenceOuverte)) + '</strong>', true);
+  }
   if (r.creneau) rows += detailRow('Créneau', esc(CRENEAUX[r.creneau] || r.creneau));
   rows += detailRow('Chien(s)', esc(chiensResa(r)));
   rows += detailRow('Ranger', esc(r.ranger_nom || 'Gabriel'));
@@ -2894,28 +2984,32 @@ async function loadMoisCourant(id) {
   var debutMoisProchain = new Date(an, mois + 1, 1);
 
   try {
+    // Les annulations sont incluses : elles doivent apparaitre sur l'estimation,
+    // facturees ou non selon la regle appliquee par Gabriel.
     var { data: resas, error } = await db.from('reservations')
       .select('*')
       .eq('client_id', id)
       .gte('date_debut', isoDate(debut))
-      .lt('date_debut', isoDate(debutMoisProchain))
-      .neq('statut', 'annule');
+      .lt('date_debut', isoDate(debutMoisProchain));
 
     if (error) { console.log('Estimation mois en cours indisponible:', error.message); el.innerHTML = ''; moisCourantData = null; return; }
     if (!resas || !resas.length) { el.innerHTML = ''; moisCourantData = null; return; }
 
-    var totalTTC = 0, nbSeances = 0;
-    resas.forEach(function(r) {
-      totalTTC  += parseFloat(r.montant_ttc) || 0;
-      nbSeances += parseInt(r.nb_seances, 10) || 0;
+    var groupes = grouperResas(resas);
+    var totalTTC = 0, nbSeances = 0, nbAnnulees = 0;
+    groupes.forEach(function(g) {
+      totalTTC += montantFacture(g);
+      if (g.statut === 'annule') nbAnnulees += g.nbSeances;
+      else nbSeances += g.nbSeances;
     });
-    if (totalTTC <= 0) { el.innerHTML = ''; moisCourantData = null; return; }
+    if (totalTTC <= 0 && !nbAnnulees) { el.innerHTML = ''; moisCourantData = null; return; }
 
-    moisCourantData = { mois: mois, an: an, totalTTC: totalTTC, nbSeances: nbSeances, resas: resas };
+    moisCourantData = { mois: mois, an: an, totalTTC: totalTTC, nbSeances: nbSeances, nbAnnulees: nbAnnulees, groupes: groupes };
 
     var totalHT = totalTTC / (1 + TVA_TAUX);
     var tva = totalTTC - totalHT;
     var seanceLabel = nbSeances > 0 ? (nbSeances + (nbSeances > 1 ? ' séances' : ' séance')) : '';
+    if (nbAnnulees) seanceLabel += (seanceLabel ? ' · ' : '') + nbAnnulees + ' annulée' + (nbAnnulees > 1 ? 's' : '');
 
     el.innerHTML =
       '<div onclick="openMoisCourantDetail()" style="background:linear-gradient(135deg,rgba(255,95,31,0.15),rgba(255,95,31,0.05));border:1px solid rgba(255,95,31,0.25);border-radius:var(--radius-lg);padding:16px;margin-bottom:18px;cursor:pointer;">'
@@ -2944,22 +3038,73 @@ async function lignesPeriode(periode) {
       .select('*')
       .eq('client_id', clientId)
       .gte('date_debut', isoDate(new Date(an, mo, 1)))
-      .lt('date_debut', isoDate(new Date(an, mo + 1, 1)))
-      .neq('statut', 'annule');
+      .lt('date_debut', isoDate(new Date(an, mo + 1, 1)));
     if (error) return null;
-    return data || [];
+    return grouperResas(data || []);
   } catch(e) { return null; }
 }
 
-function ligneFactureHTML(r) {
-  var occ = occurrences(r);
+// Une reservation = une ligne par chien en base. On regroupe pour ne pas
+// afficher deux fois la meme prestation, dont une sans montant.
+function grouperResas(rows) {
+  var map = {};
+  (rows || []).forEach(function(r) {
+    var k = [r.service, r.date_debut, r.date_fin, r.creneau, r.statut].join('|');
+    if (!map[k]) {
+      map[k] = {
+        service: r.service, date_debut: r.date_debut, date_fin: r.date_fin,
+        creneau: r.creneau, statut: r.statut, annule_par: r.annule_par,
+        facture_pourcentage: r.facture_pourcentage, annulation_tardive: r.annulation_tardive,
+        jours_recurrence: r.jours_recurrence, dates_exclues: r.dates_exclues,
+        montant: 0, nbSeances: 0, chiens: []
+      };
+    }
+    var g = map[k];
+    g.montant += parseFloat(r.montant_ttc) || 0;
+    var n = parseInt(r.nb_seances, 10) || occurrences(r).length || 1;
+    if (n > g.nbSeances) g.nbSeances = n;
+    if (r.chien_id) {
+      var tous = window.chiensData || [], nom = null;
+      for (var i = 0; i < tous.length; i++) if (tous[i].id === r.chien_id) nom = tous[i].nom;
+      if (nom && g.chiens.indexOf(nom) === -1) g.chiens.push(nom);
+    }
+  });
+  return Object.keys(map).map(function(k) { return map[k]; })
+    .sort(function(a, b) { return (a.date_debut || '').localeCompare(b.date_debut || ''); });
+}
+
+// Montant reellement du : une annulation ne compte que pour sa part facturee
+function montantFacture(g) {
+  if (g.statut !== 'annule') return g.montant;
+  var pc = g.facture_pourcentage == null ? 0 : (parseInt(g.facture_pourcentage, 10) || 0);
+  return g.montant * pc / 100;
+}
+
+function ligneFactureHTML(g) {
+  var occ = occurrences(g);
   var detail;
-  if (r.service === 'boarding') detail = dateCourte(r.date_debut) + ' → ' + dateCourte(r.date_fin || r.date_debut) + ' · ' + occ.length + ' nuits';
-  else if (occ.length > 1)      detail = (joursLabel(joursDeResa(r)) || 'tous les jours ouvrés') + ' · ' + occ.length + ' séances';
-  else                          detail = dateCourte(r.date_debut) + (r.creneau ? ' · ' + (CRENEAUX_H[r.creneau] || '') : '');
-  return '<tr><td>' + esc(SVC_NAMES[r.service] || r.service) + '<div style="font-size:10px;color:#6b7450;margin-top:2px;">' + esc(detail) + '</div></td>'
-    + '<td class="num">' + (r.nb_seances || occ.length) + '</td>'
-    + '<td class="num">' + (r.montant_ttc ? eur(r.montant_ttc) : '—') + '</td></tr>';
+  if (g.service === 'boarding') detail = dateCourte(g.date_debut) + ' → ' + dateCourte(g.date_fin || g.date_debut) + ' · ' + occ.length + ' nuits';
+  else if (g.nbSeances > 1)     detail = (joursLabel(joursDeResa(g)) || 'tous les jours ouvrés') + ' · ' + g.nbSeances + ' séances';
+  else                          detail = dateCourte(g.date_debut) + (g.creneau ? ' · ' + (CRENEAUX_H[g.creneau] || '') : '');
+  if (g.chiens && g.chiens.length) detail += ' · ' + g.chiens.join(' + ');
+
+  var nom = SVC_NAMES[g.service] || g.service;
+  var mention = '', style = '';
+  if (g.statut === 'annule') {
+    var pc = g.facture_pourcentage == null ? null : (parseInt(g.facture_pourcentage, 10) || 0);
+    style = 'color:#a33;';
+    nom += ' <span style="font-size:9px;border:1px solid #c62828;color:#c62828;border-radius:8px;padding:1px 5px;vertical-align:middle;">Annulée</span>';
+    mention = '<div style="font-size:10px;color:#c62828;margin-top:2px;">'
+      + (g.annule_par === 'client' ? 'Annulée à votre demande' : 'Annulée par Forest Rangers')
+      + (pc == null ? ' · facturation à confirmer' : (pc > 0 ? ' · facturée à ' + pc + ' %' : ' · non facturée'))
+      + (g.annulation_tardive ? ' (annulation tardive)' : '')
+      + '</div>';
+  }
+  var du = montantFacture(g);
+  return '<tr><td style="' + style + '">' + nom
+    + '<div style="font-size:10px;color:#6b7450;margin-top:2px;">' + esc(detail) + '</div>' + mention + '</td>'
+    + '<td class="num">' + g.nbSeances + '</td>'
+    + '<td class="num">' + (g.statut === 'annule' && du === 0 ? '0,00 €' : (du ? eur(du) : '—')) + '</td></tr>';
 }
 
 function factureDocHTML(opts) {
@@ -3033,7 +3178,7 @@ function openMoisCourantDetail() {
     + '<div class="warn-box warn-amber">Facture non encore émise. Le montant peut évoluer jusqu\'à la fin du mois (annulations, séances ajoutées). Le PDF sera disponible une fois la facture définitive émise par Gabriel.</div>'
     + factureDocHTML({
         numero: null, periode: MOIS_LONG[m.mois] + ' ' + m.an + ' — estimation',
-        totalTTC: m.totalTTC, lignes: m.resas
+        totalTTC: m.totalTTC, lignes: m.groupes
       });
 
   document.getElementById('factureModal').classList.add('open');

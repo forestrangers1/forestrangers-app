@@ -933,9 +933,9 @@ textarea.form-control { resize: vertical; }
         <div class="card-head"><span class="card-title">Historique des reservations</span></div>
         <div>
           <table class="tbl">
-            <thead><tr><th>Client</th><th>Chien(s)</th><th>Service</th><th>Date</th><th>Ranger</th><th>Statut</th><th>Montant</th></tr></thead>
+            <thead><tr><th>Reservee le</th><th>Client</th><th>Chien(s)</th><th>Service</th><th>Date prestation</th><th>Ranger</th><th>Statut</th><th>Montant</th></tr></thead>
             <tbody id="resa-history-tbody">
-              <tr><td colspan="7" style="text-align:center;color:var(--text-faint);padding:18px;font-size:12px;">Chargement…</td></tr>
+              <tr><td colspan="8" style="text-align:center;color:var(--text-faint);padding:18px;font-size:12px;">Chargement…</td></tr>
             </tbody>
           </table>
         </div>
@@ -1305,17 +1305,25 @@ async function loadReservationsAdmin() {
   function fmtDate(d){ if(!d) return '—'; var p=d.split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:d; }
   function fmtPlage(dd,df){ if(!dd) return '—'; if(!df||df===dd) return fmtDate(dd); var a=dd.split('-'),b=df.split('-'); return a[2]+'/'+a[1]+'→'+b[2]+'/'+b[1]; }
   function euros(n){ return (parseFloat(n)||0).toLocaleString('fr-LU',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
+  // Moment ou le client a reserve (colonne de tri de l'historique)
+  function fmtResaLe(v){
+    if(!v) return '—';
+    var d=new Date(v); if(isNaN(d)) return '—';
+    var jour = d.toDateString()===new Date().toDateString()
+      ? "Auj." : String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
+    return jour+' '+String(d.getHours()).padStart(2,'0')+'h'+String(d.getMinutes()).padStart(2,'0');
+  }
 
   try {
     var { data: resas, error } = await db.from('reservations')
-      .select('id,service,creneau,statut,date_debut,date_fin,montant_ttc,ranger_nom,client_id,chien_id,dates_exclues,jours_recurrence')
-      .order('date_debut',{ascending:false})
+      .select('id,service,creneau,statut,date_debut,date_fin,montant_ttc,ranger_nom,client_id,chien_id,dates_exclues,jours_recurrence,created_at')
+      .order('created_at',{ascending:false})
       .limit(300);
 
     if (error) {
       var msg='<div style="padding:16px;text-align:center;color:var(--red);font-size:12px;">Lecture impossible : '+(error.message||'erreur')+'</div>';
       if (pendingList) pendingList.innerHTML=msg;
-      if (histBody) histBody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--red);padding:16px;font-size:12px;">'+(error.message||'erreur')+'</td></tr>';
+      if (histBody) histBody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--red);padding:16px;font-size:12px;">'+(error.message||'erreur')+'</td></tr>';
       return;
     }
     resas = resas||[];
@@ -1331,13 +1339,19 @@ async function loadReservationsAdmin() {
     var groups={};
     resas.forEach(function(r){
       var key=[r.client_id,r.service,r.date_debut,r.date_fin,r.creneau,r.statut].join('|');
-      if(!groups[key]) groups[key]={ id:r.id, client_id:r.client_id, service:r.service, creneau:r.creneau, statut:r.statut, date_debut:r.date_debut, date_fin:r.date_fin, ranger_nom:r.ranger_nom, dates_exclues:r.dates_exclues, montant:0, dogs:[] };
+      if(!groups[key]) groups[key]={ id:r.id, client_id:r.client_id, service:r.service, creneau:r.creneau, statut:r.statut, date_debut:r.date_debut, date_fin:r.date_fin, ranger_nom:r.ranger_nom, dates_exclues:r.dates_exclues, created_at:r.created_at, montant:0, dogs:[] };
       var g=groups[key];
       g.montant += parseFloat(r.montant_ttc)||0;
       if (r.chien_id && chiensMap[r.chien_id]) g.dogs.push(chiensMap[r.chien_id].nom);
     });
     var list=Object.keys(groups).map(function(k){return groups[k];});
-    list.sort(function(a,b){return (b.date_debut||'').localeCompare(a.date_debut||'');});
+    // Tri demande par Gabriel : ordre dans lequel les clients ont reserve,
+    // la demande la plus recente en tete (et non la date de prestation).
+    list.sort(function(a,b){
+      var ca=a.created_at||'', cb=b.created_at||'';
+      if (ca || cb) return cb.localeCompare(ca);
+      return (b.date_debut||'').localeCompare(a.date_debut||'');
+    });
 
     var clientName=function(g){ var c=clientsMap[g.client_id]; return c?(c.prenom+' '+c.nom):'—'; };
     var dogsName=function(g){ return g.dogs.length?g.dogs.join(', '):'—'; };
@@ -1373,11 +1387,11 @@ async function loadReservationsAdmin() {
     var hist=list.filter(function(g){return g.statut!=='en_attente';});
     if (histBody){
       if (!hist.length){
-        histBody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text-faint);padding:18px;font-size:12px;">Aucune reservation</td></tr>';
+        histBody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--text-faint);padding:18px;font-size:12px;">Aucune reservation</td></tr>';
       } else {
         var badge={confirme:'<span class="badge b-green">Confirme</span>',termine:'<span class="badge b-green">Termine</span>',annule:'<span class="badge b-red">Annule</span>'};
         histBody.innerHTML=hist.map(function(g){
-          return '<tr style="cursor:pointer;" title="Ouvrir le detail" onclick="openResaDetail(\''+g.id+'\',\''+g.date_debut+'\')"><td>'+clientName(g)+'</td><td>'+dogsName(g)+'</td><td>'+(SVC[g.service]||g.service)+'</td><td>'+fmtPlage(g.date_debut,g.date_fin)+'</td><td>'+(g.ranger_nom||'—')+'</td><td>'+(badge[g.statut]||'<span class="badge b-muted">'+g.statut+'</span>')+(g.dates_exclues?' <span class="badge b-amber" title="'+g.dates_exclues+'">'+g.dates_exclues.split(',').filter(Boolean).length+' date(s) annulee(s)</span>':'')+'</td><td style="color:var(--accent);font-weight:700;">'+(g.montant>0?euros(g.montant):'—')+'</td></tr>';
+          return '<tr style="cursor:pointer;" title="Ouvrir le detail" onclick="openResaDetail(\''+g.id+'\',\''+g.date_debut+'\')"><td style="white-space:nowrap;color:var(--text-dim);">'+fmtResaLe(g.created_at)+'</td><td>'+clientName(g)+'</td><td>'+dogsName(g)+'</td><td>'+(SVC[g.service]||g.service)+'</td><td>'+fmtPlage(g.date_debut,g.date_fin)+'</td><td>'+(g.ranger_nom||'—')+'</td><td>'+(badge[g.statut]||'<span class="badge b-muted">'+g.statut+'</span>')+(g.dates_exclues?' <span class="badge b-amber" title="'+g.dates_exclues+'">'+g.dates_exclues.split(',').filter(Boolean).length+' date(s) annulee(s)</span>':'')+'</td><td style="color:var(--accent);font-weight:700;">'+(g.montant>0?euros(g.montant):'—')+'</td></tr>';
         }).join('');
       }
     }
@@ -2867,12 +2881,25 @@ function majSuggestionAnnulation() {
 
 // Prévient le client dans sa messagerie : sans ça, une annulation faite
 // depuis l'admin reste totalement invisible côté client.
+// Insertion dans `messages` avec le type demande. Si la colonne `type`
+// n'existe pas encore (migration v2.1 non jouee), on rejoue sans elle :
+// l'espace client retombe alors sur sa detection par le texte.
+async function insererMessages(rows, type) {
+  var avecType = rows.map(function(r) {
+    var o = {}; for (var k in r) o[k] = r[k]; o.type = type || 'message'; return o;
+  });
+  var res = await db.from('messages').insert(avecType);
+  if (res.error && /type/i.test(res.error.message || '')) {
+    res = await db.from('messages').insert(rows);
+  }
+  return res;
+}
+
 async function notifierClientAnnulation(clientId, texte) {
   if (!clientId) return;
   try {
-    var { error } = await db.from('messages').insert({
-      client_id: clientId, expediteur: 'admin', contenu: texte, lu: false
-    });
+    var { error } = (await insererMessages(
+      [{ client_id: clientId, expediteur: 'admin', contenu: texte, lu: false }], 'notification'));
     if (error) throw error;
   } catch(e) { console.error('notification annulation:', e); showToastAdmin('Client non notifie : ' + (e.message||''), 'amber'); }
 }
@@ -3078,9 +3105,8 @@ async function envoyerReponse() {
   var txt = (el.value || '').trim();
   if (!txt) return;
   try {
-    var { error } = await db.from('messages').insert({
-      client_id: msgClientSel, expediteur: 'admin', contenu: txt, lu: false
-    });
+    var { error } = (await insererMessages(
+      [{ client_id: msgClientSel, expediteur: 'admin', contenu: txt, lu: false }], 'message'));
     if (error) throw error;
     el.value = '';
     showToastAdmin('✓ Reponse envoyee', 'green');
@@ -3347,7 +3373,7 @@ async function envoyerAlerte() {
     });
     // Insertion par paquets de 50 : evite les requetes trop lourdes
     for (var i = 0; i < rows.length; i += 50) {
-      var r = await db.from('messages').insert(rows.slice(i, i + 50));
+      var r = await insererMessages(rows.slice(i, i + 50), 'notification');
       if (r.error) throw r.error;
     }
     showToastAdmin('✓ Alerte envoyee a ' + n + ' client' + (n > 1 ? 's' : ''), 'green');
