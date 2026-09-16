@@ -919,6 +919,16 @@ textarea.form-control { resize: vertical; }
           <div style="padding:16px;text-align:center;color:var(--text-faint);font-size:12px;">Chargement…</div>
         </div>
       </div>
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-head">
+          <span class="card-title">Dates annulees a l'unite</span>
+          <span style="font-size:11px;color:var(--text-faint);">Seances retirees d'une recurrence</span>
+        </div>
+        <div id="resa-occ-list">
+          <div style="padding:16px;text-align:center;color:var(--text-faint);font-size:12px;">Chargement…</div>
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-head"><span class="card-title">Historique des reservations</span></div>
         <div>
@@ -1229,7 +1239,7 @@ async function loadReservationsAdmin() {
 
   try {
     var { data: resas, error } = await db.from('reservations')
-      .select('id,service,creneau,statut,date_debut,date_fin,montant_ttc,ranger_nom,client_id,chien_id')
+      .select('id,service,creneau,statut,date_debut,date_fin,montant_ttc,ranger_nom,client_id,chien_id,dates_exclues,jours_recurrence')
       .order('date_debut',{ascending:false})
       .limit(300);
 
@@ -1252,7 +1262,7 @@ async function loadReservationsAdmin() {
     var groups={};
     resas.forEach(function(r){
       var key=[r.client_id,r.service,r.date_debut,r.date_fin,r.creneau,r.statut].join('|');
-      if(!groups[key]) groups[key]={ id:r.id, client_id:r.client_id, service:r.service, creneau:r.creneau, statut:r.statut, date_debut:r.date_debut, date_fin:r.date_fin, ranger_nom:r.ranger_nom, montant:0, dogs:[] };
+      if(!groups[key]) groups[key]={ id:r.id, client_id:r.client_id, service:r.service, creneau:r.creneau, statut:r.statut, date_debut:r.date_debut, date_fin:r.date_fin, ranger_nom:r.ranger_nom, dates_exclues:r.dates_exclues, montant:0, dogs:[] };
       var g=groups[key];
       g.montant += parseFloat(r.montant_ttc)||0;
       if (r.chien_id && chiensMap[r.chien_id]) g.dogs.push(chiensMap[r.chien_id].nom);
@@ -1298,13 +1308,59 @@ async function loadReservationsAdmin() {
       } else {
         var badge={confirme:'<span class="badge b-green">Confirme</span>',termine:'<span class="badge b-green">Termine</span>',annule:'<span class="badge b-red">Annule</span>'};
         histBody.innerHTML=hist.map(function(g){
-          return '<tr style="cursor:pointer;" title="Ouvrir le detail" onclick="openResaDetail(\''+g.id+'\',\''+g.date_debut+'\')"><td>'+clientName(g)+'</td><td>'+dogsName(g)+'</td><td>'+(SVC[g.service]||g.service)+'</td><td>'+fmtPlage(g.date_debut,g.date_fin)+'</td><td>'+(g.ranger_nom||'—')+'</td><td>'+(badge[g.statut]||'<span class="badge b-muted">'+g.statut+'</span>')+'</td><td style="color:var(--accent);font-weight:700;">'+(g.montant>0?euros(g.montant):'—')+'</td></tr>';
+          return '<tr style="cursor:pointer;" title="Ouvrir le detail" onclick="openResaDetail(\''+g.id+'\',\''+g.date_debut+'\')"><td>'+clientName(g)+'</td><td>'+dogsName(g)+'</td><td>'+(SVC[g.service]||g.service)+'</td><td>'+fmtPlage(g.date_debut,g.date_fin)+'</td><td>'+(g.ranger_nom||'—')+'</td><td>'+(badge[g.statut]||'<span class="badge b-muted">'+g.statut+'</span>')+(g.dates_exclues?' <span class="badge b-amber" title="'+g.dates_exclues+'">'+g.dates_exclues.split(',').filter(Boolean).length+' date(s) annulee(s)</span>':'')+'</td><td style="color:var(--accent);font-weight:700;">'+(g.montant>0?euros(g.montant):'—')+'</td></tr>';
         }).join('');
       }
     }
   } catch(e){
     console.error('loadReservationsAdmin:', e);
     if (pendingList) pendingList.innerHTML='<div style="padding:16px;text-align:center;color:var(--text-faint);font-size:12px;">Erreur de chargement</div>';
+  }
+}
+
+// Dates retirées d'une récurrence — invisibles dans l'historique des réservations,
+// qui raisonne par série. Sans cette liste, une annulation à l'unité ne laisse aucune trace visible.
+async function chargerAnnulationsOccurrences() {
+  var box = document.getElementById('resa-occ-list');
+  if (!box) return;
+  try {
+    var { data: occ, error } = await db.from('annulations_occurrences')
+      .select('*').order('created_at', { ascending: false }).limit(40);
+    if (error) throw error;
+    if (!occ || !occ.length) {
+      box.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-faint);font-size:12px;">Aucune date annulee a l\'unite</div>';
+      return;
+    }
+    var rids = [...new Set(occ.map(function(o){ return o.reservation_id; }).filter(Boolean))];
+    var rMap = {}, cMap = {};
+    if (rids.length) {
+      var rr = await db.from('reservations').select('id,service,creneau,client_id').in('id', rids);
+      (rr.data || []).forEach(function(r){ rMap[r.id] = r; });
+      var cids = [...new Set((rr.data || []).map(function(r){ return r.client_id; }).filter(Boolean))];
+      if (cids.length) {
+        var rc = await db.from('clients').select('id,prenom,nom').in('id', cids);
+        (rc.data || []).forEach(function(c){ cMap[c.id] = c; });
+      }
+    }
+    var SVCL = { walking:'Dog Walking', daycare:'Day Care', boarding:'Boarding' };
+    box.innerHTML = occ.map(function(o) {
+      var r = rMap[o.reservation_id];
+      var c = r && r.client_id ? cMap[r.client_id] : null;
+      var qui = o.annule_par === 'client' ? 'le client' : 'Gabriel';
+      var pct = o.facture_pourcentage != null ? o.facture_pourcentage : 0;
+      return '<div class="inv-row">'
+        + '<div style="width:8px;height:8px;border-radius:50%;background:' + (o.annulation_tardive ? 'var(--red)' : 'var(--text-faint)') + ';flex-shrink:0;"></div>'
+        + '<div style="flex:1;' + (r ? 'cursor:pointer;' : '') + '"' + (r ? ' onclick="openResaDetail(\'' + o.reservation_id + '\',\'' + o.date_occurrence + '\')"' : '') + '>'
+        +   '<div class="inv-client">' + (c ? c.prenom + ' ' + c.nom : 'Client') + ' — ' + formatDateFR(o.date_occurrence) + '</div>'
+        +   '<div class="inv-desc">' + (r ? (SVCL[r.service] || r.service) : 'Reservation') + ' · annule par ' + qui + '</div>'
+        + '</div>'
+        + (o.annulation_tardive ? '<span class="badge b-red">Tardive</span>' : '<span class="badge b-muted">A temps</span>')
+        + '<span class="badge ' + (pct > 0 ? 'b-accent' : 'b-green') + '">' + pct + ' %</span>'
+        + '</div>';
+    }).join('');
+  } catch(e) {
+    console.error('annulations occurrences:', e);
+    box.innerHTML = '<div style="padding:16px;color:var(--text-faint);font-size:12px;">Liste indisponible : ' + (e.message || '') + '</div>';
   }
 }
 
@@ -1337,7 +1393,7 @@ function nav(id, el) {
   if (backBtn) backBtn.style.display = id !== 'dashboard' ? 'flex' : 'none';
 
   if (id === 'messages')     chargerMessages(true);
-  if (id === 'reservations') loadReservationsAdmin();
+  if (id === 'reservations') { loadReservationsAdmin(); chargerAnnulationsOccurrences(); }
   if (id === 'staff')        loadStaff();
   if (id === 'factures')     loadFacturesAdmin();
   if (id === 'parametres')   loadParametres();
@@ -2734,9 +2790,22 @@ function majSuggestionAnnulation() {
   var sugg = calculerSuggestionAnnulation(r, dateRef);
   var raisonTxt = sugg.raison;
   if (portee === 'occurrence') raisonTxt = 'Pour le ' + formatDateFR(dateRef) + ' : ' + raisonTxt;
-  document.getElementById('annulation-raison').textContent = raisonTxt;
-  document.getElementById('annulation-pourcentage').value = String(sugg.pourcentage);
+  document.getElementById('annulation-raison').textContent = raisonTxt + ' → suggestion : ' + sugg.pourcentage + ' %.';
+  var selPct = document.getElementById('annulation-pourcentage');
+  selPct.value = String(sugg.pourcentage);
   currentResaDetail._suggestion = sugg;
+}
+
+// Prévient le client dans sa messagerie : sans ça, une annulation faite
+// depuis l'admin reste totalement invisible côté client.
+async function notifierClientAnnulation(clientId, texte) {
+  if (!clientId) return;
+  try {
+    var { error } = await db.from('messages').insert({
+      client_id: clientId, expediteur: 'admin', contenu: texte, lu: false
+    });
+    if (error) throw error;
+  } catch(e) { console.error('notification annulation:', e); showToastAdmin('Client non notifie : ' + (e.message||''), 'amber'); }
 }
 
 async function confirmerAnnulationResa() {
@@ -2763,6 +2832,11 @@ async function confirmerAnnulationResa() {
       var exclues = (r.dates_exclues||'').split(',').map(function(x){return x.trim();}).filter(Boolean);
       if (exclues.indexOf(dateRef) === -1) exclues.push(dateRef);
       await majLignesReservation(r, { dates_exclues: exclues.join(',') });
+      await notifierClientAnnulation(r.client_id,
+        'Votre séance du ' + formatDateFR(dateRef) + ' a été annulée'
+        + (qui === 'client' ? ' à votre demande.' : ' par Forest Rangers.')
+        + (pct > 0 ? ' Elle reste facturée à ' + pct + ' % selon les conditions d\'annulation.' : ' Elle ne vous sera pas facturée.')
+        + ' Le reste de vos séances récurrentes est inchangé.');
       showToastAdmin('✓ Occurrence du ' + formatDateFR(dateRef) + ' annulee', 'green');
     } else {
       var n = await majLignesReservation(r, {
@@ -2771,12 +2845,17 @@ async function confirmerAnnulationResa() {
         annulation_tardive: sugg.tardive,
         facture_pourcentage: pct
       });
+      await notifierClientAnnulation(r.client_id,
+        'Votre réservation ' + (SVC_NAMES[r.service] || r.service) + ' du ' + formatDateFR(r.date_debut)
+        + ' a été annulée' + (qui === 'client' ? ' à votre demande.' : ' par Forest Rangers.')
+        + (pct > 0 ? ' Facturation appliquée : ' + pct + ' %.' : ' Aucun montant ne vous sera facturé.'));
       showToastAdmin('✓ Reservation annulee (' + n + ' ligne' + (n>1?'s':'') + ')', 'green');
     }
     document.getElementById('modal-annulation').classList.remove('open');
     document.getElementById('modal-resa-detail').classList.remove('open');
     loadPlanning();
     loadReservationsAdmin();
+    chargerAnnulationsOccurrences();
   } catch(e) { showToastAdmin('Erreur : '+e.message, 'red'); console.error(e); }
 }
 

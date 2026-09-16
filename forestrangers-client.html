@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Forest Rangers — Client</title>
+<script>
+(function(){ try { if (localStorage.getItem('fr-theme') === 'light') document.documentElement.classList.add('light'); } catch(e) {} })();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
 <style>
@@ -31,10 +34,83 @@
   --radius-lg:  20px;
 }
 
+/* ── MODE CLAIR (classe html.light, clé 'fr-theme' partagée avec l'admin) ── */
+html.light {
+  --bg:         #f5f4f0;
+  --surface:    #ffffff;
+  --surface2:   #eceae3;
+  --border:     rgba(28,31,20,0.10);
+  --border2:    rgba(28,31,20,0.20);
+  --text:       #1c1f14;
+  --text-dim:   rgba(28,31,20,0.62);
+  --text-faint: rgba(28,31,20,0.42);
+  --accent-dim: rgba(255,95,31,0.10);
+  --accent-mid: rgba(255,95,31,0.28);
+  --green-dim:  rgba(60,150,90,0.14);
+  --red-dim:    rgba(200,60,60,0.12);
+  --blue-dim:   rgba(50,120,200,0.12);
+  --green:      #2f9e55;
+  --red:        #c63f3f;
+  --blue:       #2f74c0;
+}
+html.light body { background: #e4e2da; }
+html.light .phone-shell { box-shadow: 0 30px 70px rgba(28,31,20,0.18); border-color: rgba(28,31,20,0.10); }
+html.light div[style*="min-height:100vh"] { background: #e4e2da !important; }
+html.light .notch { background: #1c1f14; }
+html.light .send-btn svg { stroke: #fff; }
+
 html, body {
   height: 100%; font-family: 'Instrument Sans', sans-serif;
   background: #0e0f0a; color: var(--text); overflow: hidden; height: 100%;
 }
+
+/* ── MISE EN PAGE ORDINATEUR (≥ 900 px) ──
+   Le châssis téléphone laisse place à une fenêtre large,
+   la barre d'onglets devient une colonne latérale. */
+@media (min-width: 900px) {
+  .phone-shell {
+    width: min(1120px, 96vw);
+    height: min(900px, 94vh);
+    max-height: none;
+    border-radius: 22px;
+    flex-direction: row;
+  }
+  .notch, .status-bar { display: none; }
+  .bottom-nav {
+    order: -1;
+    width: 216px; height: 100%; flex-shrink: 0;
+    flex-direction: column; align-items: stretch;
+    border-top: none; border-right: 1px solid var(--border);
+    padding: 22px 12px; gap: 6px;
+  }
+  .nav-tab {
+    flex: 0 0 auto; flex-direction: row; justify-content: flex-start;
+    gap: 12px; padding: 12px 14px; border-radius: 10px;
+  }
+  .nav-tab span { font-size: 13px; font-weight: 600; letter-spacing: 0; }
+  .nav-tab svg { width: 19px; height: 19px; }
+  .notif-dot { top: 10px; right: 10px; }
+  .screens { flex: 1; }
+  .screen { padding-bottom: 28px; }
+  .screen-pad { padding: 30px 38px; max-width: 760px; }
+  .modal-overlay { position: fixed; }
+  .modal-full { width: 520px; max-width: 90vw; max-height: 86vh; }
+  #screen-messages .screen-pad { max-width: 760px; }
+  .msg-composer { bottom: 0; }
+}
+
+/* Bouton d'apparence dans le menu du compte */
+.theme-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.theme-switch {
+  width: 42px; height: 23px; border-radius: 12px; position: relative;
+  background: var(--border2); cursor: pointer; transition: background .2s; flex-shrink: 0;
+}
+.theme-switch.on { background: var(--accent); }
+.theme-switch i {
+  position: absolute; top: 3px; left: 3px; width: 17px; height: 17px;
+  border-radius: 50%; background: #fff; transition: transform .2s; display: block;
+}
+.theme-switch.on i { transform: translateX(19px); }
 
 /* ── PHONE SHELL ── */
 .phone-shell {
@@ -618,6 +694,11 @@ html, body {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
                 Paramètres
               </button>
+              <div class="avatar-menu-item theme-row" onclick="basculerTheme(event)" style="cursor:pointer;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="theme-icon"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                <span id="theme-label" style="flex:1;">Mode clair</span>
+                <span class="theme-switch" id="theme-switch"><i></i></span>
+              </div>
               <button class="avatar-menu-item" onclick="seDeconnecter()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                 Se déconnecter
@@ -625,6 +706,9 @@ html, body {
             </div>
           </div>
         </div>
+
+        <!-- Alertes -->
+        <div id="home-alertes"></div>
 
         <!-- Prochaine promenade -->
         <div id="prochaine-promenade" style="background:linear-gradient(135deg,rgba(255,95,31,0.15),rgba(255,95,31,0.05));border:1px solid rgba(255,95,31,0.25);border-radius:var(--radius-lg);padding:16px;margin-bottom:16px;">
@@ -1368,6 +1452,7 @@ var clientId = null;
 
 document.addEventListener('DOMContentLoaded', async function() {
   majDateHeure();
+  majBoutonTheme();
   setInterval(majDateHeure, 30000);
   loadRaces();
   await loadClientProfile();
@@ -1424,6 +1509,7 @@ async function loadClientProfile() {
     await loadMoisCourant(client.id);
     await loadProchainePromenade(client.id);
     await loadMessages(client.id);
+    renderAlertesAccueil();
     setInterval(function() { if (clientId) loadMessages(clientId); }, 60 * 1000);
 
   } catch(e) {
@@ -1603,6 +1689,76 @@ function renderNotifications() {
       + '<div class="notif-sub">' + esc((m.contenu || '').slice(0, 140)) + ((m.contenu || '').length > 140 ? '…' : '') + '</div>'
       + '</div>';
   }).join('');
+}
+
+
+// ══════════════════════════════════════════════════════════════
+//  THÈME CLAIR / SOMBRE — clé 'fr-theme' partagée avec l'admin
+// ══════════════════════════════════════════════════════════════
+function themeEstClair() {
+  return document.documentElement.classList.contains('light');
+}
+
+function majBoutonTheme() {
+  var clair = themeEstClair();
+  var sw = document.getElementById('theme-switch');
+  var lb = document.getElementById('theme-label');
+  var ic = document.getElementById('theme-icon');
+  if (sw) sw.classList.toggle('on', clair);
+  if (lb) lb.textContent = clair ? 'Mode sombre' : 'Mode clair';
+  if (ic) ic.innerHTML = clair
+    ? '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'
+    : '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>';
+}
+
+function basculerTheme(e) {
+  if (e) e.stopPropagation();
+  var clair = document.documentElement.classList.toggle('light');
+  try { localStorage.setItem('fr-theme', clair ? 'light' : 'dark'); } catch(err) {}
+  majBoutonTheme();
+  var meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', clair ? '#f5f4f0' : '#1c1f14');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ACCUEIL — alertes (impayés, fiche chien incomplète)
+// ══════════════════════════════════════════════════════════════
+function renderAlertesAccueil() {
+  var el = document.getElementById('home-alertes');
+  if (!el) return;
+  var html = '';
+
+  // Factures impayées
+  var impayees = (facturesData || []).filter(function(f) { return f.statut === 'impayee'; });
+  if (impayees.length) {
+    var total = impayees.reduce(function(a, f) { return a + (parseFloat(f.total_ttc) || 0); }, 0);
+    html += '<div onclick="goTab(\'screen-invoices\',\'tab-invoices\')" style="background:var(--red-dim);border:1px solid rgba(224,90,90,0.3);border-radius:var(--radius);padding:13px 15px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:11px;">'
+      + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+      + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--red);">'
+      +   (impayees.length > 1 ? impayees.length + ' factures à régler' : 'Facture à régler') + '</div>'
+      + '<div style="font-size:11.5px;color:var(--text-dim);">' + eur(total) + ' en attente de paiement</div></div>'
+      + '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5" style="flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>'
+      + '</div>';
+  }
+
+  // Fiche chien incomplète — bloque la réservation et les rappels vétérinaires
+  var manques = [];
+  (window.chiensData || []).forEach(function(d) {
+    var pb = [];
+    if ('vaccins_ok' in d && d.vaccins_ok === false) pb.push('vaccins à jour');
+    if ('numero_puce' in d && !d.numero_puce) pb.push('numéro de puce');
+    if (pb.length) manques.push((d.nom || 'Chien') + ' : ' + pb.join(', '));
+  });
+  if (manques.length) {
+    html += '<div onclick="goTab(\'screen-dog\',\'tab-dog\')" style="background:rgba(240,180,41,0.1);border:1px solid rgba(240,180,41,0.3);border-radius:var(--radius);padding:13px 15px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:11px;">'
+      + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f0b429" stroke-width="2" style="flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+      + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#f0b429;">Fiche chien à compléter</div>'
+      + '<div style="font-size:11.5px;color:var(--text-dim);">' + esc(manques.join(' · ')) + '</div></div>'
+      + '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5" style="flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>'
+      + '</div>';
+  }
+
+  el.innerHTML = html;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2164,6 +2320,16 @@ function politiqueAnnulation(r, dateOcc) {
     texte: 'Limite dépassée (9h00 la veille) : la prestation sera facturée à 100 %.' };
 }
 
+// Trace l'annulation dans la messagerie : c'est ce qui déclenche la pastille
+// rouge et l'alerte du dashboard côté admin.
+async function previenirGabriel(texte) {
+  if (!clientId) return;
+  try {
+    await db.from('messages').insert({ client_id: clientId, expediteur: 'client', contenu: texte, lu: false });
+    await loadMessages(clientId);
+  } catch(e) { console.log('notification annulation:', e); }
+}
+
 async function annulerResa(portee) {
   var r = resaOuverte;
   if (!r) return;
@@ -2199,6 +2365,9 @@ async function annulerResa(portee) {
         .update({ dates_exclues: exclues.join(',') }).eq('id', r.id);
       if (errExcl) throw errExcl;
       r.dates_exclues = exclues.join(',');
+      await previenirGabriel('Annulation de la séance du ' + dateLongue(dateRef)
+        + ' (' + (SVC_NAMES[r.service] || r.service) + ')'
+        + (pol.pourcentage > 0 ? ' — facturation applicable : ' + pol.pourcentage + ' %.' : ' — dans les délais, sans frais.'));
       showToast('✓ Séance du ' + dateCourte(dateRef) + ' annulée');
     } else {
       var payload = { statut: 'annule', annule_par: 'client', annulation_tardive: pol.tardive, facture_pourcentage: pol.pourcentage };
@@ -2208,6 +2377,9 @@ async function annulerResa(portee) {
       }
       if (res.error) throw res.error;
       r.statut = 'annule';
+      await previenirGabriel('Annulation de la réservation ' + (SVC_NAMES[r.service] || r.service)
+        + ' du ' + dateLongue(r.date_debut)
+        + (pol.pourcentage > 0 ? ' — facturation applicable : ' + pol.pourcentage + ' %.' : ' — dans les délais, sans frais.'));
       showToast('✓ Réservation annulée');
     }
 
@@ -2246,6 +2418,7 @@ async function loadFactures(id) {
 
     facturesData = factures || [];
     renderFactures();
+    renderAlertesAccueil();
 
   } catch(e) { console.log('Erreur factures:', e); }
 }

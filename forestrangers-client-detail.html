@@ -1327,12 +1327,29 @@ function loadReservations(resas) {
   if (tbody2) tbody2.innerHTML = passees.length ? passees.map(rowPassee).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--td);padding:16px;">Aucun historique</td></tr>';
 }
 
-function loadAnnulationDetails(resas) {
+async function loadAnnulationDetails(resas) {
   var annulations = resas.filter(function(r) { return r.statut === 'annule'; });
-  var tardifs    = annulations.filter(function(r) { return r.annulation_tardive; }).length;
-  var sansFrais  = annulations.filter(function(r) { return (r.facture_pourcentage || 0) === 0; }).length;
-  var parGabriel = annulations.filter(function(r) { return r.annule_par === 'gabriel'; }).length;
-  document.getElementById('ann-total').textContent     = annulations.length;
+
+  // Les dates retirées d'une récurrence sont aussi des annulations : sans elles,
+  // le compteur reste à zéro alors que des séances ont bien été annulées.
+  var occ = [];
+  try {
+    var rids = resas.map(function(r) { return r.id; }).filter(Boolean);
+    if (rids.length) {
+      var ro = await db.from('annulations_occurrences')
+        .select('id,date_occurrence,annule_par,annulation_tardive,facture_pourcentage,reservation_id')
+        .in('reservation_id', rids);
+      occ = ro.data || [];
+    }
+  } catch(e) { console.error('annulations occurrences (fiche client):', e); }
+
+  var tous = annulations.concat(occ);
+  var tardifs    = tous.filter(function(r) { return r.annulation_tardive; }).length;
+  var sansFrais  = tous.filter(function(r) { return (r.facture_pourcentage || 0) === 0; }).length;
+  var parGabriel = tous.filter(function(r) { return r.annule_par === 'gabriel'; }).length;
+  document.getElementById('ann-total').textContent     = tous.length;
+  var kpi = document.getElementById('stat-annulations');
+  if (kpi) kpi.textContent = tous.length;
   document.getElementById('ann-tardifs').textContent   = tardifs;
   document.getElementById('ann-sans-frais').textContent = sansFrais;
   document.getElementById('ann-gabriel').textContent   = parGabriel;
@@ -1843,9 +1860,21 @@ function majSuggestionAnnulation() {
   var sugg = calculerSuggestionAnnulation(r, dateRef);
   var raisonTxt = sugg.raison;
   if (portee === 'occurrence') raisonTxt = 'Pour le ' + formatDateFR(dateRef) + ' : ' + raisonTxt;
-  document.getElementById('annulation-raison').textContent = raisonTxt;
-  document.getElementById('annulation-pourcentage').value = String(sugg.pourcentage);
+  document.getElementById('annulation-raison').textContent = raisonTxt + ' → suggestion : ' + sugg.pourcentage + ' %.';
+  var selPct = document.getElementById('annulation-pourcentage');
+  selPct.value = String(sugg.pourcentage);
   currentResaDetail._suggestion = sugg;
+}
+
+// Prévient le client dans sa messagerie (même table que l'espace client)
+async function notifierClientAnnulation(clientId, texte) {
+  if (!clientId) return;
+  try {
+    var { error } = await db.from('messages').insert({
+      client_id: clientId, expediteur: 'admin', contenu: texte, lu: false
+    });
+    if (error) throw error;
+  } catch(e) { console.error('notification annulation:', e); alert('Annulation enregistrée, mais le client n\'a pas été notifié : ' + (e.message || '')); }
 }
 
 async function confirmerAnnulationResa() {
@@ -1872,7 +1901,12 @@ async function confirmerAnnulationResa() {
       var exclues = (r.dates_exclues || '').split(',').map(function(x) { return x.trim(); }).filter(Boolean);
       if (exclues.indexOf(dateRef) === -1) exclues.push(dateRef);
       await majLignesReservation(r, { dates_exclues: exclues.join(',') });
-      alert('✓ Séance du ' + formatDateFR(dateRef) + ' annulée.');
+      await notifierClientAnnulation(r.client_id,
+        'Votre séance du ' + formatDateFR(dateRef) + ' a été annulée'
+        + (qui === 'client' ? ' à votre demande.' : ' par Forest Rangers.')
+        + (pct > 0 ? ' Elle reste facturée à ' + pct + ' % selon les conditions d\'annulation.' : ' Elle ne vous sera pas facturée.')
+        + ' Le reste de vos séances récurrentes est inchangé.');
+      alert('✓ Séance du ' + formatDateFR(dateRef) + ' annulée. Le client a été prévenu.');
     } else {
       var n = await majLignesReservation(r, {
         statut: 'annule',
@@ -1880,7 +1914,11 @@ async function confirmerAnnulationResa() {
         annulation_tardive: sugg.tardive,
         facture_pourcentage: pct
       });
-      alert('✓ Réservation annulée (' + n + ' ligne' + (n > 1 ? 's' : '') + ').');
+      await notifierClientAnnulation(r.client_id,
+        'Votre réservation ' + (SVC_NAMES[r.service] || r.service) + ' du ' + formatDateFR(r.date_debut)
+        + ' a été annulée' + (qui === 'client' ? ' à votre demande.' : ' par Forest Rangers.')
+        + (pct > 0 ? ' Facturation appliquée : ' + pct + ' %.' : ' Aucun montant ne vous sera facturé.'));
+      alert('✓ Réservation annulée (' + n + ' ligne' + (n > 1 ? 's' : '') + '). Le client a été prévenu.');
     }
     document.getElementById('modal-annulation').classList.remove('open');
     document.getElementById('modal-resa-detail').classList.remove('open');
