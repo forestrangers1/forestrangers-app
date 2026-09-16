@@ -733,6 +733,7 @@ textarea.form-control { resize: vertical; }
     <div class="nav-item" onclick="nav('messages',this)">
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
       Messages
+      <span id="msg-badge" style="display:none;margin-left:auto;background:#e05a5a;color:#fff;font-family:Norwester,sans-serif;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:9px;padding:0 5px;display:none;align-items:center;justify-content:center;">0</span>
     </div>
     <div class="nav-item" onclick="nav('invitation',this)">
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
@@ -824,29 +825,11 @@ textarea.form-control { resize: vertical; }
         <!-- Colonne droite -->
         <div>
           <div class="card">
-            <div class="card-head"><span class="card-title">Alertes</span></div>
-            <div class="card-body">
-              <div class="alert alert-r">
-                <div class="alert-dot"></div>
-                <div class="alert-body">
-                  <strong>Annulation tardive</strong> — Mme Dupont (Max) pour demain matin. Facturable.
-                  <div class="alert-time">Il y a 23 min</div>
-                </div>
-              </div>
-              <div class="alert alert-a">
-                <div class="alert-dot"></div>
-                <div class="alert-body">
-                  <strong>Facture en retard</strong> — M. Weber · 84 € · +15 jours
-                  <div class="alert-time">Depuis le 25 mai</div>
-                </div>
-              </div>
-              <div class="alert alert-g">
-                <div class="alert-dot"></div>
-                <div class="alert-body">
-                  <strong>Nouvelle demande</strong> — M. Klein · Dog Walking · jeudi
-                  <div class="alert-time">Il y a 1 h</div>
-                </div>
-              </div>
+            <div class="card-head"><span class="card-title">Alertes</span>
+              <button class="btn btn-outline" style="padding:5px 10px;font-size:11px;" onclick="chargerAlertes()">Actualiser</button>
+            </div>
+            <div class="card-body" id="dash-alertes-body">
+              <div style="text-align:center;padding:18px;color:var(--text-faint);font-size:12px;">Chargement…</div>
             </div>
           </div>
 
@@ -1169,37 +1152,32 @@ textarea.form-control { resize: vertical; }
     <div class="page" id="page-messages">
       <div class="g2">
         <div class="card">
-          <div class="card-head"><span class="card-title">Envoyer un message</span></div>
-          <div class="card-body">
-            <div class="form-group">
-              <label class="form-label">Destinataires</label>
-              <select class="form-control"><option>Tous les clients (24)</option><option>Clients fidèles (18)</option><option>Nouveaux clients (6)</option><option>Client spécifique...</option></select>
+          <div class="card-head">
+            <span class="card-title">Boite de reception</span>
+            <button class="btn btn-outline" style="padding:5px 10px;font-size:11px;" onclick="chargerMessages(true)">Actualiser</button>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div style="padding:12px 14px;border-bottom:1px solid var(--border);">
+              <input class="form-control" id="msg-search" type="search" placeholder="Rechercher un client ou un message..." oninput="renderInbox()">
             </div>
-            <div class="form-group">
-              <label class="form-label">Sujet</label>
-              <input class="form-control" type="text" placeholder="Ex : Fermeture exceptionnelle du 14 juillet">
+            <div id="msg-inbox" style="max-height:520px;overflow-y:auto;">
+              <div style="text-align:center;padding:26px;color:var(--text-faint);font-size:12px;">Chargement…</div>
             </div>
-            <div class="form-group">
-              <label class="form-label">Message</label>
-              <textarea class="form-control" rows="5" placeholder="Votre message..."></textarea>
-            </div>
-            <button class="btn btn-accent" style="width:100%;justify-content:center;padding:10px;">Envoyer</button>
           </div>
         </div>
+
         <div class="card">
-          <div class="card-head"><span class="card-title">Derniers messages envoyes</span></div>
-          <div class="card-body" style="display:flex;flex-direction:column;gap:10px;">
-            <div style="padding:11px 13px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);">
-              <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:12px;">
-                <strong>Tous les clients</strong><span style="color:var(--text-faint);font-size:11px;">03/06/2026</span>
-              </div>
-              <div style="font-size:11.5px;color:var(--text-dim);line-height:1.5;">Rappel : le planning est clôturé la veille à 9h00. Merci de confirmer vos réservations dans les délais.</div>
+          <div class="card-head"><span class="card-title" id="msg-thread-title">Conversation</span></div>
+          <div class="card-body">
+            <div id="msg-thread" style="max-height:380px;overflow-y:auto;margin-bottom:12px;">
+              <div style="text-align:center;padding:26px;color:var(--text-faint);font-size:12px;">Selectionnez un message a gauche.</div>
             </div>
-            <div style="padding:11px 13px;background:var(--surface2);border-radius:var(--radius);border:1px solid rgba(224,90,90,0.2);">
-              <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:12px;">
-                <strong>Thomas Weber</strong><span class="badge b-red" style="font-size:9px;">Rappel facture</span>
+            <div id="msg-reply-box" style="display:none;">
+              <div class="form-group">
+                <label class="form-label">Reponse</label>
+                <textarea class="form-control" id="msg-reply" rows="4" placeholder="Votre reponse au client..."></textarea>
               </div>
-              <div style="font-size:11.5px;color:var(--text-dim);line-height:1.5;">Votre facture FR-2026-040 de 84 € est en attente depuis plus de 15 jours. Des frais de rappel (25 €) seront appliqués sous 48 h.</div>
+              <button class="btn btn-accent" style="width:100%;justify-content:center;padding:10px;" onclick="envoyerReponse()">Envoyer la reponse</button>
             </div>
           </div>
         </div>
@@ -1393,6 +1371,7 @@ function nav(id, el) {
   const backBtn = document.getElementById('backBtn');
   if (backBtn) backBtn.style.display = id !== 'dashboard' ? 'flex' : 'none';
 
+  if (id === 'messages')     chargerMessages(true);
   if (id === 'reservations') loadReservationsAdmin();
   if (id === 'staff')        loadStaff();
   if (id === 'factures')     loadFacturesAdmin();
@@ -2373,6 +2352,8 @@ function filterResasForDay(resas, dateStr) {
       var exclues = r.dates_exclues.split(',').map(function(x){return x.trim();});
       if (exclues.indexOf(dateStr) !== -1) return false;
     }
+    // Promenades et day care : jamais le week-end (règle métier — lundi au vendredi)
+    if (r.service!=='boarding' && (d.getDay()===0 || d.getDay()===6)) return false;
     if (r.service!=='boarding'&&r.jours_recurrence&&r.jours_recurrence.length>0) {
       return r.jours_recurrence.split(',').some(function(j){return jourMap[j.trim()]===d.getDay();});
     }
@@ -2786,6 +2767,256 @@ async function confirmerAnnulationResa() {
   } catch(e) { showToastAdmin('Erreur : '+e.message, 'red'); console.error(e); }
 }
 
+
+// ══════════════════════════════════════════════════════════════
+//  MESSAGERIE CLIENTS  (table `messages`)
+//  Colonnes : id, client_id, expediteur ('client'|'admin'), contenu,
+//             lu (bool), created_at
+// ══════════════════════════════════════════════════════════════
+var messagesData = [];
+var msgClientsMap = {};
+var msgClientSel = null;
+
+function msgDateFR(v) {
+  if (!v) return '';
+  var d = new Date(v);
+  if (isNaN(d)) return '';
+  var now = new Date();
+  var memeJour = d.toDateString() === now.toDateString();
+  if (memeJour) return "Aujourd'hui " + String(d.getHours()).padStart(2,'0') + 'h' + String(d.getMinutes()).padStart(2,'0');
+  return d.toLocaleDateString('fr-LU', { day:'2-digit', month:'short' }) + ' ' + String(d.getHours()).padStart(2,'0') + 'h' + String(d.getMinutes()).padStart(2,'0');
+}
+function msgNomClient(id) {
+  var c = msgClientsMap[id];
+  return c ? (c.prenom + ' ' + c.nom) : 'Client';
+}
+function msgEsc(v) {
+  return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function chargerMessages(silencieux) {
+  try {
+    var { data, error } = await db.from('messages')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(300);
+    if (error) {
+      var box = document.getElementById('msg-inbox');
+      if (box) box.innerHTML = '<div style="padding:20px;color:#e05a5a;font-size:12px;">Lecture impossible : ' + msgEsc(error.message)
+        + '<br><br>Executez fr_migration_v19.sql dans Supabase pour creer la table <code>messages</code>.</div>';
+      majBadgeMessages(0);
+      return;
+    }
+    messagesData = data || [];
+
+    var ids = [];
+    messagesData.forEach(function(m){ if (m.client_id && ids.indexOf(m.client_id) === -1) ids.push(m.client_id); });
+    if (ids.length) {
+      var rc = await db.from('clients').select('id,prenom,nom,numero_client,telephone').in('id', ids);
+      (rc.data || []).forEach(function(c){ msgClientsMap[c.id] = c; });
+    }
+
+    renderInbox();
+    if (msgClientSel) ouvrirConversation(msgClientSel, true);
+    majBadgeMessages(nbMessagesNonLus());
+  } catch(e) { console.error('Messages:', e); }
+}
+
+function nbMessagesNonLus() {
+  return messagesData.filter(function(m){ return m.expediteur === 'client' && !m.lu; }).length;
+}
+
+function majBadgeMessages(n) {
+  var b = document.getElementById('msg-badge');
+  if (!b) return;
+  if (n > 0) { b.textContent = n; b.style.display = 'flex'; }
+  else { b.style.display = 'none'; }
+}
+
+// Regroupe par client : dernier message + nombre de non-lus
+function conversations() {
+  var conv = {};
+  messagesData.forEach(function(m) {
+    var k = m.client_id || 'inconnu';
+    if (!conv[k]) conv[k] = { client_id: m.client_id, dernier: m, nonLus: 0, total: 0 };
+    if (new Date(m.created_at) > new Date(conv[k].dernier.created_at)) conv[k].dernier = m;
+    if (m.expediteur === 'client' && !m.lu) conv[k].nonLus++;
+    conv[k].total++;
+  });
+  return Object.keys(conv).map(function(k){ return conv[k]; })
+    .sort(function(a,b){
+      if (a.nonLus !== b.nonLus) return b.nonLus - a.nonLus;
+      return new Date(b.dernier.created_at) - new Date(a.dernier.created_at);
+    });
+}
+
+function renderInbox() {
+  var box = document.getElementById('msg-inbox');
+  if (!box) return;
+  var q = ((document.getElementById('msg-search')||{}).value || '').trim().toLowerCase();
+  var list = conversations().filter(function(c) {
+    if (!q) return true;
+    return (msgNomClient(c.client_id) + ' ' + (c.dernier.contenu||'')).toLowerCase().indexOf(q) !== -1;
+  });
+  if (!list.length) {
+    box.innerHTML = '<div style="text-align:center;padding:26px;color:var(--text-faint);font-size:12px;">Aucun message</div>';
+    return;
+  }
+  box.innerHTML = list.map(function(c) {
+    var m = c.dernier;
+    var prefix = m.expediteur === 'admin' ? '<span style="color:var(--text-faint);">Vous : </span>' : '';
+    return '<div onclick="ouvrirConversation(\'' + c.client_id + '\')" style="padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;'
+      + (c.nonLus ? 'background:rgba(224,90,90,0.07);' : '') + '">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;">'
+      +   '<strong style="font-size:12.5px;">' + msgEsc(msgNomClient(c.client_id)) + '</strong>'
+      +   '<span style="font-size:10.5px;color:var(--text-faint);">' + msgDateFR(m.created_at) + '</span>'
+      + '</div>'
+      + '<div style="font-size:11.5px;color:var(--text-dim);line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
+      +   prefix + msgEsc(m.contenu || '') + '</div>'
+      + (c.nonLus ? '<span class="badge b-red" style="font-size:9px;margin-top:6px;display:inline-block;">' + c.nonLus + ' non lu' + (c.nonLus>1?'s':'') + '</span>' : '')
+      + '</div>';
+  }).join('');
+}
+
+async function ouvrirConversation(clientId, sansMarquer) {
+  msgClientSel = clientId;
+  var fil = messagesData.filter(function(m){ return String(m.client_id) === String(clientId); })
+                        .sort(function(a,b){ return new Date(a.created_at) - new Date(b.created_at); });
+
+  document.getElementById('msg-thread-title').textContent = msgNomClient(clientId);
+  document.getElementById('msg-reply-box').style.display = 'block';
+  document.getElementById('msg-thread').innerHTML = fil.map(function(m) {
+    var moi = m.expediteur === 'admin';
+    return '<div style="display:flex;justify-content:' + (moi ? 'flex-end' : 'flex-start') + ';margin-bottom:8px;">'
+      + '<div style="max-width:78%;background:' + (moi ? 'var(--accent-dim)' : 'var(--surface2)') + ';border:1px solid ' + (moi ? 'rgba(255,95,31,0.3)' : 'var(--border)') + ';border-radius:12px;padding:9px 12px;">'
+      +   '<div style="font-size:12px;line-height:1.5;white-space:pre-wrap;">' + msgEsc(m.contenu || '') + '</div>'
+      +   '<div style="font-size:9.5px;color:var(--text-faint);margin-top:5px;text-align:right;">' + msgDateFR(m.created_at) + '</div>'
+      + '</div></div>';
+  }).join('') || '<div style="text-align:center;padding:26px;color:var(--text-faint);font-size:12px;">Aucun message</div>';
+
+  var th = document.getElementById('msg-thread');
+  th.scrollTop = th.scrollHeight;
+
+  if (sansMarquer) return;
+  // Marquer les messages du client comme lus
+  var aMarquer = fil.filter(function(m){ return m.expediteur === 'client' && !m.lu; }).map(function(m){ return m.id; });
+  if (aMarquer.length) {
+    try {
+      await db.from('messages').update({ lu: true }).in('id', aMarquer);
+      messagesData.forEach(function(m){ if (aMarquer.indexOf(m.id) !== -1) m.lu = true; });
+      renderInbox();
+      majBadgeMessages(nbMessagesNonLus());
+      chargerAlertes();
+    } catch(e) { console.error('maj lu:', e); }
+  }
+}
+
+async function envoyerReponse() {
+  if (!msgClientSel) return;
+  var el = document.getElementById('msg-reply');
+  var txt = (el.value || '').trim();
+  if (!txt) return;
+  try {
+    var { error } = await db.from('messages').insert({
+      client_id: msgClientSel, expediteur: 'admin', contenu: txt, lu: false
+    });
+    if (error) throw error;
+    el.value = '';
+    showToastAdmin('✓ Reponse envoyee', 'green');
+    await chargerMessages(true);
+    ouvrirConversation(msgClientSel, true);
+  } catch(e) { showToastAdmin('Erreur : ' + e.message, 'red'); console.error(e); }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ALERTES DASHBOARD — messages non lus, demandes, impayés
+// ══════════════════════════════════════════════════════════════
+function navVers(pageId) {
+  var el = null;
+  document.querySelectorAll('.nav-item').forEach(function(n) {
+    if ((n.getAttribute('onclick') || '').indexOf("'" + pageId + "'") !== -1) el = n;
+  });
+  nav(pageId, el);
+}
+
+async function chargerAlertes() {
+  var body = document.getElementById('dash-alertes-body');
+  if (!body) return;
+  var html = '';
+  var today = formatDateISO(new Date());
+
+  try {
+    // Messages clients non lus
+    var nonLus = messagesData.filter(function(m){ return m.expediteur === 'client' && !m.lu; });
+    if (nonLus.length) {
+      var apercu = nonLus.slice(0, 3).map(function(m){
+        return '<div style="font-size:11px;color:var(--text-dim);margin-top:3px;">'
+          + msgEsc(msgNomClient(m.client_id)) + ' — ' + msgEsc((m.contenu||'').slice(0, 70)) + ((m.contenu||'').length > 70 ? '…' : '') + '</div>';
+      }).join('');
+      html += '<div class="alert alert-r" style="cursor:pointer;" onclick="navVers(\'messages\')">'
+        + '<div class="alert-dot"></div><div class="alert-body">'
+        + '<strong>' + nonLus.length + ' message' + (nonLus.length>1?'s':'') + ' client non lu' + (nonLus.length>1?'s':'') + '</strong>'
+        + apercu
+        + '<div class="alert-time">Cliquez pour ouvrir la messagerie</div>'
+        + '</div></div>';
+    }
+
+    // Demandes de réservation en attente
+    var { data: enAttente } = await db.from('reservations')
+      .select('id,service,date_debut,client_id').eq('statut','en_attente').gte('date_fin', today).limit(50);
+    if (enAttente && enAttente.length) {
+      html += '<div class="alert alert-a" style="cursor:pointer;" onclick="navVers(\'reservations\')">'
+        + '<div class="alert-dot"></div><div class="alert-body">'
+        + '<strong>' + enAttente.length + ' demande' + (enAttente.length>1?'s':'') + ' a valider</strong>'
+        + '<div class="alert-time">Reservations en attente de confirmation</div>'
+        + '</div></div>';
+    }
+
+    // Factures impayées
+    var { data: impayees } = await db.from('factures')
+      .select('id,numero,total_ttc,created_at').eq('statut','impayee').limit(50);
+    if (impayees && impayees.length) {
+      var tot = impayees.reduce(function(a,f){ return a + (parseFloat(f.total_ttc)||0); }, 0);
+      html += '<div class="alert alert-a"><div class="alert-dot"></div><div class="alert-body">'
+        + '<strong>' + impayees.length + ' facture' + (impayees.length>1?'s':'') + ' impayee' + (impayees.length>1?'s':'') + '</strong> — '
+        + tot.toLocaleString('fr-LU',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €'
+        + '<div class="alert-time">Suivi dans l\'onglet Factures</div>'
+        + '</div></div>';
+    }
+
+    // Annulations d'occurrences récentes (7 derniers jours)
+    try {
+      var d7 = new Date(); d7.setDate(d7.getDate()-7);
+      var { data: annul } = await db.from('annulations_occurrences')
+        .select('id,date_occurrence,annule_par,annulation_tardive')
+        .gte('created_at', d7.toISOString()).limit(50);
+      var tardives = (annul||[]).filter(function(a){ return a.annulation_tardive; });
+      if (tardives.length) {
+        html += '<div class="alert alert-r"><div class="alert-dot"></div><div class="alert-body">'
+          + '<strong>' + tardives.length + ' annulation' + (tardives.length>1?'s':'') + ' tardive' + (tardives.length>1?'s':'') + '</strong> sur 7 jours — facturable'
+          + '<div class="alert-time">Detail dans les statistiques</div>'
+          + '</div></div>';
+      }
+    } catch(e) {}
+
+    body.innerHTML = html || '<div style="text-align:center;padding:18px;color:var(--text-faint);font-size:12px;">Aucune alerte — tout est a jour.</div>';
+  } catch(e) {
+    console.error('Alertes:', e);
+    body.innerHTML = '<div style="padding:14px;color:var(--text-faint);font-size:12px;">Alertes indisponibles.</div>';
+  }
+}
+
+// Alerte visible a la connexion : on ne rate pas un message client
+var _alerteMsgAffichee = false;
+function alerterMessagesNonLus() {
+  var n = nbMessagesNonLus();
+  majBadgeMessages(n);
+  if (n > 0 && !_alerteMsgAffichee) {
+    _alerteMsgAffichee = true;
+    showToastAdmin('📩 ' + n + ' nouveau' + (n>1?'x':'') + ' message' + (n>1?'s':'') + ' client', 'red');
+  }
+}
+
 // Charger au démarrage
 document.addEventListener('DOMContentLoaded', function() {
   loadDashboardStats();
@@ -2797,6 +3028,15 @@ document.addEventListener('DOMContentLoaded', function() {
   loadStats();
   chargerParametresLive();
   setInterval(loadDashboardStats, 5 * 60 * 1000);
+
+  // Messagerie : chargement immédiat + alerte + rafraîchissement toutes les 60 s
+  chargerMessages(true).then(function() {
+    alerterMessagesNonLus();
+    chargerAlertes();
+  });
+  setInterval(function() {
+    chargerMessages(true).then(function() { majBadgeMessages(nbMessagesNonLus()); });
+  }, 60 * 1000);
 
   // Revenir sur la section d'origine si on arrive depuis la fiche client (?section=...)
   var params = new URLSearchParams(window.location.search);

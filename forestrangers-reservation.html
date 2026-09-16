@@ -736,11 +736,11 @@ textarea.field-input { resize: vertical; min-height: 80px; }
               <div class="field">
                 <label class="field-label">Jours <span class="req">*</span></label>
                 <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">
-                  <div class="day-btn" onclick="toggleDay(this)">Lun</div>
-                  <div class="day-btn" onclick="toggleDay(this)">Mar</div>
-                  <div class="day-btn" onclick="toggleDay(this)">Mer</div>
-                  <div class="day-btn" onclick="toggleDay(this)">Jeu</div>
-                  <div class="day-btn" onclick="toggleDay(this)">Ven</div>
+                  <div class="day-btn" onclick="toggleDay(this)" data-day="lun">Lun</div>
+                  <div class="day-btn" onclick="toggleDay(this)" data-day="mar">Mar</div>
+                  <div class="day-btn" onclick="toggleDay(this)" data-day="mer">Mer</div>
+                  <div class="day-btn" onclick="toggleDay(this)" data-day="jeu">Jeu</div>
+                  <div class="day-btn" onclick="toggleDay(this)" data-day="ven">Ven</div>
                 </div>
               </div>
               <div class="field">
@@ -1272,6 +1272,56 @@ function toggleAccept(id) {
 }
 
 // ── DAY BUTTONS ──
+
+// ══════════════════════════════════════════════════════════════
+//  RÉCURRENCE — codes jours et expansion réelle des séances
+//  Les promenades et le day care ont lieu du LUNDI au VENDREDI.
+// ══════════════════════════════════════════════════════════════
+var JOUR_CODE_INDEX = { lun:1, mar:2, mer:3, jeu:4, ven:5, sam:6, dim:0 };
+
+// Codes des jours cochés, ex. ['lun','jeu']
+function joursCodesSelectionnes(svc) {
+  var sel = svc === 'walking'
+    ? document.querySelectorAll('#days-selector .day-btn.on')
+    : document.querySelectorAll('#recur-dc-options .day-btn.on');
+  var out = [];
+  Array.prototype.forEach.call(sel, function(d) {
+    var code = d.getAttribute('data-day')
+      || String(d.textContent || '').trim().toLowerCase().slice(0, 3);
+    if (code && JOUR_CODE_INDEX[code] !== undefined && out.indexOf(code) === -1) out.push(code);
+  });
+  return out;
+}
+
+function isoDateFR(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// Dates réelles des séances entre debut et fin (ISO 'AAAA-MM-JJ')
+function occurrencesFR(svc, debut, fin, codes) {
+  var out = [];
+  if (!debut) return out;
+  var d0 = new Date(debut + 'T00:00:00');
+  var d1 = fin ? new Date(fin + 'T00:00:00') : new Date(d0);
+  if (isNaN(d0)) return out;
+  if (isNaN(d1) || d1 < d0) d1 = new Date(d0);
+
+  if (svc === 'boarding') {
+    for (var b = new Date(d0); b <= d1 && out.length < 500; b.setDate(b.getDate() + 1)) out.push(isoDateFR(b));
+    return out;
+  }
+  var idx = (codes || []).map(function(c) { return JOUR_CODE_INDEX[c]; })
+                         .filter(function(i) { return i >= 1 && i <= 5; });
+  for (var d = new Date(d0); d <= d1 && out.length < 500; d.setDate(d.getDate() + 1)) {
+    var wd = d.getDay();
+    if (wd === 0 || wd === 6) continue;                    // pas de service le week-end
+    if (idx.length && idx.indexOf(wd) === -1) continue;    // uniquement les jours cochés
+    out.push(isoDateFR(d));
+  }
+  if (!out.length) out.push(isoDateFR(d0));
+  return out;
+}
+
 function toggleDay(el) {
   el.classList.toggle('on');
 }
@@ -1384,6 +1434,7 @@ function buildRecap() {
         ? document.getElementById('days-selector')
         : document.getElementById('recur-dc-options')?.querySelector('[style*="flex"]') || document.getElementById('recur-dc-options');
 
+      const selectedCodes = joursCodesSelectionnes(svc);
       const selectedDays = [];
       const allDayBtns = svc === 'walking'
         ? document.querySelectorAll('#days-selector .day-btn.on')
@@ -1405,12 +1456,9 @@ function buildRecap() {
         const startDateEl = svc === 'walking'
           ? document.getElementById('walk-date')
           : document.getElementById('daycare-date');
-        const startD = startDateEl?.value ? new Date(startDateEl.value) : new Date();
-        const endD = new Date(endDateEl.value);
-        const diffMs = endD - startD;
-        if (diffMs > 0) {
-          const weeks = Math.ceil(diffMs / (7 * 86400000));
-          const total = weeks * selectedDays.length;
+        const startISO = startDateEl?.value || isoDateFR(new Date());
+        const total = occurrencesFR(svc, startISO, endDateEl.value, selectedCodes).length;
+        if (total > 0) {
           const dogCount = getSelectedDogs().length || 1;
           const perSeance = tarifSeance(svc, dogCount);
           const totalPrice = total * perSeance;
@@ -1514,13 +1562,10 @@ function computeReservationTotal(svc) {
     const startDateEl = svc === 'walking'
       ? document.getElementById('walk-date')
       : document.getElementById('daycare-date');
-    const startD = startDateEl?.value ? new Date(startDateEl.value) : new Date();
-    const endD = endDateEl?.value ? new Date(endDateEl.value) : null;
-    if (selectedDays > 0 && endD) {
-      const diffMs = endD - startD;
-      if (diffMs > 0) {
-        const weeks = Math.ceil(diffMs / (7 * 86400000));
-        const total = weeks * selectedDays;
+    const startISO = startDateEl?.value || isoDateFR(new Date());
+    if (selectedDays > 0 && endDateEl?.value) {
+      const total = occurrencesFR(svc, startISO, endDateEl.value, joursCodesSelectionnes(svc)).length;
+      if (total > 0) {
         const dogCount = getSelectedDogs().length || 1;
         return { total: total * tarifSeance(svc, dogCount), nb: total };
       }
@@ -1560,6 +1605,22 @@ async function saveReservation(svc, isBoarding) {
   const notes = document.getElementById('booking-notes')?.value || null;
   const calc = computeReservationTotal(svc); // { total, nb } — identique au récap
 
+  // ── Récurrence ──
+  // Sans ces colonnes, le planning admin étale la réservation sur TOUS les jours
+  // de la plage (week-ends compris) : c'est la cause du bug corrigé ici.
+  let jours_recurrence = null, date_fin_recurrence = null, recurrente = false;
+  if (svc !== 'boarding') {
+    const recurId = svc === 'walking' ? 'recur-walk-recur' : 'recur-dc-recur';
+    if (document.getElementById(recurId)?.classList.contains('selected')) {
+      const codes = joursCodesSelectionnes(svc);
+      if (codes.length) {
+        jours_recurrence = codes.join(',');
+        recurrente = true;
+        date_fin_recurrence = date_fin;
+      }
+    }
+  }
+
   const base = {
     client_id: clientId,
     service: svc,
@@ -1570,29 +1631,40 @@ async function saveReservation(svc, isBoarding) {
     statut: isBoarding ? 'en_attente' : 'confirme'
     // ranger_nom / ranger_id : assignés automatiquement par le trigger fr_assign_ranger (règles §4.4)
   };
+  const recur = { jours_recurrence: jours_recurrence, date_fin_recurrence: date_fin_recurrence, recurrente: recurrente };
 
   // Construit les lignes à insérer. Le montant n'est porté QUE par la 1re ligne
   // (1 ligne par chien) pour que la somme sur le mois ne compte pas en double.
-  function buildRows(withMontant) {
+  function buildRows(withMontant, withRecur) {
     var extra = withMontant ? { montant_ttc: calc.total, nb_seances: calc.nb } : {};
     var zero  = withMontant ? { montant_ttc: 0, nb_seances: 0 } : {};
+    var rec   = withRecur ? recur : {};
     if (ids.length === 0) {
-      return [Object.assign({ chien_id: null }, base, extra)];
+      return [Object.assign({ chien_id: null }, base, rec, extra)];
     }
     return ids.map(function(id, i) {
-      return Object.assign({ chien_id: id }, base, i === 0 ? extra : zero);
+      return Object.assign({ chien_id: id }, base, rec, i === 0 ? extra : zero);
     });
   }
 
   try {
     let error = null;
-    ({ error } = await db.from('reservations').insert(buildRows(true)));
+    ({ error } = await db.from('reservations').insert(buildRows(true, true)));
 
-    // Repli : si les colonnes montant_ttc / nb_seances n'existent pas encore
+    // Repli 1 : colonnes de récurrence absentes de la table
+    if (error && /jours_recurrence|date_fin_recurrence|recurrente/i.test(error.message || '')) {
+      console.log('Colonnes de recurrence absentes — execute fr_migration_v19.sql pour corriger le planning.');
+      ({ error } = await db.from('reservations').insert(buildRows(true, false)));
+    }
+
+    // Repli 2 : si les colonnes montant_ttc / nb_seances n'existent pas encore
     // dans la table, on réinsère sans elles (la réservation reste enregistrée).
     if (error && /montant_ttc|nb_seances|column/i.test(error.message || '')) {
       console.log('Colonnes montant_ttc/nb_seances absentes — insertion sans montant. Ajoute-les pour activer l\'estimation.');
-      ({ error } = await db.from('reservations').insert(buildRows(false)));
+      ({ error } = await db.from('reservations').insert(buildRows(false, true)));
+    }
+    if (error && /jours_recurrence|date_fin_recurrence|recurrente/i.test(error.message || '')) {
+      ({ error } = await db.from('reservations').insert(buildRows(false, false)));
     }
 
     if (error) console.log('Erreur enregistrement réservation:', error);
