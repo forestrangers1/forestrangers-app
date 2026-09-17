@@ -690,12 +690,11 @@ textarea.form-control { resize: vertical; }
     <div class="nav-item" onclick="nav('planning',this)">
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
       Planning
-      <span class="nav-count">3</span>
     </div>
     <div class="nav-item" onclick="nav('reservations',this)">
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
       Réservations
-      <span class="nav-count">2</span>
+      <span class="nav-count" id="nav-count-resa" style="display:none;">0</span>
     </div>
   </div>
 
@@ -720,7 +719,7 @@ textarea.form-control { resize: vertical; }
     <div class="nav-item" onclick="nav('factures',this)">
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
       Factures
-      <span class="nav-count">1</span>
+      <span class="nav-count" id="nav-count-factures" style="display:none;" title="Factures impayées depuis plus de 30 jours">0</span>
     </div>
     <div class="nav-item" onclick="window.location.href='forestrangers-stats.html'">
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -944,6 +943,9 @@ textarea.form-control { resize: vertical; }
 
     <!-- ══════ CLIENTS ══════ -->
     <div class="page" id="page-clients">
+
+      <!-- Vue liste -->
+      <div id="clients-vue-liste">
       <div class="search-row">
         <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" id="clients-search" placeholder="Rechercher un client..." oninput="filterClients(this.value)">
@@ -957,6 +959,19 @@ textarea.form-control { resize: vertical; }
         <div id="clients-list">
           <div style="padding:24px;text-align:center;color:var(--text-faint);font-size:13px;">Chargement...</div>
         </div>
+      </div>
+      </div><!-- /clients-vue-liste -->
+
+      <!-- Vue fiche : la fiche client s'affiche ici, sans quitter l'admin -->
+      <div id="clients-vue-fiche" style="display:none;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <button class="btn btn-outline" style="padding:6px 12px;" onclick="fermerFicheClient()">&larr; Retour aux clients</button>
+          <span id="fiche-client-nom" style="font-family:'Norwester',sans-serif;font-size:14px;font-weight:800;color:var(--text);"></span>
+          <a id="fiche-client-lien" href="#" target="_blank" rel="noopener"
+             style="margin-left:auto;font-size:11px;color:var(--text-faint);text-decoration:none;">Ouvrir dans un onglet &#8599;</a>
+        </div>
+        <iframe id="client-frame" title="Fiche client"
+          style="width:100%;height:calc(100vh - 190px);min-height:600px;border:0;border-radius:12px;background:var(--surface);display:block;"></iframe>
       </div>
     </div>
 
@@ -1126,6 +1141,48 @@ textarea.form-control { resize: vertical; }
     <!-- ══════ MESSAGES ══════ -->
     <div class="page" id="page-messages">
 
+      <div class="g2" style="margin-bottom:14px;">
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Boite de reception</span>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-accent" style="padding:5px 10px;font-size:11px;" onclick="nouveauMessage()">Nouveau message</button>
+              <button class="btn btn-outline" style="padding:5px 10px;font-size:11px;" onclick="chargerMessages(true)">Actualiser</button>
+            </div>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div style="padding:12px 14px;border-bottom:1px solid var(--border);">
+              <input class="form-control" id="msg-search" type="search" placeholder="Rechercher un client, un ranger ou un message..." oninput="renderInbox()">
+            </div>
+            <div id="msg-inbox" style="max-height:520px;overflow-y:auto;">
+              <div style="text-align:center;padding:26px;color:var(--text-faint);font-size:12px;">Chargement…</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><span class="card-title" id="msg-thread-title">Conversation</span></div>
+          <div class="card-body">
+            <div id="msg-nouveau-box" style="display:none;margin-bottom:12px;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Destinataire</label>
+                <select class="form-control" id="msg-nouveau-dest" onchange="choisirDestinataire()"></select>
+              </div>
+            </div>
+            <div id="msg-thread" style="max-height:380px;overflow-y:auto;margin-bottom:12px;">
+              <div style="text-align:center;padding:26px;color:var(--text-faint);font-size:12px;">Selectionnez un message a gauche.</div>
+            </div>
+            <div id="msg-reply-box" style="display:none;">
+              <div class="form-group">
+                <label class="form-label">Message</label>
+                <textarea class="form-control" id="msg-reply" rows="4" placeholder="Votre reponse au client..."></textarea>
+              </div>
+              <button class="btn btn-accent" style="width:100%;justify-content:center;padding:10px;" onclick="envoyerReponse()">Envoyer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- ── Alertes meteo & diffusion (regles v1.9 §19) ── -->
       <div class="card" style="margin-bottom:14px;">
         <div class="card-head">
@@ -1194,38 +1251,6 @@ textarea.form-control { resize: vertical; }
         </div>
       </div>
 
-      <div class="g2">
-        <div class="card">
-          <div class="card-head">
-            <span class="card-title">Boite de reception</span>
-            <button class="btn btn-outline" style="padding:5px 10px;font-size:11px;" onclick="chargerMessages(true)">Actualiser</button>
-          </div>
-          <div class="card-body" style="padding:0;">
-            <div style="padding:12px 14px;border-bottom:1px solid var(--border);">
-              <input class="form-control" id="msg-search" type="search" placeholder="Rechercher un client ou un message..." oninput="renderInbox()">
-            </div>
-            <div id="msg-inbox" style="max-height:520px;overflow-y:auto;">
-              <div style="text-align:center;padding:26px;color:var(--text-faint);font-size:12px;">Chargement…</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-head"><span class="card-title" id="msg-thread-title">Conversation</span></div>
-          <div class="card-body">
-            <div id="msg-thread" style="max-height:380px;overflow-y:auto;margin-bottom:12px;">
-              <div style="text-align:center;padding:26px;color:var(--text-faint);font-size:12px;">Selectionnez un message a gauche.</div>
-            </div>
-            <div id="msg-reply-box" style="display:none;">
-              <div class="form-group">
-                <label class="form-label">Reponse</label>
-                <textarea class="form-control" id="msg-reply" rows="4" placeholder="Votre reponse au client..."></textarea>
-              </div>
-              <button class="btn btn-accent" style="width:100%;justify-content:center;padding:10px;" onclick="envoyerReponse()">Envoyer la reponse</button>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- ══════ PARAMETRES (éditeur intégré) ══════ -->
@@ -1247,8 +1272,8 @@ function toggleTheme() {
   document.getElementById('icon-sun').style.display  = isLight ? 'block' : 'none';
   localStorage.setItem('fr-theme', isLight ? 'light' : 'dark');
 }
-// Restore saved preference
-if (localStorage.getItem('fr-theme') === 'light') {
+// Restore saved preference — clair par defaut
+if (localStorage.getItem('fr-theme') !== 'dark') {
   document.documentElement.classList.add('light');
   document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('icon-moon').style.display = 'none';
@@ -1474,6 +1499,11 @@ function nav(id, el) {
   // Show back button on all pages except dashboard
   const backBtn = document.getElementById('backBtn');
   if (backBtn) backBtn.style.display = id !== 'dashboard' ? 'flex' : 'none';
+
+  if (id !== 'clients') {
+    var fiche = document.getElementById('clients-vue-fiche');
+    if (fiche && fiche.style.display !== 'none') fermerFicheClient();
+  }
 
   if (id === 'messages')     { chargerMessages(true); initAlerteMeteo(); }
   if (id === 'reservations') { loadReservationsAdmin(); chargerAnnulationsOccurrences(); }
@@ -2238,6 +2268,7 @@ async function loadChiens() {
       .eq('actif', true)
       .order('nom');
     if (!data) return;
+    await chargerChaleursOuvertes();
     allChiens = data;
     renderChiens(data);
   } catch(e) { console.log('Erreur chiens:', e); }
@@ -2256,16 +2287,170 @@ function renderChiens(chiens) {
     var grand  = d.poids_kg && d.poids_kg >= 35;
     return '<div class="dog-card">'
       + '<div class="dog-card-head"><span class="dog-card-name">' + d.nom + '</span>'
-      + (grand ? '<span class="badge b-amber">Grand</span>' : '<span class="badge b-green">Actif</span>') + '</div>'
+      + (chaleurActive(d) ? '<span class="badge" style="background:rgba(214,92,140,0.16);color:#d65c8c;">En chaleur</span>'
+          : chaleurSignalement(d) ? '<span class="badge b-amber">Signalée</span>'
+          : grand ? '<span class="badge b-amber">Grand</span>' : '<span class="badge b-green">Actif</span>') + '</div>'
       + '<div class="dog-prop"><span class="dog-prop-key">Race</span><span>' + (d.race || '—') + '</span></div>'
       + '<div class="dog-prop"><span class="dog-prop-key">Poids</span><span>' + poids + '</span></div>'
       + '<div class="dog-prop"><span class="dog-prop-key">Propriétaire</span><span>' + client + '</span></div>'
       + (d.notes_sante ? '<div class="dog-note">' + d.notes_sante + '</div>' : '')
+      + blocChaleurAdmin(d)
       + '<div style="display:flex;justify-content:flex-end;margin-top:8px;gap:6px;">'
       + '<button onclick="editChien(\'' + d.id + '\')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;color:var(--text-dim);font-family:\'Norwester\',sans-serif;font-size:10px;font-weight:800;cursor:pointer;">Modifier</button>'
       + '<button onclick="window.location.href=\'forestrangers-client-detail.html?id=' + (d.clients ? d.client_id : '') + '&from=chiens\'" style="background:var(--accent-dim);border:1px solid var(--accent-mid);border-radius:8px;padding:5px 12px;color:var(--accent);font-family:\'Norwester\',sans-serif;font-size:10px;font-weight:800;cursor:pointer;">Fiche client</button>'
       + '</div></div>';
   }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  MODE « EN CHALEUR »
+//
+//  Deux niveaux, volontairement separes :
+//   · un ranger SIGNALE ce qu'il constate en promenade. Rien ne
+//     bouge au planning : il n'annule pas des seances facturables
+//     de sa propre initiative.
+//   · Gabriel ou le client DECLARENT. Les seances des trois
+//     semaines sortent du planning et suivent les regles
+//     d'annulation des CGV (§4.2) — pas de gratuite automatique.
+//     L'apercu montre le cout avant de confirmer.
+//
+//  Reserve aux femelles non sterilisees : la regle est en base
+//  (fr_migration_v23), l'interface ne fait que la refleter.
+// ══════════════════════════════════════════════════════════════
+var CHALEUR_JOURS = 21;
+var chaleursOuvertes = {};   // chien_id -> ligne `chaleurs`
+
+function chaleurEligible(d) {
+  return !!d
+    && String(d.sexe || '').toLowerCase() === 'femelle'
+    && d.sterilise === false;
+}
+
+function chaleurActive(d) {
+  if (!d || !d.chaleur_debut || !d.chaleur_fin) return false;
+  var t = new Date(); t.setHours(0, 0, 0, 0);
+  return new Date(d.chaleur_debut + 'T00:00:00') <= t
+      && t <= new Date(d.chaleur_fin + 'T00:00:00');
+}
+
+function chaleurSignalement(d) {
+  var c = d && chaleursOuvertes[d.id];
+  return (c && c.statut === 'signale') ? c : null;
+}
+
+function chaleurDateFR(iso) {
+  if (!iso) return '—';
+  var d = new Date(iso + 'T00:00:00');
+  return isNaN(d) ? iso : d.toLocaleDateString('fr-LU', { day: '2-digit', month: 'short' });
+}
+
+function chaleurSourceFR(src) {
+  return src === 'client' ? 'activé par le client'
+       : src === 'admin'  ? 'activé par vous'
+       : 'activé';
+}
+
+async function chargerChaleursOuvertes() {
+  chaleursOuvertes = {};
+  try {
+    var { data } = await db.from('chaleurs')
+      .select('chien_id,statut,date_debut,signale_par_nom')
+      .in('statut', ['signale', 'active']);
+    (data || []).forEach(function(c) { chaleursOuvertes[c.chien_id] = c; });
+  } catch (e) { console.log('chaleurs:', e); }
+}
+
+function blocChaleurAdmin(d) {
+  var nomEsc = String(d.nom || '').replace(/'/g, "\\'");
+
+  if (chaleurActive(d)) {
+    return '<div style="margin-top:8px;background:rgba(214,92,140,0.10);border:1px solid rgba(214,92,140,0.3);border-radius:8px;padding:9px 11px;">'
+      + '<div style="font-size:11px;color:#d65c8c;font-weight:700;">Hors planning jusqu\'au '
+      +   chaleurDateFR(d.chaleur_fin) + '</div>'
+      + '<div style="font-size:10.5px;color:var(--text-faint);margin-top:2px;">'
+      +   chaleurSourceFR(d.chaleur_source) + '</div>'
+      + '<button onclick="chaleurAdminAnnuler(\'' + d.id + '\',\'' + nomEsc + '\')" '
+      +   'style="width:100%;margin-top:7px;background:transparent;border:1px solid rgba(214,92,140,0.4);border-radius:7px;padding:5px;color:#d65c8c;font-family:\'Norwester\',sans-serif;font-size:10px;font-weight:800;cursor:pointer;">'
+      +   'Relancer les promenades</button>'
+      + '</div>';
+  }
+
+  if (!chaleurEligible(d)) return '';
+
+  var sig = chaleurSignalement(d);
+  if (sig) {
+    return '<div style="margin-top:8px;background:rgba(240,180,41,0.10);border:1px solid rgba(240,180,41,0.35);border-radius:8px;padding:9px 11px;">'
+      + '<div style="font-size:11px;color:#f0b429;font-weight:700;">Signalée en chaleur</div>'
+      + '<div style="font-size:10.5px;color:var(--text-faint);margin-top:2px;">par '
+      +   (sig.signale_par_nom || 'un ranger') + ' le ' + chaleurDateFR(sig.date_debut)
+      +   ' · planning inchangé</div>'
+      + '<div style="display:flex;gap:6px;margin-top:7px;">'
+      +   '<button onclick="chaleurAdminDeclarer(\'' + d.id + '\',\'' + nomEsc + '\')" '
+      +     'style="flex:1;background:#d65c8c;border:none;border-radius:7px;padding:5px;color:#fff;font-family:\'Norwester\',sans-serif;font-size:10px;font-weight:800;cursor:pointer;">Confirmer</button>'
+      +   '<button onclick="chaleurAdminEcarter(\'' + d.id + '\',\'' + nomEsc + '\')" '
+      +     'style="flex:1;background:transparent;border:1px solid var(--border);border-radius:7px;padding:5px;color:var(--text-dim);font-family:\'Norwester\',sans-serif;font-size:10px;font-weight:800;cursor:pointer;">Écarter</button>'
+      + '</div></div>';
+  }
+
+  return '<button onclick="chaleurAdminDeclarer(\'' + d.id + '\',\'' + nomEsc + '\')" '
+    + 'style="width:100%;margin-top:8px;background:transparent;border:1px dashed rgba(214,92,140,0.4);border-radius:8px;padding:6px;color:#d65c8c;font-family:\'Norwester\',sans-serif;font-size:10px;font-weight:800;cursor:pointer;">'
+    + 'Activer le mode chaleur</button>';
+}
+
+// Ce que la suspension retire, et ce qu'elle facture au client.
+// Les CGV s'appliquent : une seance de demain reste due.
+async function chaleurApercuTexte(id) {
+  try {
+    var { data, error } = await db.rpc('fr_chaleur_apercu', { p_chien: id, p_jours: CHALEUR_JOURS });
+    if (error || !data) return 'Détail des séances indisponible.';
+    if (!data.length) return 'Aucune séance prévue sur les 3 prochaines semaines.';
+    var fact = data.filter(function(l) { return (l.pourcentage || 0) > 0; });
+    var total = fact.reduce(function(a, l) { return a + (parseFloat(l.montant_ligne) || 0); }, 0);
+    var t = data.length + ' séance(s) retirée(s) du planning.\n';
+    if (!fact.length) return t + 'Aucune n\'est facturable.';
+    t += fact.length + ' reste(nt) facturable(s) selon les CGV';
+    if (total > 0) t += ' — environ ' + total.toFixed(2) + ' € TTC';
+    return t + '.';
+  } catch (e) { return 'Détail des séances indisponible.'; }
+}
+
+async function chaleurAdminDeclarer(id, nom) {
+  showToastAdmin('Calcul des séances…', 'amber');
+  var apercu = await chaleurApercuTexte(id);
+  if (!confirm('Activer le mode chaleur pour ' + nom + ' ?\n\n'
+             + 'Retrait du planning pendant ' + CHALEUR_JOURS + ' jours.\n\n'
+             + apercu + '\n\n'
+             + 'Le client voit l\'information dans son espace.')) return;
+  try {
+    var { error } = await db.rpc('fr_chaleur_declarer', { p_chien: id, p_jours: CHALEUR_JOURS });
+    if (error) { showToastAdmin(String(error.message).replace(/^.*FR_CHALEUR:\s*/, ''), 'red'); return; }
+    showToastAdmin('✓ ' + nom + ' retirée du planning', 'green');
+    loadChiens();
+    if (typeof loadPlanning === 'function') loadPlanning();
+  } catch (e) { showToastAdmin('Erreur : ' + e.message, 'red'); }
+}
+
+async function chaleurAdminEcarter(id, nom) {
+  if (!confirm('Écarter le signalement concernant ' + nom + ' ?\n\nRien ne change au planning.')) return;
+  try {
+    var { error } = await db.rpc('fr_chaleur_ecarter', { p_chien: id });
+    if (error) { showToastAdmin(String(error.message).replace(/^.*FR_CHALEUR:\s*/, ''), 'red'); return; }
+    showToastAdmin('✓ Signalement écarté', 'green');
+    loadChiens();
+  } catch (e) { showToastAdmin('Erreur : ' + e.message, 'red'); }
+}
+
+async function chaleurAdminAnnuler(id, nom) {
+  if (!confirm('Remettre ' + nom + ' au planning dès aujourd\'hui ?\n\n'
+             + 'Les séances à venir qui avaient été retirées sont restaurées et les frais '
+             + 'd\'annulation correspondants annulés. Celles déjà passées restent annulées.')) return;
+  try {
+    var { error } = await db.rpc('fr_chaleur_annuler', { p_chien: id });
+    if (error) { showToastAdmin(String(error.message).replace(/^.*FR_CHALEUR:\s*/, ''), 'red'); return; }
+    showToastAdmin('✓ ' + nom + ' de retour au planning', 'green');
+    loadChiens();
+    if (typeof loadPlanning === 'function') loadPlanning();
+  } catch (e) { showToastAdmin('Erreur : ' + e.message, 'red'); }
 }
 
 function filterChiens(val) {
@@ -2369,7 +2554,7 @@ function renderClients(clients) {
     var testBadge = c.is_test ? '<span class="badge b-muted" style="font-size:9px;">Test</span>' : '';
     var zoneBadge = c.hors_zone ? '<span class="badge b-amber" style="font-size:9px;">Hors zone</span>' : '';
 
-    html += '<div class="client-row" onclick="window.location.href=\'forestrangers-client-detail.html?id=' + c.id + '&from=clients\'" style="cursor:pointer;">'
+    html += '<div class="client-row" onclick="ouvrirFicheClient(\'' + c.id + '\')" style="cursor:pointer;">'
       + '<div class="c-avatar">' + initials + '</div>'
       + '<div style="flex:1;min-width:0;">'
       + '<div class="c-name">' + c.prenom + ' ' + c.nom + ' <span style="color:var(--accent);font-size:10px;font-family:\'Norwester\',sans-serif;">#' + c.numero_client + '</span></div>'
@@ -2383,6 +2568,41 @@ function renderClients(clients) {
   });
 
   container.innerHTML = html;
+}
+
+// ── FICHE CLIENT INTEGREE (iframe : on reste dans l'admin, sidebar comprise) ──
+function ouvrirFicheClient(id) {
+  var nom = '';
+  for (var i = 0; i < allClients.length; i++) {
+    if (String(allClients[i].id) === String(id)) {
+      nom = (allClients[i].prenom || '') + ' ' + (allClients[i].nom || '');
+      break;
+    }
+  }
+  var frame = document.getElementById('client-frame');
+  var url = 'forestrangers-client-detail.html?id=' + encodeURIComponent(id) + '&from=clients&embed=1';
+  if (frame) frame.setAttribute('src', url);
+  var lien = document.getElementById('fiche-client-lien');
+  if (lien) lien.setAttribute('href', url.replace('&embed=1', ''));
+  var titre = document.getElementById('fiche-client-nom');
+  if (titre) titre.textContent = nom || '';
+  document.getElementById('clients-vue-liste').style.display = 'none';
+  document.getElementById('clients-vue-fiche').style.display = 'block';
+  var sub = document.getElementById('pageSub');
+  if (sub) sub.textContent = nom || 'Fiche client';
+  window.scrollTo(0, 0);
+}
+
+function fermerFicheClient() {
+  var frame = document.getElementById('client-frame');
+  if (frame) frame.removeAttribute('src');   // libere la page, evite le son/scroll fantome
+  var fiche = document.getElementById('clients-vue-fiche');
+  var liste = document.getElementById('clients-vue-liste');
+  if (fiche) fiche.style.display = 'none';
+  if (liste) liste.style.display = 'block';
+  var sub = document.getElementById('pageSub');
+  if (sub && titles.clients) sub.textContent = titles.clients[1];
+  loadClients();   // les tarifs ou le nom ont pu changer dans la fiche
 }
 
 function filterClients(val) {
@@ -3042,13 +3262,42 @@ function msgDateFR(v) {
   if (memeJour) return "Aujourd'hui " + String(d.getHours()).padStart(2,'0') + 'h' + String(d.getMinutes()).padStart(2,'0');
   return d.toLocaleDateString('fr-LU', { day:'2-digit', month:'short' }) + ' ' + String(d.getHours()).padStart(2,'0') + 'h' + String(d.getMinutes()).padStart(2,'0');
 }
+// ══════════════════════════════════════════════════════════════
+//  MESSAGERIE — clients ET staff
+//  Une conversation est identifiee par une cle :
+//    'c:<client_id>'  conversation avec un client
+//    's:<staff_id>'   conversation avec un membre du staff
+//  La colonne messages.staff_id est ajoutee par
+//  fr_migration_v22_messages_staff.sql. Sans elle, seules les
+//  conversations clients sont disponibles (repli automatique).
+// ══════════════════════════════════════════════════════════════
+var msgStaffMap    = {};
+var msgStaffActif  = true;   // passe a false si la colonne staff_id n'existe pas
+var msgTousClients = [];
+
 function msgNomClient(id) {
   var c = msgClientsMap[id];
   return c ? (c.prenom + ' ' + c.nom) : 'Client';
 }
+function msgNomStaff(id) {
+  var st = msgStaffMap[id];
+  return st ? (st.prenom + ' ' + (st.nom || '')).trim() : 'Staff';
+}
 function msgEsc(v) {
   return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
+
+// Cle de conversation d'un message
+function msgCle(m) {
+  if (m.staff_id) return 's:' + m.staff_id;
+  return 'c:' + (m.client_id || 'inconnu');
+}
+function msgNomCle(cle) {
+  if (!cle) return 'Conversation';
+  var id = cle.slice(2);
+  return cle.charAt(0) === 's' ? msgNomStaff(id) : msgNomClient(id);
+}
+function msgEstStaff(cle) { return !!cle && cle.charAt(0) === 's'; }
 
 async function chargerMessages(silencieux) {
   try {
@@ -3065,6 +3314,9 @@ async function chargerMessages(silencieux) {
     }
     messagesData = data || [];
 
+    // La colonne staff_id existe-t-elle ?
+    msgStaffActif = messagesData.length === 0 || ('staff_id' in messagesData[0]);
+
     var ids = [];
     messagesData.forEach(function(m){ if (m.client_id && ids.indexOf(m.client_id) === -1) ids.push(m.client_id); });
     if (ids.length) {
@@ -3072,14 +3324,58 @@ async function chargerMessages(silencieux) {
       (rc.data || []).forEach(function(c){ msgClientsMap[c.id] = c; });
     }
 
+    // Staff : chargé en entier (sert aussi au selecteur de destinataire)
+    try {
+      var rs = await db.from('staff').select('id,prenom,nom,actif').order('prenom');
+      (rs.data || []).forEach(function(st){ msgStaffMap[st.id] = st; });
+    } catch(e) { console.log('staff indisponible:', e); }
+
     renderInbox();
     if (msgClientSel) ouvrirConversation(msgClientSel, true);
     majBadgeMessages(nbMessagesNonLus());
   } catch(e) { console.error('Messages:', e); }
 }
 
+// Non lus cote Gabriel : tout ce qui ne vient pas de lui
 function nbMessagesNonLus() {
-  return messagesData.filter(function(m){ return m.expediteur === 'client' && !m.lu; }).length;
+  return messagesData.filter(function(m){ return m.expediteur !== 'admin' && !m.lu; }).length;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  COMPTEURS DE LA BARRE LATERALE
+//
+//  Un chiffre dans le menu est une notification : il apparait
+//  quand il y a quelque chose a traiter, il disparait quand c'est
+//  fait. Les compteurs decoratifs ont ete retires.
+//   · Reservations : demandes en attente
+//   · Factures     : impayees de plus de 30 jours, et elles seules
+//   · Statistiques : rien. On ne notifie pas une statistique.
+// ══════════════════════════════════════════════════════════════
+function majCompteurNav(id, n) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  if (n > 0) { el.textContent = n > 99 ? '99+' : n; el.style.display = ''; }
+  else { el.style.display = 'none'; }
+}
+
+async function majCompteursSidebar() {
+  try {
+    var r = await db.from('reservations')
+      .select('id', { count: 'exact', head: true })
+      .eq('statut', 'en_attente');
+    majCompteurNav('nav-count-resa', r.count || 0);
+  } catch (e) { console.log('compteur resa:', e); }
+
+  try {
+    var limite = new Date();
+    limite.setDate(limite.getDate() - 30);
+    var f = await db.from('factures')
+      .select('id, clients!inner(is_test)', { count: 'exact', head: true })
+      .eq('statut', 'impayee')
+      .eq('clients.is_test', false)
+      .lt('created_at', limite.toISOString());
+    majCompteurNav('nav-count-factures', f.count || 0);
+  } catch (e) { console.log('compteur factures:', e); }
 }
 
 function majBadgeMessages(n) {
@@ -3089,14 +3385,14 @@ function majBadgeMessages(n) {
   else { b.style.display = 'none'; }
 }
 
-// Regroupe par client : dernier message + nombre de non-lus
+// Regroupe par conversation : dernier message + nombre de non-lus
 function conversations() {
   var conv = {};
   messagesData.forEach(function(m) {
-    var k = m.client_id || 'inconnu';
-    if (!conv[k]) conv[k] = { client_id: m.client_id, dernier: m, nonLus: 0, total: 0 };
+    var k = msgCle(m);
+    if (!conv[k]) conv[k] = { cle: k, dernier: m, nonLus: 0, total: 0 };
     if (new Date(m.created_at) > new Date(conv[k].dernier.created_at)) conv[k].dernier = m;
-    if (m.expediteur === 'client' && !m.lu) conv[k].nonLus++;
+    if (m.expediteur !== 'admin' && !m.lu) conv[k].nonLus++;
     conv[k].total++;
   });
   return Object.keys(conv).map(function(k){ return conv[k]; })
@@ -3112,7 +3408,7 @@ function renderInbox() {
   var q = ((document.getElementById('msg-search')||{}).value || '').trim().toLowerCase();
   var list = conversations().filter(function(c) {
     if (!q) return true;
-    return (msgNomClient(c.client_id) + ' ' + (c.dernier.contenu||'')).toLowerCase().indexOf(q) !== -1;
+    return (msgNomCle(c.cle) + ' ' + (c.dernier.contenu||'')).toLowerCase().indexOf(q) !== -1;
   });
   if (!list.length) {
     box.innerHTML = '<div style="text-align:center;padding:26px;color:var(--text-faint);font-size:12px;">Aucun message</div>';
@@ -3121,10 +3417,12 @@ function renderInbox() {
   box.innerHTML = list.map(function(c) {
     var m = c.dernier;
     var prefix = m.expediteur === 'admin' ? '<span style="color:var(--text-faint);">Vous : </span>' : '';
-    return '<div onclick="ouvrirConversation(\'' + c.client_id + '\')" style="padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;'
-      + (c.nonLus ? 'background:rgba(224,90,90,0.07);' : '') + '">'
+    var tag = msgEstStaff(c.cle)
+      ? '<span class="badge b-muted" style="font-size:8.5px;margin-left:6px;">Staff</span>' : '';
+    return '<div onclick="ouvrirConversation(\'' + c.cle + '\')" style="padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;'
+      + (c.cle === msgClientSel ? 'background:var(--accent-dim);' : (c.nonLus ? 'background:rgba(224,90,90,0.07);' : '')) + '">'
       + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;">'
-      +   '<strong style="font-size:12.5px;">' + msgEsc(msgNomClient(c.client_id)) + '</strong>'
+      +   '<strong style="font-size:12.5px;">' + msgEsc(msgNomCle(c.cle)) + tag + '</strong>'
       +   '<span style="font-size:10.5px;color:var(--text-faint);">' + msgDateFR(m.created_at) + '</span>'
       + '</div>'
       + '<div style="font-size:11.5px;color:var(--text-dim);line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
@@ -3134,13 +3432,23 @@ function renderInbox() {
   }).join('');
 }
 
-async function ouvrirConversation(clientId, sansMarquer) {
-  msgClientSel = clientId;
-  var fil = messagesData.filter(function(m){ return String(m.client_id) === String(clientId); })
+async function ouvrirConversation(cle, sansMarquer) {
+  // Compatibilite : un ancien appel passait directement un client_id
+  if (cle && cle.indexOf(':') === -1) cle = 'c:' + cle;
+  msgClientSel = cle;
+
+  var fermerComposeur = document.getElementById('msg-nouveau-box');
+  if (fermerComposeur) fermerComposeur.style.display = 'none';
+
+  var fil = messagesData.filter(function(m){ return msgCle(m) === cle; })
                         .sort(function(a,b){ return new Date(a.created_at) - new Date(b.created_at); });
 
-  document.getElementById('msg-thread-title').textContent = msgNomClient(clientId);
+  document.getElementById('msg-thread-title').textContent = msgNomCle(cle)
+    + (msgEstStaff(cle) ? ' · staff' : '');
   document.getElementById('msg-reply-box').style.display = 'block';
+  var champ = document.getElementById('msg-reply');
+  if (champ) champ.placeholder = msgEstStaff(cle) ? 'Votre message au staff...' : 'Votre reponse au client...';
+
   document.getElementById('msg-thread').innerHTML = fil.map(function(m) {
     var moi = m.expediteur === 'admin';
     return '<div style="display:flex;justify-content:' + (moi ? 'flex-end' : 'flex-start') + ';margin-bottom:8px;">'
@@ -3148,14 +3456,14 @@ async function ouvrirConversation(clientId, sansMarquer) {
       +   '<div style="font-size:12px;line-height:1.5;white-space:pre-wrap;">' + msgEsc(m.contenu || '') + '</div>'
       +   '<div style="font-size:9.5px;color:var(--text-faint);margin-top:5px;text-align:right;">' + msgDateFR(m.created_at) + '</div>'
       + '</div></div>';
-  }).join('') || '<div style="text-align:center;padding:26px;color:var(--text-faint);font-size:12px;">Aucun message</div>';
+  }).join('') || '<div style="text-align:center;padding:26px;color:var(--text-faint);font-size:12px;">Aucun message — ecrivez le premier.</div>';
 
   var th = document.getElementById('msg-thread');
   th.scrollTop = th.scrollHeight;
+  renderInbox();
 
   if (sansMarquer) return;
-  // Marquer les messages du client comme lus
-  var aMarquer = fil.filter(function(m){ return m.expediteur === 'client' && !m.lu; }).map(function(m){ return m.id; });
+  var aMarquer = fil.filter(function(m){ return m.expediteur !== 'admin' && !m.lu; }).map(function(m){ return m.id; });
   if (aMarquer.length) {
     try {
       await db.from('messages').update({ lu: true }).in('id', aMarquer);
@@ -3167,20 +3475,94 @@ async function ouvrirConversation(clientId, sansMarquer) {
   }
 }
 
+// ── Nouveau message : choisir librement un client ou un membre du staff ──
+async function nouveauMessage() {
+  var box = document.getElementById('msg-nouveau-box');
+  var sel = document.getElementById('msg-nouveau-dest');
+  if (!box || !sel) return;
+
+  document.getElementById('msg-reply-box').style.display = 'none';
+  document.getElementById('msg-thread').innerHTML =
+    '<div style="text-align:center;padding:26px;color:var(--text-faint);font-size:12px;">Choisissez un destinataire.</div>';
+  document.getElementById('msg-thread-title').textContent = 'Nouveau message';
+  box.style.display = 'block';
+  sel.innerHTML = '<option value="">Chargement…</option>';
+
+  // Clients (tous, pas seulement ceux qui ont deja ecrit)
+  try {
+    var rc = await db.from('clients').select('id,prenom,nom,numero_client').order('nom');
+    msgTousClients = rc.data || [];
+    msgTousClients.forEach(function(c){ if (!msgClientsMap[c.id]) msgClientsMap[c.id] = c; });
+  } catch(e) { console.log('clients indisponibles:', e); }
+
+  // Staff
+  try {
+    var rs = await db.from('staff').select('id,prenom,nom,actif').order('prenom');
+    (rs.data || []).forEach(function(st){ msgStaffMap[st.id] = st; });
+  } catch(e) { console.log('staff indisponible:', e); }
+
+  var html = '<option value="">Selectionner un destinataire…</option>';
+
+  var staffs = Object.keys(msgStaffMap).map(function(k){ return msgStaffMap[k]; })
+                     .filter(function(st){ return st.actif !== false; });
+  if (staffs.length && msgStaffActif) {
+    html += '<optgroup label="Staff">';
+    staffs.forEach(function(st){
+      html += '<option value="s:' + st.id + '">' + msgEsc((st.prenom + ' ' + (st.nom||'')).trim()) + '</option>';
+    });
+    html += '</optgroup>';
+  }
+
+  if (msgTousClients.length) {
+    html += '<optgroup label="Clients">';
+    msgTousClients.forEach(function(c){
+      var num = c.numero_client ? ' (n° ' + c.numero_client + ')' : '';
+      html += '<option value="c:' + c.id + '">' + msgEsc(c.prenom + ' ' + c.nom) + msgEsc(num) + '</option>';
+    });
+    html += '</optgroup>';
+  }
+
+  sel.innerHTML = html;
+
+  if (!msgStaffActif) {
+    showToastAdmin("Colonne staff_id absente — executez fr_migration_v22_messages_staff.sql pour ecrire au staff", 'amber');
+  }
+}
+
+function choisirDestinataire() {
+  var sel = document.getElementById('msg-nouveau-dest');
+  if (!sel || !sel.value) return;
+  ouvrirConversation(sel.value, true);
+  var champ = document.getElementById('msg-reply');
+  if (champ) champ.focus();
+}
+
 async function envoyerReponse() {
   if (!msgClientSel) return;
   var el = document.getElementById('msg-reply');
   var txt = (el.value || '').trim();
   if (!txt) return;
+
+  var id = msgClientSel.slice(2);
+  var ligne = { expediteur: 'admin', contenu: txt, lu: false };
+  if (msgEstStaff(msgClientSel)) ligne.staff_id = id;
+  else                           ligne.client_id = id;
+
   try {
-    var { error } = (await insererMessages(
-      [{ client_id: msgClientSel, expediteur: 'admin', contenu: txt, lu: false }], 'message'));
+    var { error } = (await insererMessages([ligne], 'message'));
     if (error) throw error;
     el.value = '';
-    showToastAdmin('✓ Reponse envoyee', 'green');
+    showToastAdmin('✓ Message envoye', 'green');
     await chargerMessages(true);
     ouvrirConversation(msgClientSel, true);
-  } catch(e) { showToastAdmin('Erreur : ' + e.message, 'red'); console.error(e); }
+  } catch(e) {
+    if (/staff_id/i.test(e.message || '')) {
+      showToastAdmin("Colonne staff_id absente — executez fr_migration_v22_messages_staff.sql", 'red');
+    } else {
+      showToastAdmin('Erreur : ' + e.message, 'red');
+    }
+    console.error(e);
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -3816,6 +4198,8 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   chargerBlocsDashboard();
   setInterval(chargerBlocsDashboard, 5 * 60 * 1000);
+  majCompteursSidebar();
+  setInterval(majCompteursSidebar, 2 * 60 * 1000);
   setInterval(function() {
     chargerMessages(true).then(function() { majBadgeMessages(nbMessagesNonLus()); });
   }, 60 * 1000);

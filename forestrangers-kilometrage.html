@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Forest Rangers — Kilométrage</title>
+<script>
+/* Theme partage (cle 'fr-theme') : clair par defaut, sombre uniquement si
+   l'utilisateur l'a explicitement choisi. Applique avant le CSS pour eviter
+   le clignotement au chargement. */
+try { if (localStorage.getItem('fr-theme') !== 'dark') document.documentElement.classList.add('light'); } catch(e) {}
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
 <style>
@@ -32,6 +38,30 @@
   --bld:     rgba(90,154,224,0.12);
   --r: 10px; --rl: 16px;
 }
+
+/* ── MODE CLAIR (classe html.light, cle 'fr-theme' partagee) ── */
+html.light {
+  --acc-dim: rgba(255,95,31,0.10);
+  --acc-mid: rgba(255,95,31,0.22);
+  --bg:      #f4f5f0;
+  --s1:      #ffffff;
+  --s2:      #eef0e8;
+  --s3:      #d6dac8;
+  --bd:      rgba(0,0,0,0.08);
+  --bd2:     rgba(0,0,0,0.15);
+  --tx:      #1c1f14;
+  --td:      rgba(28,31,20,0.58);
+  --tf:      rgba(28,31,20,0.35);
+  --green:   #2e7d32;
+  --gd:      rgba(46,125,50,0.10);
+  --red:     #c62828;
+  --rd:      rgba(198,40,40,0.10);
+  --amber:   #b45000;
+  --ad:      rgba(180,80,0,0.12);
+  --blue:    #1565c0;
+  --bld:     rgba(21,101,192,0.10);
+}
+html.light body { background: var(--bg) !important; color: var(--tx) !important; }
 
 html, body {
   height: 100%; font-family: 'Instrument Sans', sans-serif;

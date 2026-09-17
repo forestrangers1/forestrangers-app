@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Forest Rangers — Statistiques</title>
+<script>
+/* Theme partage (cle 'fr-theme') : clair par defaut, sombre uniquement si
+   l'utilisateur l'a explicitement choisi. Applique avant le CSS pour eviter
+   le clignotement au chargement. */
+try { if (localStorage.getItem('fr-theme') !== 'dark') document.documentElement.classList.add('light'); } catch(e) {}
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
 <style>
@@ -19,6 +25,19 @@
   --amber: #f0b429; --amber-dim: rgba(240,180,41,0.12);
   --radius: 10px; --radius-lg: 14px;
 }
+
+/* ── MODE CLAIR (classe html.light, cle 'fr-theme' partagee) ── */
+html.light {
+  --bg: #f4f5f0; --surface: #ffffff; --surface2: #eef0e8; --surface3: #d6dac8;
+  --border: rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.14);
+  --text: #1c1f14; --text-dim: rgba(28,31,20,0.55); --text-faint: rgba(28,31,20,0.33);
+  --accent-dim: rgba(255,95,31,0.10); --accent-mid: rgba(255,95,31,0.22);
+  --green: #2e7d32; --green-dim: rgba(46,125,50,0.10);
+  --red: #c62828; --red-dim: rgba(198,40,40,0.10);
+  --blue: #1565c0; --blue-dim: rgba(21,101,192,0.10);
+  --amber: #b45000; --amber-dim: rgba(180,80,0,0.12);
+}
+html.light body { background: var(--bg) !important; color: var(--text) !important; }
 html, body { min-height: 100vh; font-family: 'Instrument Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
 
 /* ── HEADER ── */

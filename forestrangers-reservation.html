@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Forest Rangers — Réservation</title>
+<script>
+/* Theme partage avec l'espace client et l'admin (cle 'fr-theme').
+   Cette page est claire par defaut : on n'ajoute la classe 'dark' que si
+   le client a explicitement choisi le mode sombre. Applique avant le CSS
+   pour eviter le clignotement. */
+try { if (localStorage.getItem('fr-theme') === 'dark') document.documentElement.classList.add('dark'); } catch(e) {}
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
 <style>
@@ -377,6 +384,77 @@ textarea.field-input { resize: vertical; min-height: 80px; }
 .info-box * { color: #2d0d00 !important; }
 .info-box.orange * { color: #2d0d00 !important; }
 .info-box.amber * { color: #2d0d00 !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   MODE SOMBRE — actif seulement si fr-theme = 'dark'
+   Place en fin de feuille : ces regles priment sur le mode jour.
+   ══════════════════════════════════════════════════════════════ */
+html.dark {
+  --bg:         #1c1f14;
+  --surface:    #252a1a;
+  --surface2:   #2f3520;
+  --surface3:   #3d4429;
+  --border:     rgba(255,255,255,0.08);
+  --border2:    rgba(255,255,255,0.15);
+  --text:       #eceee6;
+  --text-dim:   rgba(236,238,230,0.60);
+  --text-faint: rgba(236,238,230,0.35);
+  --green:      #5ec97a;
+  --green-dim:  rgba(94,201,122,0.12);
+  --red:        #e05a5a;
+  --red-dim:    rgba(224,90,90,0.12);
+  --blue:       #5a9ae0;
+  --blue-dim:   rgba(90,154,224,0.12);
+  --amber:      #f0b429;
+  --amber-dim:  rgba(240,180,41,0.14);
+}
+html.dark body,
+html.dark .page-wrap        { background: #1c1f14 !important; color: #eceee6 !important; }
+html.dark .service-card     { background: #252a1a !important; border-color: rgba(255,255,255,0.12) !important; }
+html.dark .service-card.selected { background: #2f2519 !important; }
+html.dark .service-title    { color: #eceee6 !important; }
+html.dark .service-desc     { color: rgba(236,238,230,0.55) !important; }
+html.dark .section-block,
+html.dark .section-body     { background: #252a1a !important; }
+html.dark .step-item.done .step-num {
+  background: #3d4429 !important; border-color: #3d4429 !important;
+  color: rgba(236,238,230,0.7) !important;
+}
+html.dark .toggle-option    { background: #252a1a !important; border-color: rgba(255,255,255,0.12) !important; }
+html.dark .toggle-option-check { background: #2f3520 !important; border-color: rgba(255,255,255,0.2) !important; }
+html.dark .toggle-option-title,
+html.dark .toggle-option.selected .toggle-option-title { color: #eceee6 !important; }
+html.dark .toggle-option-desc,
+html.dark .toggle-option.selected .toggle-option-desc  { color: rgba(236,238,230,0.6) !important; }
+html.dark .field-input,
+html.dark .form-input,
+html.dark select.field-input {
+  background: #2f3520 !important; color: #eceee6 !important;
+  border-color: rgba(255,255,255,0.15) !important;
+}
+html.dark select.field-input option { background: #2f3520 !important; color: #eceee6 !important; }
+html.dark .field-input::placeholder,
+html.dark .form-input::placeholder  { color: rgba(236,238,230,0.35) !important; }
+html.dark .field-label,
+html.dark .form-label,
+html.dark .section-label { color: rgba(236,238,230,0.45) !important; }
+html.dark .recap-card    { background: #252a1a !important; }
+html.dark .recap-key     { color: rgba(236,238,230,0.55) !important; }
+html.dark .recap-val     { color: #eceee6 !important; }
+/* Encadres d'information : fond translucide, texte clair */
+html.dark .info-box *,
+html.dark .info-box.orange *,
+html.dark .info-box.amber *  { color: #f4e3d7 !important; }
+html.dark .info-box.orange   { background: rgba(255,95,31,0.14) !important; }
+html.dark .info-box.amber    { background: rgba(240,180,41,0.14) !important; }
+html.dark .info-box.green *  { color: #9fe0ad !important; }
+html.dark .info-box.red *    { color: #f0a0a0 !important; }
+html.dark .badge.b-green  { background: rgba(94,201,122,0.16)  !important; color: #5ec97a !important; }
+html.dark .badge.b-amber  { background: rgba(240,180,41,0.16)  !important; color: #f0b429 !important; }
+html.dark .badge.b-accent { background: rgba(255,95,31,0.16)   !important; color: #ff7a3d !important; }
+html.dark .badge.b-blue   { background: rgba(90,154,224,0.16)  !important; color: #5a9ae0 !important; }
+html.dark .badge.b-red    { background: rgba(224,90,90,0.16)   !important; color: #e05a5a !important; }
+html.dark .tbl th, html.dark .tbl td { border-color: rgba(255,255,255,0.08) !important; }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
@@ -557,7 +635,7 @@ textarea.field-input { resize: vertical; min-height: 80px; }
           <div class="form-row cols-2">
             <div class="field">
               <label class="field-label">Date <span class="req">*</span></label>
-              <input type="date" class="field-input" id="walk-date" min="2026-06-10" onchange="checkClotureAlert(this.value)">
+              <input type="date" class="field-input" id="walk-date" onchange="checkClotureAlert(this.value)">
             </div>
             <div class="field">
               <label class="field-label">Créneau <span class="req">*</span></label>
@@ -887,11 +965,14 @@ textarea.field-input { resize: vertical; min-height: 80px; }
       </div>
     </div>
 
+    <!-- Cloture des demandes du jour meme (08h00) -->
+    <div id="cutoff-alert" class="info-box red" style="display:none;margin-bottom:14px;"></div>
+
     <div class="nav-btns">
       <button class="btn btn-back" onclick="goPage(1)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
-      <button class="btn btn-accent" onclick="goPage(3)">
+      <button class="btn btn-accent" id="btn-continuer-2" onclick="validateDatesAndContinue()">
         Continuer
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
@@ -1115,6 +1196,12 @@ function terminerReservation() {
 
 document.addEventListener('DOMContentLoaded', loadProfileAndDogs);
 document.addEventListener('DOMContentLoaded', chargerAlerteMeteoBanner);
+// Cloture 08h00 : bornes des champs date posees au chargement,
+// puis revues chaque minute (un onglet laisse ouvert peut traverser 08h00).
+document.addEventListener('DOMContentLoaded', function() {
+  appliquerDateMin();
+  setInterval(appliquerDateMin, 60000);
+});
 
 // Alerte meteo du jour publiee par l'admin (table `alertes_meteo`)
 async function chargerAlerteMeteoBanner() {
@@ -1154,7 +1241,7 @@ async function loadProfileAndDogs() {
     clientId = client.id;
 
     const { data: chiens, error: chiensErr } = await db.from('chiens')
-      .select('id, nom, race, poids_kg')
+      .select('id, nom, race, poids_kg, sexe, sterilise, chaleur_debut, chaleur_fin')
       .eq('client_id', client.id);
     if (chiensErr) console.log('Erreur lecture chiens:', chiensErr);
     chiensData = chiens || [];
@@ -1172,8 +1259,20 @@ function renderDogList() {
     return;
   }
   list.innerHTML = chiensData.map(function(d, i) {
-    const sel = i === 0;
     const name = d.nom || 'Chien';
+
+    // Chienne en chaleur : hors planning, la ligne est verrouillee.
+    // Le refus est aussi applique en base (trigger fr_chaleur_reservation) :
+    // ce blocage-ci n'est que la version lisible.
+    if (chaleurActive(d)) {
+      return '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:rgba(214,92,140,0.08);border:1.5px solid rgba(214,92,140,0.3);border-radius:var(--radius);opacity:0.85;">'
+        + '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d65c8c" stroke-width="2" style="flex-shrink:0;"><path d="M12 2s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z"/></svg>'
+        + '<div style="flex:1;"><div style="font-size:13px;font-weight:600;color:#d65c8c;">' + name + '</div>'
+        + '<div style="font-size:11px;color:var(--text-faint);margin-top:1px;">En chaleur — indisponible jusqu\'au '
+        + chaleurDateFR(d.chaleur_fin) + '</div></div></div>';
+    }
+
+    const sel = i === 0 && !chaleurActive(chiensData[0]);
     const meta = (d.race || '—') + (d.poids_kg ? ' · ' + d.poids_kg + ' kg' : '');
     return '<div class="dog-check-item" data-chien-id="' + d.id + '" data-dog-name="' + name.replace(/"/g, '&quot;') + '" onclick="toggleDogSelect(this)" '
       + 'style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface2);border:1.5px solid ' + (sel ? 'var(--accent)' : 'var(--border)') + ';border-radius:var(--radius);cursor:pointer;">'
@@ -1184,6 +1283,19 @@ function renderDogList() {
       + '<span style="font-size:10px;font-weight:700;color:' + (sel ? 'var(--accent)' : 'var(--text-faint)') + ';background:' + (sel ? 'var(--accent-dim)' : 'rgba(0,0,0,0.05)') + ';padding:3px 8px;border-radius:20px;">' + (sel ? 'Sélectionné' : 'Non sélectionné') + '</span>'
       + '</div>';
   }).join('');
+}
+
+// ── MODE CHALEUR (lecture seule ici) ──
+function chaleurActive(d) {
+  if (!d || !d.chaleur_debut || !d.chaleur_fin) return false;
+  var t = new Date(); t.setHours(0, 0, 0, 0);
+  return new Date(d.chaleur_debut + 'T00:00:00') <= t
+      && t <= new Date(d.chaleur_fin + 'T00:00:00');
+}
+function chaleurDateFR(iso) {
+  if (!iso) return '—';
+  var d = new Date(iso + 'T00:00:00');
+  return isNaN(d) ? iso : d.toLocaleDateString('fr-LU', { day: '2-digit', month: 'long' });
 }
 
 function getSelectedDogIds() {
@@ -1217,6 +1329,83 @@ function isDateClotureEstivale(dateStr) {
     var d = new Date(dateStr);
     return d >= new Date(config.cloture_debut) && d <= new Date(config.cloture_fin);
   } catch(e) { return false; }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  CLOTURE DES DEMANDES DU JOUR MEME — 08h00
+//  Passe 08h00, plus aucune demande n'est acceptee pour la journee
+//  en cours : le client doit telephoner. Evite les reservations de
+//  derniere minute quand Gabriel est deja en tournee.
+//  Le meme controle existe cote base (trigger fr_cutoff_reservation).
+// ══════════════════════════════════════════════════════════════
+var CUTOFF_HEURE = 8;                       // heure locale de cloture
+var TEL_GABRIEL  = '+352 661 999 113';      // <-- a corriger si ce n'est pas le bon numero
+
+function premiereDateReservable() {
+  var d = new Date();
+  if (d.getHours() >= CUTOFF_HEURE) d.setDate(d.getDate() + 1);
+  return isoDateFR(d);
+}
+
+function dateTropTard(iso) {
+  return !!iso && iso < premiereDateReservable();
+}
+
+function dateDebutChoisie() {
+  var id = currentService === 'walking'  ? 'walk-date'
+         : currentService === 'daycare'  ? 'daycare-date'
+         : currentService === 'boarding' ? 'boarding-start' : null;
+  var el = id ? document.getElementById(id) : null;
+  return el ? el.value : null;
+}
+
+function messageCloture() {
+  return '<div><strong>Demandes closes pour aujourd\'hui.</strong> Les reservations du jour meme ne sont '
+       + 'plus acceptees passe ' + CUTOFF_HEURE + 'h00 : les tournees sont deja lancees. '
+       + 'Choisissez une date a partir de demain, ou appelez Gabriel au '
+       + '<a href="tel:' + TEL_GABRIEL.replace(/\s/g, '') + '" style="color:inherit;font-weight:700;">'
+       + TEL_GABRIEL + '</a>.</div>';
+}
+
+// Recalcule les bornes min des champs date et vide une date devenue invalide
+function appliquerDateMin() {
+  var mini = premiereDateReservable();
+  ['walk-date', 'daycare-date', 'boarding-start'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.min = mini;
+    if (el.value && el.value < mini) el.value = '';
+  });
+  ['walk-recur-end', 'dc-recur-end', 'boarding-end'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.min = mini;
+  });
+  majBanniereCloture();
+}
+
+function majBanniereCloture() {
+  var box = document.getElementById('cutoff-alert');
+  if (!box) return;
+  if (dateTropTard(dateDebutChoisie())) {
+    box.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+      + '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>'
+      + '<line x1="12" y1="16" x2="12.01" y2="16"/></svg>' + messageCloture();
+    box.style.display = 'flex';
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+// Verrou avant de passer a l'etape suivante
+function validateDatesAndContinue() {
+  appliquerDateMin();
+  var d = dateDebutChoisie();
+  if (dateTropTard(d)) {
+    majBanniereCloture();
+    document.getElementById('cutoff-alert').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  goPage(3);
 }
 
 function checkClotureAlert(dateStr) {
@@ -1258,6 +1447,8 @@ function checkClotureAlert(dateStr) {
     if (alertEl) alertEl.style.display = enCloture ? 'flex' : 'none';
     if (tbody)   tbody.innerHTML = enCloture ? estival[svc] : normal[svc];
   });
+
+  majBanniereCloture();
 }
 
 
@@ -1416,6 +1607,17 @@ function validateAndGoRecap() {
       if (errEl) errEl.style.display = 'none';
     }
   }
+  // Cloture 08h00 : impossible de continuer avec une date deja fermee
+  if (dateTropTard(dateDebutChoisie())) {
+    goPage(2);
+    setTimeout(function() {
+      majBanniereCloture();
+      var box = document.getElementById('cutoff-alert');
+      if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 200);
+    return;
+  }
+
   goPage(4);
 }
 
@@ -1547,10 +1749,33 @@ async function confirmBooking() {
   const svc = currentService;
   const isBoarding = svc === 'boarding';
 
+  // Cloture 08h00 — dernier verrou cote navigateur.
+  // Le verrou qui compte vraiment est le trigger fr_cutoff_reservation en base.
+  if (dateTropTard(dateDebutChoisie())) {
+    goPage(2);
+    setTimeout(function() {
+      majBanniereCloture();
+      var box = document.getElementById('cutoff-alert');
+      if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 200);
+    return;
+  }
+
   // ── Enregistrement réel dans Supabase ──
   const err = await saveReservation(svc, isBoarding);
   if (err) {
-    alert('Réservation NON enregistrée.\n\nErreur Supabase : ' + (err.message || JSON.stringify(err)));
+    var msgErr = err.message || JSON.stringify(err);
+    if (/FR_CUTOFF/i.test(msgErr)) {
+      goPage(2);
+      setTimeout(function() {
+        appliquerDateMin();
+        majBanniereCloture();
+        var box = document.getElementById('cutoff-alert');
+        if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 200);
+      return;
+    }
+    alert('Réservation NON enregistrée.\n\nErreur Supabase : ' + msgErr);
     return; // on n'affiche pas l'écran de succès si rien n'a été enregistré
   }
 

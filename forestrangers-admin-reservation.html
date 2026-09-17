@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Forest Rangers — Nouvelle réservation</title>
+<script>
+/* Theme partage (cle 'fr-theme') : clair par defaut, sombre uniquement si
+   l'utilisateur l'a explicitement choisi. Applique avant le CSS pour eviter
+   le clignotement au chargement. */
+try { if (localStorage.getItem('fr-theme') !== 'dark') document.documentElement.classList.add('light'); } catch(e) {}
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -35,14 +41,38 @@
   --blue: #5a9ae0; --bld: rgba(90,154,224,0.12);
   --r: 10px; --rl: 16px;
 }
-html, body { min-height:100vh; font-family:'Instrument Sans',sans-serif; background:#1c1f14 !important; color:#eceee6; font-size:14px; }
+
+/* ── MODE CLAIR (classe html.light, cle 'fr-theme' partagee) ── */
+html.light {
+  --acc-dim: rgba(255,95,31,0.10);
+  --acc-mid: rgba(255,95,31,0.22);
+  --bg:      #f4f5f0;
+  --s1:      #ffffff;
+  --s2:      #eef0e8;
+  --s3:      #d6dac8;
+  --bd:      rgba(0,0,0,0.08);
+  --bd2:     rgba(0,0,0,0.15);
+  --tx:      #1c1f14;
+  --td:      rgba(28,31,20,0.58);
+  --tf:      rgba(28,31,20,0.35);
+  --green:   #2e7d32;
+  --gd:      rgba(46,125,50,0.10);
+  --red:     #c62828;
+  --rd:      rgba(198,40,40,0.10);
+  --amber:   #b45000;
+  --ad:      rgba(180,80,0,0.12);
+  --blue:    #1565c0;
+  --bld:     rgba(21,101,192,0.10);
+}
+html.light body { background: var(--bg) !important; color: var(--tx) !important; }
+html, body { min-height:100vh; font-family:'Instrument Sans',sans-serif; background:var(--bg) !important; color:var(--tx); font-size:14px; }
 
 /* TOPBAR */
-.topbar { height:52px; background:#1c1f14; border-bottom:1px solid var(--bd); display:flex; align-items:center; gap:12px; padding:0 20px; position:sticky; top:0; z-index:50; }
+.topbar { height:52px; background:var(--bg); border-bottom:1px solid var(--bd); display:flex; align-items:center; gap:12px; padding:0 20px; position:sticky; top:0; z-index:50; }
 .topbar-back { display:flex; align-items:center; gap:6px; color:var(--td); font-size:12px; cursor:pointer; padding:6px 10px; border-radius:8px; transition:background 0.15s; text-decoration:none; }
 .topbar-back:hover { background:var(--s2); color:var(--tx); }
 .topbar-back svg { width:14px; height:14px; }
-.topbar-title { font-family:'Norwester',sans-serif; font-size:15px; font-weight:800; color:#eceee6; }
+.topbar-title { font-family:'Norwester',sans-serif; font-size:15px; font-weight:800; color:var(--tx); }
 .topbar-logo { width:28px; height:28px; object-fit:contain; }
 .topbar-sep { color:var(--tf); }
 
@@ -66,16 +96,16 @@ html, body { min-height:100vh; font-family:'Instrument Sans',sans-serif; backgro
 
 /* CARDS */
 .card { background:var(--s1); border:1px solid var(--bd); border-radius:var(--rl); padding:20px; margin-bottom:16px; }
-.card-title { font-family:'Norwester',sans-serif; font-size:14px; font-weight:800; color:#eceee6; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+.card-title { font-family:'Norwester',sans-serif; font-size:14px; font-weight:800; color:var(--tx); margin-bottom:16px; display:flex; align-items:center; gap:8px; }
 .card-title svg { width:16px; height:16px; stroke:var(--accent); fill:none; }
 
 /* FORM FIELDS */
 .field { margin-bottom:14px; }
 .field-label { font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:var(--tf); font-weight:700; margin-bottom:6px; display:block; }
-.field-input { width:100%; background:var(--s2); border:1.5px solid var(--bd2); border-radius:var(--r); padding:10px 12px; color:#eceee6; font-family:'Instrument Sans',sans-serif; font-size:13px; outline:none; transition:border 0.15s; }
+.field-input { width:100%; background:var(--s2); border:1.5px solid var(--bd2); border-radius:var(--r); padding:10px 12px; color:var(--tx); font-family:'Instrument Sans',sans-serif; font-size:13px; outline:none; transition:border 0.15s; }
 .field-input:focus { border-color:var(--accent); }
 .field-input::placeholder { color:var(--tf); }
-select.field-input option { background:#252a1a; color:#eceee6; }
+select.field-input option { background:var(--s1); color:var(--tx); }
 .field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .field-row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
 
@@ -84,14 +114,14 @@ select.field-input option { background:#252a1a; color:#eceee6; }
 .search-item { padding:10px 12px; cursor:pointer; transition:background 0.12s; border-bottom:1px solid var(--bd); }
 .search-item:last-child { border-bottom:none; }
 .search-item:hover { background:var(--s3); }
-.search-item-name { font-size:13px; color:#eceee6; font-weight:500; }
+.search-item-name { font-size:13px; color:var(--tx); font-weight:500; }
 .search-item-sub { font-size:11px; color:var(--td); margin-top:1px; }
 
 /* CLIENT SELECTED */
 .client-selected { background:var(--s2); border:1.5px solid var(--accent); border-radius:var(--r); padding:12px 14px; display:none; align-items:center; gap:12px; }
 .client-selected-avatar { width:36px; height:36px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; font-family:'Norwester',sans-serif; font-size:13px; font-weight:800; color:white; flex-shrink:0; }
 .client-selected-info { flex:1; }
-.client-selected-name { font-size:13px; color:#eceee6; font-weight:600; }
+.client-selected-name { font-size:13px; color:var(--tx); font-weight:600; }
 .client-selected-sub { font-size:11px; color:var(--td); margin-top:1px; }
 .client-clear { background:none; border:none; color:var(--tf); cursor:pointer; padding:4px; }
 .client-clear:hover { color:var(--red); }
@@ -107,7 +137,7 @@ select.field-input option { background:#252a1a; color:#eceee6; }
 .service-icon svg { width:20px; height:20px; stroke:var(--td); fill:none; }
 .service-card.selected .service-icon svg { stroke:var(--accent); }
 .service-name { font-family:'Norwester',sans-serif; font-size:12px; font-weight:800; color:var(--td); }
-.service-card.selected .service-name { color:#eceee6; }
+.service-card.selected .service-name { color:var(--tx); }
 .service-price { font-size:10px; color:var(--tf); margin-top:2px; }
 
 /* DOG CHECKBOXES */
@@ -117,7 +147,7 @@ select.field-input option { background:#252a1a; color:#eceee6; }
 .dog-check.selected { border-color:var(--accent); background:var(--acc-dim); }
 .dog-check-emoji { font-size:20px; }
 .dog-check-info { flex:1; }
-.dog-check-name { font-size:13px; color:#eceee6; font-weight:500; }
+.dog-check-name { font-size:13px; color:var(--tx); font-weight:500; }
 .dog-check-sub { font-size:11px; color:var(--td); }
 .dog-check-box { width:18px; height:18px; border-radius:5px; border:2px solid var(--bd2); display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.15s; }
 .dog-check.selected .dog-check-box { background:var(--accent); border-color:var(--accent); }
@@ -128,13 +158,13 @@ select.field-input option { background:#252a1a; color:#eceee6; }
 .jours-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
 .jour-btn { padding:8px 4px; border-radius:8px; border:1.5px solid var(--bd); background:var(--s2); color:var(--td); font-family:'Norwester',sans-serif; font-size:10px; font-weight:800; cursor:pointer; text-align:center; transition:all 0.15s; text-transform:uppercase; }
 .jour-btn:hover { border-color:var(--bd2); color:var(--tx); }
-.jour-btn.selected { border-color:var(--accent); background:var(--acc-dim); color:#eceee6; }
+.jour-btn.selected { border-color:var(--accent); background:var(--acc-dim); color:var(--tx); }
 
 /* CRENEAUX */
 .creneaux-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
 .creneau-btn { padding:10px 6px; border-radius:var(--r); border:1.5px solid var(--bd); background:var(--s2); color:var(--td); font-family:'Norwester',sans-serif; font-size:11px; font-weight:800; cursor:pointer; text-align:center; transition:all 0.15s; }
 .creneau-btn:hover { border-color:var(--bd2); }
-.creneau-btn.selected { border-color:var(--accent); background:var(--acc-dim); color:#eceee6; }
+.creneau-btn.selected { border-color:var(--accent); background:var(--acc-dim); color:var(--tx); }
 .creneau-time { font-size:10px; color:var(--tf); font-family:'Instrument Sans',sans-serif; font-weight:400; margin-top:2px; }
 
 /* RANGER CARDS */
@@ -143,7 +173,7 @@ select.field-input option { background:#252a1a; color:#eceee6; }
 .ranger-card:hover { border-color:var(--bd2); }
 .ranger-card.selected { border-color:var(--accent); background:var(--acc-dim); }
 .ranger-avatar { width:36px; height:36px; border-radius:50%; background:var(--s3); display:flex; align-items:center; justify-content:center; font-family:'Norwester',sans-serif; font-size:13px; font-weight:800; color:var(--accent); flex-shrink:0; }
-.ranger-name { font-size:13px; color:#eceee6; font-weight:500; }
+.ranger-name { font-size:13px; color:var(--tx); font-weight:500; }
 .ranger-sub { font-size:10px; color:var(--td); margin-top:1px; }
 .ranger-badge { margin-left:auto; }
 
@@ -159,10 +189,10 @@ select.field-input option { background:#252a1a; color:#eceee6; }
 
 /* RECAP */
 .recap-card { background:var(--s1); border:1px solid var(--bd); border-radius:var(--rl); padding:18px; }
-.recap-title { font-family:'Norwester',sans-serif; font-size:13px; font-weight:800; color:#eceee6; margin-bottom:16px; }
+.recap-title { font-family:'Norwester',sans-serif; font-size:13px; font-weight:800; color:var(--tx); margin-bottom:16px; }
 .recap-row { display:flex; justify-content:space-between; align-items:flex-start; font-size:12px; padding:7px 0; border-top:1px solid var(--bd); gap:8px; }
 .recap-key { color:var(--td); flex-shrink:0; }
-.recap-val { color:#eceee6; font-weight:500; text-align:right; }
+.recap-val { color:var(--tx); font-weight:500; text-align:right; }
 .recap-total { font-family:'Norwester',sans-serif; font-size:16px; font-weight:800; color:var(--accent); }
 .recap-note { font-size:11px; color:var(--tf); margin-top:12px; line-height:1.5; }
 
@@ -187,7 +217,7 @@ select.field-input option { background:#252a1a; color:#eceee6; }
 .confirm-screen { text-align:center; padding:40px 20px; }
 .confirm-icon { width:64px; height:64px; border-radius:50%; background:var(--gd); display:flex; align-items:center; justify-content:center; margin:0 auto 16px; }
 .confirm-icon svg { width:28px; height:28px; stroke:var(--green); fill:none; stroke-width:2.5; }
-.confirm-title { font-family:'Norwester',sans-serif; font-size:20px; font-weight:800; color:#eceee6; margin-bottom:8px; }
+.confirm-title { font-family:'Norwester',sans-serif; font-size:20px; font-weight:800; color:var(--tx); margin-bottom:8px; }
 .confirm-sub { font-size:13px; color:var(--td); line-height:1.6; }
 
 @media (max-width:768px) {

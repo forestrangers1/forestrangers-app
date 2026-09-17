@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Forest Rangers — Inscription</title>
+<script>
+/* Theme partage (cle 'fr-theme'). Cette page est claire par defaut : on
+   n'ajoute la classe 'dark' que si le mode sombre a ete choisi explicitement.
+   Applique avant le CSS pour eviter le clignotement. */
+try { if (localStorage.getItem('fr-theme') === 'dark') document.documentElement.classList.add('dark'); } catch(e) {}
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
 <style>
@@ -31,6 +37,26 @@
   --radius:      12px;
   --radius-lg:   18px;
 }
+
+/* ── MODE SOMBRE (classe html.dark, cle 'fr-theme' partagee) ── */
+html.dark {
+  --bg:         #1c1f14;
+  --surface:    #252a1a;
+  --surface2:   #2f3520;
+  --kaki:       #eceee6;
+  --kaki-mid:   #8e9870;
+  --kaki-light: #a8b28a;
+  --border:     rgba(255,255,255,0.08);
+  --border2:    rgba(255,255,255,0.16);
+  --text:       #eceee6;
+  --text-dim:   rgba(236,238,230,0.55);
+  --text-faint: rgba(236,238,230,0.32);
+  --green:      #5ec97a;
+  --green-dim:  rgba(94,201,122,0.12);
+  --red:        #e05a5a;
+  --red-dim:    rgba(224,90,90,0.12);
+}
+html.dark body { background: var(--bg); color: var(--text); }
 
 html { scroll-behavior: smooth; }
 body {

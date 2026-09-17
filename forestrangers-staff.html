@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Forest Rangers — Staff</title>
+<script>
+/* Theme partage (cle 'fr-theme') : clair par defaut, sombre uniquement
+   si l'utilisateur l'a explicitement choisi. Applique avant le CSS
+   pour eviter le clignotement au chargement. */
+try { if (localStorage.getItem('fr-theme') !== 'dark') document.documentElement.classList.add('light'); } catch(e) {}
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
 <style>
@@ -27,6 +33,28 @@
   --radius:    14px;
   --radius-lg: 20px;
 }
+
+/* ── MODE CLAIR (classe html.light, cle 'fr-theme' partagee) ──
+   Lisible en plein soleil : c'est le mode par defaut sur le terrain. */
+html.light {
+  --accent-dim: rgba(255,95,31,0.10);
+  --bg:         #f4f5f0;
+  --surface:    #ffffff;
+  --surface2:   #eef0e8;
+  --border:     rgba(0,0,0,0.09);
+  --text:       #1c1f14;
+  --text-dim:   rgba(28,31,20,0.58);
+  --text-faint: rgba(28,31,20,0.35);
+  --green:      #2e7d32;
+  --green-dim:  rgba(46,125,50,0.10);
+  --red:        #c62828;
+  --red-dim:    rgba(198,40,40,0.10);
+  --blue:       #1565c0;
+}
+html.light body,
+html.light .phone-shell { background: var(--bg) !important; color: var(--text) !important; }
+html.light .bottom-nav  { background: #ffffff; border-top: 1px solid var(--border); }
+html.light .card        { box-shadow: 0 2px 8px rgba(28,31,20,0.06); }
 
 html, body {
   height: 100%; font-family: 'Instrument Sans', sans-serif;
@@ -459,7 +487,13 @@ textarea.input-field { resize: none; }
             <div id="date-label" style="font-size:12px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">Lundi 9 juin</div>
             <div id="ranger-bonjour" style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;margin-top:2px;">Bonjour, Sophie</div>
           </div>
-          <div id="ranger-avatar" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#3d4429,#6b7450);display:flex;align-items:center;justify-content:center;font-family:'Norwester',sans-serif;font-weight:800;font-size:13px;border:1px solid var(--border);">SM</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div onclick="ouvrirMessagerieStaff()" title="Messages de Gabriel" style="position:relative;width:40px;height:40px;border-radius:12px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              <span id="staff-msg-badge" style="display:none;position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--accent);color:#fff;font-family:'Norwester',sans-serif;font-size:10px;font-weight:800;align-items:center;justify-content:center;">0</span>
+            </div>
+            <div id="ranger-avatar" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#3d4429,#6b7450);display:flex;align-items:center;justify-content:center;font-family:'Norwester',sans-serif;font-weight:800;font-size:13px;border:1px solid var(--border);">SM</div>
+          </div>
         </div>
 
         <!-- Boutons début/fin journée -->
@@ -505,11 +539,33 @@ textarea.input-field { resize: none; }
     </div>
 
     <!-- ══ SCREEN : MESSAGE GABRIEL ══ -->
+    <!-- ══ SCREEN : MESSAGERIE (echanges avec Gabriel) ══ -->
+    <div class="screen" id="screen-messages-staff">
+      <div class="screen-pad">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;margin-top:4px;">
+          <div onclick="showScreen('screen-missions');setTab('tab-missions')" style="width:34px;height:34px;border-radius:10px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+          </div>
+          <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;">Messages</div>
+        </div>
+
+        <div id="staff-msg-thread" style="max-height:52vh;overflow-y:auto;margin-bottom:14px;">
+          <div style="text-align:center;padding:26px;color:var(--text-faint);font-size:12px;">Chargement…</div>
+        </div>
+
+        <label class="input-label">Ecrire a Gabriel</label>
+        <textarea class="input-field" id="staff-msg-input" rows="3" placeholder="Votre message..."></textarea>
+        <button onclick="envoyerMessageStaff()" style="width:100%;margin-top:10px;padding:14px;border-radius:var(--radius);background:var(--accent);border:none;color:white;font-family:'Norwester',sans-serif;font-size:13px;font-weight:800;cursor:pointer;">
+          Envoyer
+        </button>
+      </div>
+    </div>
+
     <div class="screen" id="screen-message-gabriel">
       <div class="screen-pad" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;">
         <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#c44010);display:flex;align-items:center;justify-content:center;font-family:'Norwester',sans-serif;font-size:24px;font-weight:800;color:white;margin:0 auto 20px;box-shadow:0 8px 24px rgba(255,95,31,0.35);">G</div>
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:var(--text-faint);margin-bottom:8px;">Message de Gabriel</div>
-        <div id="message-gabriel-texte" style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:#eceee6;line-height:1.4;margin-bottom:8px;padding:0 16px;">Merci <span id="msg-ranger-prenom">Sophie</span> ! 🐾</div>
+        <div id="message-gabriel-texte" style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:var(--text);line-height:1.4;margin-bottom:8px;padding:0 16px;">Merci <span id="msg-ranger-prenom">Sophie</span> ! 🐾</div>
         <div style="font-size:15px;color:var(--text-dim);line-height:1.6;padding:0 24px;">
           Amusez-vous bien avec les chiens aujourd'hui.<br>
           <span style="color:var(--accent);">Bonne journée !</span>
@@ -528,7 +584,7 @@ textarea.input-field { resize: none; }
       <div class="screen-pad" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;">
         <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#c44010);display:flex;align-items:center;justify-content:center;font-family:'Norwester',sans-serif;font-size:24px;font-weight:800;color:white;margin:0 auto 20px;box-shadow:0 8px 24px rgba(255,95,31,0.35);">G</div>
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:var(--text-faint);margin-bottom:8px;">Message de Gabriel</div>
-        <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:#eceee6;line-height:1.4;margin-bottom:8px;padding:0 16px;">Merci <span id="msg-fin-prenom">Sophie</span> ! 🌙</div>
+        <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:var(--text);line-height:1.4;margin-bottom:8px;padding:0 16px;">Merci <span id="msg-fin-prenom">Sophie</span> ! 🌙</div>
         <div style="font-size:15px;color:var(--text-dim);line-height:1.6;padding:0 24px;">
           Excellent travail aujourd'hui.<br>
           <span style="color:var(--accent);">Belle fin de journée !</span>
@@ -548,7 +604,7 @@ textarea.input-field { resize: none; }
           <div style="width:64px;height:64px;border-radius:50%;background:var(--green-dim);border:2px solid var(--green);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#5ec97a" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
-          <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:#eceee6;margin-bottom:6px;">Journée terminée !</div>
+          <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:var(--text);margin-bottom:6px;">Journée terminée !</div>
           <div style="font-size:13px;color:var(--text-dim);">Rapport envoyé à Gabriel · <span id="recap-heure-fin">—</span></div>
         </div>
 
@@ -566,7 +622,7 @@ textarea.input-field { resize: none; }
 
         <div style="background:var(--accent-dim);border:1px solid rgba(255,95,31,0.2);border-radius:12px;padding:16px;text-align:center;margin-bottom:20px;">
           <div style="font-size:13px;color:var(--text-dim);line-height:1.6;">
-            Merci <strong style="color:#eceee6;" id="recap-ranger-nom">Sophie</strong> pour votre travail aujourd'hui ! 🐾<br>
+            Merci <strong style="color:var(--text);" id="recap-ranger-nom">Sophie</strong> pour votre travail aujourd'hui ! 🐾<br>
             <span style="color:var(--accent);">À demain !</span>
           </div>
         </div>
@@ -1565,6 +1621,7 @@ function togglePhoto() {
 }
 
 // ── CHARGEMENT MISSIONS SUPABASE ──
+var rangerId  = null;
 var rangerNom = 'Sophie';
 var rangerInitiales = 'SM';
 var missionsAujourdhui = [];
@@ -1580,18 +1637,124 @@ async function loadRangerProfile() {
     if (!session || !session.session) return;
     var userId = session.session.user.id;
     var { data: ranger } = await db.from('staff')
-      .select('prenom, nom')
+      .select('id, prenom, nom')
       .eq('auth_id', userId)
       .single();
     if (ranger) {
+      rangerId  = ranger.id;
       rangerNom = ranger.prenom;
       rangerInitiales = (ranger.prenom[0] + ranger.nom[0]).toUpperCase();
       var el = document.getElementById('ranger-bonjour');
       if (el) el.textContent = 'Bonjour, ' + ranger.prenom;
       var av = document.getElementById('ranger-avatar');
       if (av) av.textContent = rangerInitiales;
+      chargerMessagesStaff(true);
     }
   } catch(e) { /* garde les valeurs par défaut */ }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  MESSAGERIE STAFF ↔ GABRIEL
+//  Utilise la table `messages` avec la colonne staff_id
+//  (fr_migration_v22_messages_staff.sql). expediteur = 'staff'
+//  pour les messages du ranger, 'admin' pour ceux de Gabriel.
+// ══════════════════════════════════════════════════════════════
+var messagesStaff = [];
+
+function staffMsgEsc(v) {
+  return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function staffMsgDate(v) {
+  var d = new Date(v);
+  if (isNaN(d)) return '';
+  var hm = String(d.getHours()).padStart(2,'0') + 'h' + String(d.getMinutes()).padStart(2,'0');
+  if (d.toDateString() === new Date().toDateString()) return "Aujourd'hui " + hm;
+  return d.toLocaleDateString('fr-LU', { day:'2-digit', month:'short' }) + ' ' + hm;
+}
+
+async function chargerMessagesStaff(silencieux) {
+  if (!rangerId) return;
+  try {
+    var { data, error } = await db.from('messages')
+      .select('*')
+      .eq('staff_id', rangerId)
+      .order('created_at', { ascending: true })
+      .limit(200);
+    if (error) {
+      if (!silencieux) {
+        var z = document.getElementById('staff-msg-thread');
+        if (z) z.innerHTML = '<div style="padding:18px;color:var(--accent);font-size:12px;">Messagerie indisponible : '
+          + staffMsgEsc(error.message) + '<br><br>Executez fr_migration_v22_messages_staff.sql dans Supabase.</div>';
+      }
+      return;
+    }
+    messagesStaff = data || [];
+    majBadgeMessagesStaff();
+    renderThreadStaff();
+  } catch(e) { console.log('messages staff:', e); }
+}
+
+function majBadgeMessagesStaff() {
+  var n = messagesStaff.filter(function(m){ return m.expediteur === 'admin' && !m.lu; }).length;
+  var b = document.getElementById('staff-msg-badge');
+  if (!b) return;
+  if (n > 0) { b.textContent = n; b.style.display = 'flex'; }
+  else { b.style.display = 'none'; }
+}
+
+function renderThreadStaff() {
+  var el = document.getElementById('staff-msg-thread');
+  if (!el) return;
+  if (!messagesStaff.length) {
+    el.innerHTML = '<div style="text-align:center;padding:26px;color:var(--text-faint);font-size:12px;">Aucun message pour le moment.</div>';
+    return;
+  }
+  el.innerHTML = messagesStaff.map(function(m) {
+    var moi = m.expediteur === 'staff';
+    return '<div style="display:flex;justify-content:' + (moi ? 'flex-end' : 'flex-start') + ';margin-bottom:9px;">'
+      + '<div style="max-width:80%;background:' + (moi ? 'var(--accent-dim)' : 'var(--surface)') + ';border:1px solid '
+      +   (moi ? 'rgba(255,95,31,0.3)' : 'var(--border)') + ';border-radius:12px;padding:10px 13px;">'
+      +   (moi ? '' : '<div style="font-size:9.5px;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent);font-weight:700;margin-bottom:4px;">Gabriel</div>')
+      +   '<div style="font-size:13px;line-height:1.55;white-space:pre-wrap;">' + staffMsgEsc(m.contenu || '') + '</div>'
+      +   '<div style="font-size:9.5px;color:var(--text-faint);margin-top:5px;text-align:right;">' + staffMsgDate(m.created_at) + '</div>'
+      + '</div></div>';
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+async function ouvrirMessagerieStaff() {
+  showScreen('screen-messages-staff');
+  await chargerMessagesStaff();
+  // Marquer les messages de Gabriel comme lus
+  var ids = messagesStaff.filter(function(m){ return m.expediteur === 'admin' && !m.lu; }).map(function(m){ return m.id; });
+  if (!ids.length) return;
+  try {
+    await db.from('messages').update({ lu: true }).in('id', ids);
+    messagesStaff.forEach(function(m){ if (ids.indexOf(m.id) !== -1) m.lu = true; });
+    majBadgeMessagesStaff();
+  } catch(e) { console.log('maj lu staff:', e); }
+}
+
+async function envoyerMessageStaff() {
+  var el = document.getElementById('staff-msg-input');
+  if (!el) return;
+  var txt = (el.value || '').trim();
+  if (!txt || !rangerId) return;
+  try {
+    var ligne = { staff_id: rangerId, expediteur: 'staff', contenu: txt, lu: false, type: 'message' };
+    var res = await db.from('messages').insert([ligne]);
+    if (res.error && /type/i.test(res.error.message || '')) {
+      delete ligne.type;
+      res = await db.from('messages').insert([ligne]);
+    }
+    if (res.error) throw res.error;
+    el.value = '';
+    await chargerMessagesStaff();
+  } catch(e) {
+    alert('Message non envoye.\n\n' + (e.message || e));
+    console.log('envoi message staff:', e);
+  }
 }
 
 async function loadMissionsJour() {
@@ -1644,7 +1807,7 @@ async function loadMissionsJour() {
     var chiensMap = {};
     if (resaIds.length > 0) {
       var { data: promenades } = await db.from('promenades')
-        .select('reservation_id, chiens(id, prenom)')
+        .select('reservation_id, chiens(id, nom, prenom, sexe, sterilise, chaleur_debut, chaleur_fin)')
         .in('reservation_id', resaIds);
       if (promenades) {
         promenades.forEach(function(p) {
@@ -1653,6 +1816,8 @@ async function loadMissionsJour() {
         });
       }
     }
+
+    await chargerChaleursOuvertes();
 
     missionsAujourdhui = filtered;
     renderMissions(filtered, clientsMap, chiensMap);
@@ -1678,7 +1843,7 @@ function renderMissions(resas, clientsMap, chiensMap) {
     var clientNom = client ? client.prenom + ' ' + client.nom : '—';
     var chiens = chiensMap[r.id] || [];
     var chiensHtml = chiens.length > 0
-      ? chiens.map(function(c) { return '<span class="dog-tag">' + (c.prenom || c.nom) + '</span>'; }).join('')
+      ? chiens.map(function(c) { return tagChien(c); }).join('')
       : '<span class="dog-tag" style="color:var(--text-faint);">Aucun chien lié</span>';
     var cr = creneaux[r.creneau] || (r.service === 'boarding' ? 'Pension' : '—');
     var svc = svcLabels[r.service] || r.service;
@@ -1705,6 +1870,85 @@ function renderMissions(resas, clientsMap, chiensMap) {
   });
 
   container.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  CHALEURS — SIGNALEMENT (et rien d'autre)
+//
+//  Sur le terrain, une chienne en chaleur se repere a l'interet
+//  que lui portent les males, sterilises ou non. Le ranger le voit
+//  avant tout le monde : il le signale ici.
+//
+//  Ce bouton ne touche PAS au planning et n'annule aucune
+//  reservation. Il envoie un message a Gabriel et au client, qui
+//  decident. Un salarie n'annule pas des seances facturables sans
+//  l'accord du client ni celui de Gabriel — la base refuse meme
+//  la manoeuvre (fr_chaleur_declarer rejette le staff).
+//
+//  Reserve aux femelles non sterilisees.
+// ══════════════════════════════════════════════════════════════
+var chaleursOuvertes = {};   // chien_id -> { statut }
+
+function chaleurEligible(c) {
+  return !!c
+    && String(c.sexe || '').toLowerCase() === 'femelle'
+    && c.sterilise === false;
+}
+
+function chaleurActive(c) {
+  if (!c || !c.chaleur_debut || !c.chaleur_fin) return false;
+  var t = new Date(); t.setHours(0, 0, 0, 0);
+  return new Date(c.chaleur_debut + 'T00:00:00') <= t
+      && t <= new Date(c.chaleur_fin + 'T00:00:00');
+}
+
+async function chargerChaleursOuvertes() {
+  chaleursOuvertes = {};
+  try {
+    var { data } = await db.from('chaleurs')
+      .select('chien_id,statut')
+      .in('statut', ['signale', 'active']);
+    (data || []).forEach(function(c) { chaleursOuvertes[c.chien_id] = c; });
+  } catch (e) { console.log('chaleurs:', e); }
+}
+
+function nomChien(c) { return (c && (c.prenom || c.nom)) || 'Chien'; }
+
+function tagChien(c) {
+  var nom = nomChien(c);
+  var ouvert = c && chaleursOuvertes[c.id];
+
+  if (chaleurActive(c)) {
+    return '<span class="dog-tag" style="background:rgba(214,92,140,0.16);color:#d65c8c;border-color:rgba(214,92,140,0.4);">'
+      + '♀ ' + nom + ' · en chaleur</span>';
+  }
+  if (ouvert && ouvert.statut === 'signale') {
+    return '<span class="dog-tag" style="background:rgba(240,180,41,0.14);color:#f0b429;border-color:rgba(240,180,41,0.35);">'
+      + nom + ' · signalée</span>';
+  }
+  if (chaleurEligible(c)) {
+    return '<span class="dog-tag" onclick="signalerChaleurRanger(\'' + c.id + '\',\'' + nom.replace(/'/g, "\\'") + '\')" '
+      + 'title="Signaler que cette chienne semble en chaleur" style="cursor:pointer;">'
+      + nom + ' <span style="color:#d65c8c;font-weight:800;margin-left:3px;">♀ signaler</span></span>';
+  }
+  return '<span class="dog-tag">' + nom + '</span>';
+}
+
+async function signalerChaleurRanger(chienId, nom) {
+  if (!confirm('Signaler que ' + nom + ' semble être en chaleur ?\n\n'
+             + 'Le planning n\'est PAS modifié et aucune promenade n\'est annulée. '
+             + 'Gabriel et le client reçoivent un message — la décision leur revient.\n\n'
+             + 'À ne faire que si vous l\'avez constaté sur le terrain.')) return;
+  try {
+    var { error } = await db.rpc('fr_chaleur_signaler', { p_chien: chienId });
+    if (error) {
+      alert('Signalement impossible : ' + String(error.message).replace(/^.*FR_CHALEUR:\s*/, ''));
+      return;
+    }
+    alert('✓ Signalement transmis. Gabriel et le client sont prévenus.\n\n'
+        + 'Continuez la promenade normalement : rien n\'a changé au planning.');
+    loadMissionsJour();
+  } catch (e) { alert('Erreur : ' + e.message); }
 }
 
 function renderMissionsVides() {

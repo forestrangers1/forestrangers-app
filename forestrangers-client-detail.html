@@ -6,6 +6,19 @@
 <title>Forest Rangers — Fiche Client</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
+<script>
+/* Theme partage avec l'admin : applique la preference avant le premier rendu,
+   sinon la page s'affiche en sombre puis clignote. */
+/* Clair par defaut : seul un choix explicite 'dark' bascule en sombre. */
+try { if (localStorage.getItem('fr-theme') !== 'dark') document.documentElement.classList.add('light'); } catch(e) {}
+/* Mode integre : la page est affichee dans l'iframe de l'admin, qui fournit
+   deja sa propre barre de retour. On masque donc la topbar d'origine. */
+try {
+  if (new URLSearchParams(location.search).get('embed') === '1') {
+    document.documentElement.classList.add('embed');
+  }
+} catch(e) {}
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
   const { createClient } = window.supabase;
@@ -50,23 +63,50 @@
   --rl:        16px;
 }
 
+html.embed .topbar { display: none !important; }
+html.embed .client-sidebar { top: 0 !important; height: 100vh !important; }
+html.embed .main-area, html.embed .content { padding-top: 12px !important; }
+
+/* ── THEME CLAIR — cle 'fr-theme' partagee avec l'admin ── */
+html.light {
+  --bg:      #f4f5f0;
+  --s1:      #ffffff;
+  --s2:      #eef0e8;
+  --s3:      #d6dac8;
+  --bd:      rgba(0,0,0,0.08);
+  --bd2:     rgba(0,0,0,0.14);
+  --tx:      #1c1f14;
+  --td:      rgba(28,31,20,0.55);
+  --tf:      rgba(28,31,20,0.35);
+  --acc-dim: rgba(255,95,31,0.10);
+  --acc-mid: rgba(255,95,31,0.22);
+  --gd:      rgba(34,139,54,0.10);
+  --rd:      rgba(180,50,50,0.10);
+  --ad:      rgba(240,180,41,0.14);
+  --bld:     rgba(40,100,190,0.10);
+}
+html.light .topbar  { background: #ffffff; }
+html.light .sidebar,
+html.light .client-sidebar { background: #ffffff; }
+html.light .tab.active { background: #ffffff; color: var(--accent); }
+
 html, body {
   min-height: 100vh;
   font-family: 'Instrument Sans', sans-serif;
-  background: #1c1f14 !important;
-  color: #eceee6;
+  background: var(--bg) !important;
+  color: var(--tx);
   font-size: 14px;
 }
 
 /* ── TOPBAR ── */
 .topbar {
-  height: 52px; background: #1c1f14;
+  height: 52px; background: var(--bg);
   border-bottom: 1px solid var(--bd);
   display: flex; align-items: center; gap: 12px;
   padding: 0 20px; position: sticky; top: 0; z-index: 50;
 }
 .topbar-logo { width: 30px; height: 30px; object-fit: contain; }
-.topbar-title { font-family: 'Norwester', sans-serif; font-size: 14px; font-weight: 800; color: #eceee6; }
+.topbar-title { font-family: 'Norwester', sans-serif; font-size: 14px; font-weight: 800; color: var(--tx); }
 .topbar-sep { color: var(--tf); }
 .topbar-back {
   display: flex; align-items: center; gap: 6px;
@@ -83,7 +123,7 @@ html, body {
 /* ── CLIENT SIDEBAR ── */
 .client-sidebar {
   width: 260px; flex-shrink: 0;
-  background: #1c1f14; border-right: 1px solid var(--bd);
+  background: var(--bg); border-right: 1px solid var(--bd);
   padding: 24px 16px; position: sticky;
   top: 52px; height: calc(100vh - 52px); overflow-y: auto;
 }
@@ -93,7 +133,7 @@ html, body {
   font-family: 'Norwester', sans-serif; font-size: 22px; font-weight: 800;
   color: white; margin: 0 auto 12px; flex-shrink: 0;
 }
-.client-name { font-family: 'Norwester', sans-serif; font-size: 16px; font-weight: 800; color: #eceee6; text-align: center; margin-bottom: 4px; }
+.client-name { font-family: 'Norwester', sans-serif; font-size: 16px; font-weight: 800; color: var(--tx); text-align: center; margin-bottom: 4px; }
 .client-num { font-size: 11px; color: var(--tf); text-align: center; margin-bottom: 16px; letter-spacing: 0.08em; text-transform: uppercase; }
 
 .client-tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px; }
@@ -109,7 +149,7 @@ html, body {
 .sidebar-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-top: 1px solid var(--bd); font-size: 12px; }
 .sidebar-row:first-of-type { border-top: none; }
 .sidebar-key { color: var(--td); }
-.sidebar-val { color: #eceee6; font-weight: 600; text-align: right; }
+.sidebar-val { color: var(--tx); font-weight: 600; text-align: right; }
 
 .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; font-family: 'Norwester', sans-serif; font-size: 11px; font-weight: 800; cursor: pointer; border: none; transition: all 0.15s; letter-spacing: 0.04em; text-transform: uppercase; }
 .btn-accent { background: var(--accent); color: white; width: 100%; justify-content: center; margin-bottom: 8px; }
@@ -124,7 +164,7 @@ html, body {
 /* ── TABS ── */
 .tabs { display: flex; gap: 2px; background: var(--s1); border-radius: var(--r); padding: 4px; margin-bottom: 24px; }
 .tab { flex: 1; padding: 8px 10px; border-radius: 8px; font-family: 'Norwester', sans-serif; font-size: 11px; font-weight: 800; text-align: center; cursor: pointer; color: var(--td); transition: all 0.15s; letter-spacing: 0.04em; text-transform: uppercase; border: none; background: transparent; }
-.tab.active { background: #1c1f14; color: var(--accent); }
+.tab.active { background: var(--bg); color: var(--accent); }
 .tab:hover:not(.active) { color: var(--tx); }
 
 .tab-panel { display: none; }
@@ -133,13 +173,13 @@ html, body {
 /* ── CARDS ── */
 .card { background: var(--s1); border: 1px solid var(--bd); border-radius: var(--rl); padding: 18px; margin-bottom: 14px; }
 .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.card-title { font-family: 'Norwester', sans-serif; font-size: 13px; font-weight: 800; color: #eceee6; }
+.card-title { font-family: 'Norwester', sans-serif; font-size: 13px; font-weight: 800; color: var(--tx); }
 
 /* ── INFO GRID ── */
 .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .info-item { }
 .info-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--tf); font-weight: 700; margin-bottom: 4px; }
-.info-value { font-size: 13px; color: #eceee6; font-weight: 500; }
+.info-value { font-size: 13px; color: var(--tx); font-weight: 500; }
 .edit-input, .edit-select {
   width: 100%; background: var(--s2); border: 1px solid var(--bd2);
   border-radius: 8px; padding: 7px 9px; color: var(--tx);
@@ -164,7 +204,7 @@ html, body {
 .hist-summary-row span:last-child { color: var(--tx); font-weight: 600; text-align: right; }
 .dog-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .dog-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--acc-dim); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
-.dog-name { font-family: 'Norwester', sans-serif; font-size: 14px; font-weight: 800; color: #eceee6; }
+.dog-name { font-family: 'Norwester', sans-serif; font-size: 14px; font-weight: 800; color: var(--tx); }
 .dog-race { font-size: 11px; color: var(--td); margin-top: 1px; }
 .dog-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
 .dog-stat { text-align: center; background: var(--s1); border-radius: 8px; padding: 8px 4px; }
@@ -178,7 +218,7 @@ th { font-family: 'Norwester', sans-serif; font-size: 9px; text-transform: upper
 td { padding: 10px 10px; border-bottom: 1px solid var(--bd); color: var(--td); vertical-align: middle; }
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: rgba(255,255,255,0.02); }
-.td-main { color: #eceee6; font-weight: 500; }
+.td-main { color: var(--tx); font-weight: 500; }
 
 /* ── BADGES ── */
 .badge { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
@@ -196,7 +236,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .stat-label { font-size: 10px; color: var(--tf); text-transform: uppercase; letter-spacing: 0.08em; }
 
 /* ── NOTES ── */
-.notes-area { width: 100%; background: var(--s2); border: 1px solid var(--bd2); border-radius: var(--r); padding: 12px; color: #eceee6; font-family: 'Instrument Sans', sans-serif; font-size: 13px; line-height: 1.6; resize: vertical; min-height: 120px; outline: none; }
+.notes-area { width: 100%; background: var(--s2); border: 1px solid var(--bd2); border-radius: var(--r); padding: 12px; color: var(--tx); font-family: 'Instrument Sans', sans-serif; font-size: 13px; line-height: 1.6; resize: vertical; min-height: 120px; outline: none; }
 .notes-area:focus { border-color: var(--accent); }
 
 /* ── TIMELINE ── */
@@ -205,7 +245,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .timeline-dot { width: 32px; height: 32px; border-radius: 50%; background: var(--gd); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
 .timeline-dot svg { width: 14px; height: 14px; stroke: var(--green); fill: none; }
 .timeline-date { font-size: 11px; color: var(--tf); margin-bottom: 2px; }
-.timeline-title { font-size: 13px; color: #eceee6; font-weight: 500; }
+.timeline-title { font-size: 13px; color: var(--tx); font-weight: 500; }
 .timeline-sub { font-size: 11px; color: var(--td); margin-top: 2px; }
 
 /* ── EMPTY STATE ── */
@@ -218,10 +258,10 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .modal-overlay.open { display: flex; }
 .modal-sheet { background: var(--s1); border: 1px solid var(--bd2); border-radius: var(--rl); padding: 20px; width: 480px; max-width: 100%; max-height: 90vh; overflow-y: auto; }
 .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.modal-title { font-family: 'Norwester', sans-serif; font-size: 14px; font-weight: 800; color: #eceee6; }
+.modal-title { font-family: 'Norwester', sans-serif; font-size: 14px; font-weight: 800; color: var(--tx); }
 .modal-close { background: none; border: none; color: var(--tf); cursor: pointer; font-size: 20px; line-height: 1; padding: 0; }
 .modal-section { background: var(--s2); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 12.5px; color: var(--td); line-height: 1.7; }
-.modal-section strong { color: #eceee6; }
+.modal-section strong { color: var(--tx); }
 .modal-foot { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
 
 /* ── FORMS (modales) ── */
@@ -333,7 +373,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <!-- STATS -->
     <div class="stats-row">
       <div class="stat-card">
-        <div class="stat-val" id="stat-reservations">—</div>
+        <div class="stat-val" id="stat-reservations" style="color:var(--blue);">—</div>
         <div class="stat-label" id="stat-reservations-label">Réservations 2026</div>
       </div>
       <div class="stat-card">

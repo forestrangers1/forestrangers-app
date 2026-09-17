@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Forest Rangers — Connexion</title>
+<script>
+/* Theme partage (cle 'fr-theme') : clair par defaut. Le login est la
+   premiere page vue par le client, il doit suivre le meme theme que la
+   suite du parcours. */
+try { if (localStorage.getItem('fr-theme') !== 'dark') document.documentElement.classList.add('light'); } catch(e) {}
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -69,6 +75,56 @@ html, body {
     box-shadow: none !important;
     border: none !important;
   }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MODE CLAIR (classe html.light, cle 'fr-theme' partagee)
+   ══════════════════════════════════════════════════════════════ */
+html.light {
+  --bg:  #f4f5f0;
+  --s1:  #ffffff;
+  --s2:  #eef0e8;
+  --bd:  rgba(0,0,0,0.08);
+  --bd2: rgba(0,0,0,0.14);
+  --tx:  #1c1f14;
+  --td:  rgba(28,31,20,0.58);
+  --tf:  rgba(28,31,20,0.32);
+  --green: #2e7d32;
+}
+html.light body        { background: var(--bg) !important; color: var(--tx); }
+html.light .login-card { background: #ffffff; border: 1px solid rgba(0,0,0,0.07);
+                         box-shadow: 0 18px 50px rgba(28,31,20,0.10); }
+html.light body::before {
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 80%, rgba(46,125,50,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 20%, rgba(255,95,31,0.07) 0%, transparent 55%);
+}
+html.light .brand-panel { background: linear-gradient(160deg, #2f3520, #1c1f14); }
+
+/* ══════════════════════════════════════════════════════════════
+   MISE EN PAGE DESKTOP — deux colonnes a partir de 900px
+   Marque a gauche, formulaire a droite. En dessous : carte simple.
+   ══════════════════════════════════════════════════════════════ */
+@media (min-width: 900px) {
+  .login-card {
+    max-width: 860px;
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 20px;
+  }
+  .brand {
+    margin-bottom: 0;
+    padding: 48px 32px;
+    justify-content: center;
+    background: linear-gradient(160deg, #2f3520, #1c1f14);
+    border-right: 1px solid rgba(255,255,255,0.06);
+  }
+  .brand-logo  { width: 96px; height: 96px; margin-bottom: 20px; }
+  .brand-name  { color: #eceee6 !important; }
+  .brand-sub   { color: rgba(236,238,230,0.55) !important; }
+  .login-form-col { padding: 44px 44px 36px; }
 }
 
 /* ── BACKGROUND TEXTURE ── */
@@ -377,6 +433,8 @@ body::before {
     <div class="brand-sub">Luxembourg · ARCANIN S.à r.l.</div>
   </div>
 
+  <div class="login-form-col">
+
   <!-- ROLE SELECTOR -->
   <div class="role-label">Je me connecte en tant que</div>
   <div class="role-tabs">
@@ -424,6 +482,8 @@ body::before {
   <div class="login-footer">
     Première connexion ? <a onclick="firstLogin()">Contactez Gabriel</a>
   </div>
+
+  </div><!-- /login-form-col -->
 
 </div>
 

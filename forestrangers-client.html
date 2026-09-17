@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Forest Rangers — Client</title>
 <script>
-(function(){ try { if (localStorage.getItem('fr-theme') === 'light') document.documentElement.classList.add('light'); } catch(e) {} })();
+/* Clair par defaut : seul un choix explicite 'dark' bascule en sombre. */
+(function(){ try { if (localStorage.getItem('fr-theme') !== 'dark') document.documentElement.classList.add('light'); } catch(e) {} })();
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
@@ -804,7 +805,6 @@ html, body {
   }
   #dogEditModal .modal-full { width: 780px; }
   #dogEditModal .dog-behavior-grid { grid-template-columns: repeat(3, 1fr); }
-  #photoModal .modal-full { width: 820px; }
   .modal-close:hover { border-color: var(--accent); color: var(--accent); }
 
   /* ── Confort général ── */
@@ -825,14 +825,16 @@ html, body {
 .inv-doc .inv-h1 .rangers { color: #ff5f1f; }
 .inv-doc .inv-ref { font-family: 'Norwester', sans-serif; font-size: 13px; font-weight: 800; color: #ff5f1f; letter-spacing: 0.04em; }
 .inv-doc th { color: #ff5f1f !important; }
-.inv-doc .inv-tot.big { border-top-color: #ff5f1f !important; color: #1c1f14; }
+.inv-doc .inv-tot.big { border-top-color: #1c1f14 !important; color: #1c1f14; }
 .inv-doc .inv-tot.big span:last-child { color: #ff5f1f; }
-.inv-doc .inv-bar { height: 3px; background: #ff5f1f; border-radius: 2px; margin-top: 12px; }
+.inv-doc .inv-bar { height: 3px; background: #1c1f14; border-radius: 2px; margin-top: 12px; }
 .inv-doc .inv-sub { font-size: 11px; color: #6b7450; margin-top: 2px; }
 .inv-doc table { width: 100%; border-collapse: collapse; margin-top: 14px; }
 .inv-doc th { text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7450; border-bottom: 1px solid #e3e2dc; padding: 6px 0; }
 .inv-doc td { font-size: 11.5px; padding: 7px 0; border-bottom: 1px solid #f0efe9; vertical-align: top; }
-.inv-doc td.num, .inv-doc th.num { text-align: right; white-space: nowrap; }
+.inv-doc td.num, .inv-doc th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.inv-doc td.qte, .inv-doc th.qte { width: 42px; padding-left: 14px; }
+.inv-doc td.ttc, .inv-doc th.ttc { width: 86px; padding-left: 22px; }
 .inv-doc .inv-tot { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; }
 .inv-doc .inv-tot.big { font-family: 'Norwester', sans-serif; font-size: 16px; font-weight: 800; border-top: 1.5px solid #1c1f14; margin-top: 6px; padding-top: 8px; }
 </style>
@@ -950,9 +952,17 @@ html, body {
     </div>
 
     <!-- ══ DÉTAIL PROMENADE ══ -->
+    <!-- ══════════════════════════════════════════════════════════
+         MAQUETTE — DETAIL DE PROMENADE (non branchee)
+         Cet ecran n'est ouvert par aucun chemin de code. Il sert de
+         maquette de reference pour le module photos (§16.2) et
+         contient des donnees d'exemple. Mis en commentaire pour la
+         phase de test : aucun contenu factice ne doit atteindre un
+         client. A rebrancher quand le module photos existera.
+         ══════════════════════════════════════════════════════════
     <div class="screen" id="screen-walk-detail">
       <div>
-        <!-- Photo -->
+        [[ Photo ]]
         <div class="walk-photo">
           <div class="walk-photo-placeholder">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -978,7 +988,7 @@ html, body {
             <span class="badge b-green" style="margin-left:auto;">Terminé</span>
           </div>
 
-          <!-- Stats -->
+          [[ Stats ]]
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
             <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
               <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:var(--accent);">3,4</div>
@@ -994,7 +1004,7 @@ html, body {
             </div>
           </div>
 
-          <!-- Tracé GPS -->
+          [[ Tracé GPS ]]
           <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Parcours GPS</div>
           <div class="detail-map">
             <div class="map-grid"></div>
@@ -1007,7 +1017,7 @@ html, body {
             <div style="position:absolute;bottom:8px;left:10px;font-size:10px;color:var(--text-faint);background:rgba(28,31,20,0.8);padding:3px 8px;border-radius:6px;">Bambësch</div>
           </div>
 
-          <!-- Chiens présents -->
+          [[ Chiens présents ]]
           <div class="card" style="margin-bottom:12px;">
             <div class="card-head"><span class="card-title">Chiens du groupe</span></div>
             <div style="padding:4px 0;">
@@ -1029,7 +1039,7 @@ html, body {
             </div>
           </div>
 
-          <!-- Commentaire de Sophie -->
+          [[ Commentaire de Sophie ]]
           <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Commentaires</div>
 
           <div class="comment-box">
@@ -1037,7 +1047,7 @@ html, body {
             <div class="comment-text">Max était en grande forme aujourd'hui, très énergique ! Il a bien couru avec Charlie. Bonne promenade dans l'ensemble.</div>
           </div>
 
-          <!-- Réponse client -->
+          [[ Réponse client ]]
           <div class="comment-input-row" style="margin-bottom:16px;">
             <textarea class="comment-input" rows="2" id="commentInput" placeholder="Laisser un commentaire à Gabriel..."></textarea>
             <button class="send-btn" onclick="sendComment()">
@@ -1045,7 +1055,7 @@ html, body {
             </button>
           </div>
 
-          <!-- Commentaire envoyé (caché par défaut) -->
+          [[ Commentaire envoyé (caché par défaut) ]]
           <div id="sentComment" style="display:none;" class="comment-box" style="border-color:rgba(255,95,31,0.2);">
             <div class="comment-author" style="color:var(--accent);">Vous</div>
             <div class="comment-text" id="sentCommentText"></div>
@@ -1054,6 +1064,7 @@ html, body {
         </div>
       </div>
     </div>
+    -->
 
     <!-- ══ RÉSERVATIONS ══ -->
     <div class="screen" id="screen-bookings">
@@ -1097,18 +1108,12 @@ html, body {
         <div id="chiens-list">
           <div style="padding:24px;text-align:center;color:var(--text-faint);font-size:13px;">Chargement…</div>
         </div><!-- /chiens-list -->
-        <!-- Dernières photos -->
-        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Dernières photos</div>
-        <div class="photos-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px;">
-          <div style="aspect-ratio:1;background:linear-gradient(135deg,#2f3520,#3d4429);border-radius:10px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="openPhotoModal()">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          </div>
-          <div style="aspect-ratio:1;background:linear-gradient(135deg,#3d4429,#515938);border-radius:10px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="openPhotoModal()">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          </div>
-          <div style="aspect-ratio:1;background:linear-gradient(135deg,#515938,#6b7450);border-radius:10px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="openPhotoModal()">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          </div>
+        <!-- Dernières photos — module non développé (§16.2) : espace réservé,
+             aucune donnée factice affichée au client. -->
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Photos</div>
+        <div style="padding:22px 16px;text-align:center;background:var(--surface2);border:1px dashed var(--border2);border-radius:12px;margin-bottom:14px;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" style="color:var(--text-faint);margin-bottom:8px;"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <div style="font-size:12.5px;color:var(--text-dim);line-height:1.5;">Les photos de promenade arriveront prochainement.</div>
         </div>
 
         <a href="javascript:void(0)" class="desk-inline" onclick="openDogAdd()" style="width:100%;margin-top:20px;padding:14px;background:var(--accent);border:1.5px solid var(--accent);border-radius:12px;color:#fff;font-family:'Norwester',sans-serif;font-weight:700;font-size:13px;letter-spacing:0.04em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;">
@@ -1285,58 +1290,6 @@ html, body {
 </div>
 
 <!-- MODAL PHOTO -->
-<div class="modal-overlay" id="photoModal">
-  <div class="modal-full">
-    <div class="modal-close" onclick="closePhotoModal()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </div>
-    <div style="width:100%;aspect-ratio:4/3;background:linear-gradient(135deg,#2f3520,#3d4429,#515938);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
-      <div style="text-align:center;">
-        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        <div style="font-size:12px;color:rgba(255,255,255,0.2);margin-top:8px;">Photo de groupe</div>
-      </div>
-    </div>
-    <div style="font-family:'Norwester',sans-serif;font-size:14px;font-weight:800;margin-bottom:4px;">Promenade du matin · 9 juin</div>
-    <div style="font-size:12px;color:var(--text-faint);">Bambësch · Sophie · 3 chiens · 3,4 km</div>
-  </div>
-</div>
-
-<!-- MODAL NOUVELLE RÉSERVATION -->
-<div class="modal-overlay" id="bookingModal">
-  <div class="modal-full">
-    <div class="modal-close" onclick="closeBookingModal()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </div>
-    <div style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;margin-bottom:16px;">Nouvelle demande</div>
-
-    <div style="margin-bottom:12px;">
-      <label style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;display:block;margin-bottom:6px;">Service</label>
-      <select style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:13.5px;outline:none;">
-        <option>Dog Walking — 28 €</option>
-        <option>Day Care — 55 €</option>
-        <option>Boarding — 68 €</option>
-      </select>
-    </div>
-    <div style="margin-bottom:12px;">
-      <label style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;display:block;margin-bottom:6px;">Date souhaitée</label>
-      <input type="date" value="2026-06-11" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:13.5px;outline:none;">
-    </div>
-    <div style="margin-bottom:16px;">
-      <label style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;display:block;margin-bottom:6px;">Message (optionnel)</label>
-      <textarea style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:13.5px;outline:none;resize:none;" rows="3" placeholder="Ex : Max a un rendez-vous vétérinaire jeudi..."></textarea>
-    </div>
-
-    <div style="background:var(--accent-dim);border:1px solid rgba(255,95,31,0.2);border-radius:10px;padding:11px 13px;font-size:12px;color:var(--text-dim);margin-bottom:14px;line-height:1.5;">
-      Gabriel confirmera votre demande sous 24h. Le planning est clôturé la veille à 9h00.
-    </div>
-
-    <button class="btn-big btn-accent" onclick="closeBookingModal()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-      Envoyer la demande
-    </button>
-  </div>
-</div>
-
 <!-- MODAL DÉTAIL RÉSERVATION -->
 <div class="modal-overlay" id="resaModal">
   <div class="modal-full">
@@ -1354,6 +1307,16 @@ html, body {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </div>
     <div id="facture-modal-body"></div>
+  </div>
+</div>
+
+<!-- MODAL NOTIFICATION (message complet) -->
+<div class="modal-overlay" id="notifModal">
+  <div class="modal-full">
+    <div class="modal-close" onclick="closeNotification()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </div>
+    <div id="notif-modal-body"></div>
   </div>
 </div>
 
@@ -1620,12 +1583,8 @@ function showToast(msg, isError) {
   setTimeout(function(){ toast.remove(); }, 3200);
 }
 
-function openPhotoModal()  { document.getElementById('photoModal').classList.add('open'); }
-function closePhotoModal() { document.getElementById('photoModal').classList.remove('open'); }
-function openBookingModal()  { document.getElementById('bookingModal').classList.add('open'); }
-function closeBookingModal() { document.getElementById('bookingModal').classList.remove('open'); }
 
-['photoModal','bookingModal','dogEditModal','resaModal','factureModal','dogFullModal'].forEach(id => {
+['dogEditModal','resaModal','factureModal','dogFullModal','notifModal'].forEach(id => {
   var m = document.getElementById(id);
   if (m) m.addEventListener('click', function(e) {
     if (e.target === this) this.classList.remove('open');
@@ -1780,6 +1739,7 @@ async function loadClientProfile() {
     } catch(e) { console.log('Erreur chargement chiens:', e); }
 
     // Mettre à jour l'interface
+    await chargerChaleursSignalees();
     updateHomeScreen(client);
     updateDogScreen(chiens);
     await loadReservations(client.id);
@@ -2024,17 +1984,47 @@ function renderNotifications() {
 }
 
 
+// Clic sur une notification : on ouvre D'ABORD le message en entier.
+// La redirection vers les réservations / messages se fait ensuite, au choix du client.
 async function ouvrirNotification(id) {
   var m = null;
   for (var i = 0; i < messagesClient.length; i++) if (String(messagesClient[i].id) === String(id)) m = messagesClient[i];
-  goTab('screen-bookings', 'tab-bookings');
-  if (!m || m.lu) return;
+  if (!m) { openMessages(); return; }
+
+  var titre = /(météo|meteo|meteolux|alerte)/i.test(m.contenu || '') ? 'Alerte météo' : 'Réservation';
+  var body  = document.getElementById('notif-modal-body');
+
+  if (body) {
+    body.innerHTML =
+        '<div style="font-family:\'Norwester\',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;">' + titre + '</div>'
+      + '<div style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">' + esc(msgHeure(m.created_at)) + '</div>'
+      + '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;'
+      +      'font-size:13.5px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-word;">'
+      +   esc(m.contenu || '') + '</div>'
+      + '<div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">'
+      +   '<button class="btn-big btn-accent" style="flex:1;min-width:150px;" onclick="closeNotification();openMessages();">'
+      +     '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>'
+      +     'Repondre a Gabriel'
+      +   '</button>'
+      +   '<button class="btn-outline-big" style="flex:1;min-width:150px;" onclick="closeNotification();goTab(\'screen-bookings\',\'tab-bookings\');">'
+      +     'Mes reservations'
+      +   '</button>'
+      + '</div>';
+    document.getElementById('notifModal').classList.add('open');
+  }
+
+  if (m.lu) return;
   try {
     await db.from('messages').update({ lu: true }).eq('id', m.id);
     m.lu = true;
     majBadgesMessages();
     renderNotifications();
   } catch(e) { console.log('maj lu notification:', e); }
+}
+
+function closeNotification() {
+  var el = document.getElementById('notifModal');
+  if (el) el.classList.remove('open');
 }
 
 
@@ -2140,6 +2130,32 @@ function renderAlertesAccueil() {
       + '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5" style="flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>'
       + '</div>';
   }
+
+  // Mode chaleur / signalement — l'info la plus structurante de la semaine
+  (window.chiensData || []).forEach(function(d) {
+    if (chaleurActive(d)) {
+      var n = chaleurJoursRestants(d);
+      html = '<div onclick="goTab(\'screen-dog\',\'tab-dog\')" style="background:rgba(214,92,140,0.10);border:1px solid rgba(214,92,140,0.32);border-radius:var(--radius);padding:13px 15px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:11px;">'
+        + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d65c8c" stroke-width="2" style="flex-shrink:0;"><path d="M12 2s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z"/></svg>'
+        + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#d65c8c;">'
+        +   esc(d.nom || 'Votre chienne') + ' est en chaleur</div>'
+        + '<div style="font-size:11.5px;color:var(--text-dim);">Promenades suspendues jusqu\'au '
+        +   chaleurDateFR(d.chaleur_fin) + ' · ' + n + ' jour' + (n > 1 ? 's' : '') + '</div></div>'
+        + '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5" style="flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>'
+        + '</div>' + html;
+      return;
+    }
+    var sig = chaleurSignalement(d);
+    if (sig) {
+      html = '<div onclick="goTab(\'screen-dog\',\'tab-dog\')" style="background:rgba(240,180,41,0.10);border:1px solid rgba(240,180,41,0.35);border-radius:var(--radius);padding:13px 15px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:11px;">'
+        + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f0b429" stroke-width="2" style="flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+        + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#f0b429;">'
+        +   esc(d.nom || 'Votre chienne') + ' : chaleurs signalées</div>'
+        + '<div style="font-size:11.5px;color:var(--text-dim);">Constaté en promenade — à vous de décider</div></div>'
+        + '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5" style="flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>'
+        + '</div>' + html;
+    }
+  });
 
   el.innerHTML = html;
 }
@@ -2274,12 +2290,14 @@ function annulInfo(r, iso) { return annulOcc[r.id + '|' + iso] || null; }
 
 function annulParTexte(a) {
   if (!a || !a.annule_par) return 'Séance annulée';
+  if (a.annule_par === 'chaleur') return 'Retirée — chienne en chaleur';
   return a.annule_par === 'client' ? 'Annulée à votre demande' : 'Annulée par Forest Rangers';
 }
 
 // Version courte, insérable en milieu de phrase
 function annulCourt(a) {
   if (!a || !a.annule_par) return 'annulée';
+  if (a.annule_par === 'chaleur') return 'retirée (chienne en chaleur)';
   return a.annule_par === 'client' ? 'annulée à votre demande' : 'annulée par Forest Rangers';
 }
 
@@ -3338,8 +3356,8 @@ function ligneFactureHTML(g) {
 
   return '<tr><td style="' + style + '">' + nom
     + '<div style="font-size:10px;color:#6b7450;margin-top:2px;">' + esc(detail) + '</div>' + mention + '</td>'
-    + '<td class="num">' + (toutAnnule ? d.nbSeances : d.tenues) + '</td>'
-    + '<td class="num">' + (d.du ? eur(d.du) : '0,00 €') + '</td></tr>';
+    + '<td class="num qte">' + (toutAnnule ? d.nbSeances : d.tenues) + '</td>'
+    + '<td class="num ttc">' + (d.du ? eur(d.du) : '0,00 €') + '</td></tr>';
 }
 
 function factureDocHTML(opts) {
@@ -3361,7 +3379,7 @@ function factureDocHTML(opts) {
     +   '<strong>' + esc(((clientData && clientData.prenom) || '') + ' ' + ((clientData && clientData.nom) || '')) + '</strong>'
     +   (clientData && clientData.numero_client ? '<div class="inv-sub">Client n° ' + esc(clientData.numero_client) + '</div>' : '')
     + '</div>'
-    + '<table><thead><tr><th>Prestation</th><th class="num">Qté</th><th class="num">TTC</th></tr></thead><tbody>' + lignes + '</tbody></table>'
+    + '<table><thead><tr><th>Prestation</th><th class="num qte">Qté</th><th class="num ttc">TTC</th></tr></thead><tbody>' + lignes + '</tbody></table>'
     + '<div style="margin-top:14px;">'
     +   '<div class="inv-tot"><span style="color:#6b7450;">Total HT</span><span>' + eur(totalHT) + '</span></div>'
     +   '<div class="inv-tot"><span style="color:#6b7450;">TVA 17 %</span><span>' + eur(tva) + '</span></div>'
@@ -3409,7 +3427,7 @@ function openMoisCourantDetail() {
   window._factureCourante = null;
 
   body.innerHTML =
-      '<div style="font-family:\'Norwester\',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;">Mois en cours</div>'
+      '<div style="font-family:\'Norwester\',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;color:var(--accent);">Mois en cours</div>'
     + '<div style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">' + MOIS_LONG[m.mois] + ' ' + m.an + ' · estimation</div>'
     + '<div class="warn-box warn-amber">Facture non encore émise. Le montant peut évoluer jusqu\'à la fin du mois (annulations, séances ajoutées). Le PDF sera disponible une fois la facture définitive émise par Gabriel.</div>'
     + factureDocHTML({
@@ -3517,7 +3535,9 @@ function updateDogScreen(chiens) {
       + avatar
       + '<div style="flex:1;min-width:0;"><div style="font-family:\'Norwester\',sans-serif;font-size:16px;font-weight:800;">' + name + '</div>'
       + '<div style="font-size:12px;color:var(--text-dim);">' + sub + '</div></div>'
-      + '<span class="badge b-green">Actif</span>'
+      + (chaleurActive(d) ? '<span class="badge" style="background:rgba(214,92,140,0.16);color:#d65c8c;">En chaleur</span>'
+          : chaleurSignalement(d) ? '<span class="badge b-amber">Signalée</span>'
+          : '<span class="badge b-green">Actif</span>')
       + '<svg id="dog-chevron-' + idx + '" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5" style="margin-left:6px;flex-shrink:0;transition:transform .2s;"><polyline points="6 9 12 15 18 9"/></svg>'
       + '</div>'
       // Stats rapides (toujours visibles)
@@ -3533,8 +3553,207 @@ function updateDogScreen(chiens) {
       + 'Modifier'
       + '</button>'
       + '<button onclick="openDogFull(' + idx + ')" style="width:100%;margin-top:8px;background:transparent;border:none;color:var(--text-dim);font-family:\'Norwester\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;cursor:pointer;padding:6px;">Voir fiche complète</button>'
+      + blocChaleurChien(d, idx)
       + '</div>';
   }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  MODE « EN CHALEUR »
+//
+//  Reserve aux femelles non sterilisees.
+//
+//  Deux etapes distinctes :
+//   · un ranger peut SIGNALER ce qu'il constate en promenade.
+//     Rien ne bouge au planning : c'est un avis, pas une decision.
+//   · le client (ou Gabriel) DECLARE. La, les seances des trois
+//     semaines sortent du planning — et suivent les regles
+//     d'annulation des CGV. Le cout est annonce avant, pas
+//     decouvert sur la facture.
+//
+//  Toutes les regles sont appliquees en base (fr_migration_v23) :
+//  l'interface ne fait que les rendre lisibles.
+// ══════════════════════════════════════════════════════════════
+var CHALEUR_JOURS = 21;
+var chaleursOuvertes = {};   // chien_id -> ligne `chaleurs` en statut 'signale'
+
+function chaleurEligible(d) {
+  return !!d
+    && String(d.sexe || '').toLowerCase() === 'femelle'
+    && d.sterilise === false;
+}
+
+function chaleurActive(d) {
+  if (!d || !d.chaleur_debut || !d.chaleur_fin) return false;
+  var t = new Date(); t.setHours(0, 0, 0, 0);
+  return new Date(d.chaleur_debut + 'T00:00:00') <= t
+      && t <= new Date(d.chaleur_fin + 'T00:00:00');
+}
+
+function chaleurSignalement(d) {
+  return (d && chaleursOuvertes[d.id]) || null;
+}
+
+function chaleurJoursRestants(d) {
+  if (!chaleurActive(d)) return 0;
+  var t = new Date(); t.setHours(0, 0, 0, 0);
+  return Math.round((new Date(d.chaleur_fin + 'T00:00:00') - t) / 86400000) + 1;
+}
+
+function chaleurDateFR(iso) {
+  if (!iso) return '—';
+  var d = new Date(iso + 'T00:00:00');
+  return isNaN(d) ? iso : d.toLocaleDateString('fr-LU', { day: '2-digit', month: 'long' });
+}
+
+async function chargerChaleursSignalees() {
+  chaleursOuvertes = {};
+  try {
+    var { data } = await db.from('chaleurs')
+      .select('id,chien_id,statut,date_debut,signale_par_nom')
+      .eq('statut', 'signale');
+    (data || []).forEach(function(c) { chaleursOuvertes[c.chien_id] = c; });
+  } catch (e) { console.log('chaleurs:', e); }
+}
+
+function blocChaleurChien(d, idx) {
+  // 1. Mode actif
+  if (chaleurActive(d)) {
+    var n = chaleurJoursRestants(d);
+    return '<div style="margin-top:12px;background:rgba(214,92,140,0.10);border:1px solid rgba(214,92,140,0.32);border-radius:12px;padding:13px 14px;">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+      +   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d65c8c" stroke-width="2"><path d="M12 2s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z"/></svg>'
+      +   '<span style="font-family:\'Norwester\',sans-serif;font-size:13px;font-weight:800;color:#d65c8c;">Mode chaleur actif</span>'
+      + '</div>'
+      + '<div style="font-size:12px;color:var(--text-dim);line-height:1.55;">'
+      +   'Promenades suspendues jusqu\'au <strong>' + chaleurDateFR(d.chaleur_fin) + '</strong> ('
+      +   n + ' jour' + (n > 1 ? 's' : '') + ' restant' + (n > 1 ? 's' : '') + ').'
+      + '</div>'
+      + '<button onclick="annulerChaleur(' + idx + ')" style="width:100%;margin-top:11px;padding:10px;background:transparent;border:1.5px solid rgba(214,92,140,0.45);border-radius:10px;color:#d65c8c;font-family:\'Norwester\',sans-serif;font-size:12px;font-weight:800;cursor:pointer;">'
+      +   'Les chaleurs sont passées — reprendre les promenades'
+      + '</button>'
+      + '</div>';
+  }
+
+  if (!chaleurEligible(d)) return '';
+
+  // 2. Un ranger a signalé : la décision revient au client
+  var sig = chaleurSignalement(d);
+  if (sig) {
+    return '<div style="margin-top:12px;background:rgba(240,180,41,0.10);border:1px solid rgba(240,180,41,0.35);border-radius:12px;padding:13px 14px;">'
+      + '<div style="font-family:\'Norwester\',sans-serif;font-size:12.5px;font-weight:800;color:#f0b429;margin-bottom:5px;">'
+      +   'Signalée en chaleur par ' + esc(sig.signale_par_nom || 'un ranger') + '</div>'
+      + '<div style="font-size:12px;color:var(--text-dim);line-height:1.55;">'
+      +   'Constaté en promenade le ' + chaleurDateFR(sig.date_debut) + '. '
+      +   'Votre planning n\'a pas été modifié : c\'est à vous de décider.'
+      + '</div>'
+      + '<button onclick="declarerChaleur(' + idx + ')" style="width:100%;margin-top:11px;padding:10px;background:#d65c8c;border:none;border-radius:10px;color:#fff;font-family:\'Norwester\',sans-serif;font-size:12px;font-weight:800;cursor:pointer;">'
+      +   'Confirmer et suspendre les promenades</button>'
+      + '<button onclick="ecarterChaleur(' + idx + ')" style="width:100%;margin-top:7px;padding:8px;background:transparent;border:none;color:var(--text-dim);font-size:11.5px;font-weight:600;cursor:pointer;">'
+      +   'Fausse alerte — ne rien changer</button>'
+      + '</div>';
+  }
+
+  // 3. Rien en cours
+  return '<button onclick="declarerChaleur(' + idx + ')" style="width:100%;margin-top:8px;padding:11px;background:transparent;border:1.5px solid rgba(214,92,140,0.35);border-radius:10px;color:#d65c8c;font-family:\'Norwester\',sans-serif;font-size:11.5px;font-weight:800;letter-spacing:0.03em;cursor:pointer;">'
+    + 'Signaler des chaleurs</button>';
+}
+
+async function rechargerChiens() {
+  if (!clientId) return;
+  try {
+    await chargerChaleursSignalees();
+    var { data } = await db.from('chiens').select('*').eq('client_id', clientId);
+    updateDogScreen(data || []);
+    renderAlertesAccueil();
+  } catch (e) { console.log('Rechargement chiens:', e); }
+}
+
+// Ce que la suspension retire du planning, et ce qu'elle coute.
+// Annonce avant, pas decouvert sur la facture : une seance du
+// lendemain reste facturee, c'est la regle d'annulation habituelle.
+async function apercuChaleur(chienId) {
+  try {
+    var { data, error } = await db.rpc('fr_chaleur_apercu', { p_chien: chienId, p_jours: CHALEUR_JOURS });
+    if (error) { console.log('apercu chaleur:', error); return null; }
+    return data || [];
+  } catch (e) { return null; }
+}
+
+function texteApercuChaleur(lignes) {
+  if (!lignes) return 'Le détail des séances concernées n\'a pas pu être calculé.';
+  if (!lignes.length) return 'Aucune séance n\'est prévue sur les trois prochaines semaines : rien ne sera retiré ni facturé.';
+  var facturees = lignes.filter(function(l) { return (l.pourcentage || 0) > 0; });
+  var total = facturees.reduce(function(a, l) { return a + (parseFloat(l.montant_ligne) || 0); }, 0);
+  var t = lignes.length + ' séance' + (lignes.length > 1 ? 's' : '') + ' retirée'
+        + (lignes.length > 1 ? 's' : '') + ' du planning.\n';
+  if (!facturees.length) {
+    t += 'Aucune n\'est facturée : toutes sont annulées dans les délais.';
+    return t;
+  }
+  t += '\nAttention — ' + facturees.length + ' d\'entre elles restent facturées selon les CGV :\n';
+  facturees.slice(0, 6).forEach(function(l) {
+    t += '  · ' + chaleurDateFR(l.date_occurrence) + ' — ' + l.pourcentage + ' %'
+       + (parseFloat(l.montant_ligne) ? ' (' + eur(parseFloat(l.montant_ligne)) + ')' : '') + '\n';
+  });
+  if (facturees.length > 6) t += '  · … et ' + (facturees.length - 6) + ' autre(s)\n';
+  if (total > 0) t += '\nSoit environ ' + eur(total) + ' facturés.';
+  return t;
+}
+
+async function declarerChaleur(idx) {
+  var d = (window.chiensData || [])[idx];
+  if (!d) return;
+  showToast('Calcul des séances concernées…');
+  var lignes = await apercuChaleur(d.id);
+  var msg = 'Activer le mode chaleur pour ' + (d.nom || 'votre chienne') + ' ?\n\n'
+          + 'Elle sort du planning pendant ' + CHALEUR_JOURS + ' jours.\n\n'
+          + texteApercuChaleur(lignes)
+          + '\n\nSi les chaleurs passent plus tôt, vous relancez les promenades en un clic.';
+  if (!confirm(msg)) return;
+  try {
+    var { error } = await db.rpc('fr_chaleur_declarer', { p_chien: d.id, p_jours: CHALEUR_JOURS });
+    if (error) { showToast('✗ ' + nettoyerErreurChaleur(error.message), true); return; }
+    showToast('✓ Mode chaleur activé');
+    await rechargerChiens();
+    if (typeof loadReservations === 'function') loadReservations(clientId);
+    if (typeof loadMessages === 'function') loadMessages(clientId);
+  } catch (e) { showToast('✗ Erreur : ' + e.message, true); }
+}
+
+async function ecarterChaleur(idx) {
+  var d = (window.chiensData || [])[idx];
+  if (!d) return;
+  if (!confirm('Écarter ce signalement ?\n\nVotre planning reste inchangé.')) return;
+  try {
+    var { error } = await db.rpc('fr_chaleur_ecarter', { p_chien: d.id });
+    if (error) { showToast('✗ ' + nettoyerErreurChaleur(error.message), true); return; }
+    showToast('✓ Signalement écarté');
+    await rechargerChiens();
+  } catch (e) { showToast('✗ Erreur : ' + e.message, true); }
+}
+
+async function annulerChaleur(idx) {
+  var d = (window.chiensData || [])[idx];
+  if (!d) return;
+  if (!confirm('Relancer les promenades de ' + (d.nom || 'votre chienne') + ' dès aujourd\'hui ?\n\n'
+             + 'Les séances à venir qui avaient été retirées sont remises au planning, '
+             + 'et les frais d\'annulation correspondants sont annulés. '
+             + 'Les séances déjà passées restent annulées.')) return;
+  try {
+    var { error } = await db.rpc('fr_chaleur_annuler', { p_chien: d.id });
+    if (error) { showToast('✗ ' + nettoyerErreurChaleur(error.message), true); return; }
+    showToast('✓ Promenades reprises');
+    await rechargerChiens();
+    if (typeof loadReservations === 'function') loadReservations(clientId);
+  } catch (e) { showToast('✗ Erreur : ' + e.message, true); }
+}
+
+// Les messages d'erreur PostgreSQL arrivent prefixes : on ne montre
+// au client que la phrase utile.
+function nettoyerErreurChaleur(m) {
+  if (!m) return 'Opération impossible';
+  return String(m).replace(/^.*FR_CHALEUR:\s*/, '').replace(/^.*FR_CUTOFF:\s*/, '');
 }
 
 function toggleDogDetail(idx) {
@@ -3988,6 +4207,71 @@ async function saveDogEdit() {
   }
   if (btn) btn.style.opacity = '1';
 }
+
+/* ── Norwester : la police n'a pas de glyphes accentués (é, è, à, ö, ü…).
+      On retire donc les diacritiques de TOUT texte rendu dans cette police.
+      Vaut aussi pour le contenu injecté dynamiquement (innerHTML). ────────── */
+(function () {
+  var SEL = '[style*="Norwester"],[style*="norwester"],.norwester,'
+          + '.status-time,.card-title,.notif-type,.notif-stat strong,.booking-price,'
+          + '.dog-name,.invoice-amount,.btn-big,.btn-outline-big,.jour-pill,.cal-title,'
+          + '.nav-brand-name,.nav-badge,.nav-user-av,.inv-h1,.inv-ref,.inv-tot.big';
+
+  var LIG = { '\u0152':'OE', '\u0153':'oe', '\u00C6':'AE', '\u00E6':'ae',
+              '\u00DF':'ss', '\u00D8':'O', '\u00F8':'o', '\u0141':'L', '\u0142':'l',
+              '\u0110':'D', '\u0111':'d' };
+
+  function sansAccents(s) {
+    if (!/[^\u0000-\u007F]/.test(s)) return s;              // ASCII pur : rien à faire
+    s = s.replace(/[\u0152\u0153\u00C6\u00E6\u00DF\u00D8\u00F8\u0141\u0142\u0110\u0111]/g,
+                  function (c) { return LIG[c]; });
+    return s.normalize ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : s;
+  }
+
+  var SKIP = { INPUT:1, TEXTAREA:1, SELECT:1, OPTION:1, SCRIPT:1, STYLE:1 };
+
+  function nettoyer(el) {
+    var w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        var p = n.parentNode;
+        if (!p || SKIP[p.nodeName] || p.isContentEditable) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var n;
+    while ((n = w.nextNode())) {
+      var v = sansAccents(n.nodeValue);
+      if (v !== n.nodeValue) n.nodeValue = v;
+    }
+  }
+
+  var obs = null, pending = false;
+
+  function passe() {
+    pending = false;
+    if (obs) obs.disconnect();
+    try {
+      var els = document.querySelectorAll(SEL);
+      for (var i = 0; i < els.length; i++) nettoyer(els[i]);
+    } catch (e) { console.log('Norwester accents:', e); }
+    if (obs) obs.observe(document.body, { childList: true, subtree: true, characterData: true });
+  }
+
+  function planifier() {
+    if (pending) return;
+    pending = true;
+    (window.requestAnimationFrame || setTimeout)(passe, 0);
+  }
+
+  function demarrer() {
+    obs = new MutationObserver(planifier);
+    passe();
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', demarrer);
+  else demarrer();
+})();
+
 </script>
 
 <script>
