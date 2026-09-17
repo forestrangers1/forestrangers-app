@@ -56,10 +56,15 @@ html.light .phone-shell { background: var(--bg) !important; color: var(--text) !
 html.light .bottom-nav  { background: #ffffff; border-top: 1px solid var(--border); }
 html.light .card        { box-shadow: 0 2px 8px rgba(28,31,20,0.06); }
 
+/* `overflow: hidden` ici empechait tout defilement : sur un ecran plus
+   court que les 844px de la maquette, le bas de l'application etait
+   inatteignable. Le verrou ne vaut plus que sur telephone, ou la
+   maquette occupe exactement la fenetre (voir le media 430px). */
 html, body {
-  height: 100%; font-family: 'Instrument Sans', sans-serif;
+  min-height: 100%; font-family: 'Instrument Sans', sans-serif;
   background: var(--bg); color: var(--text);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* ── PHONE SHELL ── */
@@ -80,6 +85,9 @@ html, body {
     margin: 0; border-radius: 0; border: none;
     box-shadow: none;
   }
+  /* Sur telephone la maquette occupe exactement la fenetre : le
+     rembourrage du chassis ajouterait 40px a faire defiler pour rien. */
+  body > div[style*="min-height:100vh"] { padding: 0 !important; }
   html, body { overflow: hidden; }
 }
 
@@ -431,21 +439,54 @@ textarea.input-field { resize: none; }
 .input-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-faint); font-weight: 600; margin-bottom: 5px; display: block; }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Repli CDN : si jsDelivr n'a pas repondu, on tente unpkg avant d'abandonner. -->
+<script>if (!window.supabase) { document.write('<scr' + 'ipt src="https://unpkg.com/@supabase/supabase-js@2"><\/scr' + 'ipt>'); }</script>
   <script>
-    const { createClient } = window.supabase;
-    const SUPABASE_URL = 'https://zxzhqptimjvdtvvtnpyw.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_drh_w_i9T4GOZ_AzoqkLcw_SW45X1FT';
-    const db = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  // ── Init resiliente (correctif : "Cannot access 'db' before initialization") ──
+  // Le SDK Supabase vient d'un CDN. Sur reseau faible il peut ne pas arriver :
+  // window.supabase est alors indefini, l'ancien `const db` restait en zone morte
+  // et chaque appel renvoyait une erreur incomprehensible. On declare `db` en `var`
+  // (jamais de zone morte) et on affiche un message clair si le SDK manque.
+  var SUPABASE_URL = 'https://zxzhqptimjvdtvvtnpyw.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_drh_w_i9T4GOZ_AzoqkLcw_SW45X1FT';
+  var db = null;
+
+  function frErreurReseau(detail) {
+    if (document.getElementById('fr-offline-overlay')) return;
+    var html = '<div id="fr-offline-overlay" style="position:fixed;inset:0;z-index:99999;'
+      + 'background:#1c1f14;color:#eceee6;display:flex;align-items:center;justify-content:center;'
+      + 'padding:24px;font-family:\'Instrument Sans\',system-ui,sans-serif;text-align:center;">'
+      + '<div style="max-width:340px;">'
+      + '<div style="font-size:34px;margin-bottom:14px;">📡</div>'
+      + '<div style="font-size:17px;font-weight:600;margin-bottom:10px;">Connexion au serveur impossible</div>'
+      + '<div style="font-size:13.5px;line-height:1.6;color:rgba(236,238,230,0.6);margin-bottom:20px;">'
+      + 'Votre reseau ne permet pas de charger l\'application. Verifiez votre connexion, '
+      + 'passez en wifi si possible, puis reessayez.</div>'
+      + '<button onclick="location.reload()" style="background:#ff5f1f;color:#fff;border:0;'
+      + 'border-radius:10px;padding:13px 26px;font-size:14px;font-weight:600;cursor:pointer;">'
+      + 'Reessayer</button>'
+      + '<div style="font-size:10.5px;color:rgba(236,238,230,0.25);margin-top:16px;">'
+      + (detail || 'SDK Supabase indisponible') + '</div>'
+      + '</div></div>';
+    function poser() { document.body.insertAdjacentHTML('beforeend', html); }
+    if (document.body) poser(); else document.addEventListener('DOMContentLoaded', poser);
+  }
+
+  if (window.supabase && window.supabase.createClient) {
+    db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: false,
         storageKey: 'fr-auth',
         storage: window.localStorage,
+        // verrou neutralise : evite les erreurs Navigator Lock / DataCloneError sur mobile
         lock: async (_name, _acquireTimeout, fn) => await fn()
       }
     });
-    console.log('Supabase connecte', db);
+  } else {
+    frErreurReseau();
+  }
   </script>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#ff5f1f">
@@ -456,7 +497,7 @@ textarea.input-field { resize: none; }
 </head>
 <body>
 
-<div style="background:#111;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
+<div style="background:#111;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:20px;">
 <div class="phone-shell">
 
   <!-- Notch -->
@@ -496,18 +537,18 @@ textarea.input-field { resize: none; }
           </div>
         </div>
 
-        <!-- Boutons début/fin journée -->
+        <!-- Boutons debut/fin journee -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
           <button id="btn-demarrer-journee" onclick="showScreen('screen-debut')" style="padding:12px;border-radius:var(--radius);background:var(--accent);border:none;color:white;font-family:'Norwester',sans-serif;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 4px 16px rgba(255,95,31,0.3);">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            Démarrer journée
+            Demarrer journee
           </button>
           <button onclick="showScreen('screen-fin')" style="padding:12px;border-radius:var(--radius);background:var(--surface);border:1px solid var(--border);color:var(--text-dim);font-family:'Norwester',sans-serif;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-            Terminer journée
+            Terminer journee
           </button>
         </div>
-        <!-- Badge journée démarrée -->
+        <!-- Badge journee demarree -->
         <div id="badge-journee" style="display:none;align-items:center;gap:6px;font-size:11px;color:var(--green);font-weight:700;margin-bottom:14px;padding:6px 12px;background:var(--green-dim);border-radius:20px;width:fit-content;"></div>
 
         <!-- Stats -->
@@ -522,11 +563,11 @@ textarea.input-field { resize: none; }
           </div>
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
             <div id="stat-terminees" style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:var(--green);">—</div>
-            <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">Terminées</div>
+            <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">Terminees</div>
           </div>
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
             <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:var(--blue);">—</div>
-            <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">Durée</div>
+            <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">Duree</div>
           </div>
         </div>
 
@@ -568,7 +609,7 @@ textarea.input-field { resize: none; }
         <div id="message-gabriel-texte" style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:var(--text);line-height:1.4;margin-bottom:8px;padding:0 16px;">Merci <span id="msg-ranger-prenom">Sophie</span> ! 🐾</div>
         <div style="font-size:15px;color:var(--text-dim);line-height:1.6;padding:0 24px;">
           Amusez-vous bien avec les chiens aujourd'hui.<br>
-          <span style="color:var(--accent);">Bonne journée !</span>
+          <span style="color:var(--accent);">Bonne journee !</span>
         </div>
         <div style="margin-top:28px;display:flex;gap:6px;justify-content:center;">
           <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.2s infinite;"></div>
@@ -579,7 +620,7 @@ textarea.input-field { resize: none; }
       </div>
     </div>
 
-    <!-- ══ SCREEN : MESSAGE FIN JOURNÉE ══ -->
+    <!-- ══ SCREEN : MESSAGE FIN JOURNEE ══ -->
     <div class="screen" id="screen-message-fin">
       <div class="screen-pad" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;">
         <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#c44010);display:flex;align-items:center;justify-content:center;font-family:'Norwester',sans-serif;font-size:24px;font-weight:800;color:white;margin:0 auto 20px;box-shadow:0 8px 24px rgba(255,95,31,0.35);">G</div>
@@ -587,7 +628,7 @@ textarea.input-field { resize: none; }
         <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:var(--text);line-height:1.4;margin-bottom:8px;padding:0 16px;">Merci <span id="msg-fin-prenom">Sophie</span> ! 🌙</div>
         <div style="font-size:15px;color:var(--text-dim);line-height:1.6;padding:0 24px;">
           Excellent travail aujourd'hui.<br>
-          <span style="color:var(--accent);">Belle fin de journée !</span>
+          <span style="color:var(--accent);">Belle fin de journee !</span>
         </div>
         <div style="margin-top:28px;display:flex;gap:6px;justify-content:center;">
           <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.2s infinite;"></div>
@@ -597,18 +638,18 @@ textarea.input-field { resize: none; }
       </div>
     </div>
 
-    <!-- ══ SCREEN : RÉCAP FIN JOURNÉE ══ -->
+    <!-- ══ SCREEN : RECAP FIN JOURNEE ══ -->
     <div class="screen" id="screen-recap-journee">
       <div class="screen-pad">
         <div style="text-align:center;padding:24px 0 20px;">
           <div style="width:64px;height:64px;border-radius:50%;background:var(--green-dim);border:2px solid var(--green);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#5ec97a" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
-          <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:var(--text);margin-bottom:6px;">Journée terminée !</div>
-          <div style="font-size:13px;color:var(--text-dim);">Rapport envoyé à Gabriel · <span id="recap-heure-fin">—</span></div>
+          <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;color:var(--text);margin-bottom:6px;">Journee terminee !</div>
+          <div style="font-size:13px;color:var(--text-dim);">Rapport envoye a Gabriel · <span id="recap-heure-fin">—</span></div>
         </div>
 
-        <!-- Stats récap -->
+        <!-- Stats recap -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
             <div id="recap-missions-fin" style="font-family:'Norwester',sans-serif;font-size:26px;font-weight:800;color:var(--accent);">—</div>
@@ -616,19 +657,19 @@ textarea.input-field { resize: none; }
           </div>
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
             <div id="recap-km" style="font-family:'Norwester',sans-serif;font-size:26px;font-weight:800;color:var(--blue);">—</div>
-            <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:3px;">Kilomètres</div>
+            <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:3px;">Kilometres</div>
           </div>
         </div>
 
         <div style="background:var(--accent-dim);border:1px solid rgba(255,95,31,0.2);border-radius:12px;padding:16px;text-align:center;margin-bottom:20px;">
           <div style="font-size:13px;color:var(--text-dim);line-height:1.6;">
             Merci <strong style="color:var(--text);" id="recap-ranger-nom">Sophie</strong> pour votre travail aujourd'hui ! 🐾<br>
-            <span style="color:var(--accent);">À demain !</span>
+            <span style="color:var(--accent);">A demain !</span>
           </div>
         </div>
 
         <button onclick="showScreen('screen-missions')" style="width:100%;padding:14px;border-radius:var(--radius);background:var(--surface);border:1px solid var(--border);color:var(--text-dim);font-family:'Norwester',sans-serif;font-size:14px;font-weight:800;cursor:pointer;">
-          Retour à l'accueil
+          Retour a l'accueil
         </button>
       </div>
     </div>
@@ -658,7 +699,7 @@ textarea.input-field { resize: none; }
             <circle cx="60" cy="160" r="5" fill="var(--green)" stroke="white" stroke-width="2"/>
           </svg>
           <div class="map-dot" style="right:80px;top:50px;"></div>
-          <div class="map-label">Forêt de Merl</div>
+          <div class="map-label">Foret de Merl</div>
         </div>
 
         <!-- Stats GPS -->
@@ -679,17 +720,17 @@ textarea.input-field { resize: none; }
 
         <!-- Chiens dans ce groupe -->
         <div class="card" style="margin-bottom:14px;">
-          <div class="card-head"><span class="card-title">Chiens présents</span></div>
+          <div class="card-head"><span class="card-title">Chiens presents</span></div>
           <div style="padding:4px 0;">
             <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;">
               <div style="width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;"></div>
               <div style="flex:1;"><div style="font-size:13px;font-weight:600;">Luna</div><div style="font-size:11px;color:var(--text-faint);">Berger · Mme Dupont</div></div>
-              <span class="badge b-green">Présente</span>
+              <span class="badge b-green">Presente</span>
             </div>
             <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid var(--border);">
               <div style="width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;"></div>
               <div style="flex:1;"><div style="font-size:13px;font-weight:600;">Milo</div><div style="font-size:11px;color:var(--text-faint);">Golden · M. Schmit</div></div>
-              <span class="badge b-green">Présent</span>
+              <span class="badge b-green">Present</span>
             </div>
           </div>
         </div>
@@ -720,9 +761,9 @@ textarea.input-field { resize: none; }
           <div class="step active"></div>
         </div>
 
-        <!-- Résumé GPS -->
+        <!-- Resume GPS -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;margin-bottom:10px;">Résumé de la promenade</div>
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;margin-bottom:10px;">Resume de la promenade</div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
             <div style="text-align:center;">
               <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;color:var(--accent);">3,4</div>
@@ -749,15 +790,15 @@ textarea.input-field { resize: none; }
           <div class="photo-preview">
             <div style="text-align:center;">
               <div style="font-size:40px;margin-bottom:8px;">📸</div>
-              <div style="font-size:12px;color:var(--text-dim);">Photo chargée</div>
+              <div style="font-size:12px;color:var(--text-dim);">Photo chargee</div>
             </div>
             <div class="photo-badge">Groupe · 2 chiens</div>
           </div>
         </div>
 
-        <!-- Parcours GPS — aperçu de ce que le client recevra -->
+        <!-- Parcours GPS — apercu de ce que le client recevra -->
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;margin:14px 0 8px;">
-          Aperçu — ce que le client recevra
+          Apercu — ce que le client recevra
         </div>
         <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
           <!-- Mini map SVG -->
@@ -775,18 +816,18 @@ textarea.input-field { resize: none; }
               <polyline points="40,110 65,95 95,78 130,65 165,72 200,58 240,62 275,55 310,60"
                 fill="none" stroke="#5ec97a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
               <circle cx="40" cy="110" r="6" fill="#ff5f1f" stroke="#1c1f14" stroke-width="2"/>
-              <text x="50" y="113" fill="rgba(255,255,255,0.5)" font-size="9" font-family="Instrument Sans">Départ</text>
+              <text x="50" y="113" fill="rgba(255,255,255,0.5)" font-size="9" font-family="Instrument Sans">Depart</text>
               <circle cx="310" cy="60" r="6" fill="#5ec97a" stroke="#1c1f14" stroke-width="2"/>
-              <text x="272" y="52" fill="rgba(255,255,255,0.5)" font-size="9" font-family="Instrument Sans">Arrivée</text>
+              <text x="272" y="52" fill="rgba(255,255,255,0.5)" font-size="9" font-family="Instrument Sans">Arrivee</text>
               <circle cx="310" cy="60" r="20" fill="rgba(94,201,122,0.07)" stroke="rgba(94,201,122,0.2)" stroke-width="1" stroke-dasharray="3,2"/>
-              <text x="280" y="88" fill="rgba(94,201,122,0.4)" font-size="8" font-family="Instrument Sans">Bambësch</text>
+              <text x="280" y="88" fill="rgba(94,201,122,0.4)" font-size="8" font-family="Instrument Sans">Bambesch</text>
             </svg>
           </div>
         </div>
 
         <!-- Commentaire -->
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Commentaire (optionnel)</div>
-        <textarea class="input-field" rows="3" placeholder="Ex : Luna très énergique aujourd'hui, Milo a mangé de l'herbe..."></textarea>
+        <textarea class="input-field" rows="3" placeholder="Ex : Luna tres energique aujourd'hui, Milo a mange de l'herbe..."></textarea>
 
         <button class="btn-big btn-start" onclick="showScreen('screen-done')" style="margin-top:4px;">
           <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" width="20" height="20"><polyline points="20 6 9 17 4 12"/></svg>
@@ -804,8 +845,8 @@ textarea.input-field { resize: none; }
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
 
-        <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;margin-bottom:8px;">Promenade terminée</div>
-        <div style="font-size:14px;color:var(--text-dim);line-height:1.6;margin-bottom:24px;max-width:280px;">Les clients ont été notifiés avec la photo, le tracé GPS et le résumé de la promenade.</div>
+        <div style="font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;margin-bottom:8px;">Promenade terminee</div>
+        <div style="font-size:14px;color:var(--text-dim);line-height:1.6;margin-bottom:24px;max-width:280px;">Les clients ont ete notifies avec la photo, le trace GPS et le resume de la promenade.</div>
 
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;width:100%;margin-bottom:20px;">
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
@@ -819,7 +860,7 @@ textarea.input-field { resize: none; }
             </div>
             <div style="text-align:center;">
               <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;color:var(--green);">2</div>
-              <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;">notifiés</div>
+              <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;">notifies</div>
             </div>
           </div>
         </div>
@@ -836,12 +877,12 @@ textarea.input-field { resize: none; }
     <div class="screen" id="screen-history">
       <div class="screen-pad">
         <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;margin-bottom:4px;margin-top:4px;">Historique</div>
-        <div style="font-size:13px;color:var(--text-dim);margin-bottom:18px;">Vos promenades terminées</div>
+        <div style="font-size:13px;color:var(--text-dim);margin-bottom:18px;">Vos promenades terminees</div>
 
         <div class="card">
           <div class="history-item">
             <div class="history-date">Aujourd'hui · 08:00</div>
-            <div class="history-title">Groupe B · Bambësch</div>
+            <div class="history-title">Groupe B · Bambesch</div>
             <div class="history-stats">
               <div class="history-stat">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -859,7 +900,7 @@ textarea.input-field { resize: none; }
           </div>
           <div class="history-item">
             <div class="history-date">Vendredi 6 juin · 08:00</div>
-            <div class="history-title">Groupe B · Forêt de Merl</div>
+            <div class="history-title">Groupe B · Foret de Merl</div>
             <div class="history-stats">
               <div class="history-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>52 min</div>
               <div class="history-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18"/></svg>4,1 km</div>
@@ -868,7 +909,7 @@ textarea.input-field { resize: none; }
           </div>
           <div class="history-item">
             <div class="history-date">Jeudi 5 juin · 16:30</div>
-            <div class="history-title">Groupe C · Bambësch</div>
+            <div class="history-title">Groupe C · Bambesch</div>
             <div class="history-stats">
               <div class="history-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>41 min</div>
               <div class="history-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18"/></svg>3,1 km</div>
@@ -877,7 +918,7 @@ textarea.input-field { resize: none; }
           </div>
           <div class="history-item">
             <div class="history-date">Mercredi 4 juin · 08:00</div>
-            <div class="history-title">Groupe B · Forêt de Merl</div>
+            <div class="history-title">Groupe B · Foret de Merl</div>
             <div class="history-stats">
               <div class="history-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>50 min</div>
               <div class="history-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18"/></svg>3,8 km</div>
@@ -914,7 +955,7 @@ textarea.input-field { resize: none; }
 
         <div class="profile-hero">
           <div class="profile-avatar">SM</div>
-          <div class="profile-name">Sophie Müller</div>
+          <div class="profile-name">Sophie Muller</div>
           <div class="profile-role">Ranger · Forest Rangers</div>
           <div class="profile-stats">
             <div class="profile-stat"><div class="profile-stat-val">8</div><div class="profile-stat-label">Cette sem.</div></div>
@@ -926,7 +967,7 @@ textarea.input-field { resize: none; }
         <div class="card">
           <div class="card-head"><span class="card-title">Informations</span></div>
           <div style="padding:4px 0;">
-            <div style="padding:11px 16px;border-top:none;display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-faint);">Téléphone</span><span>+352 621 xxx xxx</span></div>
+            <div style="padding:11px 16px;border-top:none;display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-faint);">Telephone</span><span>+352 621 xxx xxx</span></div>
             <div style="padding:11px 16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-faint);">Email</span><span>sophie@forestrangers.lu</span></div>
             <div style="padding:11px 16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-faint);">Contrat</span><span>Depuis mars 2025</span></div>
           </div>
@@ -934,13 +975,13 @@ textarea.input-field { resize: none; }
 
         <button class="btn-outline-big" style="width:100%;color:var(--red);border-color:rgba(224,90,90,0.2);">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-          Se déconnecter
+          Se deconnecter
         </button>
       </div>
     </div>
 
 
-    <!-- ══ SCREEN 5b : DEMANDE CRÉNEAU ══ -->
+    <!-- ══ SCREEN 5b : DEMANDE CRENEAU ══ -->
     <div class="screen" id="screen-demande">
       <div class="screen-pad">
 
@@ -948,7 +989,7 @@ textarea.input-field { resize: none; }
           <button onclick="showScreen('screen-missions')" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text);">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
-          <div style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;">Demandes reçues</div>
+          <div style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;">Demandes recues</div>
           <div style="margin-left:auto;width:8px;height:8px;border-radius:50%;background:var(--accent);"></div>
         </div>
 
@@ -966,9 +1007,9 @@ textarea.input-field { resize: none; }
               <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">→ ~11:30</div>
             </div>
           </div>
-          <!-- Créneaux détaillés -->
+          <!-- Creneaux detailles -->
           <div style="background:var(--surface2);border-radius:10px;padding:11px 13px;margin-bottom:10px;">
-            <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Créneaux demandés</div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Creneaux demandes</div>
             <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);">
               <div>
                 <div style="font-size:13px;font-weight:600;">Matin · 09:00 → ~11:30</div>
@@ -985,7 +1026,7 @@ textarea.input-field { resize: none; }
             </div>
           </div>
           <div style="background:var(--surface2);border-radius:10px;padding:11px 13px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
-            <div style="font-size:12px;color:var(--text-dim);">Durée totale estimée</div>
+            <div style="font-size:12px;color:var(--text-dim);">Duree totale estimee</div>
             <div style="font-family:'Norwester',sans-serif;font-size:16px;font-weight:800;color:var(--accent);">~2h30</div>
           </div>
 
@@ -1006,12 +1047,12 @@ textarea.input-field { resize: none; }
             </button>
             <button onclick="respondDemande('decline')" style="padding:13px;border-radius:12px;background:var(--red-dim);border:1px solid rgba(224,90,90,0.3);color:var(--red);font-family:'Norwester',sans-serif;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              Décliner
+              Decliner
             </button>
           </div>
         </div>
 
-        <!-- Réponse (cachée par défaut) -->
+        <!-- Reponse (cachee par defaut) -->
         <div id="demande-response" style="display:none;text-align:center;padding:2rem 1rem;">
           <div id="demande-icon" style="width:60px;height:60px;border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;"></div>
           <div id="demande-title" style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;margin-bottom:8px;"></div>
@@ -1026,17 +1067,17 @@ textarea.input-field { resize: none; }
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;">
           <div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;font-size:12.5px;">
             <div>
-              <div style="font-weight:600;">Vendredi 6 juin · Après-midi</div>
+              <div style="font-weight:600;">Vendredi 6 juin · Apres-midi</div>
               <div style="font-size:11px;color:var(--text-faint);margin-top:2px;">Demande de Gabriel</div>
             </div>
-            <span style="background:var(--green-dim);color:var(--green);padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;">Accepté</span>
+            <span style="background:var(--green-dim);color:var(--green);padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;">Accepte</span>
           </div>
           <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:12.5px;">
             <div>
               <div style="font-weight:600;">Mercredi 4 juin · Midi</div>
               <div style="font-size:11px;color:var(--text-faint);margin-top:2px;">Demande de Gabriel</div>
             </div>
-            <span style="background:var(--red-dim);color:var(--red);padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;">Décliné</span>
+            <span style="background:var(--red-dim);color:var(--red);padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;">Decline</span>
           </div>
         </div>
 
@@ -1052,32 +1093,32 @@ textarea.input-field { resize: none; }
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
           <div>
-            <div style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;">Début de journée</div>
+            <div style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;">Debut de journee</div>
             <div style="font-size:11px;color:var(--text-faint);margin-top:2px;">Lundi 9 juin · 08:47</div>
           </div>
         </div>
 
-        <!-- Camionnette assignée -->
+        <!-- Camionnette assignee -->
         <div style="background:var(--accent-dim);border:1.5px solid var(--accent-mid);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
           <div>
-            <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--accent);font-weight:700;margin-bottom:4px;">Camionnette assignée</div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--accent);font-weight:700;margin-bottom:4px;">Camionnette assignee</div>
             <div style="font-family:'Norwester',sans-serif;font-size:16px;font-weight:800;">Camionnette A</div>
             <div style="font-size:11px;color:var(--text-faint);margin-top:2px;font-family:monospace;">LU · AB 1234</div>
           </div>
           <div style="text-align:right;">
-            <div style="font-size:10px;color:var(--text-faint);margin-bottom:4px;">Capacité</div>
+            <div style="font-size:10px;color:var(--text-faint);margin-bottom:4px;">Capacite</div>
             <div style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;color:var(--accent);">10</div>
             <div style="font-size:10px;color:var(--text-faint);">chiens max</div>
           </div>
         </div>
 
-        <!-- Kilométrage départ -->
+        <!-- Kilometrage depart -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:14px;">
           <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
             <div style="width:26px;height:26px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
             </div>
-            <div style="font-family:'Norwester',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);">Kilométrage départ</div>
+            <div style="font-family:'Norwester',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);">Kilometrage depart</div>
             <span style="margin-left:auto;font-size:10px;color:var(--red);font-weight:700;">Obligatoire</span>
           </div>
           <div style="padding:16px;">
@@ -1088,13 +1129,13 @@ textarea.input-field { resize: none; }
           </div>
         </div>
 
-        <!-- État technique -->
+        <!-- Etat technique -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:14px;">
           <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
             <div style="width:26px;height:26px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/><path d="M12 6v6l4 2"/></svg>
             </div>
-            <div style="font-family:'Norwester',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);">État technique</div>
+            <div style="font-family:'Norwester',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);">Etat technique</div>
           </div>
           <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px;">
 
@@ -1106,10 +1147,10 @@ textarea.input-field { resize: none; }
                   <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--green);">OK</div>
                 </div>
                 <div class="state-btn" onclick="selectState(this,'huile')" data-val="surveiller" style="flex:1;padding:10px;border-radius:9px;text-align:center;background:var(--surface2);border:1.5px solid var(--border);cursor:pointer;">
-                  <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--text-dim);">À surveiller</div>
+                  <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--text-dim);">A surveiller</div>
                 </div>
                 <div class="state-btn" onclick="selectState(this,'huile')" data-val="faire" style="flex:1;padding:10px;border-radius:9px;text-align:center;background:var(--surface2);border:1.5px solid var(--border);cursor:pointer;">
-                  <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--text-dim);">À faire</div>
+                  <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--text-dim);">A faire</div>
                 </div>
               </div>
             </div>
@@ -1122,7 +1163,7 @@ textarea.input-field { resize: none; }
                   <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--green);">OK</div>
                 </div>
                 <div class="state-btn" onclick="selectState(this,'adblue')" data-val="faire" style="flex:1;padding:10px;border-radius:9px;text-align:center;background:var(--surface2);border:1.5px solid var(--border);cursor:pointer;">
-                  <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--text-dim);">À faire</div>
+                  <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--text-dim);">A faire</div>
                 </div>
                 <div class="state-btn" onclick="selectState(this,'adblue')" data-val="na" style="flex:1;padding:10px;border-radius:9px;text-align:center;background:var(--surface2);border:1.5px solid var(--border);cursor:pointer;">
                   <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--text-dim);">N/A</div>
@@ -1139,13 +1180,13 @@ textarea.input-field { resize: none; }
             <div style="font-family:'Norwester',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);">Remarques (optionnel)</div>
           </div>
           <div style="padding:14px 16px;">
-            <textarea id="debut-remarques" style="width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:13px;outline:none;resize:none;min-height:80px;" placeholder="Ex : voyant pression pneu allumé, rayure nouvelle sur carrosserie..."></textarea>
+            <textarea id="debut-remarques" style="width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:13px;outline:none;resize:none;min-height:80px;" placeholder="Ex : voyant pression pneu allume, rayure nouvelle sur carrosserie..."></textarea>
           </div>
         </div>
 
         <button onclick="confirmerDebut()" style="width:100%;padding:16px;border-radius:var(--radius);background:var(--accent);border:none;color:white;font-family:'Norwester',sans-serif;font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 8px 24px rgba(255,95,31,0.3);">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-          Démarrer ma journée
+          Demarrer ma journee
         </button>
       </div>
     </div>
@@ -1158,18 +1199,18 @@ textarea.input-field { resize: none; }
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
           <div>
-            <div style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;">Fin de journée</div>
-            <div style="font-size:11px;color:var(--text-faint);margin-top:2px;">Lundi 9 juin · Départ : 48 250 km</div>
+            <div style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;">Fin de journee</div>
+            <div style="font-size:11px;color:var(--text-faint);margin-top:2px;">Lundi 9 juin · Depart : 48 250 km</div>
           </div>
         </div>
 
-        <!-- Kilométrage arrivée -->
+        <!-- Kilometrage arrivee -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:14px;">
           <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
             <div style="width:26px;height:26px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
             </div>
-            <div style="font-family:'Norwester',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);">Kilométrage arrivée</div>
+            <div style="font-family:'Norwester',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);">Kilometrage arrivee</div>
             <span style="margin-left:auto;font-size:10px;color:var(--red);font-weight:700;">Obligatoire</span>
           </div>
           <div style="padding:16px;">
@@ -1177,30 +1218,30 @@ textarea.input-field { resize: none; }
               <input type="number" id="km-arrivee" placeholder="Ex: 48 372" style="flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;color:var(--text);font-family:'Norwester',sans-serif;font-size:22px;font-weight:800;outline:none;text-align:center;" oninput="calcKm()">
               <span style="font-size:14px;color:var(--text-faint);font-weight:600;">km</span>
             </div>
-            <!-- Résultat km -->
+            <!-- Resultat km -->
             <div id="km-result" style="display:none;margin-top:12px;background:var(--green-dim);border:1px solid rgba(94,201,122,0.25);border-radius:10px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;">
-              <span style="font-size:13px;color:var(--text-dim);">Kilomètres parcourus aujourd'hui</span>
+              <span style="font-size:13px;color:var(--text-dim);">Kilometres parcourus aujourd'hui</span>
               <span id="km-total" style="font-family:'Norwester',sans-serif;font-size:20px;font-weight:800;color:var(--green);">—</span>
             </div>
           </div>
         </div>
 
-        <!-- Résumé missions -->
+        <!-- Resume missions -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:14px;">
           <div style="padding:12px 16px;border-bottom:1px solid var(--border);">
-            <div style="font-family:'Norwester',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);">Résumé de la journée</div>
+            <div style="font-family:'Norwester',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);">Resume de la journee</div>
           </div>
           <div style="padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
             <div style="display:flex;justify-content:space-between;font-size:13px;">
-              <span style="color:var(--text-faint);">Missions réalisées</span>
+              <span style="color:var(--text-faint);">Missions realisees</span>
               <strong>2 / 2</strong>
             </div>
             <div style="display:flex;justify-content:space-between;font-size:13px;">
-              <span style="color:var(--text-faint);">Chiens accompagnés</span>
+              <span style="color:var(--text-faint);">Chiens accompagnes</span>
               <strong>5 chiens</strong>
             </div>
             <div style="display:flex;justify-content:space-between;font-size:13px;">
-              <span style="color:var(--text-faint);">Photos envoyées</span>
+              <span style="color:var(--text-faint);">Photos envoyees</span>
               <strong style="color:var(--green);">2 / 2 ✓</strong>
             </div>
             <div style="display:flex;justify-content:space-between;font-size:13px;">
@@ -1216,13 +1257,13 @@ textarea.input-field { resize: none; }
             <div style="font-family:'Norwester',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);">Remarques / Incidents</div>
           </div>
           <div style="padding:14px 16px;">
-            <textarea id="fin-remarques" style="width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:13px;outline:none;resize:none;min-height:80px;" placeholder="Ex : petit accrochage parking, chien malade pendant promenade, clé difficile à tourner..."></textarea>
+            <textarea id="fin-remarques" style="width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:13px;outline:none;resize:none;min-height:80px;" placeholder="Ex : petit accrochage parking, chien malade pendant promenade, cle difficile a tourner..."></textarea>
           </div>
         </div>
 
         <button onclick="confirmerFin()" style="width:100%;padding:16px;border-radius:var(--radius);background:var(--surface3);border:none;color:var(--text);font-family:'Norwester',sans-serif;font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-          Terminer ma journée
+          Terminer ma journee
         </button>
       </div>
     </div>
@@ -1257,16 +1298,16 @@ textarea.input-field { resize: none; }
 </div><!-- /phone-shell -->
 </div>
 
-<!-- ══ MODAL : Confirmation présence chiens ══ -->
+<!-- ══ MODAL : Confirmation presence chiens ══ -->
 <div class="modal-overlay" id="startModal" style="position:fixed;">
   <div class="modal-sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Confirmation de présence</div>
-    <div style="font-size:13px;color:var(--text-dim);margin-bottom:14px;">Pour chaque chien, confirmez s'il est présent ou absent.</div>
+    <div class="sheet-title">Confirmation de presence</div>
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:14px;">Pour chaque chien, confirmez s'il est present ou absent.</div>
 
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:12px;" id="dog-presence-list">
 
-      <!-- Chien 1 — Max — présent -->
+      <!-- Chien 1 — Max — present -->
       <div style="padding:12px 14px;border-bottom:1px solid var(--border);">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
           <div style="font-size:13px;font-weight:600;flex:1;">Max</div>
@@ -1274,12 +1315,12 @@ textarea.input-field { resize: none; }
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
           <div class="presence-btn present" onclick="setPresence(this,'max','present')" style="padding:10px;border-radius:9px;text-align:center;background:var(--surface);border:1.5px solid var(--border);cursor:pointer;">
-            <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--text-dim);">Présent</div>
+            <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--text-dim);">Present</div>
             <div style="font-size:10px;color:var(--text-faint);margin-top:2px;">Promenade normale</div>
           </div>
           <div class="presence-btn absent active" onclick="setPresence(this,'max','absent')" style="padding:10px;border-radius:9px;text-align:center;background:var(--red-dim);border:1.5px solid rgba(224,90,90,0.4);cursor:pointer;">
             <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--red);">Absent</div>
-            <div style="font-size:10px;color:var(--red);opacity:0.7;margin-top:2px;">Non prévenu</div>
+            <div style="font-size:10px;color:var(--red);opacity:0.7;margin-top:2px;">Non prevenu</div>
           </div>
         </div>
       </div>
@@ -1292,38 +1333,38 @@ textarea.input-field { resize: none; }
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
           <div class="presence-btn present" onclick="setPresence(this,'luna','present')" style="padding:10px;border-radius:9px;text-align:center;background:var(--surface);border:1.5px solid var(--border);cursor:pointer;">
-            <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--text-dim);">Présente</div>
+            <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--text-dim);">Presente</div>
             <div style="font-size:10px;color:var(--text-faint);margin-top:2px;">Promenade normale</div>
           </div>
           <div class="presence-btn absent active" onclick="setPresence(this,'luna','absent')" style="padding:10px;border-radius:9px;text-align:center;background:var(--red-dim);border:1.5px solid rgba(224,90,90,0.4);cursor:pointer;">
             <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--red);">Absente</div>
-            <div style="font-size:10px;color:var(--red);opacity:0.7;margin-top:2px;">Non prévenu</div>
+            <div style="font-size:10px;color:var(--red);opacity:0.7;margin-top:2px;">Non prevenu</div>
           </div>
         </div>
         <!-- Alerte absence Luna -->
         <div id="luna-alert" style="margin-top:8px;padding:9px 11px;background:var(--red-dim);border:1px solid rgba(224,90,90,0.25);border-radius:8px;font-size:11.5px;color:var(--red);line-height:1.5;">
-          <strong style="color:var(--red);">Absence notée.</strong> Séance non effectuée pour Luna. Max récupéré ce même trajet.
+          <strong style="color:var(--red);">Absence notee.</strong> Seance non effectuee pour Luna. Max recupere ce meme trajet.
         </div>
       </div>
 
     </div>
 
-    <!-- Résumé facturation -->
+    <!-- Resume facturation -->
     <div id="facturation-resume" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;">
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Impact facturation</div>
       <div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-top:1px solid var(--border);">
         <div style="width:7px;height:7px;border-radius:50%;background:var(--red);flex-shrink:0;"></div>
-        <span style="color:var(--text-dim);">Max — Absent · non prévenu</span>
+        <span style="color:var(--text-dim);">Max — Absent · non prevenu</span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-top:1px solid var(--border);">
         <div style="width:7px;height:7px;border-radius:50%;background:var(--red);flex-shrink:0;"></div>
-        <span style="color:var(--text-dim);">Luna — Absente · non prévenu</span>
+        <span style="color:var(--text-dim);">Luna — Absente · non prevenu</span>
       </div>
     </div>
 
     <button class="btn-big btn-start" onclick="confirmerPresenceEtDemarrer()">
       <svg viewBox="0 0 24 24" fill="white" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-      Confirmer et démarrer GPS
+      Confirmer et demarrer GPS
     </button>
     <button class="btn-outline-big" style="width:100%;margin-top:8px;" onclick="closeStartModal()">Annuler</button>
   </div>
@@ -1357,7 +1398,7 @@ function toggleCheck(el) {
   box.classList.toggle('checked');
   if (box.classList.contains('checked')) {
     badge.className = 'badge b-green';
-    badge.textContent = 'Récupéré(e)';
+    badge.textContent = 'Recupere(e)';
   } else {
     badge.className = 'badge b-muted';
     badge.textContent = 'Absent(e)';
@@ -1412,25 +1453,25 @@ function updateFacturationResume() {
   var onlyLunaAbsent = maxPresent && !lunaPresent;
   var onlyMaxAbsent = !maxPresent && lunaPresent;
 
-  var html = '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Statut de la séance</div>';
+  var html = '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Statut de la seance</div>';
 
   // Max line
   if (maxPresent) {
-    html += '<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-top:1px solid var(--border);"><div style="width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;"></div><span style="color:var(--text-dim);">Max — Présent · promenade effectuée</span></div>';
+    html += '<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-top:1px solid var(--border);"><div style="width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;"></div><span style="color:var(--text-dim);">Max — Present · promenade effectuee</span></div>';
   } else {
-    html += '<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-top:1px solid var(--border);"><div style="width:7px;height:7px;border-radius:50%;background:var(--red);flex-shrink:0;"></div><span style="color:var(--text-dim);">Max — Absent · séance non effectuée</span></div>';
+    html += '<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-top:1px solid var(--border);"><div style="width:7px;height:7px;border-radius:50%;background:var(--red);flex-shrink:0;"></div><span style="color:var(--text-dim);">Max — Absent · seance non effectuee</span></div>';
     if (!lunaPresent) {
-      html += '<div style="display:flex;align-items:center;gap:8px;font-size:11px;padding:4px 0 4px 15px;"><span style="color:var(--amber);">Déplacement effectué sans récupération</span></div>';
+      html += '<div style="display:flex;align-items:center;gap:8px;font-size:11px;padding:4px 0 4px 15px;"><span style="color:var(--amber);">Deplacement effectue sans recuperation</span></div>';
     }
   }
 
   // Luna line
   if (lunaPresent) {
-    html += '<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-top:1px solid var(--border);"><div style="width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;"></div><span style="color:var(--text-dim);">Luna — Présente · promenade effectuée</span></div>';
+    html += '<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-top:1px solid var(--border);"><div style="width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;"></div><span style="color:var(--text-dim);">Luna — Presente · promenade effectuee</span></div>';
   } else {
-    html += '<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-top:1px solid var(--border);"><div style="width:7px;height:7px;border-radius:50%;background:var(--red);flex-shrink:0;"></div><span style="color:var(--text-dim);">Luna — Absente · non prévenu</span></div>';
+    html += '<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-top:1px solid var(--border);"><div style="width:7px;height:7px;border-radius:50%;background:var(--red);flex-shrink:0;"></div><span style="color:var(--text-dim);">Luna — Absente · non prevenu</span></div>';
     if (maxPresent) {
-      html += '<div style="display:flex;align-items:center;gap:8px;font-size:11px;padding:4px 0 4px 15px;"><span style="color:var(--text-faint);">Max récupéré lors de ce même trajet</span></div>';
+      html += '<div style="display:flex;align-items:center;gap:8px;font-size:11px;padding:4px 0 4px 15px;"><span style="color:var(--text-faint);">Max recupere lors de ce meme trajet</span></div>';
     }
   }
 
@@ -1459,14 +1500,14 @@ function respondDemande(response) {
     icon.style.background = 'var(--green-dim)';
     icon.style.border = '2px solid var(--green)';
     icon.innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
-    title.textContent = 'Créneau accepté !';
-    sub.textContent = 'Gabriel a été notifié. Le mardi 10 juin matin a été ajouté à vos missions.';
+    title.textContent = 'Creneau accepte !';
+    sub.textContent = 'Gabriel a ete notifie. Le mardi 10 juin matin a ete ajoute a vos missions.';
   } else {
     icon.style.background = 'var(--red-dim)';
     icon.style.border = '2px solid var(--red)';
     icon.innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
-    title.textContent = 'Créneau décliné';
-    sub.textContent = 'Gabriel a été notifié de votre indisponibilité. Il cherchera une autre solution.';
+    title.textContent = 'Creneau decline';
+    sub.textContent = 'Gabriel a ete notifie de votre indisponibilite. Il cherchera une autre solution.';
   }
 }
 
@@ -1527,24 +1568,24 @@ function confirmerDebut() {
     });
   } catch(e) {}
 
-  // Mettre à jour le badge "Journée démarrée"
+  // Mettre a jour le badge "Journee demarree"
   var badge = document.getElementById('badge-journee');
   if (badge) {
     badge.style.display = 'flex';
-    badge.textContent = '✓ Journée démarrée · ' + heure;
+    badge.textContent = '✓ Journee demarree · ' + heure;
   }
 
-  // Bouton "Démarrer journée" devient grisé
+  // Bouton "Demarrer journee" devient grise
   var btnDebut = document.getElementById('btn-demarrer-journee');
   if (btnDebut) {
     btnDebut.style.background = 'var(--green)';
-    btnDebut.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Journée démarrée';
+    btnDebut.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Journee demarree';
     btnDebut.disabled = true;
     btnDebut.style.opacity = '0.7';
     btnDebut.onclick = null;
   }
 
-  // Mettre à jour le prénom dans le message Gabriel
+  // Mettre a jour le prenom dans le message Gabriel
   var msgPrenom = document.getElementById('msg-ranger-prenom');
   if (msgPrenom) msgPrenom.textContent = rangerNom;
   var recapNom = document.getElementById('recap-ranger-nom');
@@ -1553,7 +1594,7 @@ function confirmerDebut() {
   // Afficher le message de Gabriel
   showScreen('screen-message-gabriel');
 
-  // Retour automatique aux missions après 3.5 secondes
+  // Retour automatique aux missions apres 3.5 secondes
   setTimeout(function() {
     showScreen('screen-missions');
   }, 3500);
@@ -1577,7 +1618,7 @@ function confirmerFin() {
     }, { onConflict: 'ranger_nom,date' });
   } catch(e) {}
 
-  // Préparer le récap
+  // Preparer le recap
   var el = document.getElementById('recap-km');
   if (el) el.textContent = (kmTotal > 0 ? kmTotal : '—') + ' km';
   var el2 = document.getElementById('recap-missions-fin');
@@ -1585,16 +1626,16 @@ function confirmerFin() {
   var heureEl = document.getElementById('recap-heure-fin');
   if (heureEl) heureEl.textContent = new Date().toLocaleTimeString('fr-LU', { hour: '2-digit', minute: '2-digit' });
 
-  // Mettre à jour le prénom dans le message fin
+  // Mettre a jour le prenom dans le message fin
   var msgFinPrenom = document.getElementById('msg-fin-prenom');
   if (msgFinPrenom) msgFinPrenom.textContent = rangerNom;
   var recapNom = document.getElementById('recap-ranger-nom');
   if (recapNom) recapNom.textContent = rangerNom;
 
-  // Afficher le message Gabriel fin de journée
+  // Afficher le message Gabriel fin de journee
   showScreen('screen-message-fin');
 
-  // Puis récap après 3.5 secondes
+  // Puis recap apres 3.5 secondes
   setTimeout(function() {
     showScreen('screen-recap-journee');
   }, 3500);
@@ -1602,7 +1643,7 @@ function confirmerFin() {
 
 function calcKm() {
   const arrivee = parseFloat(document.getElementById('km-arrivee').value);
-  const depart = 48250; // stored from début
+  const depart = 48250; // stored from debut
   const result = document.getElementById('km-result');
   const total = document.getElementById('km-total');
   if (arrivee && arrivee > depart) {
@@ -1650,7 +1691,7 @@ async function loadRangerProfile() {
       if (av) av.textContent = rangerInitiales;
       chargerMessagesStaff(true);
     }
-  } catch(e) { /* garde les valeurs par défaut */ }
+  } catch(e) { /* garde les valeurs par defaut */ }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1760,7 +1801,7 @@ async function envoyerMessageStaff() {
 async function loadMissionsJour() {
   var today = new Date().toISOString().split('T')[0];
   var joursFr = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
-  var moisFr  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  var moisFr  = ['janvier','fevrier','mars','avril','mai','juin','juillet','aout','septembre','octobre','novembre','decembre'];
   var now = new Date();
   var dateLabel = joursFr[now.getDay()] + ' ' + now.getDate() + ' ' + moisFr[now.getMonth()];
 
@@ -1781,7 +1822,7 @@ async function loadMissionsJour() {
       return;
     }
 
-    // Filtrer selon jours récurrence
+    // Filtrer selon jours recurrence
     var jourMap = { lun:1, mar:2, mer:3, jeu:4, ven:5, sam:6, dim:0 };
     var dowToday = now.getDay();
     var filtered = resas.filter(function(r) {
@@ -1802,7 +1843,7 @@ async function loadMissionsJour() {
       if (clients) clients.forEach(c => { clientsMap[c.id] = c; });
     }
 
-    // Charger chiens par réservation
+    // Charger chiens par reservation
     var resaIds = filtered.map(r => r.id);
     var chiensMap = {};
     if (resaIds.length > 0) {
@@ -1844,13 +1885,13 @@ function renderMissions(resas, clientsMap, chiensMap) {
     var chiens = chiensMap[r.id] || [];
     var chiensHtml = chiens.length > 0
       ? chiens.map(function(c) { return tagChien(c); }).join('')
-      : '<span class="dog-tag" style="color:var(--text-faint);">Aucun chien lié</span>';
+      : '<span class="dog-tag" style="color:var(--text-faint);">Aucun chien lie</span>';
     var cr = creneaux[r.creneau] || (r.service === 'boarding' ? 'Pension' : '—');
     var svc = svcLabels[r.service] || r.service;
     var isDone = r.statut === 'termine';
     var missionClass = isDone ? 'mission done' : (i === 0 ? 'mission next' : 'mission');
     var badgeClass = isDone ? 'b-green' : 'b-muted';
-    var badgeLabel = isDone ? 'Terminé' : 'À faire';
+    var badgeLabel = isDone ? 'Termine' : 'A faire';
 
     html += '<div class="' + missionClass + '" id="mission-' + r.id + '">';
     html += '<div class="mission-time">' + cr + '</div>';
@@ -1863,7 +1904,7 @@ function renderMissions(resas, clientsMap, chiensMap) {
     if (!isDone) {
       html += '<div class="mission-footer">';
       html += '<button class="btn-big btn-start" style="width:auto;padding:10px 18px;font-size:13px;margin-top:8px;" onclick="demarrerMission(\'' + r.id + '\')">';
-      html += '<svg viewBox="0 0 24 24" fill="white" width="16" height="16"><polygon points="5 3 19 12 5 21 5 3"/></svg> Démarrer</button>';
+      html += '<svg viewBox="0 0 24 24" fill="white" width="16" height="16"><polygon points="5 3 19 12 5 21 5 3"/></svg> Demarrer</button>';
       html += '</div>';
     }
     html += '</div>';
@@ -1924,7 +1965,7 @@ function tagChien(c) {
   }
   if (ouvert && ouvert.statut === 'signale') {
     return '<span class="dog-tag" style="background:rgba(240,180,41,0.14);color:#f0b429;border-color:rgba(240,180,41,0.35);">'
-      + nom + ' · signalée</span>';
+      + nom + ' · signalee</span>';
   }
   if (chaleurEligible(c)) {
     return '<span class="dog-tag" onclick="signalerChaleurRanger(\'' + c.id + '\',\'' + nom.replace(/'/g, "\\'") + '\')" '
@@ -1935,18 +1976,18 @@ function tagChien(c) {
 }
 
 async function signalerChaleurRanger(chienId, nom) {
-  if (!confirm('Signaler que ' + nom + ' semble être en chaleur ?\n\n'
-             + 'Le planning n\'est PAS modifié et aucune promenade n\'est annulée. '
-             + 'Gabriel et le client reçoivent un message — la décision leur revient.\n\n'
-             + 'À ne faire que si vous l\'avez constaté sur le terrain.')) return;
+  if (!confirm('Signaler que ' + nom + ' semble etre en chaleur ?\n\n'
+             + 'Le planning n\'est PAS modifie et aucune promenade n\'est annulee. '
+             + 'Gabriel et le client recoivent un message — la decision leur revient.\n\n'
+             + 'A ne faire que si vous l\'avez constate sur le terrain.')) return;
   try {
     var { error } = await db.rpc('fr_chaleur_signaler', { p_chien: chienId });
     if (error) {
       alert('Signalement impossible : ' + String(error.message).replace(/^.*FR_CHALEUR:\s*/, ''));
       return;
     }
-    alert('✓ Signalement transmis. Gabriel et le client sont prévenus.\n\n'
-        + 'Continuez la promenade normalement : rien n\'a changé au planning.');
+    alert('✓ Signalement transmis. Gabriel et le client sont prevenus.\n\n'
+        + 'Continuez la promenade normalement : rien n\'a change au planning.');
     loadMissionsJour();
   } catch (e) { alert('Erreur : ' + e.message); }
 }

@@ -839,22 +839,55 @@ html, body {
 .inv-doc .inv-tot.big { font-family: 'Norwester', sans-serif; font-size: 16px; font-weight: 800; border-top: 1.5px solid #1c1f14; margin-top: 6px; padding-top: 8px; }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Repli CDN : si jsDelivr n'a pas repondu, on tente unpkg avant d'abandonner. -->
+<script>if (!window.supabase) { document.write('<scr' + 'ipt src="https://unpkg.com/@supabase/supabase-js@2"><\/scr' + 'ipt>'); }</script>
   <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
   <script>
-    const { createClient } = window.supabase;
-    const SUPABASE_URL = 'https://zxzhqptimjvdtvvtnpyw.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_drh_w_i9T4GOZ_AzoqkLcw_SW45X1FT';
-    const db = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  // ── Init resiliente (correctif : "Cannot access 'db' before initialization") ──
+  // Le SDK Supabase vient d'un CDN. Sur reseau faible il peut ne pas arriver :
+  // window.supabase est alors indefini, l'ancien `const db` restait en zone morte
+  // et chaque appel renvoyait une erreur incomprehensible. On declare `db` en `var`
+  // (jamais de zone morte) et on affiche un message clair si le SDK manque.
+  var SUPABASE_URL = 'https://zxzhqptimjvdtvvtnpyw.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_drh_w_i9T4GOZ_AzoqkLcw_SW45X1FT';
+  var db = null;
+
+  function frErreurReseau(detail) {
+    if (document.getElementById('fr-offline-overlay')) return;
+    var html = '<div id="fr-offline-overlay" style="position:fixed;inset:0;z-index:99999;'
+      + 'background:#1c1f14;color:#eceee6;display:flex;align-items:center;justify-content:center;'
+      + 'padding:24px;font-family:\'Instrument Sans\',system-ui,sans-serif;text-align:center;">'
+      + '<div style="max-width:340px;">'
+      + '<div style="font-size:34px;margin-bottom:14px;">📡</div>'
+      + '<div style="font-size:17px;font-weight:600;margin-bottom:10px;">Connexion au serveur impossible</div>'
+      + '<div style="font-size:13.5px;line-height:1.6;color:rgba(236,238,230,0.6);margin-bottom:20px;">'
+      + 'Votre reseau ne permet pas de charger l\'application. Verifiez votre connexion, '
+      + 'passez en wifi si possible, puis reessayez.</div>'
+      + '<button onclick="location.reload()" style="background:#ff5f1f;color:#fff;border:0;'
+      + 'border-radius:10px;padding:13px 26px;font-size:14px;font-weight:600;cursor:pointer;">'
+      + 'Reessayer</button>'
+      + '<div style="font-size:10.5px;color:rgba(236,238,230,0.25);margin-top:16px;">'
+      + (detail || 'SDK Supabase indisponible') + '</div>'
+      + '</div></div>';
+    function poser() { document.body.insertAdjacentHTML('beforeend', html); }
+    if (document.body) poser(); else document.addEventListener('DOMContentLoaded', poser);
+  }
+
+  if (window.supabase && window.supabase.createClient) {
+    db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: false,
         storageKey: 'fr-auth',
         storage: window.localStorage,
+        // verrou neutralise : evite les erreurs Navigator Lock / DataCloneError sur mobile
         lock: async (_name, _acquireTimeout, fn) => await fn()
       }
     });
-    console.log('Supabase connecte', db);
+  } else {
+    frErreurReseau();
+  }
   </script>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#ff5f1f">
@@ -3675,9 +3708,20 @@ async function rechargerChiens() {
 async function apercuChaleur(chienId) {
   try {
     var { data, error } = await db.rpc('fr_chaleur_apercu', { p_chien: chienId, p_jours: CHALEUR_JOURS });
-    if (error) { console.log('apercu chaleur:', error); return null; }
-    return data || [];
-  } catch (e) { return null; }
+    if (error) { console.log('apercu chaleur:', error); return { lignes: null, erreur: error.message }; }
+    return { lignes: data || [], erreur: null };
+  } catch (e) { return { lignes: null, erreur: e.message }; }
+}
+
+// Si la migration v23 n'est pas passee, PostgREST repond « Could not
+// find the function … in the schema cache ». Autant le dire clairement
+// plutot que de laisser croire a un probleme de reseau.
+function erreurServeurChaleur(msg) {
+  if (!msg) return null;
+  if (/schema cache|Could not find the function/i.test(msg)) {
+    return 'Le mode chaleur n\'est pas encore actif sur le serveur.';
+  }
+  return nettoyerErreurChaleur(msg);
 }
 
 function texteApercuChaleur(lignes) {
@@ -3705,15 +3749,18 @@ async function declarerChaleur(idx) {
   var d = (window.chiensData || [])[idx];
   if (!d) return;
   showToast('Calcul des séances concernées…');
-  var lignes = await apercuChaleur(d.id);
+  var ap = await apercuChaleur(d.id);
+  // Le calcul du cout a echoue : on n'enchaine pas sur une confirmation
+  // qui echouera de toute facon deux secondes plus tard.
+  if (ap.erreur) { showToast('✗ ' + erreurServeurChaleur(ap.erreur), true); return; }
   var msg = 'Activer le mode chaleur pour ' + (d.nom || 'votre chienne') + ' ?\n\n'
           + 'Elle sort du planning pendant ' + CHALEUR_JOURS + ' jours.\n\n'
-          + texteApercuChaleur(lignes)
+          + texteApercuChaleur(ap.lignes)
           + '\n\nSi les chaleurs passent plus tôt, vous relancez les promenades en un clic.';
   if (!confirm(msg)) return;
   try {
     var { error } = await db.rpc('fr_chaleur_declarer', { p_chien: d.id, p_jours: CHALEUR_JOURS });
-    if (error) { showToast('✗ ' + nettoyerErreurChaleur(error.message), true); return; }
+    if (error) { showToast('✗ ' + erreurServeurChaleur(error.message), true); return; }
     showToast('✓ Mode chaleur activé');
     await rechargerChiens();
     if (typeof loadReservations === 'function') loadReservations(clientId);
@@ -3727,7 +3774,7 @@ async function ecarterChaleur(idx) {
   if (!confirm('Écarter ce signalement ?\n\nVotre planning reste inchangé.')) return;
   try {
     var { error } = await db.rpc('fr_chaleur_ecarter', { p_chien: d.id });
-    if (error) { showToast('✗ ' + nettoyerErreurChaleur(error.message), true); return; }
+    if (error) { showToast('✗ ' + erreurServeurChaleur(error.message), true); return; }
     showToast('✓ Signalement écarté');
     await rechargerChiens();
   } catch (e) { showToast('✗ Erreur : ' + e.message, true); }
@@ -3742,7 +3789,7 @@ async function annulerChaleur(idx) {
              + 'Les séances déjà passées restent annulées.')) return;
   try {
     var { error } = await db.rpc('fr_chaleur_annuler', { p_chien: d.id });
-    if (error) { showToast('✗ ' + nettoyerErreurChaleur(error.message), true); return; }
+    if (error) { showToast('✗ ' + erreurServeurChaleur(error.message), true); return; }
     showToast('✓ Promenades reprises');
     await rechargerChiens();
     if (typeof loadReservations === 'function') loadReservations(clientId);

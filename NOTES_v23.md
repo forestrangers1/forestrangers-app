@@ -154,3 +154,98 @@ elles ne sont appelées nulle part non plus.
 
 Il n'y a donc rien à dédoublonner : soit tu le supprimes du dépôt, soit tu
 le laisses, il ne s'exécute pas. Je ne l'ai pas supprimé — c'est ton dépôt.
+
+---
+
+## 7. `forestrangers-login.html` — écran de connexion cassé sur desktop
+
+Trois défauts, tous dans la feuille de style.
+
+**a) Le formulaire était invisible au-delà de 900px.** Le bloc
+`@media (min-width: 900px)` était écrit *avant* la règle de base
+`.login-card`. À spécificité égale, c'est l'ordre du fichier qui tranche :
+la règle de base réimposait `max-width: 420px` et le padding, mais laissait
+passer `display: grid` et `grid-template-columns: 340px 1fr`, qui n'y sont
+pas redéclarés. La colonne marque prenait donc les 340px disponibles, la
+colonne formulaire débordait de la carte, et `overflow: hidden` la coupait
+net. Mesuré avant correction : carte 420px, formulaire à x=887 sur 280px
+de large, pour une carte qui s'arrête à x=930.
+
+Le bloc desktop est maintenant en fin de feuille, avec un commentaire qui
+dit pourquoi il doit y rester.
+
+**b) Bandes sombres à gauche et à droite.** La règle `html, body` mettait
+`display: flex` sur `html` aussi, ce qui réduisait `body` à la largeur de
+son contenu ; le reste de l'écran montrait le fond de `html`, resté sombre
+même en mode clair. `html` ne porte plus que le fond, `body` garde la mise
+en page.
+
+**c) Mode sombre illisible.** Le bloc « MODE JOUR — textes globaux »
+n'était scopé sur rien : il forçait les champs en blanc et les libellés en
+texte foncé, y compris quand le thème sombre était actif. Tout est passé
+sous `html.light`. Au passage, `.brand-name` était en texte clair sur la
+carte blanche en dessous de 900px — le titre disparaissait sur mobile en
+mode clair.
+
+Vérifié au rendu en 1440 / 1280 / 880 / 390 px, thèmes clair et sombre.
+
+---
+
+## 8. « Could not find the function ... in the schema cache »
+
+Ce message ne vient pas de l'application mais de PostgREST, la couche API
+de Supabase. Il signifie l'une de deux choses :
+
+- la fonction n'existe pas — `fr_migration_v23_mode_chaleur.sql` n'est pas
+  passé, ou s'est arrêté sur une erreur avant d'arriver au bout (l'éditeur
+  SQL de Supabase interrompt tout au premier problème) ;
+- la fonction existe mais PostgREST ne l'a pas encore vue : son cache de
+  schéma est en retard.
+
+`fr_diagnostic_v23.sql` tranche entre les deux en quatre requêtes, puis
+recharge le cache (`notify pgrst, 'reload schema';`). Attendre une dizaine
+de secondes et recharger l'application en vidant le cache.
+
+Côté interface, deux corrections dans la foulée :
+
+- l'aperçu qui échoue arrête la manœuvre au lieu d'enchaîner sur une
+  confirmation vouée à échouer — c'est ce qui produisait le « Le détail des
+  séances concernées n'a pas pu être calculé », suivi d'un OK inutile ;
+- le message affiché nomme la cause réelle (« Le mode chaleur n'est pas
+  encore actif sur le serveur ») plutôt que de la masquer.
+
+---
+
+## 9. `fr_migration_v24_cloisonnement_messagerie.sql` — à passer
+
+Trouvé en relisant le contrôle (c) de la v22 : sept politiques coexistent
+sur `messages`. Trois de la v19, quatre de la v22.
+
+Les politiques RLS d'une même commande se combinent **en OU**. Celles de la
+v22, écrites pour restreindre chaque ranger à son propre fil, ne
+restreignent donc rien : il suffit qu'une politique autorise. Et celles de
+la v19 ouvrent tout à `fr_est_staff()`, qui ne distingue pas Gabriel d'un
+ranger.
+
+Aujourd'hui, en production, un compte ranger peut :
+
+- lire toutes les conversations clients ;
+- lire les fils privés des autres rangers ;
+- écrire dans le fil de n'importe quel client en se faisant passer pour
+  l'administration (`expediteur = 'admin'`).
+
+Rien de tout ça n'est visible dans l'application — l'interface ranger ne
+demande que son propre fil. C'est l'API REST de Supabase qui est ouverte,
+et un compte ranger authentifié suffit.
+
+La v24 ajoute `fr_est_admin()` (distincte de `fr_est_staff()`) et
+`fr_mon_staff_id()`, supprime les quatre politiques de la v22, et réécrit
+les trois de la v19 : une seule politique par commande, Gabriel voit tout,
+un ranger ne voit que `staff_id = le sien`, un client ne voit que ses
+messages et jamais un fil staff.
+
+**Garde-fou :** le script refuse de s'exécuter s'il n'existe aucune ligne
+`user_roles` avec `role = 'admin'` — sans elle, les nouvelles politiques
+fermeraient la messagerie à tout le monde, toi compris.
+
+À passer après la v23.

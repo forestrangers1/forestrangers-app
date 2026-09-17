@@ -647,22 +647,54 @@ textarea.form-control { resize: vertical; }
 ::-webkit-scrollbar-thumb { background: var(--k600); border-radius: 2px; }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Repli CDN : si jsDelivr n'a pas repondu, on tente unpkg avant d'abandonner. -->
+<script>if (!window.supabase) { document.write('<scr' + 'ipt src="https://unpkg.com/@supabase/supabase-js@2"><\/scr' + 'ipt>'); }</script>
   <script>
-    const { createClient } = window.supabase;
-    const SUPABASE_URL = 'https://zxzhqptimjvdtvvtnpyw.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_drh_w_i9T4GOZ_AzoqkLcw_SW45X1FT';
-    const db = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  // ── Init resiliente (correctif : "Cannot access 'db' before initialization") ──
+  // Le SDK Supabase vient d'un CDN. Sur reseau faible il peut ne pas arriver :
+  // window.supabase est alors indefini, l'ancien `const db` restait en zone morte
+  // et chaque appel renvoyait une erreur incomprehensible. On declare `db` en `var`
+  // (jamais de zone morte) et on affiche un message clair si le SDK manque.
+  var SUPABASE_URL = 'https://zxzhqptimjvdtvvtnpyw.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_drh_w_i9T4GOZ_AzoqkLcw_SW45X1FT';
+  var db = null;
+
+  function frErreurReseau(detail) {
+    if (document.getElementById('fr-offline-overlay')) return;
+    var html = '<div id="fr-offline-overlay" style="position:fixed;inset:0;z-index:99999;'
+      + 'background:#1c1f14;color:#eceee6;display:flex;align-items:center;justify-content:center;'
+      + 'padding:24px;font-family:\'Instrument Sans\',system-ui,sans-serif;text-align:center;">'
+      + '<div style="max-width:340px;">'
+      + '<div style="font-size:34px;margin-bottom:14px;">📡</div>'
+      + '<div style="font-size:17px;font-weight:600;margin-bottom:10px;">Connexion au serveur impossible</div>'
+      + '<div style="font-size:13.5px;line-height:1.6;color:rgba(236,238,230,0.6);margin-bottom:20px;">'
+      + 'Votre reseau ne permet pas de charger l\'application. Verifiez votre connexion, '
+      + 'passez en wifi si possible, puis reessayez.</div>'
+      + '<button onclick="location.reload()" style="background:#ff5f1f;color:#fff;border:0;'
+      + 'border-radius:10px;padding:13px 26px;font-size:14px;font-weight:600;cursor:pointer;">'
+      + 'Reessayer</button>'
+      + '<div style="font-size:10.5px;color:rgba(236,238,230,0.25);margin-top:16px;">'
+      + (detail || 'SDK Supabase indisponible') + '</div>'
+      + '</div></div>';
+    function poser() { document.body.insertAdjacentHTML('beforeend', html); }
+    if (document.body) poser(); else document.addEventListener('DOMContentLoaded', poser);
+  }
+
+  if (window.supabase && window.supabase.createClient) {
+    db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: false,
         storageKey: 'fr-auth',
         storage: window.localStorage,
-        // verrou neutralisé : évite les erreurs Navigator Lock / DataCloneError vues sur mobile
+        // verrou neutralise : evite les erreurs Navigator Lock / DataCloneError sur mobile
         lock: async (_name, _acquireTimeout, fn) => await fn()
       }
     });
-    console.log('Supabase connecte', db);
+  } else {
+    frErreurReseau();
+  }
   </script>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#ff5f1f">
@@ -2399,10 +2431,21 @@ function blocChaleurAdmin(d) {
 
 // Ce que la suspension retire, et ce qu'elle facture au client.
 // Les CGV s'appliquent : une seance de demain reste due.
+// Si la migration v23 n'est pas passee, PostgREST repond « Could not
+// find the function … in the schema cache ». Autant le dire clairement.
+function erreurServeurChaleur(msg) {
+  if (!msg) return 'Opération impossible';
+  if (/schema cache|Could not find the function/i.test(msg)) {
+    return 'Mode chaleur inactif sur le serveur — migration v23 à passer';
+  }
+  return String(msg).replace(/^.*FR_CHALEUR:\s*/, '');
+}
+
 async function chaleurApercuTexte(id) {
   try {
     var { data, error } = await db.rpc('fr_chaleur_apercu', { p_chien: id, p_jours: CHALEUR_JOURS });
-    if (error || !data) return 'Détail des séances indisponible.';
+    if (error) return { erreur: erreurServeurChaleur(error.message) };
+    if (!data) return { erreur: 'Détail des séances indisponible.' };
     if (!data.length) return 'Aucune séance prévue sur les 3 prochaines semaines.';
     var fact = data.filter(function(l) { return (l.pourcentage || 0) > 0; });
     var total = fact.reduce(function(a, l) { return a + (parseFloat(l.montant_ligne) || 0); }, 0);
@@ -2417,13 +2460,14 @@ async function chaleurApercuTexte(id) {
 async function chaleurAdminDeclarer(id, nom) {
   showToastAdmin('Calcul des séances…', 'amber');
   var apercu = await chaleurApercuTexte(id);
+  if (apercu && apercu.erreur) { showToastAdmin(apercu.erreur, 'red'); return; }
   if (!confirm('Activer le mode chaleur pour ' + nom + ' ?\n\n'
              + 'Retrait du planning pendant ' + CHALEUR_JOURS + ' jours.\n\n'
              + apercu + '\n\n'
              + 'Le client voit l\'information dans son espace.')) return;
   try {
     var { error } = await db.rpc('fr_chaleur_declarer', { p_chien: id, p_jours: CHALEUR_JOURS });
-    if (error) { showToastAdmin(String(error.message).replace(/^.*FR_CHALEUR:\s*/, ''), 'red'); return; }
+    if (error) { showToastAdmin(erreurServeurChaleur(error.message), 'red'); return; }
     showToastAdmin('✓ ' + nom + ' retirée du planning', 'green');
     loadChiens();
     if (typeof loadPlanning === 'function') loadPlanning();
@@ -2434,7 +2478,7 @@ async function chaleurAdminEcarter(id, nom) {
   if (!confirm('Écarter le signalement concernant ' + nom + ' ?\n\nRien ne change au planning.')) return;
   try {
     var { error } = await db.rpc('fr_chaleur_ecarter', { p_chien: id });
-    if (error) { showToastAdmin(String(error.message).replace(/^.*FR_CHALEUR:\s*/, ''), 'red'); return; }
+    if (error) { showToastAdmin(erreurServeurChaleur(error.message), 'red'); return; }
     showToastAdmin('✓ Signalement écarté', 'green');
     loadChiens();
   } catch (e) { showToastAdmin('Erreur : ' + e.message, 'red'); }
@@ -2446,7 +2490,7 @@ async function chaleurAdminAnnuler(id, nom) {
              + 'd\'annulation correspondants annulés. Celles déjà passées restent annulées.')) return;
   try {
     var { error } = await db.rpc('fr_chaleur_annuler', { p_chien: id });
-    if (error) { showToastAdmin(String(error.message).replace(/^.*FR_CHALEUR:\s*/, ''), 'red'); return; }
+    if (error) { showToastAdmin(erreurServeurChaleur(error.message), 'red'); return; }
     showToastAdmin('✓ ' + nom + ' de retour au planning', 'green');
     loadChiens();
     if (typeof loadPlanning === 'function') loadPlanning();
@@ -3489,11 +3533,15 @@ async function nouveauMessage() {
   sel.innerHTML = '<option value="">Chargement…</option>';
 
   // Clients (tous, pas seulement ceux qui ont deja ecrit)
+  // Un echec ici se voyait seulement dans la console : le selecteur
+  // s'affichait avec le seul groupe Staff, sans rien dire. On le dit.
+  var erreurClients = null;
   try {
     var rc = await db.from('clients').select('id,prenom,nom,numero_client').order('nom');
+    if (rc.error) erreurClients = rc.error.message;
     msgTousClients = rc.data || [];
     msgTousClients.forEach(function(c){ if (!msgClientsMap[c.id]) msgClientsMap[c.id] = c; });
-  } catch(e) { console.log('clients indisponibles:', e); }
+  } catch(e) { erreurClients = e.message; }
 
   // Staff
   try {
@@ -3520,9 +3568,20 @@ async function nouveauMessage() {
       html += '<option value="c:' + c.id + '">' + msgEsc(c.prenom + ' ' + c.nom) + msgEsc(num) + '</option>';
     });
     html += '</optgroup>';
+  } else {
+    html += '<optgroup label="Clients"><option value="" disabled>'
+         +  (erreurClients ? 'Lecture impossible — ' + msgEsc(erreurClients)
+                           : 'Aucun client lisible depuis ce compte')
+         +  '</option></optgroup>';
   }
 
   sel.innerHTML = html;
+
+  if (erreurClients) {
+    showToastAdmin('Clients illisibles : ' + erreurClients, 'red');
+  } else if (!msgTousClients.length) {
+    showToastAdmin('Aucun client remonte par la base — verifiez les politiques RLS sur `clients`', 'amber');
+  }
 
   if (!msgStaffActif) {
     showToastAdmin("Colonne staff_id absente — executez fr_migration_v22_messages_staff.sql pour ecrire au staff", 'amber');
