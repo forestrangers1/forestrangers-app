@@ -2846,9 +2846,48 @@ function calculerSuggestionAnnulation(r, dateRef) {
   return { tardive:false, pourcentage:0, raison:"Annulation avant 9h la veille : gratuite." };
 }
 
+// Lignes (= chiens) de la reservation ouverte, pour l'annulation par chien
+var lignesAnnulation = [];
+
+async function chargerChiensAnnulation(r) {
+  lignesAnnulation = [];
+  var box = document.getElementById('annulation-chiens');
+  var grp = document.getElementById('annulation-chiens-group');
+  if (!box || !grp) return;
+  grp.style.display = 'none';
+  box.innerHTML = '';
+  try {
+    var q = db.from('reservations').select('id,chien_id,statut')
+      .eq('client_id', r.client_id).eq('service', r.service)
+      .eq('date_debut', r.date_debut);
+    q = r.date_fin ? q.eq('date_fin', r.date_fin) : q.is('date_fin', null);
+    q = r.creneau  ? q.eq('creneau',  r.creneau)  : q.is('creneau',  null);
+    var rr = await q;
+    if (rr.error) throw rr.error;
+    var lignes = (rr.data || []).filter(function(x) { return x.statut !== 'annule'; });
+    if (lignes.length < 2) return;
+
+    var ids = lignes.map(function(x) { return x.chien_id; }).filter(Boolean);
+    var noms = {};
+    if (ids.length) {
+      var rc = await db.from('chiens').select('id,nom').in('id', ids);
+      (rc.data || []).forEach(function(c) { noms[c.id] = c.nom; });
+    }
+    lignesAnnulation = lignes;
+    box.innerHTML = lignes.map(function(x) {
+      return '<label style="display:flex;align-items:center;gap:9px;font-size:12.5px;padding:4px 0;cursor:pointer;">'
+        + '<input type="checkbox" class="annul-chien-admin" id="ann-chien-' + x.id + '" checked '
+        + 'style="width:15px;height:15px;accent-color:#ff5f1f;">'
+        + (noms[x.chien_id] || 'Chien') + '</label>';
+    }).join('');
+    grp.style.display = 'block';
+  } catch(e) { console.log('chiens annulation:', e); }
+}
+
 function ouvrirAnnulationResa() {
   if (!currentResaDetail) return;
   var r = currentResaDetail;
+  chargerChiensAnnulation(r);
   var estRecurrente = r.service !== 'boarding' && r.jours_recurrence && r.jours_recurrence.length > 0;
   var porteeGroup = document.getElementById('annulation-portee-group');
   var porteeSelect = document.getElementById('annulation-portee');
@@ -2914,38 +2953,67 @@ async function confirmerAnnulationResa() {
   var dateRef = portee === 'occurrence' ? r._occurrenceDate : r.date_debut;
   var sugg = currentResaDetail._suggestion || calculerSuggestionAnnulation(r, dateRef);
   try {
-    if (portee === 'occurrence') {
-      // 1. Enregistrer l'annulation de cette occurrence (pour les stats)
-      var { error: errOcc } = await db.from('annulations_occurrences').insert({
-        reservation_id: r.id,
-        date_occurrence: dateRef,
-        annule_par: qui,
-        annulation_tardive: sugg.tardive,
-        facture_pourcentage: pct
+    // Chiens coches : si le selecteur est absent, toute la reservation
+    var ciblesIds = [], nomsCibles = [], partielle = false;
+    if (lignesAnnulation.length > 1) {
+      lignesAnnulation.forEach(function(x) {
+        var b = document.getElementById('ann-chien-' + x.id);
+        if (b && b.checked) ciblesIds.push(x.id);
       });
-      if (errOcc) throw errOcc;
-      // 2. Exclure cette date de la récurrence
+      if (!ciblesIds.length) { showToastAdmin('Selectionnez au moins un chien', 'amber'); return; }
+      partielle = ciblesIds.length < lignesAnnulation.length;
+      var labels = document.querySelectorAll('#annulation-chiens label');
+      lignesAnnulation.forEach(function(x, i) {
+        if (ciblesIds.indexOf(x.id) !== -1 && labels[i]) nomsCibles.push(labels[i].textContent.trim());
+      });
+    }
+    var mention = partielle ? ' pour ' + nomsCibles.join(' + ') : '';
+
+    if (portee === 'occurrence') {
+      // Une trace et une date exclue par chien annule
+      var visees = ciblesIds.length ? ciblesIds : [r.id];
+      for (var i = 0; i < visees.length; i++) {
+        var { error: errOcc } = await db.from('annulations_occurrences').insert({
+          reservation_id: visees[i],
+          date_occurrence: dateRef,
+          annule_par: qui,
+          annulation_tardive: sugg.tardive,
+          facture_pourcentage: pct
+        });
+        if (errOcc) throw errOcc;
+      }
       var exclues = (r.dates_exclues||'').split(',').map(function(x){return x.trim();}).filter(Boolean);
       if (exclues.indexOf(dateRef) === -1) exclues.push(dateRef);
-      await majLignesReservation(r, { dates_exclues: exclues.join(',') });
+      if (ciblesIds.length) {
+        var ru = await db.from('reservations').update({ dates_exclues: exclues.join(',') }).in('id', ciblesIds);
+        if (ru.error) throw ru.error;
+      } else {
+        await majLignesReservation(r, { dates_exclues: exclues.join(',') });
+      }
       await notifierClientAnnulation(r.client_id,
-        'Votre séance du ' + formatDateFR(dateRef) + ' a été annulée'
+        'Votre séance du ' + formatDateFR(dateRef) + ' a été annulée' + mention
         + (qui === 'client' ? ' à votre demande.' : ' par Forest Rangers.')
         + (pct > 0 ? ' Elle reste facturée à ' + pct + ' % selon les conditions d\'annulation.' : ' Elle ne vous sera pas facturée.')
+        + (partielle ? ' Vos autres chiens sont maintenus sur cette séance.' : '')
         + ' Le reste de vos séances récurrentes est inchangé.');
-      showToastAdmin('✓ Occurrence du ' + formatDateFR(dateRef) + ' annulee', 'green');
+      showToastAdmin('✓ Occurrence du ' + formatDateFR(dateRef) + ' annulee' + mention, 'green');
     } else {
-      var n = await majLignesReservation(r, {
-        statut: 'annule',
-        annule_par: qui,
-        annulation_tardive: sugg.tardive,
-        facture_pourcentage: pct
-      });
+      var payload = { statut: 'annule', annule_par: qui, annulation_tardive: sugg.tardive, facture_pourcentage: pct };
+      var n;
+      if (ciblesIds.length) {
+        var rs = await db.from('reservations').update(payload).in('id', ciblesIds).select('id');
+        if (rs.error) throw rs.error;
+        n = (rs.data || []).length;
+        if (!n) throw new Error("Aucune ligne modifiee. Verifiez la politique RLS UPDATE sur reservations (fr_rls_reservations.sql).");
+      } else {
+        n = await majLignesReservation(r, payload);
+      }
       await notifierClientAnnulation(r.client_id,
         'Votre réservation ' + (SVC_NAMES[r.service] || r.service) + ' du ' + formatDateFR(r.date_debut)
-        + ' a été annulée' + (qui === 'client' ? ' à votre demande.' : ' par Forest Rangers.')
-        + (pct > 0 ? ' Facturation appliquée : ' + pct + ' %.' : ' Aucun montant ne vous sera facturé.'));
-      showToastAdmin('✓ Reservation annulee (' + n + ' ligne' + (n>1?'s':'') + ')', 'green');
+        + ' a été annulée' + mention + (qui === 'client' ? ' à votre demande.' : ' par Forest Rangers.')
+        + (pct > 0 ? ' Facturation appliquée : ' + pct + ' %.' : ' Aucun montant ne vous sera facturé.')
+        + (partielle ? ' Vos autres chiens sont maintenus.' : ''));
+      showToastAdmin('✓ Reservation annulee (' + n + ' ligne' + (n>1?'s':'') + ')' + mention, 'green');
     }
     document.getElementById('modal-annulation').classList.remove('open');
     document.getElementById('modal-resa-detail').classList.remove('open');
@@ -4374,6 +4442,14 @@ document.addEventListener('click', function(e) {
         <option value="occurrence">Seulement ce jour</option>
         <option value="serie">Toute la récurrence</option>
       </select>
+    </div>
+
+    <div class="form-group" id="annulation-chiens-group" style="display:none;">
+      <label class="form-label">Quels chiens annuler ?</label>
+      <div id="annulation-chiens" style="background:rgba(0,0,0,0.18);border-radius:8px;padding:8px 12px;"></div>
+      <div style="font-size:10.5px;color:var(--text-faint);margin-top:5px;line-height:1.5;">
+        Si un seul chien est annule, celui qui reste est facture au tarif d'un chien seul (plus de remise multi-chiens).
+      </div>
     </div>
 
     <div id="annulation-raison" style="font-size:12.5px;color:var(--text-dim);background:rgba(0,0,0,0.18);border-radius:8px;padding:10px 12px;margin-bottom:14px;line-height:1.5;"></div>
