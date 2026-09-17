@@ -49,10 +49,18 @@ try { if (localStorage.getItem('fr-theme') !== 'dark') document.documentElement.
   --r:      12px;
 }
 
-html, body {
+/* `html` porte seulement le fond : en faire un conteneur flex reduisait
+   `body` a la largeur de son contenu, d'ou les bandes sombres a gauche
+   et a droite sur grand ecran. */
+html {
   min-height: 100vh;
+  background: #1c1f14;
+}
+body {
+  min-height: 100vh;
+  width: 100%;
   font-family: 'Instrument Sans', sans-serif;
-  background: #1c1f14 !important;
+  background: #1c1f14;
   color: #eceee6;
   font-size: 14px;
   display: flex;
@@ -62,7 +70,7 @@ html, body {
 }
 
 @media (max-width: 480px) {
-  html, body {
+  body {
     align-items: flex-start;
     padding: 0;
   }
@@ -91,7 +99,13 @@ html.light {
   --tf:  rgba(28,31,20,0.32);
   --green: #2e7d32;
 }
-html.light body        { background: var(--bg) !important; color: var(--tx); }
+html.light,
+html.light body        { background: var(--bg) !important; }
+html.light body        { color: var(--tx); }
+html.light .version    { color: rgba(28,31,20,0.22); }
+/* En dessous de 900px la marque est sur la carte blanche, pas sur le
+   panneau sombre : le titre doit passer en texte foncé. */
+html.light .brand-name { color: var(--tx); }
 html.light .login-card { background: #ffffff; border: 1px solid rgba(0,0,0,0.07);
                          box-shadow: 0 18px 50px rgba(28,31,20,0.10); }
 html.light body::before {
@@ -100,32 +114,6 @@ html.light body::before {
     radial-gradient(ellipse 60% 50% at 80% 20%, rgba(255,95,31,0.07) 0%, transparent 55%);
 }
 html.light .brand-panel { background: linear-gradient(160deg, #2f3520, #1c1f14); }
-
-/* ══════════════════════════════════════════════════════════════
-   MISE EN PAGE DESKTOP — deux colonnes a partir de 900px
-   Marque a gauche, formulaire a droite. En dessous : carte simple.
-   ══════════════════════════════════════════════════════════════ */
-@media (min-width: 900px) {
-  .login-card {
-    max-width: 860px;
-    display: grid;
-    grid-template-columns: 340px 1fr;
-    padding: 0;
-    overflow: hidden;
-    border-radius: 20px;
-  }
-  .brand {
-    margin-bottom: 0;
-    padding: 48px 32px;
-    justify-content: center;
-    background: linear-gradient(160deg, #2f3520, #1c1f14);
-    border-right: 1px solid rgba(255,255,255,0.06);
-  }
-  .brand-logo  { width: 96px; height: 96px; margin-bottom: 20px; }
-  .brand-name  { color: #eceee6 !important; }
-  .brand-sub   { color: rgba(236,238,230,0.55) !important; }
-  .login-form-col { padding: 44px 44px 36px; }
-}
 
 /* ── BACKGROUND TEXTURE ── */
 body::before {
@@ -383,36 +371,81 @@ body::before {
   .brand-logo { width: 60px; height: 60px; }
 }
 
-/* ── MODE JOUR — textes globaux ── */
-.toggle-option-title { color: #1c1f14 !important; }
-.toggle-option-desc { color: rgba(28,31,20,0.6) !important; }
-.toggle-option.selected .toggle-option-title { color: #eceee6 !important; }
-.toggle-option.selected .toggle-option-desc { color: rgba(236,238,230,0.7) !important; }
+/* ── MODE JOUR — textes globaux ──
+   Ce bloc n'etait scope sur rien : en mode sombre il forcait les champs
+   en blanc et les libelles en texte fonce sur carte foncee, donc
+   illisibles. Tout est desormais sous `html.light`. */
+html.light .toggle-option-title { color: #1c1f14 !important; }
+html.light .toggle-option-desc { color: rgba(28,31,20,0.6) !important; }
+html.light .toggle-option.selected .toggle-option-title { color: #eceee6 !important; }
+html.light .toggle-option.selected .toggle-option-desc { color: rgba(236,238,230,0.7) !important; }
 
 /* Champs input */
-.field-input, .form-input, select.field-input {
+html.light .field-input,
+html.light .form-input,
+html.light select.field-input {
   color: #1c1f14 !important;
   background: #ffffff !important;
   border-color: rgba(0,0,0,0.12) !important;
 }
-.field-input::placeholder, .form-input::placeholder { color: rgba(28,31,20,0.35) !important; }
+html.light .field-input::placeholder,
+html.light .form-input::placeholder { color: rgba(28,31,20,0.35) !important; }
 
 /* Labels */
-.field-label, .form-label, .section-label {
+html.light .field-label,
+html.light .form-label,
+html.light .section-label {
   color: rgba(28,31,20,0.45) !important;
 }
 
 /* Texte général sur fond clair */
-.section-title, .card-title, .info-title {
+html.light .section-title,
+html.light .card-title,
+html.light .info-title {
   color: #1c1f14 !important;
 }
 
 /* Badges sur fond clair restent lisibles */
-.badge.b-green { background: rgba(46,125,50,0.12) !important; color: #2e7d32 !important; }
-.badge.b-amber { background: rgba(180,100,0,0.12) !important; color: #b45000 !important; }
-.badge.b-accent { background: rgba(255,95,31,0.12) !important; color: #c94400 !important; }
-.badge.b-blue  { background: rgba(21,101,192,0.12) !important; color: #1565c0 !important; }
-.badge.b-red   { background: rgba(198,40,40,0.12) !important; color: #c62828 !important; }
+html.light .badge.b-green { background: rgba(46,125,50,0.12) !important; color: #2e7d32 !important; }
+html.light .badge.b-amber { background: rgba(180,100,0,0.12) !important; color: #b45000 !important; }
+html.light .badge.b-accent { background: rgba(255,95,31,0.12) !important; color: #c94400 !important; }
+html.light .badge.b-blue  { background: rgba(21,101,192,0.12) !important; color: #1565c0 !important; }
+html.light .badge.b-red   { background: rgba(198,40,40,0.12) !important; color: #c62828 !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   MISE EN PAGE DESKTOP — deux colonnes a partir de 900px
+   Marque a gauche, formulaire a droite. En dessous : carte simple.
+
+   CE BLOC DOIT RESTER EN DERNIER. Il etait place plus haut, avant la
+   regle de base `.login-card` : a specificite egale, c'est l'ordre du
+   fichier qui tranche, donc la regle de base reimposait max-width 420px
+   et le padding, tout en laissant passer `display: grid` et
+   `grid-template-columns: 340px 1fr`. Resultat sur desktop : la colonne
+   marque occupait les 340px disponibles et la colonne formulaire
+   debordait de la carte, ou `overflow: hidden` la coupait. L'ecran de
+   connexion n'affichait plus que le logo.
+   ══════════════════════════════════════════════════════════════ */
+@media (min-width: 900px) {
+  .login-card {
+    max-width: 860px;
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 20px;
+  }
+  .brand {
+    margin-bottom: 0;
+    padding: 48px 32px;
+    justify-content: center;
+    background: linear-gradient(160deg, #2f3520, #1c1f14);
+    border-right: 1px solid rgba(255,255,255,0.06);
+  }
+  .brand-logo  { width: 96px; height: 96px; margin-bottom: 20px; }
+  .brand-name  { color: #eceee6 !important; }
+  .brand-sub   { color: rgba(236,238,230,0.55) !important; }
+  .login-form-col { padding: 44px 44px 36px; }
+}
 
 </style>
   <link rel="manifest" href="/manifest.json">
