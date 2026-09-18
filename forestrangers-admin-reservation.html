@@ -901,6 +901,20 @@ async function saveReservation() {
     dateFin   = document.getElementById('boarding-fin').value;
   }
 
+  // Garde-fou : sans date, la reservation est enregistree avec date_debut null.
+  // Elle devient alors invisible dans le calendrier, absente de l'estimation du
+  // mois et introuvable par la recherche. On bloque avant l'insertion.
+  var manque = [];
+  if (!dateDebut) manque.push(state.service === 'boarding' ? 'la date d\'arrivée' : 'la date de début');
+  if (state.service === 'boarding' && !dateFin) manque.push('la date de départ');
+  if (manque.length) {
+    var texte = '✗ Impossible d\'enregistrer : il manque ' + manque.join(' et ') + '. Revenez à l\'étape précédente pour la renseigner.';
+    var box = document.getElementById('confirm-message');
+    if (box) box.textContent = texte;
+    else alert(texte);
+    return;
+  }
+
   var statut = state.service === 'boarding' ? 'en_attente' : 'confirme';
   var notes  = document.getElementById('resa-notes') ? document.getElementById('resa-notes').value : '';
 

@@ -412,8 +412,18 @@ html.dark body,
 html.dark .page-wrap        { background: #1c1f14 !important; color: #eceee6 !important; }
 html.dark .service-card     { background: #252a1a !important; border-color: rgba(255,255,255,0.12) !important; }
 html.dark .service-card.selected { background: #2f2519 !important; }
-html.dark .service-title    { color: #eceee6 !important; }
+/* Correctif : la regle visait .service-title, une classe qui n'existe dans
+   aucun HTML — le markup utilise .service-name. Les noms de services
+   restaient donc noirs sur fond sombre. */
+html.dark .service-name     { color: #eceee6 !important; }
 html.dark .service-desc     { color: rgba(236,238,230,0.55) !important; }
+/* Correctif : .cancel-table td fixait #1c1f14 en dur sans contrepartie sombre. */
+html.dark .cancel-table td              { color: rgba(236,238,230,0.75) !important; }
+html.dark .cancel-table td:first-child  { color: #eceee6 !important; }
+html.dark .cancel-table th              { color: rgba(236,238,230,0.5) !important; }
+/* Bouton Continuer desactive : 0.35 d'opacite sur fond kaki etait a la limite
+   du lisible. On remonte a 0.55 sans lui rendre l'apparence d'un bouton actif. */
+html.dark .btn-accent:disabled          { color: rgba(236,238,230,0.55) !important; }
 html.dark .section-block,
 html.dark .section-body     { background: #252a1a !important; }
 html.dark .step-item.done .step-num {

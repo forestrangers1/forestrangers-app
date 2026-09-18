@@ -67,6 +67,10 @@ html.light {
   --accent-mid: rgba(255,95,31,0.2);
   --k600: #d6dac8;
   --k700: #e8ebe0;
+  /* Correctif : --k800 sert de fond aux modales, aux options de select et au
+     menu mobile. Sans redefinition ici, il restait kaki fonce en mode clair,
+     avec du texte fonce par-dessus — donc illisible. */
+  --k800: #ffffff;
 }
 html.light .sidebar { background: #ffffff; }
 html.light .brand-name { color: #3d4429; }

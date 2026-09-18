@@ -1737,6 +1737,48 @@ function majDateHeure() {
   if (h) h.textContent = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
 }
 
+// ── Session expirée (jeton JWT périmé) ──
+// Sans ce garde-fou, les requetes repondaient 401 en silence : l'ecran gardait
+// les donnees de la session precedente et rien n'indiquait qu'il fallait se
+// reconnecter. Le client croyait voir ses vraies reservations.
+var __frSessionPerimee = false;
+
+function frSessionExpiree(err) {
+  if (!err || __frSessionPerimee) return !!__frSessionPerimee;
+  var sig = [err.message, err.msg, err.error_description, err.code, err.status, err.hint]
+            .join(' ').toLowerCase();
+  if (!/jwt expired|jwt is expired|invalid jwt|token.*expir|pgrst301|(^|\D)401(\D|$)/.test(sig)) return false;
+  frDemandeReconnexion();
+  return true;
+}
+
+function frDemandeReconnexion() {
+  if (__frSessionPerimee) return;
+  __frSessionPerimee = true;
+  if (document.getElementById('fr-session-overlay')) return;
+  var html = '<div id="fr-session-overlay" style="position:fixed;inset:0;z-index:99998;'
+    + 'background:rgba(20,23,14,0.94);backdrop-filter:blur(6px);display:flex;'
+    + 'align-items:center;justify-content:center;padding:24px;text-align:center;'
+    + 'font-family:\'Instrument Sans\',system-ui,sans-serif;color:#eceee6;">'
+    + '<div style="max-width:330px;">'
+    + '<div style="font-size:34px;margin-bottom:14px;">🔒</div>'
+    + '<div style="font-size:17px;font-weight:600;margin-bottom:10px;">Session expirée</div>'
+    + '<div style="font-size:13.5px;line-height:1.6;color:rgba(236,238,230,0.6);margin-bottom:20px;">'
+    + 'Pour votre sécurité, la connexion se coupe après un certain temps. '
+    + 'Les informations affichées peuvent ne plus être à jour.</div>'
+    + '<button onclick="frReconnexion()" style="background:#ff5f1f;color:#fff;border:0;'
+    + 'border-radius:10px;padding:13px 26px;font-size:14px;font-weight:600;cursor:pointer;">'
+    + 'Se reconnecter</button>'
+    + '</div></div>';
+  function poser() { document.body.insertAdjacentHTML('beforeend', html); }
+  if (document.body) poser(); else document.addEventListener('DOMContentLoaded', poser);
+}
+
+function frReconnexion() {
+  try { if (db) db.auth.signOut(); } catch(e) {}
+  window.location.href = 'forestrangers-login.html';
+}
+
 async function loadClientProfile() {
   try {
     // Récupérer la session — sans session active, on renvoie vers la connexion
@@ -1887,6 +1929,7 @@ async function loadMessages(id) {
       .limit(200);
     if (error) {
       console.log('Messages indisponibles:', error.message);
+      if (frSessionExpiree(error)) return;
       var el = document.getElementById('msg-thread-client');
       if (el) el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--red);font-size:12px;">Messagerie indisponible : ' + esc(error.message) + '</div>';
       return;
@@ -2107,7 +2150,7 @@ async function chargerAlerteMeteo() {
     var r = await db.from('alertes_meteo').select('*')
       .eq('date_alerte', jour).eq('actif', true)
       .order('created_at', { ascending: false }).limit(1);
-    if (r.error) { console.log('alertes_meteo indisponible:', r.error.message); alerteMeteoJour = null; return; }
+    if (r.error) { console.log('alertes_meteo indisponible:', r.error.message); frSessionExpiree(r.error); alerteMeteoJour = null; return; }
     alerteMeteoJour = (r.data || [])[0] || null;
   } catch(e) { console.log('alertes_meteo:', e); alerteMeteoJour = null; }
 }
@@ -2506,6 +2549,7 @@ async function loadReservations(id) {
 
     if (error) {
       console.log('Erreur lecture réservations (Supabase):', error);
+      if (frSessionExpiree(error)) return;
       container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--red);font-size:12px;">Lecture impossible : ' + esc(error.message || 'erreur inconnue') + '</div>';
       return;
     }
@@ -2701,7 +2745,10 @@ function renderReservations() {
   var list = resasUniques(resasData.filter(function(r) { return !q || resaTexte(r).indexOf(q) !== -1; }));
   if (!resasData.length)  { c.innerHTML = vide('Aucune réservation'); return; }
   if (!list.length)       { c.innerHTML = vide('Aucun résultat pour cette recherche'); return; }
-  c.innerHTML = list.map(ligneResa).join('');
+  // Correctif : `list.map(ligneResa)` passait l'index de boucle en 2e argument,
+  // recu par ligneResa comme une date d'occurrence. A partir de la 2e ligne,
+  // dateCourte(1) renvoyait « — » et ecrasait la periode affichee.
+  c.innerHTML = list.map(function(r) { return ligneResa(r); }).join('');
 }
 
 // ── Bascule liste / calendrier ──
