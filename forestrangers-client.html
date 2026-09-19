@@ -1122,10 +1122,16 @@ html, body {
         <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:20px;font-weight:800;margin-bottom:4px;margin-top:4px;">Mes reservations</div>
         <div style="font-size:13px;color:var(--text-dim);margin-bottom:18px;">Historique et à venir</div>
 
-        <button class="btn-big btn-accent desk-inline" style="margin-bottom:16px;" onclick="window.location.href='forestrangers-reservation.html'">
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Nouvelle reservation
-        </button>
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <button class="btn-big btn-accent desk-inline" style="flex:1;min-width:180px;" onclick="window.location.href='forestrangers-reservation.html'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nouvelle reservation
+          </button>
+          <button class="btn-outline-big desk-inline" style="flex:1;min-width:180px;" onclick="openAbsence()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
+            Annuler une periode
+          </button>
+        </div>
 
         <!-- Recherche + bascule liste / calendrier -->
         <div style="display:flex;gap:8px;margin-bottom:14px;">
@@ -1341,6 +1347,38 @@ html, body {
 
 <!-- MODAL PHOTO -->
 <!-- MODAL DÉTAIL RÉSERVATION -->
+<!-- MODAL ANNULATION PAR PERIODE (absence) -->
+<div class="modal-overlay" id="absenceModal">
+  <div class="modal-full">
+    <div class="modal-close" onclick="closeAbsence()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </div>
+    <div style="font-family:'Norwester','Oswald','Arial Narrow',sans-serif;font-size:19px;font-weight:800;margin-bottom:4px;">Annuler une periode</div>
+    <div style="font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:16px;">
+      Promenades et crèche du jour. Pour la pension, ouvrez la réservation concernée : ses délais d'annulation sont différents.
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+      <div style="flex:1;min-width:150px;">
+        <label style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;display:block;margin-bottom:5px;">Date</label>
+        <input class="field-input" type="date" id="abs-debut" onchange="majAbsence()">
+      </div>
+      <div style="flex:1;min-width:150px;">
+        <label style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;display:block;margin-bottom:5px;">
+          <input type="checkbox" id="abs-jusqua" onchange="majAbsence()" style="margin-right:6px;vertical-align:-1px;">Jusqu'au
+        </label>
+        <input class="field-input" type="date" id="abs-fin" onchange="majAbsence()" disabled>
+      </div>
+    </div>
+
+    <div id="abs-recap" style="margin-bottom:14px;"></div>
+
+    <button class="btn-big btn-accent" id="abs-confirm" style="display:none;" onclick="confirmerAbsence()">
+      Annuler ces séances
+    </button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="resaModal">
   <div class="modal-full">
     <div class="modal-close" onclick="closeResaDetail()">
@@ -1595,7 +1633,55 @@ function renderSettings() {
   html += '<div class="field-group"><label class="field-label">Email (compte)</label>'
     + '<input class="field-input" type="email" value="' + String(mail).replace(/"/g, '&quot;') + '" disabled></div>';
 
+  html += blocCGV();
+
   el.innerHTML = html;
+}
+
+// ── Conditions générales : version acceptée, PDF, acceptation ──
+var CGV_VERSION = '2026-10';
+var CGV_PDF     = 'cgv/Conditions_Generales_Forest_Rangers_2026-10.pdf';
+
+function blocCGV() {
+  var acceptee = clientData && clientData.cgv_version === CGV_VERSION;
+  var quand = (clientData && clientData.cgv_acceptee_le) ? new Date(clientData.cgv_acceptee_le) : null;
+  var etat = acceptee
+    ? '<span style="color:var(--green);font-weight:600;">Acceptées</span>'
+      + (quand ? ' <span style="color:var(--text-faint);">le ' + quand.toLocaleDateString('fr-LU')
+                 + ' à ' + ('0' + quand.getHours()).slice(-2) + 'h' + ('0' + quand.getMinutes()).slice(-2) + '</span>' : '')
+    : '<span style="color:var(--accent);font-weight:600;">À accepter</span>';
+
+  return '<div class="field-group" style="margin-top:6px;padding-top:14px;border-top:1px solid var(--border);">'
+    + '<label class="field-label">Conditions générales — version ' + CGV_VERSION + '</label>'
+    + '<div style="font-size:12.5px;margin-bottom:10px;">' + etat + '</div>'
+    + '<a class="btn-outline-big" href="' + CGV_PDF + '" target="_blank" rel="noopener" style="text-decoration:none;margin-bottom:8px;">'
+    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'
+    + 'Télécharger le PDF</a>'
+    + (acceptee ? '' :
+        '<button class="btn-big btn-accent" id="cgv-accept-btn" onclick="accepterCGV()" style="font-size:13px;padding:13px;">'
+        + 'J\'accepte les conditions générales</button>'
+        + '<div style="font-size:11.5px;color:var(--text-faint);margin-top:6px;line-height:1.5;">'
+        + 'Lisez le PDF avant d\'accepter. La date et l\'heure de votre acceptation sont enregistrées (article 3.2).</div>')
+    + '</div>';
+}
+
+async function accepterCGV() {
+  var btn = document.getElementById('cgv-accept-btn');
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+  try {
+    var res = await db.rpc('fr_cgv_accepter', { p_version: CGV_VERSION });
+    if (res.error) throw res.error;
+    if (clientData) {
+      clientData.cgv_version = CGV_VERSION;
+      clientData.cgv_acceptee_le = (res.data && res.data.cgv_acceptee_le) || new Date().toISOString();
+    }
+    renderSettings();
+    showToast('✓ Conditions générales acceptées');
+  } catch(e) {
+    console.log('Erreur acceptation CGV:', e);
+    showToast('✗ ' + ((e && e.message) || 'Acceptation impossible'), true);
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+  }
 }
 
 async function saveSettings() {
@@ -3081,10 +3167,18 @@ function politiqueAnnulation(r, dateOcc) {
   }
 
   if (r.service === 'boarding') {
-    var jours = Math.floor((d - now) / 86400000);
-    if (jours > 30) return { classe: 'warn-green', tardive: false, pourcentage: 0, texte: 'Annulation gratuite : plus de 30 jours avant l\'arrivée.' };
-    if (jours >= 14) return { classe: 'warn-amber', tardive: true, pourcentage: 50, texte: 'Annulation entre 14 et 30 jours avant l\'arrivée : 50 % du séjour est facturé.' };
-    return { classe: 'warn-red', tardive: true, pourcentage: 100, texte: 'Annulation à moins de 14 jours de l\'arrivée : 100 % du séjour est facturé.' };
+    // CGV 2026-10, pension : preavis gratuit de 30 jours pour un nouveau client,
+    // 14 jours pour un client regulier. Entre les deux : 50 %. Moins de 14 jours : 100 %.
+    var jours   = Math.floor((d - now) / 86400000);
+    var fidele  = !!(clientData && clientData.client_fidele);
+    var preavis = fidele ? 14 : 30;
+    if (jours >= preavis) return { classe: 'warn-green', tardive: false, pourcentage: 0,
+      texte: 'Annulation gratuite : plus de ' + preavis + ' jours avant l\'arrivée'
+             + (fidele ? ' (préavis client régulier).' : '.') };
+    if (jours >= 14) return { classe: 'warn-amber', tardive: true, pourcentage: 50,
+      texte: 'Annulation entre 14 et 30 jours avant l\'arrivée : 50 % du séjour est facturé.' };
+    return { classe: 'warn-red', tardive: true, pourcentage: 100,
+      texte: 'Annulation à moins de 14 jours de l\'arrivée : 100 % du séjour est facturé.' };
   }
 
   // Walking / Day Care : gratuit jusqu'à 9h00 la veille du service
@@ -3207,6 +3301,218 @@ async function annulerResa(portee) {
   } catch(e) {
     console.log('Erreur annulation:', e);
     showToast('✗ ' + ((e && e.message) || 'Annulation impossible'), true);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ANNULATION PAR PÉRIODE (absence)
+//
+//  Une absence n'annule pas les réservations : chaque date part dans
+//  dates_exclues et la récurrence reprend seule au retour. Chaque date
+//  annulée laisse une trace dans annulations_occurrences, avec le
+//  pourcentage facturé calculé séance par séance par politiqueAnnulation()
+//  — c'est-à-dire selon les CGV : gratuit jusqu'à 9h00 la veille, 100 %
+//  ensuite, et 100 % sans exception du 1er juin au 31 août.
+//
+//  Portée : promenades et crèche du jour. La pension garde ses préavis
+//  de 14 / 30 jours et s'annule réservation par réservation.
+// ══════════════════════════════════════════════════════════════
+var absenceSeances = [];
+
+function openAbsence() {
+  var mod = document.getElementById('absenceModal');
+  if (!mod) return;
+  var today = isoDate(new Date());
+  var d1 = document.getElementById('abs-debut');
+  var d2 = document.getElementById('abs-fin');
+  var cb = document.getElementById('abs-jusqua');
+  if (d1) { d1.min = today; d1.value = ''; }
+  if (d2) { d2.min = today; d2.value = ''; d2.disabled = true; }
+  if (cb) cb.checked = false;
+  absenceSeances = [];
+  var rec = document.getElementById('abs-recap');
+  if (rec) rec.innerHTML = '<div style="font-size:12.5px;color:var(--text-faint);padding:14px 0;">Choisissez une date. Cochez « Jusqu\'au » pour une absence de plusieurs jours.</div>';
+  var btn = document.getElementById('abs-confirm');
+  if (btn) btn.style.display = 'none';
+  mod.classList.add('open');
+}
+
+function closeAbsence() {
+  var mod = document.getElementById('absenceModal');
+  if (mod) mod.classList.remove('open');
+}
+
+// Séances annulables dans la période : une entrée par réservation et par date
+function seancesPeriode(d1, d2) {
+  var today = isoDate(new Date());
+  var out = [];
+  resasUniques(resasData).forEach(function(r) {
+    if (r.service === 'boarding') return;               // pension : hors périmètre
+    if (r.statut === 'annule') return;
+    var et = etatResa(r, null);
+    if (!et.actifs.length) return;                      // déjà tout annulé
+    occurrences(r).forEach(function(iso) {
+      if (iso < today || iso < d1 || iso > d2) return;
+      var etJour = etatResa(r, iso);
+      if (!etJour.actifs.length) return;                // séance déjà annulée
+      var pol = politiqueAnnulation(r, iso);
+      var mt = montantResa(r), nTot = nbChiensResa(r), nbS = occurrencesBrutes(r).length || 1;
+      var montant = 0;
+      if (mt) {
+        var pu = prixUnitaire(mt / nbS, nTot);
+        montant = prixPourChiens(pu, etJour.actifs.length);
+      }
+      out.push({
+        resa: r, date: iso, lignes: etJour.actifs,
+        pourcentage: pol.pourcentage, tardive: pol.tardive,
+        montantSeance: montant,
+        montantDu: Math.round(montant * pol.pourcentage) / 100
+      });
+    });
+  });
+  out.sort(function(a, b) { return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0); });
+  return out;
+}
+
+function majAbsence() {
+  var cb  = document.getElementById('abs-jusqua');
+  var d1e = document.getElementById('abs-debut');
+  var d2e = document.getElementById('abs-fin');
+  var rec = document.getElementById('abs-recap');
+  var btn = document.getElementById('abs-confirm');
+  if (!d1e || !rec) return;
+
+  if (d2e) {
+    d2e.disabled = !(cb && cb.checked);
+    if (d2e.disabled) d2e.value = '';
+    if (d1e.value) d2e.min = d1e.value;
+  }
+
+  var d1 = d1e.value;
+  var d2 = (cb && cb.checked && d2e && d2e.value) ? d2e.value : d1;
+  absenceSeances = [];
+  if (btn) btn.style.display = 'none';
+
+  if (!d1) {
+    rec.innerHTML = '<div style="font-size:12.5px;color:var(--text-faint);padding:14px 0;">Choisissez une date. Cochez « Jusqu\'au » pour une absence de plusieurs jours.</div>';
+    return;
+  }
+  if (d2 < d1) {
+    rec.innerHTML = '<div style="font-size:12.5px;color:var(--red);padding:14px 0;">La date de fin est avant la date de début.</div>';
+    return;
+  }
+
+  absenceSeances = seancesPeriode(d1, d2);
+  if (!absenceSeances.length) {
+    rec.innerHTML = '<div style="font-size:12.5px;color:var(--text-faint);padding:14px 0;">Aucune séance de promenade ou de crèche sur cette période.</div>';
+    return;
+  }
+
+  var totalDu = 0, nbPayantes = 0;
+  var lignes = absenceSeances.map(function(x) {
+    totalDu += x.montantDu;
+    if (x.pourcentage > 0) nbPayantes++;
+    var badge = x.pourcentage === 0
+      ? '<span style="color:var(--green);font-weight:600;">Gratuite</span>'
+      : '<span style="color:var(--red);font-weight:600;">' + x.pourcentage + ' % · ' + eur(x.montantDu) + '</span>';
+    return '<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12.5px;">'
+      + '<span>' + esc(dateCourte(x.date)) + ' · ' + esc(SVC_NAMES[x.resa.service] || x.resa.service)
+      + ' <span style="color:var(--text-faint);">' + esc(nomsDeLignes(x.lignes).join(' + ')) + '</span></span>'
+      + badge + '</div>';
+  }).join('');
+
+  var ete = absenceSeances.some(function(x) {
+    var m = parseDate(x.date).getMonth();
+    return m >= ETE_DEBUT_MOIS && m <= ETE_FIN_MOIS;
+  });
+
+  rec.innerHTML =
+      '<div style="font-size:13px;font-weight:600;margin-bottom:6px;">'
+        + absenceSeances.length + ' séance' + (absenceSeances.length > 1 ? 's' : '') + ' concernée' + (absenceSeances.length > 1 ? 's' : '') + '</div>'
+    + '<div style="max-height:210px;overflow-y:auto;border:1px solid var(--border);border-radius:12px;padding:4px 12px;background:var(--surface2);">' + lignes + '</div>'
+    + (ete ? '<div style="margin-top:10px;padding:10px 12px;border-radius:10px;background:rgba(224,90,90,0.12);border:1px solid rgba(224,90,90,0.3);font-size:12px;color:var(--red);line-height:1.5;">'
+             + 'Période estivale (1<sup>er</sup> juin — 31 août) : toute annulation est facturée à 100 %, quel que soit le délai.</div>' : '')
+    + '<div style="display:flex;justify-content:space-between;margin-top:12px;font-size:13px;font-weight:700;">'
+        + '<span>Total facturé</span><span style="color:' + (totalDu > 0 ? 'var(--red)' : 'var(--green)') + ';">' + eur(totalDu) + '</span></div>'
+    + (nbPayantes ? '<div style="font-size:11.5px;color:var(--text-faint);margin-top:4px;">'
+        + nbPayantes + ' séance' + (nbPayantes > 1 ? 's' : '') + ' hors délai sur ' + absenceSeances.length + '.</div>' : '');
+
+  if (btn) btn.style.display = 'flex';
+}
+
+async function confirmerAbsence() {
+  if (!absenceSeances.length) return;
+  var btn = document.getElementById('abs-confirm');
+  var totalDu = absenceSeances.reduce(function(t, x) { return t + x.montantDu; }, 0);
+  var d1 = absenceSeances[0].date, d2 = absenceSeances[absenceSeances.length - 1].date;
+
+  var msg = 'Annuler ' + absenceSeances.length + ' séance' + (absenceSeances.length > 1 ? 's' : '')
+    + ' du ' + dateLongue(d1) + ' au ' + dateLongue(d2) + ' ?\n\n'
+    + (totalDu > 0 ? 'Montant facturé : ' + eur(totalDu) + '.' : 'Aucun frais : toutes les séances sont dans les délais.');
+  if (!confirm(msg)) return;
+  // Seconde confirmation quand de l'argent est en jeu
+  if (totalDu > 0 && !confirm('Confirmez-vous ? ' + eur(totalDu) + ' seront facturés selon les conditions générales.')) return;
+
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; btn.textContent = 'Annulation en cours…'; }
+
+  try {
+    // Une écriture par ligne de réservation (= par chien), toutes dates d'un coup
+    var parLigne = {};
+    absenceSeances.forEach(function(x) {
+      x.lignes.forEach(function(ligne) {
+        if (!parLigne[ligne.id]) parLigne[ligne.id] = { ligne: ligne, dates: [] };
+        if (parLigne[ligne.id].dates.indexOf(x.date) === -1) parLigne[ligne.id].dates.push(x.date);
+      });
+    });
+
+    var traces = [];
+    absenceSeances.forEach(function(x) {
+      x.lignes.forEach(function(ligne) {
+        traces.push({
+          reservation_id: ligne.id,
+          date_occurrence: x.date,
+          annule_par: 'client',
+          annulation_tardive: x.tardive,
+          facture_pourcentage: x.pourcentage
+        });
+      });
+    });
+    try {
+      if (traces.length) {
+        var tr = await db.from('annulations_occurrences').insert(traces);
+        if (tr.error) console.log('annulations_occurrences:', tr.error);
+      }
+    } catch(eo) { console.log('annulations_occurrences indisponible:', eo); }
+
+    for (var id in parLigne) {
+      var item = parLigne[id];
+      var exclues = datesExclues(item.ligne);
+      item.dates.forEach(function(dt) { if (exclues.indexOf(dt) === -1) exclues.push(dt); });
+      var up = await db.from('reservations').update({ dates_exclues: exclues.join(',') }).eq('id', id);
+      if (up.error) throw up.error;
+      item.ligne.dates_exclues = exclues.join(',');
+    }
+
+    await previenirGabriel('Absence du ' + dateLongue(d1) + ' au ' + dateLongue(d2) + ' : '
+      + absenceSeances.length + ' séance' + (absenceSeances.length > 1 ? 's' : '') + ' annulée'
+      + (absenceSeances.length > 1 ? 's' : '')
+      + (totalDu > 0 ? ' — montant facturé selon les CGV : ' + eur(totalDu) + '.' : ' — dans les délais, sans frais.'));
+
+    closeAbsence();
+    showToast('✓ ' + absenceSeances.length + ' séance' + (absenceSeances.length > 1 ? 's' : '') + ' annulée' + (absenceSeances.length > 1 ? 's' : ''));
+    absenceSeances = [];
+    if (clientId) {
+      await loadAnnulations(resasData);
+      renderReservations();
+      if (vueResa === 'calendrier') { renderCalendrier(); if (calJourSel) calSelect(calJourSel); }
+      await loadMoisCourant(clientId);
+      await loadProchainePromenade(clientId);
+    }
+  } catch(e) {
+    console.log('Erreur annulation période:', e);
+    showToast('✗ ' + ((e && e.message) || 'Annulation impossible'), true);
+  } finally {
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.textContent = 'Annuler ces séances'; }
   }
 }
 

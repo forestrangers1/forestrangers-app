@@ -1143,12 +1143,22 @@ textarea.form-control { resize: vertical; }
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
               <div>
                 <label style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;display:block;margin-bottom:5px;">Validite du lien</label>
-                <select style="width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:13px;outline:none;">
-                  <option selected>7 jours</option>
-                  <option>3 jours</option>
-                  <option>14 jours</option>
+                <select id="inv-validite" style="width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:13px;outline:none;">
+                  <option value="7" selected>7 jours</option>
+                  <option value="3">3 jours</option>
+                  <option value="14">14 jours</option>
                 </select>
               </div>
+              <div>
+                <label style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;display:block;margin-bottom:5px;">Langue du formulaire</label>
+                <select id="inv-langue" style="width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:13px;outline:none;">
+                  <option value="fr" selected>Francais</option>
+                  <option value="en">English</option>
+                  <option value="lu">Letzebuergesch</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:14px;">
               <div>
                 <label style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;display:block;margin-bottom:5px;">Note interne</label>
                 <input type="text" placeholder="Ex : référé par M. Weber" style="width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:13px;outline:none;">
@@ -1607,8 +1617,10 @@ async function genererLien() {
   var email  = document.getElementById('inv-email').value.trim();
   var noteEl = document.querySelector('#page-invitation input[placeholder*="référé"]');
   var note   = noteEl ? noteEl.value.trim() : '';
-  var validiteEl = document.querySelector('#page-invitation select');
-  var jours  = validiteEl ? parseInt(validiteEl.value) : 7;
+  var validiteEl = document.getElementById('inv-validite');
+  var jours  = validiteEl ? (parseInt(validiteEl.value) || 7) : 7;
+  var langueEl = document.getElementById('inv-langue');
+  var langue = langueEl ? langueEl.value : 'fr';
 
   // Validation
   document.getElementById('inv-prenom').style.borderColor = '';
@@ -1631,12 +1643,14 @@ async function genererLien() {
       token:        token,
       expire_at:    expireAt.toISOString(),
       note_interne: note || null,
+      langue:       langue,
       utilise:      false
     }]);
     if (error) throw error;
 
     // Afficher le lien
-    document.getElementById('lien-dest').textContent = prenom + ' · ' + email;
+    var langueNom = { fr: 'Francais', en: 'English', lu: 'Letzebuergesch' }[langue] || 'Francais';
+    document.getElementById('lien-dest').textContent = prenom + ' · ' + email + ' · ' + langueNom;
     document.getElementById('lien-url').textContent  = lien;
     var expireText = 'Expire dans ' + jours + ' jour' + (jours > 1 ? 's' : '');
     document.querySelector('#lien-genere .badge').textContent = expireText;
@@ -1699,6 +1713,7 @@ async function loadInvitations() {
       var joursRestants = Math.ceil((expire - now) / (1000*60*60*24));
       var initials = inv.prenom.substring(0,2).toUpperCase();
       var dateEnvoi = new Date(inv.created_at).toLocaleDateString('fr-LU', { day:'2-digit', month:'short', year:'numeric' });
+      var langueTxt = { fr: 'FR', en: 'EN', lu: 'LU' }[inv.langue || 'fr'] || 'FR';
       var lien = lienInvitation(inv.token);
 
       var badge = '', extra = '';
@@ -1706,7 +1721,7 @@ async function loadInvitations() {
         badge = '<span class="badge b-green">Inscription complete</span>';
       } else if (expired) {
         badge = '<span class="badge b-muted">Expire</span>';
-        extra = '<button style="font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 8px;color:var(--text-dim);cursor:pointer;font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-weight:700;margin-top:4px;" onclick="renvoyerInvitation(this,\''+inv.email+'\',\''+inv.prenom+'\')">Renvoyer</button>';
+        extra = '<button style="font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 8px;color:var(--text-dim);cursor:pointer;font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-weight:700;margin-top:4px;" onclick="renvoyerInvitation(this,\''+inv.email+'\',\''+inv.prenom+'\',\''+(inv.langue||'fr')+'\')">Renvoyer</button>';
       } else {
         badge = '<span class="badge b-amber">En attente</span>';
         extra = '<span style="font-size:10px;color:var(--text-faint);">Expire dans ' + joursRestants + ' jour' + (joursRestants > 1 ? 's' : '') + '</span>';
@@ -1718,7 +1733,7 @@ async function loadInvitations() {
       var opacity = expired && !inv.utilise ? '0.6' : '1';
       container.innerHTML += '<div style="display:flex;align-items:flex-start;gap:12px;padding:11px 16px;border-top:1px solid var(--border);opacity:' + opacity + ';">'
         + '<div style="width:34px;height:34px;border-radius:9px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:11px;font-weight:800;color:var(--text);flex-shrink:0;border:1px solid var(--border);margin-top:2px;">' + initials + '</div>'
-        + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;">' + inv.prenom + '</div><div style="font-size:11px;color:var(--text-faint);margin-top:1px;">' + inv.email + ' · ' + dateEnvoi + '</div>'
+        + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;">' + inv.prenom + '</div><div style="font-size:11px;color:var(--text-faint);margin-top:1px;">' + inv.email + ' · ' + dateEnvoi + ' · ' + langueTxt + '</div>'
         + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">' + btnCopier + '</div></div>'
         + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;">' + badge + extra + btnSupprimer + '</div>'
         + '</div>';
@@ -1750,7 +1765,7 @@ async function supprimerInvitation(btn, id) {
   } catch(e) { console.error('Erreur suppression:', e); }
 }
 
-async function renvoyerInvitation(btn, email, prenom) {
+async function renvoyerInvitation(btn, email, prenom, langue) {
   // Générer un nouveau token
   var token = genererTokenInvitation();
   var expireAt = new Date();
@@ -1761,6 +1776,7 @@ async function renvoyerInvitation(btn, email, prenom) {
     var { error } = await db.from('invitations').insert([{
       prenom: prenom, email: email, token: token,
       expire_at: expireAt.toISOString(), utilise: false,
+      langue: langue || 'fr',
       note_interne: 'Renvoi automatique'
     }]);
     if (error) throw error;
@@ -2981,6 +2997,7 @@ async function openResaDetail(id, dateOccurrence) {
     if (r.client_id) {
       var resC = await db.from('clients').select('prenom,nom,commune,client_fidele').eq('id', r.client_id).single();
       client = resC.data;
+      currentResaDetail._client_fidele = !!(client && client.client_fidele);
     }
     // Tous les chiens de la réservation (1 ligne par chien ; null = tous les chiens du client)
     var dogList = [];
@@ -3123,8 +3140,13 @@ function calculerSuggestionAnnulation(r, dateRef) {
     return { tardive:true, pourcentage:100, raison:"Période de clôture estivale (1ᵉʳ juin – 31 août) : facturation à 100% par défaut." };
   }
   if (r.service === 'boarding') {
+    // CGV 2026-10 : preavis gratuit de 30 jours pour un nouveau client,
+    // 14 jours pour un client regulier. Entre les deux : 50%. Moins de 14 jours : 100%.
     var joursAvant = Math.floor((debut - now) / 86400000);
-    if (joursAvant > 30)  return { tardive:false, pourcentage:0,   raison:"Plus de 30 jours avant l'arrivée : annulation gratuite." };
+    var fidele  = !!(r._client_fidele || r.client_fidele);
+    var preavis = fidele ? 14 : 30;
+    if (joursAvant >= preavis) return { tardive:false, pourcentage:0,
+      raison:"Plus de " + preavis + " jours avant l'arrivée" + (fidele ? " (client régulier)" : "") + " : annulation gratuite." };
     if (joursAvant >= 14) return { tardive:true,  pourcentage:50,  raison:"Entre 14 et 30 jours avant l'arrivée : 50% facturé." };
     return { tardive:true, pourcentage:100, raison:"Moins de 14 jours avant l'arrivée : 100% facturé." };
   }

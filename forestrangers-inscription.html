@@ -383,6 +383,9 @@ input[type=range]::-webkit-slider-runnable-track {
 .cg-box h4 { font-size: 12px; font-weight: 700; color: var(--text); margin: 12px 0 4px; text-transform: uppercase; letter-spacing: 0.08em; }
 .cg-box h4:first-child { margin-top: 0; }
 .cg-box p { margin-bottom: 8px; }
+.cg-box h5 { font-size: 12px; font-weight: 700; color: var(--text); margin: 10px 0 4px; }
+.cg-box ul { margin: 0 0 8px 16px; }
+.cg-box li { margin-bottom: 4px; list-style: disc; }
 
 .cg-accept {
   display: flex; align-items: flex-start; gap: 12px;
@@ -567,6 +570,450 @@ input[type=range]::-webkit-slider-runnable-track {
     });
   } else {
     frErreurReseau();
+  }
+  </script>
+  <script>
+  // ════════════════════════════════════════════════════════════════
+  //  TRADUCTION (FR / EN / LU)
+  //  Le francais est la langue source : le dictionnaire est indexe par
+  //  la phrase francaise. Chaque noeud de texte traduit garde son
+  //  original en memoire (_i18n.fr), ce qui permet :
+  //    · de rebasculer d'une langue a l'autre sans rechargement ;
+  //    · d'enregistrer en base TOUJOURS le texte francais (comportement
+  //      du chien, sterilisation...), quel que soit l'affichage.
+  //  Les noms de races restent en francais : ils sont stockes tels quels.
+  //  Traductions LU a faire relire par un locuteur natif.
+  // ════════════════════════════════════════════════════════════════
+  var FR_I18N = {
+"en": {
+"Inscription client": "Client registration",
+"Lien d'invitation valable 7 jours": "Invitation link valid for 7 days",
+"Bienvenue chez": "Welcome to",
+"Suite à notre rencontre, complétez votre fiche personnelle et la fiche de votre chien pour activer votre compte. Cela prend environ 5 minutes.": "Following our meeting, please complete your personal details and your dog's profile to activate your account. It takes about 5 minutes.",
+"Langue": "Language",
+"Fiche client": "Client details",
+"Fiche chien": "Dog profile",
+"Conditions": "Terms",
+"Mot de passe": "Password",
+"Votre langue": "Your language",
+"Choisissez la langue de vos emails (confirmations, factures) et, à terme, celle de l'application. Pour l'instant, seul le français est disponible — d'autres langues arriveront bientôt.": "Choose the language of your emails (confirmations, invoices) and, in time, of the app itself. This registration form is available in French, English and Luxembourgish; the client area is still in French for now.",
+"Continuer — Fiche client": "Continue — Client details",
+"Informations personnelles": "Personal information",
+"Prénom": "First name",
+"Nom": "Last name",
+"Adresse complète": "Full address",
+"Code postal": "Postcode",
+"Zone sans frais de déplacement": "Area with no travel surcharge",
+"Zone avec supplément déplacement (+5 €)": "Area with travel surcharge (+€5)",
+"Commune": "Municipality",
+"Téléphone": "Phone",
+"E-mail": "Email",
+"Contact d'urgence": "Emergency contact",
+"Nom complet": "Full name",
+"La même personne peut récupérer mon chien": "This person may also collect my dog",
+"Personnes autorisées à récupérer le chien": "People allowed to collect the dog",
+"Personne autorisée 1": "Authorised person 1",
+"Ajouter une personne": "Add a person",
+"Accès domicile": "Home access",
+"Clés remises à Forest Rangers": "Keys handed to Forest Rangers",
+"Une copie de vos clés sera conservée en sécurité": "A copy of your keys will be kept securely",
+"Alarme présente": "Alarm system",
+"Précisez le code ci-dessous si nécessaire": "Give the code below if needed",
+"Code / Instructions d'accès": "Code / access instructions",
+"Particularités du domicile": "Notes about the home",
+"Continuer — Fiche chien": "Continue — Dog profile",
+"Informations générales": "General information",
+"Nom du chien": "Dog's name",
+"Race": "Breed",
+"1re race": "1st breed",
+"2e race": "2nd breed",
+"(facultatif)": "(optional)",
+"Choisissez dans la liste ou saisissez librement. La 2e race est facultative.": "Pick from the list or type your own. The 2nd breed is optional.",
+"Précisez la race": "Specify the breed",
+"Sexe": "Sex",
+"Mâle": "Male",
+"Femelle": "Female",
+"Date de naissance": "Date of birth",
+"Poids (kg)": "Weight (kg)",
+"Votre chien est dans la catégorie grand gabarit. La disponibilité dépend de la capacité de la camionnette.": "Your dog counts as a large dog. Availability depends on the space in the van.",
+"Stérilisé(e)": "Neutered / spayed",
+"Stérilisé": "Neutered / spayed",
+"Oui": "Yes",
+"Non": "No",
+"Numéro de puce": "Microchip number",
+"N° de puce": "Chip no.",
+"Santé": "Health",
+"Vétérinaire": "Vet",
+"Téléphone vétérinaire": "Vet's phone",
+"Vaccins à jour": "Vaccinations up to date",
+"En cours": "In progress",
+"Allergies": "Allergies",
+"Médicaments en cours": "Current medication",
+"Pathologies / Antécédents": "Conditions / medical history",
+"Comportement": "Behaviour",
+"Liberté autorisée": "May be let off the lead",
+"Protection nourriture": "Guards food",
+"Rappel fiable": "Reliable recall",
+"Dominant": "Dominant",
+"Instinct chasseur": "Hunting instinct",
+"Sociable avec femelles": "Good with females",
+"Réactif en laisse": "Reactive on the lead",
+"Sociable avec mâles": "Good with males",
+"Adore l'eau": "Loves water",
+"Rescue dog": "Rescue dog",
+"Peurs / Phobies": "Fears / phobias",
+"Marche en laisse": "Walking on the lead",
+"Bien": "Good",
+"À améliorer": "Needs work",
+"Tire fort": "Pulls hard",
+"Harnais requis": "Harness required",
+"Niveau d'énergie": "Energy level",
+"Très calme": "Very calm",
+"Calme": "Calm",
+"Moyen": "Average",
+"Énergique": "Energetic",
+"Très énergique": "Very energetic",
+"Informations complémentaires": "Additional information",
+"Remarques importantes": "Important notes",
+"Les informations sur les compatibilités entre chiens seront complétées par Gabriel après votre entretien de bienvenue.": "Gabriel will add notes on how your dog gets on with others after your welcome meeting.",
+"Ajouter un autre chien": "Add another dog",
+"Continuer — Conditions générales": "Continue — Terms and conditions",
+"Conditions générales d'utilisation": "Terms and conditions",
+"Veuillez lire attentivement les conditions générales ci-dessous avant d'accepter. L'acceptation est obligatoire pour effectuer des réservations.": "Please read the terms below carefully before accepting. Acceptance is required in order to make bookings.",
+"J'ai lu et j'accepte les conditions générales": "I have read and accept the terms and conditions",
+"de Forest Rangers Luxembourg. Je comprends que sans acceptation, mon compte sera créé mais les réservations ne seront pas possibles.": "of Forest Rangers Luxembourg. I understand that without acceptance my account will be created but bookings will not be possible.",
+"Vous pourrez accéder à l'application immédiatement après la création de votre compte. L'acceptation des conditions générales peut être effectuée ultérieurement depuis votre profil, mais sera requise avant toute réservation.": "You can use the app as soon as your account is created. The terms can be accepted later from your profile, but are required before any booking.",
+"Continuer — Mot de passe": "Continue — Password",
+"Créez votre mot de passe": "Create your password",
+"Saisissez votre mot de passe": "Enter your password",
+"Confirmer le mot de passe": "Confirm password",
+"🔒 Votre mot de passe doit contenir au minimum 8 caractères. Choisissez quelque chose de mémorable — vous en aurez besoin pour vous connecter à chaque fois.": "🔒 Your password must be at least 8 characters long. Pick something you will remember — you will need it every time you log in.",
+"Créer mon compte": "Create my account",
+"Compte créé avec succès !": "Account created!",
+"Bienvenue dans la famille Forest Rangers !": "Welcome to the Forest Rangers family!",
+"Votre compte est actif. Vous pouvez accéder à votre espace dès maintenant.": "Your account is active. You can go to your client area right away.",
+"Accéder à mon espace": "Go to my client area",
+"12 rue des Chênes": "12 rue des Chênes",
+"Ex : boîte à clé code 4521, portail gauche...": "E.g. key safe code 4521, left gate...",
+"Ex : chien à attacher dans l'entrée, ne pas laisser entrer le chat...": "E.g. attach the dog in the hallway, don't let the cat out...",
+"Cliquez ou tapez pour rechercher...": "Click or type to search...",
+"Ex : Labrador...": "E.g. Labrador...",
+"Ex : Berger Allemand...": "E.g. German Shepherd...",
+"Saisissez la race du chien...": "Type the dog's breed...",
+"Ex : acariens, certains aliments...": "E.g. dust mites, certain foods...",
+"Nom, dosage, fréquence...": "Name, dose, frequency...",
+"Ex : dysplasie, épilepsie, chirurgies...": "E.g. dysplasia, epilepsy, surgery...",
+"Ex : orage, feux d'artifice, voitures...": "E.g. thunderstorms, fireworks, cars...",
+"Tout ce qui est utile pour nous : habitudes, préférences, consignes particulières, petites manies (ex : aboie sur tous les bulldogs)...": "Anything useful for us: habits, preferences, special instructions, little quirks (e.g. barks at every bulldog)...",
+"Minimum 8 caractères": "At least 8 characters",
+"Répétez votre mot de passe": "Repeat your password",
+"Prénom Nom": "First name Last name",
+"15 chiffres": "15 digits",
+"Labrador, Race mixte...": "Labrador, mixed breed...",
+"Sélectionner...": "Select...",
+"Champs obligatoires manquants : ": "Missing required fields: ",
+"Numéro de puce (15 chiffres)": "Microchip number (15 digits)",
+"Poids": "Weight",
+"Email": "Email",
+"Contact d'urgence — nom": "Emergency contact — name",
+"Contact d'urgence — téléphone": "Emergency contact — phone",
+"Personne autorisée à récupérer le chien": "Person allowed to collect the dog",
+"Vous devez accepter les conditions générales pour continuer.": "You must accept the terms and conditions to continue.",
+"Le mot de passe doit contenir au moins 8 caractères.": "The password must be at least 8 characters long.",
+"Les mots de passe ne correspondent pas.": "The passwords do not match.",
+"Trop court": "Too short",
+"Faible": "Weak",
+"Fort": "Strong",
+"Très fort": "Very strong",
+"Vérifiez vos informations": "Check your details",
+"Une erreur ? Revenez en arrière pour corriger avant de créer votre compte.": "Something wrong? Go back and correct it before creating your account.",
+"Prénom / Nom": "First name / Last name",
+"Chien": "Dog",
+"Création du compte…": "Creating your account…",
+"Client": "Client",
+"N° client": "Client no.",
+"Personne autorisée": "Authorised person",
+"Ajouter": "Add",
+"Race personnalisée": "Custom breed",
+"Aucune race trouvée": "No breed found",
+"Inscription sur invitation": "Registration by invitation",
+"L'inscription se fait uniquement à partir du lien personnel que nous vous avons envoyé. Ouvrez-le directement depuis votre message.": "Registration is only possible from the personal link we sent you. Please open it directly from your message.",
+"Lien non reconnu": "Link not recognised",
+"Ce lien d'inscription n'est pas valable. Vérifiez qu'il a été copié en entier, ou demandez-nous un nouveau lien.": "This registration link is not valid. Check that it was copied in full, or ask us for a new one.",
+"Lien expiré": "Link expired",
+"Ce lien d'inscription a dépassé sa durée de validité. Demandez-nous un nouveau lien, nous vous l'envoyons aussitôt.": "This registration link has expired. Ask us for a new one and we will send it straight away.",
+"Compte déjà créé": "Account already created",
+"Ce lien a déjà servi à créer votre compte. Connectez-vous avec votre email et votre mot de passe.": "This link has already been used to create your account. Please log in with your email and password.",
+"Vérification impossible": "Check failed",
+"Le lien n'a pas pu être vérifié. Vérifiez votre connexion puis rechargez la page.": "The link could not be checked. Check your connection and reload the page.",
+"Se connecter": "Log in",
+"Réessayer": "Try again",
+"Appeler Gabriel · +352 661 999 113": "Call Gabriel · +352 661 999 113",
+"Le lien d'invitation est absent. Ouvrez la page depuis le lien reçu.": "The invitation link is missing. Please open the page from the link you received.",
+"Ce lien a déjà servi à créer un compte. Connectez-vous depuis la page de connexion.": "This link has already been used to create an account. Please use the login page.",
+"Ce lien d'invitation a expiré. Demandez-nous un nouveau lien.": "This invitation link has expired. Please ask us for a new one.",
+"Votre compte n'a pas pu être créé. Réessayez dans un instant ; si le problème persiste, appelez-nous au +352 661 999 113.": "Your account could not be created. Please try again in a moment; if the problem persists, call us on +352 661 999 113.",
+"Cet email est déjà associé à une autre fiche client. Appelez-nous au +352 661 999 113.": "This email is already linked to another client record. Please call us on +352 661 999 113.",
+"Le prénom et le nom sont obligatoires.": "First name and last name are required.",
+"Les inscriptions sont momentanément fermées. Appelez-nous au +352 661 999 113.": "Registrations are temporarily closed. Please call us on +352 661 999 113.",
+"Trop de tentatives en peu de temps. Patientez quelques minutes puis réessayez.": "Too many attempts in a short time. Please wait a few minutes and try again.",
+"Mot de passe refusé : ": "Password refused: ",
+"Connexion au serveur impossible. Vérifiez votre réseau puis réessayez.": "Could not reach the server. Check your connection and try again.",
+"Une erreur est survenue : ": "An error occurred: ",
+"Veuillez remplir au minimum le prénom, le nom et l'email.": "Please fill in at least the first name, last name and email.",
+"Bienvenue dans la famille Forest Rangers, ": "Welcome to the Forest Rangers family, ",
+" ! Votre n° client : ": "! Your client number: ",
+"Votre fiche est enregistrée. Un compte existait déjà pour cet email : connectez-vous avec le mot de passe choisi lors de votre première tentative, ou utilisez « Mot de passe oublié ».": "Your details are saved. An account already existed for this email: log in with the password you chose on your first attempt, or use “Forgot password”.",
+"Votre fiche est enregistrée. Connectez-vous avec votre email et le mot de passe que vous venez de choisir.": "Your details are saved. Log in with your email and the password you have just chosen.",
+"Version octobre 2026 — texte officiel, disponible en français uniquement. La date et l'heure de votre acceptation sont enregistrées.": "October 2026 version — official text, available in French only. The date and time of your acceptance are recorded.",
+"Télécharger les conditions générales (PDF)": "Download the terms and conditions (PDF)"
+},
+"lu": {
+"Inscription client": "Client-Umeldung",
+"Lien d'invitation valable 7 jours": "Invitatiounslink 7 Deeg gëlteg",
+"Bienvenue chez": "Wëllkomm bei",
+"Suite à notre rencontre, complétez votre fiche personnelle et la fiche de votre chien pour activer votre compte. Cela prend environ 5 minutes.": "No eiser Begéinung fëllt w.e.g. Är perséinlech Donnéeën an d'Fiche vun Ärem Hond aus, fir Äre Kont z'aktivéieren. Dat dauert ongeféier 5 Minutten.",
+"Langue": "Sprooch",
+"Fiche client": "Client-Fiche",
+"Fiche chien": "Hond-Fiche",
+"Conditions": "Konditiounen",
+"Mot de passe": "Passwuert",
+"Votre langue": "Är Sprooch",
+"Choisissez la langue de vos emails (confirmations, factures) et, à terme, celle de l'application. Pour l'instant, seul le français est disponible — d'autres langues arriveront bientôt.": "Wielt d'Sprooch vun Ären E-Maile (Bestätegungen, Rechnungen) an, mat der Zäit, och déi vun der App. Dëse Formulaire gëtt et op Franséisch, Englesch a Lëtzebuergesch; de Client-Beräich ass nach op Franséisch.",
+"Continuer — Fiche client": "Weider — Client-Fiche",
+"Informations personnelles": "Perséinlech Informatiounen",
+"Prénom": "Virnumm",
+"Nom": "Numm",
+"Adresse complète": "Komplett Adress",
+"Code postal": "Postleitzuel",
+"Zone sans frais de déplacement": "Zon ouni Deplacementskäschten",
+"Zone avec supplément déplacement (+5 €)": "Zon mat Deplacementssupplement (+5 €)",
+"Commune": "Gemeng",
+"Téléphone": "Telefon",
+"E-mail": "E-Mail",
+"Contact d'urgence": "Noutfallkontakt",
+"Nom complet": "Ganzen Numm",
+"La même personne peut récupérer mon chien": "Dëse Persoun dierf mäin Hond och ofhuelen",
+"Personnes autorisées à récupérer le chien": "Persoune, déi den Hond dierfen ofhuelen",
+"Personne autorisée 1": "Autoriséiert Persoun 1",
+"Ajouter une personne": "Eng Persoun derbäisetzen",
+"Accès domicile": "Zougang zur Wunneng",
+"Clés remises à Forest Rangers": "Schlëssel bei Forest Rangers",
+"Une copie de vos clés sera conservée en sécurité": "Eng Kopie vun Äre Schlëssele gëtt sécher opbewaart",
+"Alarme présente": "Alarmanlag do",
+"Précisez le code ci-dessous si nécessaire": "Gitt de Code hei ënnen un, wann néideg",
+"Code / Instructions d'accès": "Code / Zougangsinstruktiounen",
+"Particularités du domicile": "Besonderheete vun der Wunneng",
+"Continuer — Fiche chien": "Weider — Hond-Fiche",
+"Informations générales": "Allgemeng Informatiounen",
+"Nom du chien": "Numm vum Hond",
+"Race": "Rass",
+"1re race": "1. Rass",
+"2e race": "2. Rass",
+"(facultatif)": "(fakultativ)",
+"Choisissez dans la liste ou saisissez librement. La 2e race est facultative.": "Wielt aus der Lëscht oder tippt fräi. Déi 2. Rass ass fakultativ.",
+"Précisez la race": "Préziséiert d'Rass",
+"Sexe": "Geschlecht",
+"Mâle": "Männlech",
+"Femelle": "Weiblech",
+"Date de naissance": "Gebuertsdatum",
+"Poids (kg)": "Gewiicht (kg)",
+"Votre chien est dans la catégorie grand gabarit. La disponibilité dépend de la capacité de la camionnette.": "Ären Hond zielt als grousse Hond. D'Disponibilitéit hänkt vum Plaz am Camionnette of.",
+"Stérilisé(e)": "Stereliséiert",
+"Stérilisé": "Stereliséiert",
+"Oui": "Jo",
+"Non": "Nee",
+"Numéro de puce": "Chipnummer",
+"N° de puce": "Chipnr.",
+"Santé": "Gesondheet",
+"Vétérinaire": "Déierendokter",
+"Téléphone vétérinaire": "Telefon vum Déierendokter",
+"Vaccins à jour": "Impfungen um leschte Stand",
+"En cours": "Amgaang",
+"Allergies": "Allergien",
+"Médicaments en cours": "Medikamenter am Moment",
+"Pathologies / Antécédents": "Krankheeten / Virgeschicht",
+"Comportement": "Verhalen",
+"Liberté autorisée": "Dierf lass lafen",
+"Protection nourriture": "Beschützt säi Friessen",
+"Rappel fiable": "Kënnt zoverlässeg zréck",
+"Dominant": "Dominant",
+"Instinct chasseur": "Juegdinstinkt",
+"Sociable avec femelles": "Verdréit sech mat Weibercher",
+"Réactif en laisse": "Reaktiv un der Léngt",
+"Sociable avec mâles": "Verdréit sech mat Männercher",
+"Adore l'eau": "Gär am Waasser",
+"Rescue dog": "Rescue-Hond",
+"Peurs / Phobies": "Ängschten / Phobien",
+"Marche en laisse": "Un der Léngt goen",
+"Bien": "Gutt",
+"À améliorer": "Ka besser ginn",
+"Tire fort": "Zitt staark",
+"Harnais requis": "Geschier néideg",
+"Niveau d'énergie": "Energieniveau",
+"Très calme": "Ganz roueg",
+"Calme": "Roueg",
+"Moyen": "Mëttel",
+"Énergique": "Energesch",
+"Très énergique": "Ganz energesch",
+"Informations complémentaires": "Zousätzlech Informatiounen",
+"Remarques importantes": "Wichteg Bemierkungen",
+"Les informations sur les compatibilités entre chiens seront complétées par Gabriel après votre entretien de bienvenue.": "De Gabriel fëllt no Ärem Wëllkomm-Gespréich aus, wéi Ären Hond sech mat anere versteet.",
+"Ajouter un autre chien": "Nach en Hond derbäisetzen",
+"Continuer — Conditions générales": "Weider — Allgemeng Konditiounen",
+"Conditions générales d'utilisation": "Allgemeng Konditiounen",
+"Veuillez lire attentivement les conditions générales ci-dessous avant d'accepter. L'acceptation est obligatoire pour effectuer des réservations.": "Liest w.e.g. déi Konditiounen hei ënnen opmierksam duerch, ier Dir se acceptéiert. D'Akzeptanz ass néideg fir Reservatiounen ze maachen.",
+"J'ai lu et j'accepte les conditions générales": "Ech hunn d'Konditioune gelies an acceptéieren se",
+"de Forest Rangers Luxembourg. Je comprends que sans acceptation, mon compte sera créé mais les réservations ne seront pas possibles.": "vu Forest Rangers Luxembourg. Ech verstinn, datt mäi Kont ouni Akzeptanz ugeluecht gëtt, mee datt Reservatiounen dann net méiglech sinn.",
+"Vous pourrez accéder à l'application immédiatement après la création de votre compte. L'acceptation des conditions générales peut être effectuée ultérieurement depuis votre profil, mais sera requise avant toute réservation.": "Dir kënnt d'App direkt benotzen, soubal Äre Kont ugeluecht ass. D'Konditioune kënnen och méi spéit an Ärem Profil acceptéiert ginn, mee si si virun all Reservatioun néideg.",
+"Continuer — Mot de passe": "Weider — Passwuert",
+"Créez votre mot de passe": "Uleeën vun Ärem Passwuert",
+"Saisissez votre mot de passe": "Gitt Äert Passwuert an",
+"Confirmer le mot de passe": "Passwuert bestätegen",
+"🔒 Votre mot de passe doit contenir au minimum 8 caractères. Choisissez quelque chose de mémorable — vous en aurez besoin pour vous connecter à chaque fois.": "🔒 Äert Passwuert muss mindestens 8 Zeeche laang sinn. Wielt eppes, wat Dir Iech ka merken — Dir braucht et bei all Umeldung.",
+"Créer mon compte": "Mäi Kont uleeën",
+"Compte créé avec succès !": "Kont ugeluecht!",
+"Bienvenue dans la famille Forest Rangers !": "Wëllkomm an der Forest-Rangers-Famill!",
+"Votre compte est actif. Vous pouvez accéder à votre espace dès maintenant.": "Äre Kont ass aktiv. Dir kënnt elo direkt an Äre Client-Beräich goen.",
+"Accéder à mon espace": "An mäi Client-Beräich",
+"12 rue des Chênes": "12 rue des Chênes",
+"Ex : boîte à clé code 4521, portail gauche...": "Z. B. Schlësselkëscht Code 4521, lénkst Paart...",
+"Ex : chien à attacher dans l'entrée, ne pas laisser entrer le chat...": "Z. B. Hond am Gank uhänken, d'Kaz net eraloossen...",
+"Cliquez ou tapez pour rechercher...": "Klickt oder tippt fir ze sichen...",
+"Ex : Labrador...": "Z. B. Labrador...",
+"Ex : Berger Allemand...": "Z. B. Schäferhond...",
+"Saisissez la race du chien...": "Gitt d'Rass vum Hond an...",
+"Ex : acariens, certains aliments...": "Z. B. Hausstëbsmilben, gewëssen Iessen...",
+"Nom, dosage, fréquence...": "Numm, Dosis, Frequenz...",
+"Ex : dysplasie, épilepsie, chirurgies...": "Z. B. Dysplasie, Epilepsie, Operatiounen...",
+"Ex : orage, feux d'artifice, voitures...": "Z. B. Donnerwieder, Freedefeier, Autoen...",
+"Tout ce qui est utile pour nous : habitudes, préférences, consignes particulières, petites manies (ex : aboie sur tous les bulldogs)...": "Alles, wat fir eis nëtzlech ass: Gewunnechten, Virléiften, speziell Instruktiounen, kleng Manieren (z. B. billt all Bulldog un)...",
+"Minimum 8 caractères": "Mindestens 8 Zeechen",
+"Répétez votre mot de passe": "Widderhuelt Äert Passwuert",
+"Prénom Nom": "Virnumm Numm",
+"15 chiffres": "15 Zifferen",
+"Labrador, Race mixte...": "Labrador, Mëschrass...",
+"Sélectionner...": "Auswielen...",
+"Champs obligatoires manquants : ": "Et feelen obligatoresch Felder: ",
+"Numéro de puce (15 chiffres)": "Chipnummer (15 Zifferen)",
+"Poids": "Gewiicht",
+"Email": "E-Mail",
+"Contact d'urgence — nom": "Noutfallkontakt — Numm",
+"Contact d'urgence — téléphone": "Noutfallkontakt — Telefon",
+"Personne autorisée à récupérer le chien": "Persoun, déi den Hond dierf ofhuelen",
+"Vous devez accepter les conditions générales pour continuer.": "Dir musst d'Konditiounen acceptéieren, fir weiderzefueren.",
+"Le mot de passe doit contenir au moins 8 caractères.": "D'Passwuert muss mindestens 8 Zeeche laang sinn.",
+"Les mots de passe ne correspondent pas.": "D'Passwierder stëmmen net iwwereneen.",
+"Trop court": "Ze kuerz",
+"Faible": "Schwaach",
+"Fort": "Staark",
+"Très fort": "Ganz staark",
+"Vérifiez vos informations": "Kontrolléiert Är Donnéeën",
+"Une erreur ? Revenez en arrière pour corriger avant de créer votre compte.": "Eppes falsch? Gitt zréck a korrigéiert et, ier Dir Äre Kont uleet.",
+"Prénom / Nom": "Virnumm / Numm",
+"Chien": "Hond",
+"Création du compte…": "De Kont gëtt ugeluecht…",
+"Client": "Client",
+"N° client": "Client-Nr.",
+"Personne autorisée": "Autoriséiert Persoun",
+"Ajouter": "Derbäisetzen",
+"Race personnalisée": "Eege Rass",
+"Aucune race trouvée": "Keng Rass fonnt",
+"Inscription sur invitation": "Umeldung op Invitatioun",
+"L'inscription se fait uniquement à partir du lien personnel que nous vous avons envoyé. Ouvrez-le directement depuis votre message.": "D'Umeldung geet nëmme mat dem perséinleche Link, dee mir Iech geschéckt hunn. Maacht e w.e.g. direkt aus Ärer Noriicht op.",
+"Lien non reconnu": "Link net erkannt",
+"Ce lien d'inscription n'est pas valable. Vérifiez qu'il a été copié en entier, ou demandez-nous un nouveau lien.": "Dëse Umeldungslink ass net gëlteg. Kuckt, ob e ganz kopéiert gouf, oder frot eis no engem neie Link.",
+"Lien expiré": "Link ofgelaf",
+"Ce lien d'inscription a dépassé sa durée de validité. Demandez-nous un nouveau lien, nous vous l'envoyons aussitôt.": "Dëse Umeldungslink ass ofgelaf. Frot eis no engem neien, mir schécken en direkt.",
+"Compte déjà créé": "Kont scho ugeluecht",
+"Ce lien a déjà servi à créer votre compte. Connectez-vous avec votre email et votre mot de passe.": "Mat dësem Link gouf Äre Kont scho ugeluecht. Mellt Iech mat Ärer E-Mail an Ärem Passwuert un.",
+"Vérification impossible": "Iwwerpréifung net méiglech",
+"Le lien n'a pas pu être vérifié. Vérifiez votre connexion puis rechargez la page.": "De Link konnt net iwwerpréift ginn. Kontrolléiert Är Verbindung a lued d'Säit nei.",
+"Se connecter": "Umellen",
+"Réessayer": "Nach eng Kéier probéieren",
+"Appeler Gabriel · +352 661 999 113": "Gabriel uruffen · +352 661 999 113",
+"Le lien d'invitation est absent. Ouvrez la page depuis le lien reçu.": "De Invitatiounslink feelt. Maacht d'Säit iwwer de Link op, deen Dir kritt hutt.",
+"Ce lien a déjà servi à créer un compte. Connectez-vous depuis la page de connexion.": "Mat dësem Link gouf scho e Kont ugeluecht. Benotzt w.e.g. d'Umeldungssäit.",
+"Ce lien d'invitation a expiré. Demandez-nous un nouveau lien.": "Dëse Invitatiounslink ass ofgelaf. Frot eis w.e.g. no engem neien.",
+"Votre compte n'a pas pu être créé. Réessayez dans un instant ; si le problème persiste, appelez-nous au +352 661 999 113.": "Äre Kont konnt net ugeluecht ginn. Probéiert w.e.g. gläich nach eng Kéier; wann et net geet, rufft eis um +352 661 999 113 un.",
+"Cet email est déjà associé à une autre fiche client. Appelez-nous au +352 661 999 113.": "Dës E-Mail ass schonn un eng aner Client-Fiche gebonnen. Rufft eis w.e.g. um +352 661 999 113 un.",
+"Le prénom et le nom sont obligatoires.": "Virnumm an Numm si obligatoresch.",
+"Les inscriptions sont momentanément fermées. Appelez-nous au +352 661 999 113.": "D'Umeldunge sinn am Moment zou. Rufft eis w.e.g. um +352 661 999 113 un.",
+"Trop de tentatives en peu de temps. Patientez quelques minutes puis réessayez.": "Ze vill Versich a kuerzer Zäit. Waart e puer Minutten a probéiert nach eng Kéier.",
+"Mot de passe refusé : ": "Passwuert refuséiert: ",
+"Connexion au serveur impossible. Vérifiez votre réseau puis réessayez.": "De Server ass net erreechbar. Kontrolléiert Är Verbindung a probéiert nach eng Kéier.",
+"Une erreur est survenue : ": "Et ass e Feeler opgetratt: ",
+"Veuillez remplir au minimum le prénom, le nom et l'email.": "Fëllt w.e.g. mindestens Virnumm, Numm an E-Mail aus.",
+"Bienvenue dans la famille Forest Rangers, ": "Wëllkomm an der Forest-Rangers-Famill, ",
+" ! Votre n° client : ": "! Är Client-Nummer: ",
+"Votre fiche est enregistrée. Un compte existait déjà pour cet email : connectez-vous avec le mot de passe choisi lors de votre première tentative, ou utilisez « Mot de passe oublié ».": "Är Fiche ass gespäichert. Fir dës E-Mail gouf et scho e Kont: mellt Iech mat dem Passwuert vun Ärem éischte Versuch un, oder benotzt „Passwuert vergiess“.",
+"Votre fiche est enregistrée. Connectez-vous avec votre email et le mot de passe que vous venez de choisir.": "Är Fiche ass gespäichert. Mellt Iech mat Ärer E-Mail an dem Passwuert un, dat Dir just gewielt hutt.",
+"Version octobre 2026 — texte officiel, disponible en français uniquement. La date et l'heure de votre acceptation sont enregistrées.": "Versioun Oktober 2026 — offiziellen Text, nëmmen op Franséisch. Datum an Auerzäit vun Ärer Zoustëmmung ginn registréiert.",
+"Télécharger les conditions générales (PDF)": "Konditiounen eroflueden (PDF)"
+}
+};
+  var currentLang = 'fr';
+  var _i18nNoeuds = [];
+  var _i18nAttrs  = [];
+
+  function t(fr) {
+    if (currentLang === 'fr') return fr;
+    var d = FR_I18N[currentLang];
+    return (d && d[fr]) || fr;
+  }
+
+  // Texte francais d'origine d'un element (pour ce qui part en base)
+  function frOriginal(el) {
+    if (!el) return '';
+    for (var i = 0; i < el.childNodes.length; i++) {
+      var n = el.childNodes[i];
+      if (n.nodeType === 3 && n._i18n) return n._i18n.fr;
+    }
+    return (el.textContent || '').trim();
+  }
+
+  function frI18nScan(root) {
+    root = root || document.body;
+    if (!root || !document.createTreeWalker) return;
+    var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+    var n;
+    while ((n = w.nextNode())) {
+      if (n._i18n) continue;
+      var tag = n.parentNode ? n.parentNode.nodeName : '';
+      if (tag === 'SCRIPT' || tag === 'STYLE') continue;
+      // Blocs volontairement laisses en francais (texte juridique)
+      if (n.parentElement && n.parentElement.closest('[data-i18n-off]')) continue;
+      var brut = n.nodeValue || '';
+      var fr = brut.trim();
+      if (!fr) continue;
+      n._i18n = { fr: fr, avant: (brut.match(/^\s*/) || [''])[0], apres: (brut.match(/\s*$/) || [''])[0] };
+      _i18nNoeuds.push(n);
+    }
+    if (root.querySelectorAll) {
+      var els = root.querySelectorAll('[placeholder],[title]');
+      for (var i = 0; i < els.length; i++) {
+        var el = els[i];
+        if (el._i18nAttr) continue;
+        el._i18nAttr = { placeholder: el.getAttribute('placeholder'), title: el.getAttribute('title') };
+        _i18nAttrs.push(el);
+      }
+    }
+    appliquerLangue();
+  }
+
+  function appliquerLangue() {
+    for (var i = 0; i < _i18nNoeuds.length; i++) {
+      var n = _i18nNoeuds[i];
+      if (!n._i18n || !n.parentNode) continue;
+      n.nodeValue = n._i18n.avant + t(n._i18n.fr) + n._i18n.apres;
+    }
+    for (var j = 0; j < _i18nAttrs.length; j++) {
+      var el = _i18nAttrs[j], a = el._i18nAttr;
+      if (a.placeholder) el.setAttribute('placeholder', t(a.placeholder));
+      if (a.title) el.setAttribute('title', t(a.title));
+    }
+    document.documentElement.setAttribute('lang', currentLang === 'lu' ? 'lb' : currentLang);
+    if (typeof stripDisplayAccents === 'function') stripDisplayAccents();
   }
   </script>
   <link rel="manifest" href="/manifest.json">
@@ -1107,35 +1554,212 @@ input[type=range]::-webkit-slider-runnable-track {
         <div class="info-banner">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           Veuillez lire attentivement les conditions générales ci-dessous avant d'accepter. L'acceptation est obligatoire pour effectuer des réservations.
+          <br><span style="font-size:12px;color:var(--text-faint);">Version octobre 2026 — texte officiel, disponible en français uniquement. La date et l'heure de votre acceptation sont enregistrées.</span>
         </div>
 
-        <div class="cg-box">
-          <h4>1. Prestations proposées</h4>
-          <p>Forest Rangers Luxembourg propose des services de dog walking, day care et boarding pour chiens au Luxembourg. Les prestations sont soumises aux disponibilités et à la validation de Gabriel Quiaios.</p>
-
-          <h4>2. Réservations et planning</h4>
-          <p>Le planning est clôturé la veille à 9h00. Aucune modification n'est acceptée après ce délai. Les réservations de dog walking et day care sont confirmées automatiquement si la place est disponible. Les réservations de boarding sont soumises à validation manuelle.</p>
-
-          <h4>3. Annulations</h4>
-          <p>Toute annulation doit être effectuée au minimum 24 heures avant la prestation. En cas d'annulation tardive (moins de 24h), d'annulation sur place ou d'impossibilité de prise en charge imputable au client, la prestation sera facturée en totalité. Des frais de déplacement pourront s'appliquer.</p>
-
-          <h4>4. Tarifs</h4>
-          <p>Dog Walking : 28 € (client fidèle) / 30 € (nouveau client). Day Care : 55 € / 60 €. Boarding : 68 € / 75 €. Un supplément de 5 € est appliqué pour les clients hors zone. Réduction de 50 % (fidèle) ou 30 % (nouveau) sur le 2e chien.</p>
-
-          <h4>5. Paiement</h4>
-          <p>Les factures sont émises mensuellement. En cas de facture impayée au-delà du délai indiqué, des frais de rappel de 25 € seront appliqués. Forest Rangers se réserve le droit de suspendre les prestations en cas d'impayé.</p>
-
-          <h4>6. Responsabilité</h4>
-          <p>Forest Rangers prend toutes les précautions nécessaires pour assurer la sécurité des animaux. Le client déclare que son chien est à jour de ses vaccins et en bonne santé. En cas d'incident nécessitant des soins vétérinaires urgents, Forest Rangers contactera le client et le vétérinaire désigné.</p>
-
-          <h4>7. Photos et données</h4>
-          <p>Les photos prises lors des promenades peuvent être partagées avec le propriétaire et utilisées à des fins de communication par Forest Rangers, sauf opposition du client. Les données personnelles sont traitées conformément au RGPD.</p>
-
-          <h4>8. Organisation</h4>
-          <p>L'organisation des promenades, groupes et plannings est de la responsabilité exclusive de Gabriel Quiaios. Le personnel terrain exécute les missions assignées et ne peut modifier le planning.</p>
+        <div class="cg-box" id="cg-box" data-i18n-off lang="fr">
+          <h4>1. OBJET</h4>
+          <p>1.1. Les présentes Conditions Générales ont pour objet de définir les droits et obligations des Clients et du Prestataire dans le cadre des services proposés par l&#x27;entreprise ARCANIN S.à r.l. (ci-après dénommée « FOREST RANGERS »), immatriculée sous le numéro B270245 le 12/08/2022 et ayant son siège social au 42, rue de Mersch, L-8181 Kopstal. ARCANIN S.à r.l. exerce ses activités commerciales sous l&#x27;enseigne commerciale « FOREST RANGERS ».</p>
+          <p>1.2. Coordonnées de contact de FOREST RANGERS :</p>
+          <ul>
+          <li>Téléphone : +352 661 999 113 — urgences, réservations et questions rapides.</li>
+          <li>Email : info@forestrangers.lu — demandes, réservations, modifications et annulations.</li>
+          <li>Adresse : 42, rue de Mersch, L-8181 Kopstal.</li>
+          <li>Site web : www.forestrangers.lu — tarifs, secteurs desservis et conditions en vigueur.</li>
+          </ul>
+          <h4>2. SERVICES PROPOSÉS</h4>
+          <p>2.1. FOREST RANGERS propose les services suivants :</p>
+          <ul>
+          <li>Promenades pour chiens.</li>
+          <li>Crèche du jour pour chiens.</li>
+          <li>Pension pour chiens.</li>
+          </ul>
+          <h4>3. CHAMP D&#x27;APPLICATION</h4>
+          <p>3.1. Les présentes conditions générales régissent le contrat de prestation de service conclu entre FOREST RANGERS et le Client.</p>
+          <p>3.2. Le Client reconnaît avoir pris connaissance, compris et accepté intégralement et sans réserve les présentes conditions générales. L&#x27;acceptation s&#x27;effectue par voie électronique lors de la création du compte client sur app.forestrangers.lu. Cette acceptation conditionne l&#x27;accès à la plateforme et vaut consentement au Contrat ; aucune signature manuscrite n&#x27;est requise. La date et l&#x27;heure de l&#x27;acceptation sont enregistrées.</p>
+          <p>3.3. FOREST RANGERS se réserve le droit de modifier les présentes conditions générales. Toute modification est communiquée au Client par écrit au moins trente (30) jours avant son entrée en vigueur. Le Client qui n&#x27;accepte pas les nouvelles conditions doit le faire savoir par écrit avant cette date ; sa notification vaut résiliation du Contrat, laquelle prend effet au terme du préavis d&#x27;un mois prévu à l&#x27;article 8.1. Pendant ce préavis, les conditions antérieures continuent de s&#x27;appliquer et les prestations inscrites au planning restent dues selon les règles d&#x27;annulation en vigueur. À défaut de notification écrite dans le délai imparti, les nouvelles conditions sont réputées acceptées. Aucune modification ne s&#x27;applique rétroactivement aux prestations déjà réalisées.</p>
+          <p>3.4. Les présentes conditions générales prévalent sur toutes autres conditions générales.</p>
+          <p>3.5. Les conditions générales sont indissociables des conditions particulières du contrat.</p>
+          <p>3.6. Aucun autre accord ne lie FOREST RANGERS, sauf s&#x27;il est écrit, contresigné et accepté par les deux parties. Aucun engagement verbal pris par les employés ou représentants de FOREST RANGERS n&#x27;est reconnu. Toute demande adressée directement au personnel sur le terrain — annulation, modification, question organisationnelle, demande de pension ou discussion prolongée — est considérée comme non valable. Le personnel sur le terrain n&#x27;est ni autorisé ni mandaté pour gérer l&#x27;organisation des prestations.</p>
+          <h4>4. OBLIGATIONS DU PRESTATAIRE</h4>
+          <p>4.1. Le Prestataire s&#x27;engage à fournir les services conformément aux termes et conditions du Contrat de Prestation de Services conclu avec le Client.</p>
+          <p>4.2. Le Prestataire veillera à agir en bon père de famille et à respecter les dispositions légales en vigueur dans l&#x27;exercice de ses activités.</p>
+          <p>4.3. FOREST RANGERS condamne fermement tout acte de maltraitance ou de violence, physique ou psychologique, envers les animaux qui lui sont confiés. Tout comportement de cette nature entraîne l&#x27;écartement immédiat de la personne concernée, le signalement aux autorités compétentes et, le cas échéant, des poursuites judiciaires.</p>
+          <p>4.4. Le Prestataire dispose de toutes les autorisations, licences et droits nécessaires pour fournir les services proposés.</p>
+          <p>4.5. Les horaires communiqués sont indicatifs. FOREST RANGERS fonctionne par tournées optimisées et évolutives. Aucun horaire précis ne peut être garanti individuellement.</p>
+          <p>4.6. Les promenades couvrent une distance minimale de 3 km. La durée d&#x27;une promenade varie selon le terrain, les conditions météorologiques et la composition du groupe ; elle ne constitue pas un engagement contractuel. Seule la distance minimale est garantie.</p>
+          <p>4.7. Interruptions annuelles. Les promenades régulières sont suspendues durant les deux dernières semaines du mois de décembre. La crèche du jour fonctionne normalement sur cette période, à l&#x27;exception des jours fériés légaux. La pension reste assurée sans interruption. Les promenades régulières et la crèche du jour sont également suspendues pendant les congés annuels de FOREST RANGERS, dont les dates sont communiquées au Client au moins soixante (60) jours à l&#x27;avance. La pension reste assurée sans interruption. Aucune prestation n&#x27;est facturée pendant ces périodes et leur suspension n&#x27;ouvre droit à aucune indemnité. L&#x27;article 6.5 ne s&#x27;applique pas aux prestations supprimées du fait de FOREST RANGERS.</p>
+          <h4>5. OBLIGATIONS DU CLIENT</h4>
+          <p>5.1. Le Client est responsable de s&#x27;assurer que son chien est vacciné conformément aux obligations légales en matière de vaccination antirabique. En cas d&#x27;absence de vaccination ou de preuve de vaccination, le contrat pourra être résilié. Le chien doit être en bonne santé générale et exempt de maladies contagieuses.</p>
+          <p>5.2. Le Client doit disposer d&#x27;une assurance responsabilité civile couvrant son chien.</p>
+          <p>5.3. Le Client doit fournir toutes les informations nécessaires concernant le chien pris en charge, y compris les chiennes en période de chaleur, les besoins particuliers ou les restrictions éventuelles.</p>
+          <p>5.4. Le Client met à disposition le matériel nécessaire au nettoyage de l&#x27;animal, notamment serviettes et lingettes.</p>
+          <p>5.5. Le Client accorde au Prestataire le droit d&#x27;utiliser le matériel, équipement et fournitures lui appartenant. Le Prestataire utilisera ce matériel en bon père de famille et informera le Client de tout dommage ou</p>
+          <p>dysfonctionnement. Le Prestataire prendra en charge la réparation dans un délai raisonnable, sauf si le dommage résulte d&#x27;une mauvaise utilisation imputable au Client.</p>
+          <p>5.6. Le Client est tenu de fournir un accès clair et permanent au domicile — clé, code ou autre moyen d&#x27;accès. Toute attente imposée au personnel constitue un manquement contractuel.</p>
+          <p>5.7. En cas d&#x27;absence du Client ou de toute personne désignée lors de la restitution du chien, et en l&#x27;absence d&#x27;instructions claires permettant une récupération autonome, FOREST RANGERS poursuivra sa tournée afin de ne pas perturber l&#x27;organisation globale. La journée sera intégralement facturée et la récupération du chien devra être effectuée à Kopstal, sur rendez-vous. Cette mesure est prise exclusivement dans l&#x27;intérêt du bien-être et de la sécurité du chien.</p>
+          <p>5.8. Chaque chien confié à FOREST RANGERS doit porter une médaille clairement lisible avec un numéro de téléphone actualisé, afin de faciliter sa récupération rapide en cas de fugue ou de perte.</p>
+          <p>5.9. En cas de mauvaise hygiène, de maladie non signalée ou de contamination d&#x27;autres animaux causée par son animal, le Client sera responsable de tous les frais associés — frais de nettoyage, de traitement médical, etc.</p>
+          <p>5.10. En cas de comportement inapproprié du chien, notamment l&#x27;urination ou la défécation dans des zones non prévues à cet effet, le chien ne sera pas isolé mais des frais de nettoyage pourront être appliqués selon les tarifs en vigueur, après communication du montant au Client.</p>
+          <p>5.11. Soins vétérinaires. Le Client autorise FOREST RANGERS à faire examiner et soigner son chien par un vétérinaire lorsque l&#x27;état de l&#x27;animal le requiert et que le Client ne peut être joint dans un délai compatible avec l&#x27;urgence. FOREST RANGERS informe le Client sans délai. Le Client communique les coordonnées du vétérinaire qui suit habituellement son chien. FOREST RANGERS s&#x27;adresse à ce praticien en priorité. Lorsque celui-ci n&#x27;est pas joignable, indisponible ou trop éloigné au regard de l&#x27;urgence, FOREST RANGERS s&#x27;adresse au vétérinaire de son choix. Les frais vétérinaires sont à la charge du Client. FOREST RANGERS les avance et les refacture au prix coûtant sur la facture du mois suivant, justificatifs à l&#x27;appui.</p>
+          <p>5.12. Dommages et assurances. Les dommages causés par le chien à un tiers, à un autre animal ou à des biens relèvent de l&#x27;assurance responsabilité civile du Client, que celui-ci s&#x27;engage à maintenir en vigueur pendant toute la durée du Contrat conformément à l&#x27;article 5.2. FOREST RANGERS dispose d&#x27;une assurance responsabilité civile professionnelle souscrite auprès de LALUX ASSURANCES S.A., couvrant notamment le transport des animaux et les animaux qui lui sont confiés. Cette garantie s&#x27;applique dans les limites, conditions et franchises du contrat souscrit. Les frais dont le montant n&#x27;atteint pas la franchise applicable restent à la charge du Client, selon les modalités de l&#x27;article 5.11.</p>
+          <h4>6. RÉSERVATIONS ET ANNULATIONS</h4>
+          <p>6.1. Les réservations doivent être effectuées à l&#x27;avance, en fonction des disponibilités.</p>
+          <p>6.2. Toute annulation doit être communiquée dans les délais spécifiés pour chaque service. Le Client a la possibilité de reporter le service à une nouvelle date, sous réserve de disponibilité. Si le service n&#x27;est pas reporté, ou en cas d&#x27;annulation tardive, des frais d&#x27;annulation seront appliqués.</p>
+          <p>6.3. En cas d&#x27;annulation ou d&#x27;impossibilité de prise en charge lorsque le personnel est déjà sur place, la prestation sera facturée intégralement. Des frais de déplacement de 5 € HTVA pourront être appliqués.</p>
+          <p>6.4. Secteur opérationnel. Le secteur desservi par FOREST RANGERS évolue en fonction de l&#x27;organisation des tournées. Lorsqu&#x27;une prestation nécessite un déplacement en dehors du secteur habituel, un supplément de déplacement de 5 € HTVA est appliqué par trajet et par adresse desservie, quel que soit le nombre de chiens pris en charge à cette adresse.</p>
+          <p>Ce supplément est communiqué au Client par écrit dans les conditions particulières, avant la première intervention. Il ne peut être appliqué rétroactivement à un contrat en cours. Les secteurs desservis et les suppléments applicables sont consultables sur www.forestrangers.lu.</p>
+          <p>6.5. Période estivale. Du 1er juin au 31 août inclus, toute annulation de prestation est facturée à 100 %, quel que soit le délai de prévenance et pour l&#x27;ensemble des services. Cette mesure est rendue nécessaire par l&#x27;arrêté anticipé des plannings estivaux et par le nombre limité de places disponibles sur cette période. Les Clients en sont informés avant l&#x27;ouverture de la période. Les réservations comme les annulations relatives à la période estivale doivent être communiquées avant la date de clôture annoncée par FOREST RANGERS.</p>
+          <h4>7. CONDITIONS DE PAIEMENT</h4>
+          <p>7.1. Sauf convention contraire, le prix indiqué est net, TVA incluse au taux en vigueur à la date de la facture. Le taux de TVA applicable est de 17 %.</p>
+          <p>7.2. Le prix des prestations est indiqué dans l&#x27;offre ou la confirmation de commande. À défaut, les tarifs de FOREST RANGERS en vigueur au moment de la conclusion du contrat s&#x27;appliquent, sous réserve de leur communication préalable au Client. Les tarifs sont disponibles en toute transparence sur le site www.forestrangers.lu.</p>
+          <p>7.3. Une facture détaillée est émise le dernier jour de chaque mois pour les prestations réalisées au cours de ce mois. Elle est remise au Client par voie électronique, postale (avec une majoration de 2 EUR) ou en mains propres.</p>
+          <p>7.4. Les factures sont payables dans un délai de quatorze (14) jours calendaires à compter de leur émission, par virement bancaire sur le compte de FOREST RANGERS : BANQUE : Spuerkeess IBAN : LU80 0019 7355 9489 5000 BIC : BCEELULL</p>
+          <p>7.5. Tout retard de paiement entraîne de plein droit, sans mise en demeure préalable, l&#x27;application d&#x27;un intérêt de retard au taux d&#x27;intérêt légal en vigueur, calculé à compter du lendemain de la date d&#x27;échéance de la facture, ainsi qu&#x27;une indemnité forfaitaire de 25 EUR par rappel émis.</p>
+          <p>7.6. Chiens supplémentaires. Lorsque plusieurs chiens du même foyer sont pris en charge à la même adresse, une remise est appliquée sur chaque chien supplémentaire. Le taux de cette remise est indiqué dans la grille tarifaire en vigueur, consultable sur www.forestrangers.lu, et figure dans les conditions particulières du Client. Cette remise s&#x27;applique aux promenades, à la crèche du jour et à la pension.</p>
+          <h4>8. RÉSILIATION</h4>
+          <p>8.1. Le présent Contrat peut être résilié par écrit, par lettre recommandée avec accusé de réception, à l&#x27;initiative de l&#x27;une ou l&#x27;autre des Parties :</p>
+          <ul>
+          <li>Avec effet immédiat en cas de non-respect par l&#x27;une des Parties de ses obligations contractuelles.</li>
+          <li>Pour toute autre cause, moyennant un préavis d&#x27;un mois.</li>
+          </ul>
+          <p>8.2. En cas de décès ou de maladie grave de l&#x27;animal du Client, le Contrat peut être résilié sans préavis.</p>
+          <p>8.3. En cas de non-paiement d&#x27;une facture échue, FOREST RANGERS adresse au Client des rappels écrits. À défaut de régularisation dans un délai de trente (30) jours suivant la date d&#x27;échéance, le Contrat peut être résilié de plein droit, sans préjudice du recouvrement des sommes dues.</p>
+          <p>8.4. FOREST RANGERS se réserve le droit de mettre fin à la collaboration en cas de manque d&#x27;organisation récurrent ou de non-respect des présentes conditions générales.</p>
+          <h4>9. RESPONSABILITÉ</h4>
+          <p>9.1. Le Prestataire agit en toute autonomie et est responsable de ses actes et de ses fautes contractuelles ou délictuelles dans l&#x27;exécution des services.</p>
+          <p>9.2. Le Prestataire garantit les conséquences pécuniaires de la responsabilité civile contractuelle liée à la perte accidentelle des clés ou moyens d&#x27;ouverture confiés par le Client.</p>
+          <p>9.3. Toutes les informations importantes — modifications de service, réservations, demandes particulières et annulations — doivent être transmises par l&#x27;un des trois canaux officiels suivants : l&#x27;espace client app.forestrangers.lu, l&#x27;adresse email info@forestrangers.lu, ou le téléphone au +352 661 999 113. Les communications effectuées uniquement auprès du personnel sur le terrain ne sont pas considérées comme officielles et ne peuvent être opposées à FOREST RANGERS.</p>
+          <h4>10. JOURS FÉRIÉS LÉGAUX</h4>
+          <p>10.1. Nouvel An, lundi de Pâques, 1er mai, Journée de l&#x27;Europe (9 mai), Ascension, lundi de Pentecôte, fête nationale luxembourgeoise (23 juin), Assomption (15 août), Toussaint (1er novembre), 25 décembre et 26 décembre.</p>
+          <h4>11. HORAIRES D&#x27;OUVERTURE</h4>
+          <p>11.1. Les horaires d&#x27;ouverture de FOREST RANGERS sont du lundi au vendredi, de 8h00 à 18h00, sauf les jours fériés légaux.</p>
+          <h4>12. ADAPTATION AUX CONDITIONS MÉTÉOROLOGIQUES</h4>
+          <p>12.1. FOREST RANGERS s&#x27;engage à assurer ses services de promenade dans toutes les conditions météorologiques, tout en prenant les mesures d&#x27;adaptation nécessaires à la sécurité et au confort des animaux et de son équipe :</p>
+          <ul>
+          <li>Alertes météorologiques extrêmes : en réponse à une alerte rouge émise par Meteolux indiquant des conditions dangereuses, FOREST RANGERS peut être contraint d&#x27;annuler toutes les promenades prévues.</li>
+          <li>Chaleur, pluie et vent : même en cas d&#x27;alerte orange, de températures supérieures à 25 °C, de fortes pluies ou de vents intenses, les promenades sont maintenues. La durée ou la longueur des promenades est ajustée pour garantir le confort et la sécurité des chiens. Une veste de pluie est conseillée pour tous les chiens.</li>
+          <li>Températures basses et neige : en présence de neige ou par températures inférieures à 5 °C, le port d&#x27;un manteau est obligatoire pour les chiens de petite et très petite taille. Les promenades peuvent être raccourcies compte tenu de la composition mixte des groupes.</li>
+          </ul>
+          <h4>13. FORCE MAJEURE</h4>
+          <p>13.1. Aucune des parties ne peut être tenue responsable d&#x27;un manquement à ses obligations en cas de force majeure.</p>
+          <p>13.2. Constitue un cas de force majeure tout événement indépendant de la volonté de la partie concernée, imprévisible et insurmontable, rendant impossible l&#x27;exécution des obligations prévues au contrat, notamment les catastrophes naturelles, les grèves, les conflits sociaux, les émeutes, les guerres, les actes de terrorisme, les pannes d&#x27;électricité et les défaillances informatiques majeures.</p>
+          <h4>14. CONFIDENTIALITÉ ET PROTECTION DES DONNÉES</h4>
+          <p>14.1. Le Prestataire s&#x27;engage à traiter les données personnelles des Clients conformément au Règlement général sur la protection des données (RGPD) et aux dispositions légales applicables. Les informations collectées sont utilisées uniquement aux fins de la prestation des services et ne sont pas divulguées à des tiers sans le consentement préalable du Client, sauf obligation légale.</p>
+          <p>14.2. Le Client dispose d&#x27;un droit d&#x27;accès, de rectification et de suppression de ses données. Toute demande est à adresser à info@forestrangers.lu.</p>
+          <p>14.3. Les données relatives au Client et à son chien sont hébergées dans l&#x27;espace client sécurisé décrit à l&#x27;article 15 des présentes.</p>
+          <h4>15. ESPACE CLIENT</h4>
+          <p>15.1. FOREST RANGERS met à disposition de ses Clients un espace client en ligne accessible à l&#x27;adresse app.forestrangers.lu.</p>
+          <p>15.2. L&#x27;accès à l&#x27;espace client est ouvert à l&#x27;issue de la rencontre préalable, au moyen d&#x27;un lien d&#x27;inscription personnel valable sept (7) jours et à usage unique. Le Client y renseigne ses coordonnées et les informations relatives à son chien, accepte les présentes conditions générales et définit son mot de passe.</p>
+          <p>15.3. Les identifiants de connexion sont personnels et confidentiels. Le Client est responsable de leur conservation et de toute utilisation faite depuis son compte. Il informe FOREST RANGERS sans délai de toute utilisation non autorisée.</p>
+          <p>15.4. L&#x27;espace client permet notamment au Client de consulter son planning, d&#x27;effectuer ses demandes de réservation et d&#x27;annulation, d&#x27;accéder aux parcours enregistrés et aux photos des promenades, ainsi qu&#x27;à ses factures.</p>
+          <p>15.5. Les réservations effectuées via l&#x27;espace client sont enregistrées et confirmées dans la limite des places disponibles. Si une contrainte d&#x27;organisation empêche d&#x27;honorer une réservation, FOREST RANGERS contacte le Client afin de convenir d&#x27;une solution alternative. Les réservations de pension font l&#x27;objet d&#x27;une confirmation préalable de FOREST RANGERS, le nombre de places étant limité à cinq chiens par nuit.</p>
+          <p>15.6. Les délais d&#x27;annulation prévus aux présentes s&#x27;appliquent à l&#x27;identique quel que soit le canal utilisé. La date et l&#x27;heure retenues sont celles de l&#x27;enregistrement de la demande par FOREST RANGERS.</p>
+          <p>15.7. Les factures sont mises à disposition dans l&#x27;espace client et transmises par voie électronique. Le Client accepte ce mode de transmission, qui vaut remise au sens de l&#x27;article 7.3.</p>
+          <p>15.8. FOREST RANGERS peut adresser au Client des notifications relatives à ses prestations, notamment en cas d&#x27;alerte météorologique, par notification dans l&#x27;application ou par SMS. Ces notifications sont envoyées aux seuls Clients concernés par une prestation planifiée le jour visé.</p>
+          <p>15.9. FOREST RANGERS s&#x27;efforce d&#x27;assurer la disponibilité continue de l&#x27;espace client sans pouvoir la garantir. Une indisponibilité technique ne dispense pas le Client du respect des délais d&#x27;annulation : il lui appartient dans ce cas d&#x27;utiliser l&#x27;email ou le téléphone.</p>
+          <p>15.10. Les données saisies dans l&#x27;espace client sont traitées conformément à l&#x27;article 14 des présentes.</p>
+          <h4>16. LOI APPLICABLE ET JURIDICTION COMPÉTENTE</h4>
+          <p>16.1. Les présentes Conditions Générales sont régies par le droit luxembourgeois.</p>
+          <p>16.2. Tout litige découlant des présentes Conditions Générales ou de la prestation des services sera soumis à la compétence exclusive des juridictions luxembourgeoises.</p>
+          <h4>PRESTATIONS DE SERVICE</h4>
+          <h5>Présentation des prestations</h5>
+          <p>FOREST RANGERS propose quatre types de promenades pour chiens :</p>
+          <ul>
+          <li>Promenade en groupe : le chien est promené en groupe restreint, sur une distance minimale de 3 km. La composition des groupes est déterminée par FOREST RANGERS en fonction du gabarit, du tempérament et des affinités entre les chiens.</li>
+          <li>Promenade individuelle : le chien est promené seul par un membre du personnel de FOREST RANGERS.</li>
+          <li>Promenade sportive (Cani-Cross) : le chien court avec un membre du personnel, dans un groupe de trois chiens au maximum.</li>
+          <li>Promenade pour chiens âgés ou à mobilité réduite : service spécialisé d&#x27;une durée de 30 minutes, dans un groupe de trois chiens au maximum. FOREST RANGERS propose également la crèche du jour et la pension, en hébergement sans cage, ainsi qu&#x27;un cadre domestique offrant confort et sécurité.</li>
+          </ul>
+          <h5>Rencontre préalable obligatoire</h5>
+          <p>Aucune prestation ne peut débuter sans une rencontre préalable entre FOREST RANGERS, le Client et le chien. Cette rencontre a lieu dans un parc canin, afin d&#x27;observer le chien en situation avec d&#x27;autres chiens. Elle permet d&#x27;évaluer son comportement, sa condition physique et sa compatibilité avec les groupes existants. La rencontre préalable est facturée selon le tarif en vigueur indiqué sur www.forestrangers.lu. Ce montant est déduit de la première facture si l&#x27;intégration se concrétise. La rencontre est offerte lorsque le Client est adressé par un client existant de FOREST RANGERS. FOREST RANGERS se réserve le droit de refuser l&#x27;intégration d&#x27;un chien à l&#x27;issue de cette rencontre. En cas d&#x27;acceptation, un lien d&#x27;inscription personnel, valable sept (7) jours et à usage unique, est adressé au Client afin qu&#x27;il crée son compte et renseigne les informations relatives à son chien.</p>
+          <h5>Disponibilité des prestations</h5>
+          <p>La promenade individuelle, la promenade sportive (Cani-Cross) et la promenade pour chiens âgés ou à mobilité réduite sont proposées sous réserve de la constitution d&#x27;un groupe compatible et de la disponibilité du personnel. FOREST RANGERS informe le Client des créneaux disponibles au moment de la demande. Aucune de ces prestations ne fait l&#x27;objet d&#x27;un engagement de disponibilité permanente.</p>
+          <h5>Informations importantes</h5>
+          <ul>
+          <li>Suivi des promenades : FOREST RANGERS utilise un système de traceur pour chaque promenade. Une application enregistre le parcours effectué, fournissant une preuve concrète du temps et du trajet réalisés.</li>
+          <li>Moments capturés : FOREST RANGERS prend des photos des animaux confiés et les transmet au Client.</li>
+          <li>La durée et les lieux des promenades sont déterminés par FOREST RANGERS en tenant compte du lieu de résidence du chien, du groupe et des conditions météorologiques.</li>
+          <li>Les promenades ont lieu sur le territoire luxembourgeois.</li>
+          <li>Le chien doit être âgé d&#x27;au moins 6 mois.</li>
+          <li>Les chiennes en période de chaleur ne peuvent pas participer aux promenades en groupe, ni être accueillies en crèche du jour ou en pension. La promenade individuelle reste disponible.</li>
+          <li>Les installations de crèche du jour et de pension sont équipées de caméras.</li>
+          <li>Les animaux sont transportés dans un véhicule adapté et équipé. Le transport est couvert par l&#x27;assurance professionnelle souscrite auprès de LALUX ASSURANCES S.A.</li>
+          <li>FOREST RANGERS utilise exclusivement son propre matériel lors des promenades, sauf circonstances exceptionnelles telles que l&#x27;utilisation d&#x27;une muselière.</li>
+          <li>En cas d&#x27;annulation tardive, FOREST RANGERS propose le report de la prestation à une date ultérieure, sous réserve de disponibilité. Si le report n&#x27;est pas possible ou n&#x27;est pas souhaité par le Client, l&#x27;annulation tardive est facturée conformément aux conditions propres à chaque service.</li>
+          <li>Les chiens répertoriés comme dangereux au sens de la loi du 9 mai 2008 relative aux chiens ne peuvent participer aux promenades en groupe ni au Cani-Cross, à moins de porter une muselière ou tout autre dispositif anti-morsure.</li>
+          </ul>
+          <h4>LES SERVICES</h4>
+          <h5>Promenade en groupe (Dog Walking)</h5>
+          <p>A) FOREST RANGERS se réserve le droit de modifier la composition des groupes en fonction des disponibilités et des affinités entre les chiens.</p>
+          <p>B) Les promenades ont lieu du lundi au vendredi, à l&#x27;exception des jours fériés légaux. La récupération des chiens débute à 9h00 (promenade du matin), 12h00 (promenade de midi) et 14h30 (promenade de l&#x27;après-midi). FOREST RANGERS se réserve le droit de modifier ces horaires.</p>
+          <p>C) Les promenades couvrent une distance minimale de 3 km. La durée varie selon le terrain, la météo et la composition du groupe et ne constitue pas un engagement contractuel. Seule la distance minimale est garantie.</p>
+          <p>D) FOREST RANGERS transmet les photos et les parcours effectués par courriel, via l&#x27;espace client ou sur les réseaux sociaux.</p>
+          <p>E) Un supplément de déplacement peut s&#x27;appliquer conformément à l&#x27;article 6.4 des présentes conditions générales.</p>
+          <p>F) FOREST RANGERS se réserve le droit de refuser la participation d&#x27;un chien si son état de santé semble incompatible avec l&#x27;activité projetée ou si les conditions météorologiques ne conviennent pas à l&#x27;animal.</p>
+          <p>G) Toute annulation doit être communiquée au plus tard la veille avant 9h00. Toute annulation effectuée après ce délai est facturée intégralement. L&#x27;article 6.5 s&#x27;applique durant la période estivale.</p>
+          <h5>Promenade individuelle (Special Walk)</h5>
+          <p>A) Durée et distance à convenir avec le Client, selon les besoins du chien.</p>
+          <p>B) Un supplément de déplacement peut s&#x27;appliquer conformément à l&#x27;article 6.4 des présentes conditions générales.</p>
+          <p>C) Les promenades ont lieu du lundi 8h00 au vendredi 16h00, selon un horaire convenu, à l&#x27;exception des jours fériés légaux.</p>
+          <p>D) FOREST RANGERS se réserve le droit de refuser la participation d&#x27;un chien si son état de santé semble incompatible avec l&#x27;activité projetée ou si les conditions météorologiques ne conviennent pas à l&#x27;animal.</p>
+          <p>E) Toute annulation doit être communiquée au plus tard la veille avant 9h00. Toute annulation effectuée après ce délai est facturée intégralement. L&#x27;article 6.5 s&#x27;applique durant la période estivale.</p>
+          <h5>Promenade pour chiens âgés ou à mobilité réduite</h5>
+          <p>A) Chaque promenade est limitée à une durée de 30 minutes et à un groupe de trois chiens au maximum.</p>
+          <p>B) Les horaires de récupération sont communiqués au Client lors de la mise en place de la prestation.</p>
+          <p>C) Un supplément de déplacement peut s&#x27;appliquer conformément à l&#x27;article 6.4 des présentes conditions générales.</p>
+          <p>D) Toute annulation doit être communiquée au plus tard la veille avant 9h00. Toute annulation effectuée après ce délai est facturée intégralement. L&#x27;article 6.5 s&#x27;applique durant la période estivale.</p>
+          <h5>Promenade sportive (Cani-Cross)</h5>
+          <p>A) Les séances ont lieu en semaine, en matinée, selon les créneaux communiqués par FOREST RANGERS et sous réserve de la constitution d&#x27;un groupe.</p>
+          <p>B) La durée de la séance est d&#x27;une heure.</p>
+          <p>C) Le rythme est adapté aux chiens.</p>
+          <p>D) Trois chiens au maximum peuvent participer à chaque séance.</p>
+          <p>E) Les chiens doivent être compatibles entre eux et présenter une condition physique adéquate.</p>
+          <p>F) Un supplément de déplacement peut s&#x27;appliquer conformément à l&#x27;article 6.4 des présentes conditions générales.</p>
+          <p>G) Toute annulation doit être communiquée au plus tard la veille avant 9h00. Toute annulation effectuée après ce délai est facturée intégralement. L&#x27;article 6.5 s&#x27;applique durant la période estivale.</p>
+          <h5>Pension pour chiens (Dog Boarding)</h5>
+          <p>A) La prestation comprend l&#x27;hébergement du chien dans les installations dédiées de FOREST RANGERS, son nourrissage et deux promenades en groupe par jour. La nourriture est fournie par le Client, afin que le chien conserve son alimentation habituelle et ne subisse aucune transition alimentaire durant son séjour.</p>
+          <p>B) Pour bénéficier de la pension, le Client doit être souscrit aux services de promenades ou de crèche du jour.</p>
+          <p>C) Une nuitée de test est requise avant l&#x27;acceptation d&#x27;un chien en pension. Une deuxième nuitée peut être demandée si FOREST RANGERS le juge nécessaire. Ces nuitées de test sont facturées.</p>
+          <p>D) Le carnet de santé du chien doit être en règle avant la nuitée de test.</p>
+          <p>E) La prestation est disponible pour une durée minimale de deux jours.</p>
+          <p>F) Aucune cage n&#x27;est utilisée pour l&#x27;hébergement des chiens.</p>
+          <p>G) La récupération et le dépôt de l&#x27;animal ne sont pas compris. Ces services supplémentaires peuvent être facturés sur demande.</p>
+          <p>H) Les demandes spécifiques et services additionnels sont facturés séparément.</p>
+          <p>I) Toute annulation de réservation de pension doit être effectuée au minimum trente (30) jours avant la date prévue du séjour pour les nouveaux clients, et quatorze (14) jours pour les clients réguliers. En cas d&#x27;annulation hors délai : entre 30 et 14 jours avant le séjour, 50 % du montant total ; moins de 14 jours avant le séjour, 100 % du montant total. Ces conditions sont justifiées par le nombre limité de places disponibles. L&#x27;article 6.5 s&#x27;applique durant la période estivale.</p>
+          <p>J) Le nombre de places disponibles est limité à cinq chiens par nuit.</p>
+          <p>K) Aucun supplément n&#x27;est appliqué les week-ends ni les jours fériés.</p>
+          <p>L) Les installations sont placées sous surveillance par caméra.</p>
+          <p>M) Les Clients dont le chien est en pension peuvent contacter FOREST RANGERS en dehors des horaires d&#x27;ouverture pour obtenir des nouvelles ou des photos.</p>
+          <h5>Crèche du jour (Dog Day Care)</h5>
+          <p>A) La prestation comprend le gardiennage du chien dans les locaux de FOREST RANGERS, son nourrissage et deux promenades en groupe. La nourriture est fournie par le Client.</p>
+          <p>B) Le Client s&#x27;engage à respecter les horaires d&#x27;ouverture afin de ne pas perturber l&#x27;organisation.</p>
+          <p>C) Une journée de test est requise avant l&#x27;acceptation d&#x27;un chien, afin d&#x27;assurer sa compatibilité.</p>
+          <p>D) Aucune réservation ne peut être effectuée sans présentation d&#x27;un carnet médical à jour.</p>
+          <p>E) La récupération et le dépôt de l&#x27;animal ne sont pas compris. Ces services supplémentaires peuvent être facturés sur demande.</p>
+          <p>F) Les demandes spécifiques et services additionnels sont facturés séparément.</p>
+          <p>G) Les locaux sont placés sous surveillance par caméra.</p>
+          <p>H) Toute annulation doit être communiquée au plus tard la veille avant 9h00. Toute annulation effectuée après ce délai est facturée intégralement. L&#x27;article 6.5 s&#x27;applique durant la période estivale.</p>
+          <p>I) Les journées de crèche ont lieu du lundi au vendredi, de 8h00 à 18h00, à l&#x27;exception des jours fériés légaux.</p>
+          <h4>EXEMPLES PRATIQUES</h4>
+          <h5>Facturation de la pension</h5>
+          <p>Une nuitée est facturée pour chaque période de 24 heures durant laquelle FOREST RANGERS a la garde du chien. Tout service commencé est dû dans son intégralité. Exemple : Jean confie son chien Paul à la pension avant sa promenade régulière du mardi matin à 9h00 et souhaite le récupérer à la même heure le mardi suivant. Sept nuitées sont facturées. Si le chien est déposé après sa promenade régulière du mardi matin, la promenade de ce jour est également facturée. Si le chien reste jusqu&#x27;à 18h00 le dernier jour, une journée de crèche du jour est facturée en supplément, et non une nuitée.</p>
+          <h5>Réception de la facture</h5>
+          <p>Exemple : un chien est confié à la pension du 28 janvier au 10 février. Les services fournis du 28 au 31 janvier figurent sur la facture émise le 31 janvier, payable au 14 février. Les services fournis du 1er au 10 février figurent sur la facture émise le 28 février, payable au 14 mars.</p>
+          <h5>Annulation</h5>
+          <p>Promenades et crèche du jour : les plannings sont clôturés la veille à 9h00. Toute annulation reçue après cette heure est intégralement facturée. Pour annuler sans frais une promenade prévue le mardi après-midi, le Client doit informer FOREST RANGERS le lundi avant 9h00, ou reporter la séance à une date ultérieure. Pension : un préavis de 30 jours est requis pour annuler sans frais pour un nouveau client, et de 14 jours pour un client régulier. En cas d&#x27;annulation entre 30 et 14 jours avant le séjour, 50 % du montant total est facturé. Toute annulation effectuée moins de 14 jours avant le début du séjour est facturée intégralement. Ces délais sont calculés à partir de la date de début prévue de la pension. Période estivale : du 1er juin au 31 août, toute annulation est facturée à 100 %, sans exception et quel que soit le service concerné.</p>
+          <h4>DÉFINITIONS</h4>
+          <p>« Contrat » : ensemble constitué des conditions générales et des conditions particulières acceptées par le Client. « FOREST RANGERS » : enseigne commerciale de la société à responsabilité limitée ARCANIN S.à r.l., enregistrée sous le numéro B270245, dont le siège social est situé au 42, rue de Mersch, L-8181 Kopstal. « Client » : personne propriétaire d&#x27;un chien faisant appel aux services de FOREST RANGERS. « Client régulier » : Client dont le compte est ouvert depuis au moins douze (12) mois, bénéficiant de prestations régulières et à jour de ses paiements. « Chien » : chien ou chiens appartenant au Client et faisant l&#x27;objet du contrat de prestation de service. « Promenade » : prestation offrant une sortie récréative avec le chien, d&#x27;une distance minimale de 3 km. « Pension » : prestation comprenant l&#x27;hébergement du chien dans les installations de FOREST RANGERS et les soins quotidiens réguliers, à l&#x27;exclusion des soins vétérinaires. « Crèche » : prestation de garde du chien pour une journée ouvrable dans les locaux de FOREST RANGERS, à l&#x27;exclusion des soins vétérinaires. « Rencontre préalable » : entrevue obligatoire entre FOREST RANGERS, le Client et le chien, préalable à toute prestation, permettant d&#x27;évaluer la compatibilité du chien avec les services proposés. « Secteur opérationnel » : ensemble des localités desservies sans supplément de déplacement, tel que publié sur www.forestrangers.lu.</p>
+          <p>Les présentes conditions générales sont acceptées par voie électronique lors de la création du compte client sur app.forestrangers.lu. Aucune signature manuscrite n&#x27;est requise. FOREST RANGERS — ARCANIN S.à r.l. — 42, rue de Mersch, L-8181 Kopstal — Version octobre 2026</p>
         </div>
 
-        <div class="cg-accept" id="cg-accept-box" onclick="toggleCGAccept()">
+        <a class="btn btn-back" href="cgv/Conditions_Generales_Forest_Rangers_2026-10.pdf" target="_blank" rel="noopener"
+           style="width:100%;justify-content:center;margin-bottom:14px;text-decoration:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Télécharger les conditions générales (PDF)
+        </a>
+
+<div class="cg-accept" id="cg-accept-box" onclick="toggleCGAccept()">
           <div class="cg-checkbox">
             <svg viewBox="0 0 24 24" fill="none" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
@@ -1278,7 +1902,7 @@ function validerPage2() {
     erreurs.push('Numéro de puce (15 chiffres)');
   }
   if (erreurs.length > 0) {
-    alert('Champs obligatoires manquants : ' + erreurs.join(', '));
+    alert(t('Champs obligatoires manquants : ') + erreurs.map(t).join(', '));
     return;
   }
   goPage(3);
@@ -1291,7 +1915,7 @@ function validerPage3() {
   if (!accepted) {
     box.style.borderColor = '#e05a5a';
     box.style.background = 'rgba(224,90,90,0.08)';
-    alert('Vous devez accepter les conditions générales pour continuer.');
+    alert(t('Vous devez accepter les conditions générales pour continuer.'));
     setTimeout(function() {
       box.style.borderColor = '';
       box.style.background = '';
@@ -1335,7 +1959,7 @@ function validerPage1() {
     erreurs.push('Personne autorisée à récupérer le chien');
   }
   if (erreurs.length > 0) {
-    alert('Champs obligatoires manquants : ' + erreurs.join(', '));
+    alert(t('Champs obligatoires manquants : ') + erreurs.map(t).join(', '));
     return;
   }
   goPage(2);
@@ -1389,6 +2013,7 @@ function ajouterChien() {
     + '</div>'
     + '</div>';
   container.appendChild(div);
+  frI18nScan(div);
 }
 
 // ── CONTACT = MÊME PERSONNE QUI RÉCUPÈRE ──
@@ -1478,13 +2103,15 @@ function updateGabaritAlert() {
 let cgAccepted = false;
 
 // ── LANGUE ──
-var currentLang = 'fr';
 function setLang(lang) {
+  if (['fr','en','lu'].indexOf(lang) === -1) lang = 'fr';
   currentLang = lang;
   ['fr','en','lu'].forEach(function(l) {
     var btn = document.getElementById('lang-' + l);
     if (btn) btn.classList.toggle('active', l === lang);
   });
+  appliquerLangue();
+  try { localStorage.setItem('fr-langue', lang); } catch(e) {}
 }
 
 // ── AUTOCOMPLÉTION RACES ──
@@ -1596,7 +2223,7 @@ function searchRaceFor(key, val) {
   var q = val.toLowerCase();
   var results = racesCache.filter(function(r) { return r.nom.toLowerCase().includes(q); });
   if (!results.length) {
-    dropdown.innerHTML = '<div class="race-option" onmousedown="selectRaceFor(\'' + key + '\',\'' + val.replace(/'/g,"\\'") + '\')">Ajouter "' + val + '" <div class="race-cat">Race personnalisée</div></div>';
+    dropdown.innerHTML = '<div class="race-option" onmousedown="selectRaceFor(\'' + key + '\',\'' + val.replace(/'/g,"\\'") + '\')">' + t('Ajouter') + ' "' + val + '" <div class="race-cat">' + t('Race personnalisée') + '</div></div>';
     dropdown.style.display = 'block';
     return;
   }
@@ -1678,24 +2305,24 @@ function renderPreRecap() {
   var race = ((document.getElementById('race-value')||{}).value || v('race')).trim();
   var poids = v('poids-chien');
   var rows = [
-    ['Prénom / Nom', (v('prenom') + ' ' + v('nom')).trim()],
-    ['Email',        v('email')],
-    ['Téléphone',    v('telephone')],
-    ['Commune',      v('commune')],
-    ['Chien',        v('nom-chien')],
-    ['Race',         race],
-    ['Poids',        poids ? poids + ' kg' : ''],
-    ['N° de puce',   v('puce-chien')]
+    [t('Prénom / Nom'), (v('prenom') + ' ' + v('nom')).trim()],
+    [t('Email'),        v('email')],
+    [t('Téléphone'),    v('telephone')],
+    [t('Commune'),      v('commune')],
+    [t('Chien'),        v('nom-chien')],
+    [t('Race'),         race],
+    [t('Poids'),        poids ? poids + ' kg' : ''],
+    [t('N° de puce'),   v('puce-chien')]
   ];
   var html = '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;">'
-    + '<div style="font-weight:600;font-size:13px;margin-bottom:10px;color:var(--accent);">Vérifiez vos informations</div>';
+    + '<div style="font-weight:600;font-size:13px;margin-bottom:10px;color:var(--accent);">' + t('Vérifiez vos informations') + '</div>';
   rows.forEach(function(r) {
     if (!r[1]) return;
     html += '<div style="display:flex;justify-content:space-between;gap:12px;padding:5px 0;font-size:12.5px;border-bottom:1px solid var(--border);">'
       + '<span style="color:var(--text-faint);">' + r[0] + '</span>'
       + '<span style="text-align:right;font-weight:500;">' + escapeHtml(r[1]) + '</span></div>';
   });
-  html += '<div style="font-size:11.5px;color:var(--text-faint);margin-top:10px;">Une erreur ? Revenez en arrière pour corriger avant de créer votre compte.</div></div>';
+  html += '<div style="font-size:11.5px;color:var(--text-faint);margin-top:10px;">' + t('Une erreur ? Revenez en arrière pour corriger avant de créer votre compte.') + '</div></div>';
   el.innerHTML = html;
 }
 
@@ -1716,10 +2343,10 @@ function checkPwd(val) {
   if (/[0-9]/.test(val)) score++;
   if (/[^A-Za-z0-9]/.test(val)) score++;
   var colors = ['#e05a5a','#f0b429','#f0b429','#5ec97a','#5ec97a'];
-  var labels = ['Trop court','Faible','Moyen','Fort','Très fort'];
+  var labels = ['Trop court','Faible','Moyen','Fort','Très fort'].map(t);
   strength.style.background = colors[Math.max(0, score-1)] || 'var(--surface2)';
   strength.style.width = (score * 20) + '%';
-  hint.textContent = val.length === 0 ? 'Saisissez votre mot de passe' : labels[Math.max(0, score-1)];
+  hint.textContent = val.length === 0 ? t('Saisissez votre mot de passe') : labels[Math.max(0, score-1)];
   hint.style.color = colors[Math.max(0, score-1)] || 'var(--text-faint)';
 }
 
@@ -1732,12 +2359,12 @@ function validerMotDePasse() {
   if (cfmEl) cfmEl.style.borderColor = '';
   if (pwd.length < 8) {
     if (pwdEl) pwdEl.style.borderColor = '#e05a5a';
-    alert('Le mot de passe doit contenir au moins 8 caractères.');
+    alert(t('Le mot de passe doit contenir au moins 8 caractères.'));
     return;
   }
   if (pwd !== confirm) {
     if (cfmEl) cfmEl.style.borderColor = '#e05a5a';
-    alert('Les mots de passe ne correspondent pas.');
+    alert(t('Les mots de passe ne correspondent pas.'));
     return;
   }
   sauvegarderInscription(pwd);
@@ -1794,6 +2421,7 @@ function stripDisplayAccents(root) {
 
 document.addEventListener('DOMContentLoaded', function() {
   loadRaces();
+  frI18nScan(document.body);
   stripDisplayAccents();
   verifierInvitation();
 });
@@ -1806,8 +2434,8 @@ document.addEventListener('DOMContentLoaded', function() {
 window._invitationToken = null;
 window._invitationEmail = null;
 
-function frEchapper(t) {
-  return String(t == null ? '' : t).replace(/[&<>"']/g, function(c) {
+function frEchapper(val) {
+  return String(val == null ? '' : val).replace(/[&<>"']/g, function(c) {
     return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
   });
 }
@@ -1820,17 +2448,17 @@ function afficherInvitationInvalide(statut) {
     utilisee:    ['Compte déjà créé', 'Ce lien a déjà servi à créer votre compte. Connectez-vous avec votre email et votre mot de passe.'],
     erreur:      ['Vérification impossible', 'Le lien n\'a pas pu être vérifié. Vérifiez votre connexion puis rechargez la page.']
   };
-  var t = textes[statut] || textes.introuvable;
+  var t2 = textes[statut] || textes.introuvable;
   var bouton = statut === 'utilisee'
-    ? '<a class="btn btn-accent" style="width:100%;margin-top:18px;justify-content:center;text-decoration:none;" href="forestrangers-login.html">Se connecter</a>'
+    ? '<a class="btn btn-accent" style="width:100%;margin-top:18px;justify-content:center;text-decoration:none;" href="forestrangers-login.html">' + t('Se connecter') + '</a>'
     : (statut === 'erreur'
-      ? '<button class="btn btn-accent" style="width:100%;margin-top:18px;" onclick="location.reload()">Réessayer</button>'
-      : '<a class="btn btn-accent" style="width:100%;margin-top:18px;justify-content:center;text-decoration:none;" href="tel:+352661999113">Appeler Gabriel · +352 661 999 113</a>');
+      ? '<button class="btn btn-accent" style="width:100%;margin-top:18px;" onclick="location.reload()">' + t('Réessayer') + '</button>'
+      : '<a class="btn btn-accent" style="width:100%;margin-top:18px;justify-content:center;text-decoration:none;" href="tel:+352661999113">' + t('Appeler Gabriel · +352 661 999 113') + '</a>');
   var cont = document.querySelector('.container');
   if (cont) {
     cont.innerHTML = '<div class="success-screen">'
-      + '<div class="success-title">' + t[0] + '</div>'
-      + '<div class="success-sub" style="line-height:1.6;">' + t[1] + '</div>'
+      + '<div class="success-title">' + t(t2[0]) + '</div>'
+      + '<div class="success-sub" style="line-height:1.6;">' + t(t2[1]) + '</div>'
       + bouton + '</div>';
   }
   var steps = document.querySelector('.steps-wrap');
@@ -1850,6 +2478,8 @@ async function verifierInvitation() {
     if (inv.statut !== 'valide') { afficherInvitationInvalide(inv.statut); return; }
     window._invitationToken = token;
     window._invitationEmail = inv.email;
+    // Langue choisie par Gabriel au moment de creer l'invitation
+    if (inv.langue) setLang(inv.langue);
     var emailEl  = document.getElementById('email');
     var prenomEl = document.getElementById('prenom');
     if (emailEl) { emailEl.value = inv.email; emailEl.readOnly = true; emailEl.style.opacity = '0.7'; }
@@ -1860,6 +2490,7 @@ async function verifierInvitation() {
   }
 }
 
+var CGV_VERSION = '2026-10';   // version du texte affiche ci-dessus
 var _inscriptionEnCours = false;
 
 // Messages lisibles pour les codes renvoyes par fr_inscription_finaliser() et Supabase Auth
@@ -1874,12 +2505,12 @@ function messageErreurInscription(e) {
     'compte_deja_rattache':'Cet email est déjà associé à une autre fiche client. Appelez-nous au +352 661 999 113.',
     'nom_obligatoire':     'Le prénom et le nom sont obligatoires.'
   };
-  for (var k in codes) { if (m.indexOf('FR_INSCRIPTION:' + k) !== -1) return codes[k]; }
-  if (/signups? not allowed|signup is disabled/i.test(m)) return 'Les inscriptions sont momentanément fermées. Appelez-nous au +352 661 999 113.';
-  if (/rate limit/i.test(m)) return 'Trop de tentatives en peu de temps. Patientez quelques minutes puis réessayez.';
-  if (/password/i.test(m)) return 'Mot de passe refusé : ' + m;
-  if (/failed to fetch|network/i.test(m)) return 'Connexion au serveur impossible. Vérifiez votre réseau puis réessayez.';
-  return 'Une erreur est survenue : ' + m;
+  for (var k in codes) { if (m.indexOf('FR_INSCRIPTION:' + k) !== -1) return t(codes[k]); }
+  if (/signups? not allowed|signup is disabled/i.test(m)) return t('Les inscriptions sont momentanément fermées. Appelez-nous au +352 661 999 113.');
+  if (/rate limit/i.test(m)) return t('Trop de tentatives en peu de temps. Patientez quelques minutes puis réessayez.');
+  if (/password/i.test(m)) return t('Mot de passe refusé : ') + m;
+  if (/failed to fetch|network/i.test(m)) return t('Connexion au serveur impossible. Vérifiez votre réseau puis réessayez.');
+  return t('Une erreur est survenue : ') + m;
 }
 
 async function sauvegarderInscription(motDePasse) {
@@ -1887,7 +2518,7 @@ async function sauvegarderInscription(motDePasse) {
   var btnFinal = document.querySelector('#page-3b .btn-accent[onclick*="validerMotDePasse"]');
   var btnTexte = btnFinal ? btnFinal.innerHTML : '';
   _inscriptionEnCours = true;
-  if (btnFinal) { btnFinal.disabled = true; btnFinal.style.opacity = '0.6'; btnFinal.textContent = 'Création du compte…'; }
+  if (btnFinal) { btnFinal.disabled = true; btnFinal.style.opacity = '0.6'; btnFinal.textContent = t('Création du compte…'); }
   try {
     if (!window._invitationToken || !window._invitationEmail) {
       throw new Error('FR_INSCRIPTION:token_absent');
@@ -1905,12 +2536,12 @@ async function sauvegarderInscription(motDePasse) {
     var poids     = (document.getElementById('poids-chien') || {}).value || null;
     var sexe      = (document.getElementById('sexe-chien') || {}).value || null;
     var sterilPill = document.querySelector("[onclick*=\"'steril'\"].selected");
-    var sterilise = sterilPill ? (sterilPill.textContent.trim() === 'Oui') : null;
+    var sterilise = sterilPill ? (frOriginal(sterilPill) === 'Oui') : null;
     var numeroPuce = (((document.getElementById('puce-chien') || {}).value || '').trim().replace(/\s/g, '')) || null;
     var horsZone  = isHorsZone(commune);
 
     if (!prenom || !nom || !email) {
-      alert('Veuillez remplir au minimum le prénom, le nom et l\'email.');
+      alert(t('Veuillez remplir au minimum le prénom, le nom et l\'email.'));
       return;
     }
 
@@ -2001,7 +2632,8 @@ async function sauvegarderInscription(motDePasse) {
         hors_zone: horsZone,
         personnes_autorisees: personnes
       },
-      p_chiens: chiens
+      p_chiens: chiens,
+      p_cgv_version: cgAccepted ? CGV_VERSION : null
     });
     if (fin.error) throw fin.error;
     var nextNum = fin.data && fin.data.numero_client;
@@ -2027,27 +2659,27 @@ async function sauvegarderInscription(motDePasse) {
 
     // Mettre à jour l'écran de succès avec les vraies infos
     var nameEl = document.querySelector('.success-title');
-    if (nameEl) nameEl.textContent = 'Compte créé avec succès !';
+    if (nameEl) nameEl.textContent = t('Compte créé avec succès !');
     var subEl = document.querySelector('.success-sub');
-    if (subEl) subEl.textContent = 'Bienvenue dans la famille Forest Rangers, ' + prenom + ' ! Votre n° client : ' + nextNum;
+    if (subEl) subEl.textContent = t('Bienvenue dans la famille Forest Rangers, ') + prenom + t(' ! Votre n° client : ') + nextNum;
 
     // Récapitulatif réel
     var bandeau = document.querySelector('#page-4 .info-banner');
     if (bandeau && !connecte) {
-      bandeau.lastChild.textContent = compteExistait
-        ? ' Votre fiche est enregistrée. Un compte existait déjà pour cet email : connectez-vous avec le mot de passe choisi lors de votre première tentative, ou utilisez « Mot de passe oublié ».'
-        : ' Votre fiche est enregistrée. Connectez-vous avec votre email et le mot de passe que vous venez de choisir.';
+      bandeau.lastChild.textContent = ' ' + t(compteExistait
+        ? 'Votre fiche est enregistrée. Un compte existait déjà pour cet email : connectez-vous avec le mot de passe choisi lors de votre première tentative, ou utilisez « Mot de passe oublié ».'
+        : 'Votre fiche est enregistrée. Connectez-vous avec votre email et le mot de passe que vous venez de choisir.');
     }
     prenom = frEchapper(prenom); nom = frEchapper(nom); email = frEchapper(email);
     commune = frEchapper(commune); nomChien = frEchapper(nomChien); race = frEchapper(race);
     var recapEl = document.getElementById('recap-inscription');
     if (recapEl) {
       recapEl.innerHTML = '<div style="background:var(--surface2);border-radius:12px;padding:16px;margin-top:16px;font-size:13px;">'
-        + '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-faint);">Client</span><span style="font-weight:600;">' + prenom + ' ' + nom + '</span></div>'
-        + '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-faint);">Email</span><span>' + email + '</span></div>'
-        + '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-faint);">Commune</span><span>' + (commune || '—') + '</span></div>'
-        + (nomChien ? '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-faint);">Chien</span><span>' + nomChien + (race ? ' · ' + race : '') + '</span></div>' : '')
-        + '<div style="display:flex;justify-content:space-between;padding:6px 0;"><span style="color:var(--text-faint);">N° client</span><span style="color:var(--accent);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:15px;font-weight:800;">#' + nextNum + '</span></div>'
+        + '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-faint);">' + t('Client') + '</span><span style="font-weight:600;">' + prenom + ' ' + nom + '</span></div>'
+        + '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-faint);">' + t('Email') + '</span><span>' + email + '</span></div>'
+        + '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-faint);">' + t('Commune') + '</span><span>' + (commune || '—') + '</span></div>'
+        + (nomChien ? '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-faint);">' + t('Chien') + '</span><span>' + nomChien + (race ? ' · ' + race : '') + '</span></div>' : '')
+        + '<div style="display:flex;justify-content:space-between;padding:6px 0;"><span style="color:var(--text-faint);">' + t('N° client') + '</span><span style="color:var(--accent);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:15px;font-weight:800;">#' + nextNum + '</span></div>'
         + '</div>';
     }
 
@@ -2100,7 +2732,10 @@ function selectPill(el, group) {
 // ── ENERGY SLIDER ──
 const labels = ['','Très calme','Calme','Moyen','Énergique','Très énergique'];
 function updateEnergy(val) {
-  document.getElementById('energyLabel').textContent = labels[val];
+  var el = document.getElementById('energyLabel');
+  if (!el) return;
+  el.dataset.fr = labels[val];          // valeur enregistree en base
+  el.textContent = t(labels[val]);      // valeur affichee
 }
 
 // ── LECTURE DU COMPORTEMENT (chien principal) → résumé lisible ──
@@ -2110,14 +2745,15 @@ function readComportementPrincipal() {
   document.querySelectorAll('.behavior-grid .behavior-item').forEach(function(it) {
     var lbl = it.querySelector('.behavior-label');
     var tg = it.querySelector('.toggle');
-    if (lbl && tg && tg.classList.contains('on')) on.push(lbl.textContent.trim());
+    if (lbl && tg && tg.classList.contains('on')) on.push(frOriginal(lbl));
   });
   if (on.length) parts.push(on.join(', '));
   var peurs = ((document.getElementById('peurs-chien') || {}).value || '').trim();
   if (peurs) parts.push('Peurs : ' + peurs);
   var laisse = document.querySelector('[onclick*="\'laisse\'"].selected');
-  if (laisse) parts.push('Marche en laisse : ' + laisse.textContent.trim());
-  var energy = ((document.getElementById('energyLabel') || {}).textContent || '').trim();
+  if (laisse) parts.push('Marche en laisse : ' + frOriginal(laisse));
+  var energyEl = document.getElementById('energyLabel');
+  var energy = energyEl ? (energyEl.dataset.fr || energyEl.textContent || '').trim() : '';
   if (energy) parts.push('Énergie : ' + energy);
   return parts.join(' · ') || null;
 }
@@ -2130,7 +2766,7 @@ function addPerson() {
   div.className = 'person-card';
   div.id = 'person-' + personCount;
   div.innerHTML = `
-    <div class="person-card-title">Personne autorisée ${personCount}</div>
+    <div class="person-card-title">${t('Personne autorisée')} ${personCount}</div>
     <button class="remove-btn" onclick="removePerson(${personCount})">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
@@ -2146,6 +2782,7 @@ function addPerson() {
     </div>
   `;
   document.getElementById('authorized-list').appendChild(div);
+  frI18nScan(div);
 }
 function removePerson(id) {
   document.getElementById('person-' + id).remove();
