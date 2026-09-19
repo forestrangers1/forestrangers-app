@@ -451,6 +451,25 @@ input[type=range]::-webkit-slider-runnable-track {
   margin-bottom: 12px; display: flex; gap: 10px; align-items: flex-start;
 }
 .info-banner svg { width: 16px; height: 16px; color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+.info-banner ul { margin: 6px 0 0; padding-left: 16px; }
+.info-banner li { margin-bottom: 3px; }
+
+/* ── Aide contextuelle repliable (ou trouver le n° de puce...) ── */
+.hint-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 15px; height: 15px; margin-left: 5px; vertical-align: -2px;
+  padding: 0; border: 1px solid var(--accent-mid); border-radius: 50%;
+  background: transparent; color: var(--accent);
+  font-family: inherit; font-size: 10px; font-weight: 700; font-style: italic;
+  line-height: 1; cursor: pointer;
+}
+.hint-btn:hover { background: var(--accent-dim); }
+.field-hint {
+  display: none; margin-top: 6px; padding: 9px 11px;
+  background: var(--accent-dim); border: 1px solid var(--accent-mid);
+  border-radius: 10px; font-size: 11.5px; color: var(--text-dim); line-height: 1.5;
+}
+.field-hint.open { display: block; }
 
 @media (max-width: 500px) {
   .form-row.cols-2, .form-row.cols-3 { grid-template-columns: 1fr; }
@@ -622,6 +641,14 @@ input[type=range]::-webkit-slider-runnable-track {
 "Code / Instructions d'accès": "Code / access instructions",
 "Particularités du domicile": "Notes about the home",
 "Continuer — Fiche chien": "Continue — Dog profile",
+"2e chien": "2nd dog",
+"3e chien": "3rd dog",
+"4e chien": "4th dog",
+"5e chien": "5th dog",
+"6e chien": "6th dog",
+"7e chien": "7th dog",
+"8e chien": "8th dog",
+"Supprimer ce chien": "Remove this dog",
 "Informations générales": "General information",
 "Nom du chien": "Dog's name",
 "Race": "Breed",
@@ -678,6 +705,24 @@ input[type=range]::-webkit-slider-runnable-track {
 "Les informations sur les compatibilités entre chiens seront complétées par Gabriel après votre entretien de bienvenue.": "Gabriel will add notes on how your dog gets on with others after your welcome meeting.",
 "Ajouter un autre chien": "Add another dog",
 "Continuer — Conditions générales": "Continue — Terms and conditions",
+"L'essentiel en bref": "The essentials at a glance",
+"Résumé sans valeur juridique, fourni pour faciliter la lecture. Seul le texte officiel en français ci-dessous fait foi.": "Plain-language summary, provided for convenience. It carries no legal force: only the official French text below applies.",
+"Réservations et annulations": "Bookings and cancellations",
+"Les réservations se font à l'avance selon les disponibilités. Une annulation tardive est facturée, et la prestation est due en entier si le ranger est déjà sur place.": "Bookings are made in advance, subject to availability. Late cancellations are charged, and the full price is due if the ranger has already arrived.",
+"Santé et sécurité du chien": "Your dog's health and safety",
+"Le chien doit être vacciné contre la rage, en bonne santé, couvert par une assurance responsabilité civile et porter une médaille avec un numéro de téléphone à jour.": "Your dog must be vaccinated against rabies, in good health, covered by third-party liability insurance, and wear a tag with an up-to-date phone number.",
+"Accès au domicile": "Access to your home",
+"Vous fournissez un accès permanent et sans attente — clé, code ou autre moyen — ainsi que le matériel de nettoyage du chien (serviettes, lingettes).": "You provide permanent access with no waiting — key, code or another means — as well as what we need to clean your dog (towels, wipes).",
+"Facturation et paiement": "Invoicing and payment",
+"Une facture détaillée est émise le dernier jour du mois pour les prestations réalisées, payable sous 14 jours par virement. TVA 17 % incluse. Envoi postal : +2 €.": "A detailed invoice is issued on the last day of the month for the services provided, payable within 14 days by bank transfer. 17% VAT included. Postal delivery: +€2.",
+"Retard de paiement": "Late payment",
+"Un retard entraîne les intérêts légaux et une indemnité de 25 € par rappel. Sans régularisation sous 30 jours, le contrat peut être résilié.": "Late payment incurs statutory interest and a €25 fee per reminder. If it is not settled within 30 days, the contract may be terminated.",
+"Déplacement hors secteur": "Travel outside the service area",
+"Une adresse située hors du secteur habituel entraîne un supplément de 5 € HTVA par trajet et par adresse.": "An address outside the usual service area incurs a €5 surcharge (excl. VAT) per trip and per address.",
+"Horaires, jours fériés et météo": "Opening hours, public holidays and weather",
+"Du lundi au vendredi, de 8h00 à 18h00, hors jours fériés légaux luxembourgeois. Les promenades ont lieu par tous les temps, avec les adaptations nécessaires à la sécurité des chiens et de l'équipe.": "Monday to Friday, 8:00 to 18:00, except Luxembourg public holidays. Walks take place in all weather, with whatever adjustments keep the dogs and the team safe.",
+"Résiliation": "Termination",
+"Le contrat se résilie par écrit, par lettre recommandée. En cas de décès ou de maladie grave du chien, la résiliation est immédiate et sans préavis.": "The contract is terminated in writing, by registered letter. If your dog dies or falls seriously ill, it ends immediately with no notice period.",
 "Conditions générales d'utilisation": "Terms and conditions",
 "Veuillez lire attentivement les conditions générales ci-dessous avant d'accepter. L'acceptation est obligatoire pour effectuer des réservations.": "Please read the terms below carefully before accepting. Acceptance is required in order to make bookings.",
 "J'ai lu et j'accepte les conditions générales": "I have read and accept the terms and conditions",
@@ -695,7 +740,7 @@ input[type=range]::-webkit-slider-runnable-track {
 "Accéder à mon espace": "Go to my client area",
 "12 rue des Chênes": "12 rue des Chênes",
 "Ex : boîte à clé code 4521, portail gauche...": "E.g. key safe code 4521, left gate...",
-"Ex : chien à attacher dans l'entrée, ne pas laisser entrer le chat...": "E.g. attach the dog in the hallway, don't let the cat out...",
+"Ex : serviettes dans le garage, ne pas laisser entrer le chat...": "E.g. towels are in the garage, don't let the cat in...",
 "Cliquez ou tapez pour rechercher...": "Click or type to search...",
 "Ex : Labrador...": "E.g. Labrador...",
 "Ex : Berger Allemand...": "E.g. German Shepherd...",
@@ -713,6 +758,13 @@ input[type=range]::-webkit-slider-runnable-track {
 "Sélectionner...": "Select...",
 "Champs obligatoires manquants : ": "Missing required fields: ",
 "Numéro de puce (15 chiffres)": "Microchip number (15 digits)",
+"Où trouver ce numéro ?": "Where can I find this number?",
+"Où le trouver ? Dans le passeport européen de votre chien, rubrique III « Marquage de l'animal », point 1 « Code alphanumérique du transpondeur » — 15 chiffres.": "Where to find it? In your dog's EU pet passport, section III \"Marking of animal\", point 1 \"Transponder alphanumeric code\" — 15 digits.",
+"Pourquoi ces informations comptent": "Why these details matter",
+"Prenez le temps de les remplir correctement : elles ne servent pas qu'à nous.": "Take the time to fill them in properly — they are not only useful to us.",
+"En voyage, ou chez un vétérinaire que vous ne connaissez pas, vous retrouvez le nom exact des traitements de votre chien.": "When travelling, or at a vet you don't know, you have the exact name of your dog's medication to hand.",
+"En cas de fugue ou de perte, son numéro de puce et sa photo restent accessibles depuis votre téléphone, à tout moment.": "If your dog runs off or goes missing, its microchip number and photo stay available on your phone, at any time.",
+"En cas d'urgence pendant une promenade, nous savons immédiatement qui appeler et quoi signaler.": "In an emergency during a walk, we know immediately who to call and what to report.",
 "Poids": "Weight",
 "Email": "Email",
 "Contact d'urgence — nom": "Emergency contact — name",
@@ -774,13 +826,13 @@ input[type=range]::-webkit-slider-runnable-track {
 "Bienvenue chez": "Wëllkomm bei",
 "Suite à notre rencontre, complétez votre fiche personnelle et la fiche de votre chien pour activer votre compte. Cela prend environ 5 minutes.": "No eiser Begéinung fëllt w.e.g. Är perséinlech Donnéeën an d'Fiche vun Ärem Hond aus, fir Äre Kont z'aktivéieren. Dat dauert ongeféier 5 Minutten.",
 "Langue": "Sprooch",
-"Fiche client": "Client-Fiche",
-"Fiche chien": "Hond-Fiche",
+"Fiche client": "Informatiounen iwwer de Client",
+"Fiche chien": "Informatiounen iwwer den Hond",
 "Conditions": "Konditiounen",
 "Mot de passe": "Passwuert",
 "Votre langue": "Är Sprooch",
 "Choisissez la langue de vos emails (confirmations, factures) et, à terme, celle de l'application. Pour l'instant, seul le français est disponible — d'autres langues arriveront bientôt.": "Wielt d'Sprooch vun Ären E-Maile (Bestätegungen, Rechnungen) an, mat der Zäit, och déi vun der App. Dëse Formulaire gëtt et op Franséisch, Englesch a Lëtzebuergesch; de Client-Beräich ass nach op Franséisch.",
-"Continuer — Fiche client": "Weider — Client-Fiche",
+"Continuer — Fiche client": "Weider — Informatiounen iwwer de Client",
 "Informations personnelles": "Perséinlech Informatiounen",
 "Prénom": "Virnumm",
 "Nom": "Numm",
@@ -804,7 +856,15 @@ input[type=range]::-webkit-slider-runnable-track {
 "Précisez le code ci-dessous si nécessaire": "Gitt de Code hei ënnen un, wann néideg",
 "Code / Instructions d'accès": "Code / Zougangsinstruktiounen",
 "Particularités du domicile": "Besonderheete vun der Wunneng",
-"Continuer — Fiche chien": "Weider — Hond-Fiche",
+"Continuer — Fiche chien": "Weider — Informatiounen iwwer den Hond",
+"2e chien": "2ten Hond",
+"3e chien": "3ten Hond",
+"4e chien": "4ten Hond",
+"5e chien": "5ten Hond",
+"6e chien": "6ten Hond",
+"7e chien": "7ten Hond",
+"8e chien": "8ten Hond",
+"Supprimer ce chien": "Dësen Hond ewechhuelen",
 "Informations générales": "Allgemeng Informatiounen",
 "Nom du chien": "Numm vum Hond",
 "Race": "Rass",
@@ -818,9 +878,9 @@ input[type=range]::-webkit-slider-runnable-track {
 "Femelle": "Weiblech",
 "Date de naissance": "Gebuertsdatum",
 "Poids (kg)": "Gewiicht (kg)",
-"Votre chien est dans la catégorie grand gabarit. La disponibilité dépend de la capacité de la camionnette.": "Ären Hond zielt als grousse Hond. D'Disponibilitéit hänkt vum Plaz am Camionnette of.",
-"Stérilisé(e)": "Stereliséiert",
-"Stérilisé": "Stereliséiert",
+"Votre chien est dans la catégorie grand gabarit. La disponibilité dépend de la capacité de la camionnette.": "Ären Hond gehéiert zum grousse Kaliber. D'Disponibilitéit hänkt vum Plaz an der Camionnette of.",
+"Stérilisé(e)": "Steriliséiert",
+"Stérilisé": "Steriliséiert",
 "Oui": "Jo",
 "Non": "Nee",
 "Numéro de puce": "Chipnummer",
@@ -861,6 +921,24 @@ input[type=range]::-webkit-slider-runnable-track {
 "Les informations sur les compatibilités entre chiens seront complétées par Gabriel après votre entretien de bienvenue.": "De Gabriel fëllt no Ärem Wëllkomm-Gespréich aus, wéi Ären Hond sech mat anere versteet.",
 "Ajouter un autre chien": "Nach en Hond derbäisetzen",
 "Continuer — Conditions générales": "Weider — Allgemeng Konditiounen",
+"L'essentiel en bref": "D'Wichtegst op ee Bléck",
+"Résumé sans valeur juridique, fourni pour faciliter la lecture. Seul le texte officiel en français ci-dessous fait foi.": "Zesummefaassung fir d'Liese méi einfach ze maachen, ouni juristesche Wäert. Nëmmen den offizielle franséischen Text hei ënnen zielt.",
+"Réservations et annulations": "Reservatiounen an Annulatiounen",
+"Les réservations se font à l'avance selon les disponibilités. Une annulation tardive est facturée, et la prestation est due en entier si le ranger est déjà sur place.": "Reservatioune gi virdru gemaach, jee no Disponibilitéit. Eng ze spéit Annulatioun gëtt verrechent, an d'Prestatioun gëtt ganz verrechent, wann de Ranger scho virun der Dier steet.",
+"Santé et sécurité du chien": "Gesondheet a Sécherheet vum Hond",
+"Le chien doit être vacciné contre la rage, en bonne santé, couvert par une assurance responsabilité civile et porter une médaille avec un numéro de téléphone à jour.": "Den Hond muss géint d'Tollwut geimpft sinn, gesond sinn, eng Haftpflichtversécherung hunn an eng Medail mat enger aktueller Telefonsnummer droen.",
+"Accès au domicile": "Zougang zur Wunneng",
+"Vous fournissez un accès permanent et sans attente — clé, code ou autre moyen — ainsi que le matériel de nettoyage du chien (serviettes, lingettes).": "Dir gitt en dauerhaften Zougang ouni Waardezäit — Schlëssel, Code oder eppes anescht — an d'Material fir den Hond propper ze maachen (Handdicher, Läppercher).",
+"Facturation et paiement": "Rechnung a Bezuelung",
+"Une facture détaillée est émise le dernier jour du mois pour les prestations réalisées, payable sous 14 jours par virement. TVA 17 % incluse. Envoi postal : +2 €.": "Eng detailléiert Rechnung gëtt de leschten Dag vum Mount fir déi geleeschte Prestatiounen ausgestallt, bannent 14 Deeg per Iwwerweisung ze bezuelen. 17 % TVA abegraff. Per Post: +2 €.",
+"Retard de paiement": "Bei Verspéidung vun der Rechnung",
+"Un retard entraîne les intérêts légaux et une indemnité de 25 € par rappel. Sans régularisation sous 30 jours, le contrat peut être résilié.": "Bei Verzuch kommen déi gesetzlech Zënsen an eng Pauschal vu 25 € pro Rappel dobäi. Ass no 30 Deeg näischt bezuelt, kann de Kontrakt opgeléist ginn.",
+"Déplacement hors secteur": "Ausserhalb vun eisem Secteur",
+"Une adresse située hors du secteur habituel entraîne un supplément de 5 € HTVA par trajet et par adresse.": "Eng Adress ausserhalb vum gewéinleche Secteur kascht e Supplement vu 5 € HTVA pro Trajet a pro Adress.",
+"Horaires, jours fériés et météo": "Ouverturen, Feierdeeg a Wieder",
+"Du lundi au vendredi, de 8h00 à 18h00, hors jours fériés légaux luxembourgeois. Les promenades ont lieu par tous les temps, avec les adaptations nécessaires à la sécurité des chiens et de l'équipe.": "Méindes bis freides vun 8.00 bis 18.00 Auer, ausser u gesetzleche Feierdeeg zu Lëtzebuerg. Gaang gëtt bei all Wieder, mat den néidegen Upassunge fir d'Sécherheet vun den Hënn an dem Team.",
+"Résiliation": "Kënnegung",
+"Le contrat se résilie par écrit, par lettre recommandée. En cas de décès ou de maladie grave du chien, la résiliation est immédiate et sans préavis.": "De Kontrakt gëtt schrëftlech per Recommandé opgeléist. Stierft den Hond oder gëtt e schwéier krank, ass d'Kënnegung direkt an ouni Delai.",
 "Conditions générales d'utilisation": "Allgemeng Konditiounen",
 "Veuillez lire attentivement les conditions générales ci-dessous avant d'accepter. L'acceptation est obligatoire pour effectuer des réservations.": "Liest w.e.g. déi Konditiounen hei ënnen opmierksam duerch, ier Dir se acceptéiert. D'Akzeptanz ass néideg fir Reservatiounen ze maachen.",
 "J'ai lu et j'accepte les conditions générales": "Ech hunn d'Konditioune gelies an acceptéieren se",
@@ -878,7 +956,7 @@ input[type=range]::-webkit-slider-runnable-track {
 "Accéder à mon espace": "An mäi Client-Beräich",
 "12 rue des Chênes": "12 rue des Chênes",
 "Ex : boîte à clé code 4521, portail gauche...": "Z. B. Schlësselkëscht Code 4521, lénkst Paart...",
-"Ex : chien à attacher dans l'entrée, ne pas laisser entrer le chat...": "Z. B. Hond am Gank uhänken, d'Kaz net eraloossen...",
+"Ex : serviettes dans le garage, ne pas laisser entrer le chat...": "Z. B. Handdicher sinn an der Garage, d'Kaz net eraloossen...",
 "Cliquez ou tapez pour rechercher...": "Klickt oder tippt fir ze sichen...",
 "Ex : Labrador...": "Z. B. Labrador...",
 "Ex : Berger Allemand...": "Z. B. Schäferhond...",
@@ -896,6 +974,13 @@ input[type=range]::-webkit-slider-runnable-track {
 "Sélectionner...": "Auswielen...",
 "Champs obligatoires manquants : ": "Et feelen obligatoresch Felder: ",
 "Numéro de puce (15 chiffres)": "Chipnummer (15 Zifferen)",
+"Où trouver ce numéro ?": "Wou fannen ech dës Nummer?",
+"Où le trouver ? Dans le passeport européen de votre chien, rubrique III « Marquage de l'animal », point 1 « Code alphanumérique du transpondeur » — 15 chiffres.": "Wou fannen ech en? Am europäesche Pass vun Ärem Hond, Rubrik III « Beschreibung des Tieres », Punkt 1 « Alphanumerischer Transponder-Code » — 15 Zifferen.",
+"Pourquoi ces informations comptent": "Firwat dës Informatioune wichteg sinn",
+"Prenez le temps de les remplir correctement : elles ne servent pas qu'à nous.": "Huelt Iech d'Zäit fir se richteg auszefëllen — si notzen net nëmmen eis.",
+"En voyage, ou chez un vétérinaire que vous ne connaissez pas, vous retrouvez le nom exact des traitements de votre chien.": "Op der Rees, oder bei engem Veterinär deen Dir net kennt, hutt Dir den exakten Numm vun de Medikamenter vun Ärem Hond bei der Hand.",
+"En cas de fugue ou de perte, son numéro de puce et sa photo restent accessibles depuis votre téléphone, à tout moment.": "Wann Ären Hond fortleeft oder verluer geet, bleiwen seng Chipnummer a säi Foto zu all Moment op Ärem Handy accessibel.",
+"En cas d'urgence pendant une promenade, nous savons immédiatement qui appeler et quoi signaler.": "Am Noutfall während enger Promenade wësse mir direkt wie mir uruffe mussen a wat mir mellen.",
 "Poids": "Gewiicht",
 "Email": "E-Mail",
 "Contact d'urgence — nom": "Noutfallkontakt — Numm",
@@ -1052,11 +1137,11 @@ input[type=range]::-webkit-slider-runnable-track {
     </div>
     <div class="step-item" id="step-2">
       <div class="step-num">2</div>
-      <div class="step-label">Fiche client</div>
+      <div class="step-label">Client</div>
     </div>
     <div class="step-item" id="step-3">
       <div class="step-num">3</div>
-      <div class="step-label">Fiche chien</div>
+      <div class="step-label">Chien</div>
     </div>
     <div class="step-item" id="step-4">
       <div class="step-num">4</div>
@@ -1255,7 +1340,7 @@ input[type=range]::-webkit-slider-runnable-track {
         <div class="form-row solo">
           <div class="field">
             <label class="field-label">Particularités du domicile</label>
-            <textarea class="field-input" placeholder="Ex : chien à attacher dans l'entrée, ne pas laisser entrer le chat..."></textarea>
+            <textarea class="field-input" placeholder="Ex : serviettes dans le garage, ne pas laisser entrer le chat..."></textarea>
           </div>
         </div>
       </div>
@@ -1277,11 +1362,25 @@ input[type=range]::-webkit-slider-runnable-track {
   ══════════════════════════════════════ -->
   <div class="page-section" id="page-2">
 
+    <!-- Encart : a quoi servent ces informations (rassurance client) -->
+    <div class="info-banner" style="margin-bottom:16px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4.5 8-11V5l-8-3-8 3v6c0 6.5 8 11 8 11z"/></svg>
+      <div>
+        <strong style="color:var(--text);">Pourquoi ces informations comptent</strong>
+        <div style="margin-top:3px;">Prenez le temps de les remplir correctement : elles ne servent pas qu'à nous.</div>
+        <ul>
+          <li>En voyage, ou chez un vétérinaire que vous ne connaissez pas, vous retrouvez le nom exact des traitements de votre chien.</li>
+          <li>En cas de fugue ou de perte, son numéro de puce et sa photo restent accessibles depuis votre téléphone, à tout moment.</li>
+          <li>En cas d'urgence pendant une promenade, nous savons immédiatement qui appeler et quoi signaler.</li>
+        </ul>
+      </div>
+    </div>
+
     <!-- Informations générales -->
     <div class="form-section">
       <div class="form-section-head">
         <div class="form-section-icon">
-          <svg viewBox="0 0 24 24" stroke-width="2"><path d="M10 5.172C10 3.782 8.423 2.679 6.5 3c-2 .336-3.5 2.332-3.5 4.327 0 .644.198 1.885.5 2.669L10 21v-3.164"/><path d="M14 5.172C14 3.782 15.577 2.679 17.5 3c2 .336 3.5 2.332 3.5 4.327 0 .644-.198 1.885-.5 2.669L14 21v-3.164"/></svg>
+          <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="6.3" cy="9.8" rx="1.7" ry="2.2" transform="rotate(-22 6.3 9.8)"/><ellipse cx="10.3" cy="7.1" rx="1.7" ry="2.4" transform="rotate(-8 10.3 7.1)"/><ellipse cx="14.4" cy="7.1" rx="1.7" ry="2.4" transform="rotate(8 14.4 7.1)"/><ellipse cx="18.4" cy="9.8" rx="1.7" ry="2.2" transform="rotate(22 18.4 9.8)"/><path d="M12.3 11.9C15.3 11.9 18 14.1 18 16.6C18 18.6 16.3 20 14.2 19.6C13.4 19.5 12.9 19.3 12.3 19.3C11.7 19.3 11.2 19.5 10.4 19.6C8.3 20 6.6 18.6 6.6 16.6C6.6 14.1 9.3 11.9 12.3 11.9Z"/></svg>
         </div>
         <div class="form-section-title">Informations générales</div>
       </div>
@@ -1338,7 +1437,7 @@ input[type=range]::-webkit-slider-runnable-track {
           </div>
           <div class="field">
             <label class="field-label">Date de naissance</label>
-            <input class="field-input" type="date">
+            <input class="field-input" type="date" id="naissance-chien">
           </div>
           <div class="field">
             <label class="field-label">Poids (kg) <span class="req">*</span></label>
@@ -1358,8 +1457,9 @@ input[type=range]::-webkit-slider-runnable-track {
             </div>
           </div>
           <div class="field">
-            <label class="field-label">Numéro de puce <span class="req">*</span></label>
-            <input class="field-input" id="puce-chien" type="text" placeholder="276098100000000">
+            <label class="field-label">Numéro de puce <span class="req">*</span><button type="button" class="hint-btn" onclick="toggleHint(this)" aria-expanded="false" title="Où trouver ce numéro ?" aria-label="Où trouver ce numéro ?">i</button></label>
+            <input class="field-input" id="puce-chien" type="text" inputmode="numeric" maxlength="15" placeholder="276098100000000">
+            <div class="field-hint">Où le trouver ? Dans le passeport européen de votre chien, rubrique III « Marquage de l'animal », point 1 « Code alphanumérique du transpondeur » — 15 chiffres.</div>
           </div>
         </div>
       </div>
@@ -1555,6 +1655,21 @@ input[type=range]::-webkit-slider-runnable-track {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           Veuillez lire attentivement les conditions générales ci-dessous avant d'accepter. L'acceptation est obligatoire pour effectuer des réservations.
           <br><span style="font-size:12px;color:var(--text-faint);">Version octobre 2026 — texte officiel, disponible en français uniquement. La date et l'heure de votre acceptation sont enregistrées.</span>
+        </div>
+
+        <!-- Résumé traduit, affiché dans la langue choisie. Le texte officiel
+             ci-dessous reste en français (data-i18n-off) : lui seul fait foi. -->
+        <div style="border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:14px;background:var(--surface2);">
+          <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent);margin-bottom:8px;">L'essentiel en bref</div>
+          <div style="display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);"><div style="flex:0 0 33%;font-weight:700;font-size:12.5px;color:var(--text);">Réservations et annulations</div><div style="flex:1;font-size:12.5px;color:var(--text-dim);line-height:1.55;">Les réservations se font à l'avance selon les disponibilités. Une annulation tardive est facturée, et la prestation est due en entier si le ranger est déjà sur place.</div></div>
+          <div style="display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);"><div style="flex:0 0 33%;font-weight:700;font-size:12.5px;color:var(--text);">Santé et sécurité du chien</div><div style="flex:1;font-size:12.5px;color:var(--text-dim);line-height:1.55;">Le chien doit être vacciné contre la rage, en bonne santé, couvert par une assurance responsabilité civile et porter une médaille avec un numéro de téléphone à jour.</div></div>
+          <div style="display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);"><div style="flex:0 0 33%;font-weight:700;font-size:12.5px;color:var(--text);">Accès au domicile</div><div style="flex:1;font-size:12.5px;color:var(--text-dim);line-height:1.55;">Vous fournissez un accès permanent et sans attente — clé, code ou autre moyen — ainsi que le matériel de nettoyage du chien (serviettes, lingettes).</div></div>
+          <div style="display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);"><div style="flex:0 0 33%;font-weight:700;font-size:12.5px;color:var(--text);">Facturation et paiement</div><div style="flex:1;font-size:12.5px;color:var(--text-dim);line-height:1.55;">Une facture détaillée est émise le dernier jour du mois pour les prestations réalisées, payable sous 14 jours par virement. TVA 17 % incluse. Envoi postal : +2 €.</div></div>
+          <div style="display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);"><div style="flex:0 0 33%;font-weight:700;font-size:12.5px;color:var(--text);">Retard de paiement</div><div style="flex:1;font-size:12.5px;color:var(--text-dim);line-height:1.55;">Un retard entraîne les intérêts légaux et une indemnité de 25 € par rappel. Sans régularisation sous 30 jours, le contrat peut être résilié.</div></div>
+          <div style="display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);"><div style="flex:0 0 33%;font-weight:700;font-size:12.5px;color:var(--text);">Déplacement hors secteur</div><div style="flex:1;font-size:12.5px;color:var(--text-dim);line-height:1.55;">Une adresse située hors du secteur habituel entraîne un supplément de 5 € HTVA par trajet et par adresse.</div></div>
+          <div style="display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);"><div style="flex:0 0 33%;font-weight:700;font-size:12.5px;color:var(--text);">Horaires, jours fériés et météo</div><div style="flex:1;font-size:12.5px;color:var(--text-dim);line-height:1.55;">Du lundi au vendredi, de 8h00 à 18h00, hors jours fériés légaux luxembourgeois. Les promenades ont lieu par tous les temps, avec les adaptations nécessaires à la sécurité des chiens et de l'équipe.</div></div>
+          <div style="display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);"><div style="flex:0 0 33%;font-weight:700;font-size:12.5px;color:var(--text);">Résiliation</div><div style="flex:1;font-size:12.5px;color:var(--text-dim);line-height:1.55;">Le contrat se résilie par écrit, par lettre recommandée. En cas de décès ou de maladie grave du chien, la résiliation est immédiate et sans préavis.</div></div>
+          <div style="font-size:11.5px;color:var(--text-faint);margin-top:10px;line-height:1.5;">Résumé sans valeur juridique, fourni pour faciliter la lecture. Seul le texte officiel en français ci-dessous fait foi.</div>
         </div>
 
         <div class="cg-box" id="cg-box" data-i18n-off lang="fr">
@@ -1901,6 +2016,32 @@ function validerPage2() {
     if (puce) puce.style.borderColor = '#e05a5a';
     erreurs.push('Numéro de puce (15 chiffres)');
   }
+  // Chiens supplementaires : controles seulement si le chien a un nom.
+  var cartes = document.querySelectorAll('#chiens-supps-container .chien-supplementaire');
+  for (var i = 0; i < cartes.length; i++) {
+    var c    = cartes[i];
+    var pref = libelleChien(i + 2) + ' — ';
+    var eNom   = c.querySelector('.chien-nom');
+    var eRace  = c.querySelector('.race-autocomplete input');
+    var ePoids = c.querySelector('.chien-poids');
+    var ePuce  = c.querySelector('.chien-puce');
+    [eNom, eRace, ePoids, ePuce].forEach(function(e) { if (e) e.style.borderColor = ''; });
+    if (!eNom || !eNom.value.trim()) continue;   // carte vide : ignoree
+    if (!eRace || !eRace.value.trim()) {
+      if (eRace) eRace.style.borderColor = '#e05a5a';
+      erreurs.push(pref + t('Race'));
+    }
+    if (!ePoids || !ePoids.value) {
+      if (ePoids) ePoids.style.borderColor = '#e05a5a';
+      erreurs.push(pref + t('Poids'));
+    }
+    var pv = ePuce ? ePuce.value.trim().replace(/\s/g, '') : '';
+    if (!pv || !/^\d{15}$/.test(pv)) {
+      if (ePuce) ePuce.style.borderColor = '#e05a5a';
+      erreurs.push(pref + t('Numéro de puce (15 chiffres)'));
+    }
+  }
+
   if (erreurs.length > 0) {
     alert(t('Champs obligatoires manquants : ') + erreurs.map(t).join(', '));
     return;
@@ -1987,33 +2128,234 @@ function toggleAuthMemePerson(cb) {
     if (addBtn) addBtn.style.display = '';
   }
 }
-var nbChiensSupp = 0;
+var nbChiensSupp   = 0;
+var chiensSuppEtat = {};   // idx -> { raceMode, raceGrand, poidsGrand }
+
+// Icone patte (identique au reste de l'app)
+var SVG_PATTE = '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+  + '<ellipse cx="6.3" cy="9.8" rx="1.7" ry="2.2" transform="rotate(-22 6.3 9.8)"/>'
+  + '<ellipse cx="10.3" cy="7.1" rx="1.7" ry="2.4" transform="rotate(-8 10.3 7.1)"/>'
+  + '<ellipse cx="14.4" cy="7.1" rx="1.7" ry="2.4" transform="rotate(8 14.4 7.1)"/>'
+  + '<ellipse cx="18.4" cy="9.8" rx="1.7" ry="2.2" transform="rotate(22 18.4 9.8)"/>'
+  + '<path d="M12.3 11.9C15.3 11.9 18 14.1 18 16.6C18 18.6 16.3 20 14.2 19.6C13.4 19.5 12.9 19.3 12.3 19.3'
+  + 'C11.7 19.3 11.2 19.5 10.4 19.6C8.3 20 6.6 18.6 6.6 16.6C6.6 14.1 9.3 11.9 12.3 11.9Z"/></svg>';
+
+// Libelle francais du Nieme chien (num >= 2). Traduit via le dictionnaire.
+function libelleChien(num) { return num + 'e chien'; }
+
+// Fermeture differee d'une liste deroulante de races (sans arrow function
+// dans un attribut genere, pour rester lisible dans le HTML inline).
+function fermerRaceDropdown(id) {
+  setTimeout(function() {
+    var e = document.getElementById(id);
+    if (e) e.style.display = 'none';
+  }, 200);
+}
+
+// Carte « chien supplementaire » : strictement la meme structure que la
+// fiche du 1er chien (autocomplete race + croise/autre, date de naissance,
+// alerte grand gabarit, pastilles Oui/Non pour la sterilisation).
 function ajouterChien() {
   nbChiensSupp++;
-  var container = document.getElementById('chiens-supps-container');
+  var n   = nbChiensSupp;
+  var num = n + 1;
+  var pre = 'race-d' + n;
+
+  chiensSuppEtat[n] = { raceMode: 'normal', raceGrand: false, poidsGrand: false };
+  RACE_FIELDS['d' + n]        = { input: pre,           dropdown: pre + '-dropdown',      hidden: pre + '-value' };
+  RACE_FIELDS['d' + n + 'm1'] = { input: pre + '-mix1', dropdown: pre + '-mix1-dropdown', hidden: pre + '-mix1-value' };
+  RACE_FIELDS['d' + n + 'm2'] = { input: pre + '-mix2', dropdown: pre + '-mix2-dropdown', hidden: pre + '-mix2-value' };
+
+  function autocomplete(key, id, placeholder, cls) {
+    return '<div class="race-autocomplete">'
+      + '<input class="field-input' + (cls ? ' ' + cls : '') + '" type="text" id="' + id + '" autocomplete="off"'
+      + ' placeholder="' + placeholder + '"'
+      + ' oninput="searchRaceFor(\'' + key + '\',this.value);updateRaceCompositeSupp(' + n + ')"'
+      + ' onfocus="openRaceListFor(\'' + key + '\')"'
+      + ' onblur="fermerRaceDropdown(\'' + id + '-dropdown\')">'
+      + '<div id="' + id + '-dropdown" class="race-dropdown" style="display:none;"></div>'
+      + '</div>';
+  }
+
   var div = document.createElement('div');
   div.className = 'form-section chien-supplementaire';
-  div.id = 'chien-supp-' + nbChiensSupp;
-  div.innerHTML = '<div class="form-section-head" style="display:flex;justify-content:space-between;align-items:center;">'
-    + '<div style="display:flex;align-items:center;gap:10px;"><div class="form-section-icon"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M10 5.172C10 3.782 8.423 2.679 6.5 3c-2 .336-3.5 2.332-3.5 4.327 0 .644.198 1.885.5 2.669L10 21v-3.164"/></svg></div><div class="form-section-title">Chien ' + (nbChiensSupp + 1) + '</div></div>'
-    + '<button onclick="document.getElementById(\'chien-supp-' + nbChiensSupp + '\').remove()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:18px;">✕</button>'
+  div.id = 'chien-supp-' + n;
+  div.setAttribute('data-idx', n);
+  div.innerHTML =
+      '<div class="form-section-head" style="display:flex;justify-content:space-between;align-items:center;">'
+    +   '<div style="display:flex;align-items:center;gap:10px;">'
+    +     '<div class="form-section-icon">' + SVG_PATTE + '</div>'
+    +     '<div class="form-section-title">' + libelleChien(num) + '</div>'
+    +   '</div>'
+    +   '<button type="button" onclick="supprimerChien(' + n + ')" title="Supprimer ce chien"'
+    +     ' style="background:none;border:none;color:var(--red);cursor:pointer;font-size:18px;line-height:1;padding:0 2px;">&#10005;</button>'
     + '</div>'
     + '<div class="form-section-body">'
-    + '<div class="form-row cols-2">'
-    + '<div class="field"><label class="field-label">Nom du chien</label><input class="field-input chien-nom" type="text" placeholder="Luna"></div>'
-    + '<div class="field"><label class="field-label">Race</label><input class="field-input chien-race" type="text" placeholder="Labrador, Race mixte..."></div>'
-    + '</div>'
-    + '<div class="form-row cols-2">'
-    + '<div class="field"><label class="field-label">Poids (kg)</label><input class="field-input chien-poids" type="number" placeholder="25" min="1" max="120"></div>'
-    + '<div class="field"><label class="field-label">Sexe</label><select class="field-input chien-sexe"><option value="">Sélectionner...</option><option value="male">Mâle</option><option value="femelle">Femelle</option></select></div>'
-    + '</div>'
-    + '<div class="form-row cols-2">'
-    + '<div class="field"><label class="field-label">Stérilisé</label><select class="field-input chien-steril"><option value="">Sélectionner...</option><option value="true">Oui</option><option value="false">Non</option></select></div>'
-    + '<div class="field"><label class="field-label">N° de puce</label><input class="field-input chien-puce" type="text" inputmode="numeric" maxlength="15" placeholder="15 chiffres"></div>'
-    + '</div>'
+
+    // Nom + race
+    +   '<div class="form-row cols-2">'
+    +     '<div class="field">'
+    +       '<label class="field-label">Nom du chien <span class="req">*</span></label>'
+    +       '<input class="field-input chien-nom" type="text" placeholder="Luna">'
+    +     '</div>'
+    +     '<div class="field">'
+    +       '<label class="field-label">Race <span class="req">*</span></label>'
+    +       autocomplete('d' + n, pre, 'Cliquez ou tapez pour rechercher...')
+    +       '<input type="hidden" class="chien-race" id="' + pre + '-value">'
+    +     '</div>'
+    +   '</div>'
+
+    // Sous-champs croise
+    +   '<div id="' + pre + '-mix" style="display:none;">'
+    +     '<div class="form-row cols-2">'
+    +       '<div class="field">'
+    +         '<label class="field-label" style="font-size:11px;">1re race</label>'
+    +         autocomplete('d' + n + 'm1', pre + '-mix1', 'Ex : Labrador...')
+    +         '<input type="hidden" id="' + pre + '-mix1-value">'
+    +       '</div>'
+    +       '<div class="field">'
+    +         '<label class="field-label" style="font-size:11px;">2e race <span style="color:var(--text-faint);font-weight:400;">(facultatif)</span></label>'
+    +         autocomplete('d' + n + 'm2', pre + '-mix2', 'Ex : Berger Allemand...')
+    +         '<input type="hidden" id="' + pre + '-mix2-value">'
+    +       '</div>'
+    +     '</div>'
+    +     '<div style="font-size:11px;color:var(--text-faint);margin-top:-4px;">Choisissez dans la liste ou saisissez librement. La 2e race est facultative.</div>'
+    +   '</div>'
+
+    // Champ libre « Autre »
+    +   '<div id="' + pre + '-autre" class="field" style="display:none;">'
+    +     '<label class="field-label" style="font-size:11px;">Précisez la race</label>'
+    +     '<input class="field-input" type="text" id="' + pre + '-autre-input" placeholder="Saisissez la race du chien..." oninput="updateRaceCompositeSupp(' + n + ')">'
+    +   '</div>'
+
+    // Sexe / naissance / poids
+    +   '<div class="form-row cols-3">'
+    +     '<div class="field">'
+    +       '<label class="field-label">Sexe <span class="req">*</span></label>'
+    +       '<select class="field-input chien-sexe"><option value="">...</option><option value="male">Mâle</option><option value="femelle">Femelle</option></select>'
+    +     '</div>'
+    +     '<div class="field">'
+    +       '<label class="field-label">Date de naissance</label>'
+    +       '<input class="field-input chien-naissance" type="date">'
+    +     '</div>'
+    +     '<div class="field">'
+    +       '<label class="field-label">Poids (kg) <span class="req">*</span></label>'
+    +       '<input class="field-input chien-poids" type="number" placeholder="28" min="1" max="120" oninput="checkWeightSupp(' + n + ',this.value)">'
+    +     '</div>'
+    +   '</div>'
+
+    // Alerte grand gabarit
+    +   '<div id="weight-alert-d' + n + '" style="display:none;" class="info-banner">'
+    +     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+    +     'Votre chien est dans la catégorie grand gabarit. La disponibilité dépend de la capacité de la camionnette.'
+    +   '</div>'
+
+    // Sterilisation + puce
+    +   '<div class="form-row cols-2">'
+    +     '<div class="field">'
+    +       '<label class="field-label">Stérilisé(e) <span class="req">*</span></label>'
+    +       '<div class="radio-pills" style="margin-top:4px;">'
+    +         '<div class="radio-pill selected" onclick="selectPillChien(this,\'true\')">Oui</div>'
+    +         '<div class="radio-pill" onclick="selectPillChien(this,\'false\')">Non</div>'
+    +       '</div>'
+    +       '<input type="hidden" class="chien-steril" value="true">'
+    +     '</div>'
+    +     '<div class="field">'
+    +       '<label class="field-label">Numéro de puce <span class="req">*</span><button type="button" class="hint-btn" onclick="toggleHint(this)" aria-expanded="false" title="Où trouver ce numéro ?" aria-label="Où trouver ce numéro ?">i</button></label>'
+    +       '<input class="field-input chien-puce" type="text" inputmode="numeric" maxlength="15" placeholder="276098100000000">'
+    +       '<div class="field-hint">Où le trouver ? Dans le passeport européen de votre chien, rubrique III « Marquage de l\'animal », point 1 « Code alphanumérique du transpondeur » — 15 chiffres.</div>'
+    +     '</div>'
+    +   '</div>'
     + '</div>';
-  container.appendChild(div);
+
+  document.getElementById('chiens-supps-container').appendChild(div);
   frI18nScan(div);
+}
+
+function supprimerChien(n) {
+  var el = document.getElementById('chien-supp-' + n);
+  if (el) el.remove();
+  delete chiensSuppEtat[n];
+  delete RACE_FIELDS['d' + n];
+  delete RACE_FIELDS['d' + n + 'm1'];
+  delete RACE_FIELDS['d' + n + 'm2'];
+  renumeroterChiens();
+}
+
+// Apres suppression, les titres restants sont renumerotes (2e, 3e...) sans
+// casser l'enregistrement i18n du noeud texte.
+function renumeroterChiens() {
+  var cartes = document.querySelectorAll('#chiens-supps-container .chien-supplementaire');
+  for (var i = 0; i < cartes.length; i++) {
+    var titre = cartes[i].querySelector('.form-section-title');
+    if (!titre) continue;
+    var node = titre.firstChild;
+    if (!node || node.nodeType !== 3) continue;
+    var fr = libelleChien(i + 2);
+    if (node._i18n) node._i18n.fr = fr;
+    node.nodeValue = fr;
+  }
+  appliquerLangue();
+}
+
+function selectPillChien(el, val) {
+  var wrap  = el.parentNode;
+  var pills = wrap.querySelectorAll('.radio-pill');
+  for (var i = 0; i < pills.length; i++) pills[i].classList.remove('selected');
+  el.classList.add('selected');
+  var hidden = wrap.parentNode.querySelector('.chien-steril');
+  if (hidden) hidden.value = val;
+}
+
+function checkWeightSupp(n, val) {
+  var st = chiensSuppEtat[n];
+  if (!st) return;
+  st.poidsGrand = parseFloat(val) >= 35;
+  majAlerteSupp(n);
+}
+
+function majAlerteSupp(n) {
+  var st = chiensSuppEtat[n];
+  var al = document.getElementById('weight-alert-d' + n);
+  if (!st || !al) return;
+  al.style.display = (st.raceGrand || st.poidsGrand) ? 'flex' : 'none';
+}
+
+function applyRaceSelectionSupp(n, nom) {
+  var st = chiensSuppEtat[n];
+  if (!st) return;
+  var pre        = 'race-d' + n;
+  var mixBlock   = document.getElementById(pre + '-mix');
+  var autreBlock = document.getElementById(pre + '-autre');
+  var isMix   = (nom === 'Croisé / Mix');
+  var isAutre = (nom === 'Autre');
+  st.raceMode = isMix ? 'mixte' : (isAutre ? 'autre' : 'normal');
+  if (mixBlock)   mixBlock.style.display   = isMix   ? 'block' : 'none';
+  if (autreBlock) autreBlock.style.display = isAutre ? 'block' : 'none';
+  var match = racesCache.filter(function(r) { return r.nom === nom; })[0];
+  st.raceGrand = (st.raceMode === 'normal') && !!(match && match.grand);
+  majAlerteSupp(n);
+  updateRaceCompositeSupp(n);
+}
+
+function updateRaceCompositeSupp(n) {
+  var st = chiensSuppEtat[n];
+  if (!st) return;
+  var pre    = 'race-d' + n;
+  var hidden = document.getElementById(pre + '-value');
+  if (!hidden) return;
+  function v(id) { return ((document.getElementById(id) || {}).value || '').trim(); }
+  if (st.raceMode === 'mixte') {
+    var r1 = v(pre + '-mix1-value') || v(pre + '-mix1');
+    var r2 = v(pre + '-mix2-value') || v(pre + '-mix2');
+    if (r1 && r2) hidden.value = 'Croisé — ' + r1 + ' × ' + r2;
+    else if (r1)  hidden.value = 'Croisé — ' + r1;
+    else          hidden.value = 'Croisé / Mix';
+  } else if (st.raceMode === 'autre') {
+    hidden.value = v(pre + '-autre-input') || 'Autre';
+  } else {
+    hidden.value = v(pre);
+  }
 }
 
 // ── CONTACT = MÊME PERSONNE QUI RÉCUPÈRE ──
@@ -2097,6 +2439,19 @@ function updateGabaritAlert() {
   var alert = document.getElementById('weight-alert');
   if (!alert) return;
   alert.style.display = (raceGrandGabarit || poidsGrandGabarit) ? 'flex' : 'none';
+}
+
+// ── AIDE CONTEXTUELLE (bulle « ou trouver ce numero ? ») ──
+// Un seul gestionnaire pour le chien principal et les chiens supplementaires :
+// on remonte au .field parent et on bascule le .field-hint qu'il contient.
+function toggleHint(btn) {
+  if (!btn) return;
+  var champ = btn.closest ? btn.closest('.field') : btn.parentNode.parentNode;
+  var hint  = champ ? champ.querySelector('.field-hint') : null;
+  if (!hint) return;
+  var ouvert = hint.className.indexOf('open') === -1;
+  hint.className = ouvert ? 'field-hint open' : 'field-hint';
+  btn.setAttribute('aria-expanded', ouvert ? 'true' : 'false');
 }
 
 // ── NAVIGATION ──
@@ -2246,8 +2601,12 @@ function selectRaceFor(key, nom) {
   if (hidden) hidden.value = nom;
   var dropdown = document.getElementById(f.dropdown);
   if (dropdown) dropdown.style.display = 'none';
-  if (key === 'main') applyMainRaceSelection(nom);
-  else updateRaceComposite();
+  if (key === 'main') { applyMainRaceSelection(nom); return; }
+  var m = key.match(/^d(\d+)$/);
+  if (m) { applyRaceSelectionSupp(parseInt(m[1], 10), nom); return; }
+  var mm = key.match(/^d(\d+)m[12]$/);
+  if (mm) { updateRaceCompositeSupp(parseInt(mm[1], 10)); return; }
+  updateRaceComposite();
 }
 
 // Compatibilité : le champ race principal utilise ces wrappers.
@@ -2301,28 +2660,60 @@ function escapeHtml(s) {
 function renderPreRecap() {
   var el = document.getElementById('recap-pre');
   if (!el) return;
-  function v(id) { return ((document.getElementById(id)||{}).value || '').trim(); }
-  var race = ((document.getElementById('race-value')||{}).value || v('race')).trim();
+  function v(id) { return ((document.getElementById(id) || {}).value || '').trim(); }
+
+  // Un bloc = un titre discret + ses lignes. Vide => non affiche.
+  function bloc(titre, rows, premier) {
+    var body = '';
+    rows.forEach(function(r) {
+      if (!r[1]) return;
+      body += '<div style="display:flex;justify-content:space-between;gap:12px;padding:5px 0;font-size:12.5px;border-bottom:1px solid var(--border);">'
+        + '<span style="color:var(--text-faint);">' + r[0] + '</span>'
+        + '<span style="text-align:right;font-weight:500;">' + escapeHtml(r[1]) + '</span></div>';
+    });
+    if (!body) return '';
+    var sep = premier ? '' : 'margin-top:18px;padding-top:14px;border-top:1px solid var(--border);';
+    return '<div style="' + sep + '">'
+      + '<div style="font-family:\'Norwester\', \'Oswald\', \'Arial Narrow\', sans-serif;font-size:11px;font-weight:800;'
+      + 'letter-spacing:0.09em;text-transform:uppercase;color:var(--text-faint);margin-bottom:8px;">' + titre + '</div>'
+      + body + '</div>';
+  }
+
   var poids = v('poids-chien');
-  var rows = [
+  var html = '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;">'
+    + '<div style="font-weight:600;font-size:13px;margin-bottom:14px;color:var(--accent);">' + t('Vérifiez vos informations') + '</div>';
+
+  html += bloc(t('Fiche client'), [
     [t('Prénom / Nom'), (v('prenom') + ' ' + v('nom')).trim()],
     [t('Email'),        v('email')],
     [t('Téléphone'),    v('telephone')],
-    [t('Commune'),      v('commune')],
-    [t('Chien'),        v('nom-chien')],
-    [t('Race'),         race],
-    [t('Poids'),        poids ? poids + ' kg' : ''],
-    [t('N° de puce'),   v('puce-chien')]
-  ];
-  var html = '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;">'
-    + '<div style="font-weight:600;font-size:13px;margin-bottom:10px;color:var(--accent);">' + t('Vérifiez vos informations') + '</div>';
-  rows.forEach(function(r) {
-    if (!r[1]) return;
-    html += '<div style="display:flex;justify-content:space-between;gap:12px;padding:5px 0;font-size:12.5px;border-bottom:1px solid var(--border);">'
-      + '<span style="color:var(--text-faint);">' + r[0] + '</span>'
-      + '<span style="text-align:right;font-weight:500;">' + escapeHtml(r[1]) + '</span></div>';
+    [t('Commune'),      v('commune')]
+  ], true);
+
+  html += bloc(t('Fiche chien'), [
+    [t('Chien'),      v('nom-chien')],
+    [t('Race'),       ((document.getElementById('race-value') || {}).value || v('race')).trim()],
+    [t('Poids'),      poids ? poids + ' kg' : ''],
+    [t('N° de puce'), v('puce-chien')]
+  ], false);
+
+  // Chiens supplementaires : un bloc par chien renseigne.
+  var cartes = document.querySelectorAll('#chiens-supps-container .chien-supplementaire');
+  Array.prototype.forEach.call(cartes, function(c, i) {
+    function cv(sel) { return ((c.querySelector(sel) || {}).value || '').trim(); }
+    var nom = cv('.chien-nom');
+    if (!nom) return;
+    var p = cv('.chien-poids');
+    html += bloc(t(libelleChien(i + 2)), [
+      [t('Chien'),      nom],
+      [t('Race'),       cv('.chien-race') || cv('.race-autocomplete input')],
+      [t('Poids'),      p ? p + ' kg' : ''],
+      [t('N° de puce'), cv('.chien-puce')]
+    ], false);
   });
-  html += '<div style="font-size:11.5px;color:var(--text-faint);margin-top:10px;">' + t('Une erreur ? Revenez en arrière pour corriger avant de créer votre compte.') + '</div></div>';
+
+  html += '<div style="font-size:11.5px;color:var(--text-faint);margin-top:14px;">'
+    + t('Une erreur ? Revenez en arrière pour corriger avant de créer votre compte.') + '</div></div>';
   el.innerHTML = html;
 }
 
@@ -2538,6 +2929,7 @@ async function sauvegarderInscription(motDePasse) {
     var sterilPill = document.querySelector("[onclick*=\"'steril'\"].selected");
     var sterilise = sterilPill ? (frOriginal(sterilPill) === 'Oui') : null;
     var numeroPuce = (((document.getElementById('puce-chien') || {}).value || '').trim().replace(/\s/g, '')) || null;
+    var naissance = ((document.getElementById('naissance-chien') || {}).value || '') || null;
     var horsZone  = isHorsZone(commune);
 
     if (!prenom || !nom || !email) {
@@ -2574,6 +2966,7 @@ async function sauvegarderInscription(motDePasse) {
         race: race || null,
         poids_kg: poids ? parseFloat(poids) : null,
         sexe: sexe || null,
+        date_naissance: naissance,
         sterilise: sterilise,
         numero_puce: numeroPuce,
         grand_chien: !!(raceGrandGabarit || poidsGrandGabarit),
@@ -2582,10 +2975,14 @@ async function sauvegarderInscription(motDePasse) {
       });
     }
     document.querySelectorAll('.chien-supplementaire').forEach(function(c) {
+      var idx = parseInt(c.getAttribute('data-idx'), 10);
+      var etat = chiensSuppEtat[idx] || {};
       var n  = ((c.querySelector('.chien-nom')   || {}).value || '').trim();
-      var r  = (c.querySelector('.chien-race')   || {}).value;
+      var r  = ((c.querySelector('.chien-race')  || {}).value || '').trim()
+               || ((c.querySelector('.race-autocomplete input') || {}).value || '').trim();
       var p  = (c.querySelector('.chien-poids')  || {}).value;
       var sx = (c.querySelector('.chien-sexe')   || {}).value;
+      var dn = (c.querySelector('.chien-naissance') || {}).value;
       var st = (c.querySelector('.chien-steril') || {}).value;
       var pu = (((c.querySelector('.chien-puce') || {}).value || '').trim().replace(/\s/g, '')) || null;
       if (!n) return;
@@ -2594,9 +2991,10 @@ async function sauvegarderInscription(motDePasse) {
         race: r || null,
         poids_kg: p ? parseFloat(p) : null,
         sexe: sx || null,
+        date_naissance: dn || null,
         sterilise: (st === '' || st == null) ? null : (st === 'true'),
         numero_puce: pu,
-        grand_chien: p ? (parseFloat(p) >= 35) : null
+        grand_chien: !!(etat.raceGrand || etat.poidsGrand)
       });
     });
     chiens.forEach(function(c) { if (c.poids_kg !== null && isNaN(c.poids_kg)) c.poids_kg = null; });

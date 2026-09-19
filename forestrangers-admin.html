@@ -61,6 +61,8 @@
   --red-dim:   rgba(224,90,90,0.12);
   --blue:   #5a9ae0;
   --blue-dim:  rgba(90,154,224,0.12);
+  --amber:  #f0b429;
+  --amber-dim: rgba(240,180,41,0.12);
 
   --sidebar-w: 220px;
   --radius: 10px;
@@ -80,6 +82,8 @@ html.light {
   --green-dim: rgba(34,139,54,0.1);
   --red-dim:   rgba(180,50,50,0.1);
   --blue-dim:  rgba(40,100,190,0.1);
+  --amber:     #b45000;
+  --amber-dim: rgba(180,80,0,0.12);
   --accent-dim: rgba(255,95,31,0.1);
   --accent-mid: rgba(255,95,31,0.2);
   --k600: #d6dac8;
@@ -717,6 +721,7 @@ textarea.form-control { resize: vertical; }
     frErreurReseau();
   }
   </script>
+  <script src="fr-calendrier.js"></script>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#ff5f1f">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -758,7 +763,7 @@ textarea.form-control { resize: vertical; }
       Clients
     </div>
     <div class="nav-item" onclick="nav('chiens',this)">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 5.172C10 3.782 8.423 2.679 6.5 3c-2 .336-3.5 2.332-3.5 4.327 0 .644.198 1.885.5 2.669L10 21v-3.164"/><path d="M14 5.172C14 3.782 15.577 2.679 17.5 3c2 .336 3.5 2.332 3.5 4.327 0 .644-.198 1.885-.5 2.669L14 21v-3.164"/><path d="M12 12a2 2 0 100-4 2 2 0 000 4z"/></svg>
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="6.3" cy="9.8" rx="1.7" ry="2.2" transform="rotate(-22 6.3 9.8)"/><ellipse cx="10.3" cy="7.1" rx="1.7" ry="2.4" transform="rotate(-8 10.3 7.1)"/><ellipse cx="14.4" cy="7.1" rx="1.7" ry="2.4" transform="rotate(8 14.4 7.1)"/><ellipse cx="18.4" cy="9.8" rx="1.7" ry="2.2" transform="rotate(22 18.4 9.8)"/><path d="M12.3 11.9C15.3 11.9 18 14.1 18 16.6C18 18.6 16.3 20 14.2 19.6C13.4 19.5 12.9 19.3 12.3 19.3C11.7 19.3 11.2 19.5 10.4 19.6C8.3 20 6.6 18.6 6.6 16.6C6.6 14.1 9.3 11.9 12.3 11.9Z"/></svg>
       Chiens
     </div>
     <div class="nav-item" onclick="nav('staff',this)">
@@ -1041,10 +1046,13 @@ textarea.form-control { resize: vertical; }
 
     <!-- ══════ STAFF ══════ -->
     <div class="page" id="page-staff">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+        <button class="btn btn-accent" style="padding:6px 12px;font-size:11px;" onclick="ouvrirFicheStaff(null)">+ Ajouter un membre</button>
+      </div>
       <div class="g2" id="staff-cards" style="margin-bottom:14px;">
         <div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--text-faint);font-size:12px;">Chargement…</div>
       </div>
-      <div class="card">
+      <div class="card" style="margin-bottom:14px;">
         <div class="card-head"><span class="card-title">Performances — semaine en cours</span></div>
         <div>
           <table class="tbl">
@@ -1054,6 +1062,14 @@ textarea.form-control { resize: vertical; }
             </tbody>
           </table>
         </div>
+      </div>
+
+      <!-- Organisation de l'équipe : attribution quotidienne, fiches rangers, congés.
+           Servi par forestrangers-parametres.html en vue « staff ». -->
+      <div class="card" style="overflow:hidden;">
+        <div class="card-head"><span class="card-title">Organisation de l'équipe</span></div>
+        <iframe id="staff-frame" title="Organisation de l'équipe"
+          style="width:100%;height:760px;min-height:620px;border:0;background:var(--surface);display:block;"></iframe>
       </div>
     </div>
 
@@ -1570,7 +1586,7 @@ function nav(id, el) {
 
   if (id === 'messages')     { chargerMessages(true); initAlerteMeteo(); }
   if (id === 'reservations') { loadReservationsAdmin(); chargerAnnulationsOccurrences(); }
-  if (id === 'staff')        loadStaff();
+  if (id === 'staff')        { loadStaff(); loadStaffOrga(); }
   if (id === 'factures')     loadFacturesAdmin();
   if (id === 'parametres')   loadParametres();
 }
@@ -1971,6 +1987,7 @@ async function loadStaff() {
   if (cards) cards.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--text-faint);font-size:12px;">Chargement…</div>';
   var SVC = { walking:'Dog Walking', daycare:'Day Care', boarding:'Boarding' };
   var CREN = { matin:'09h00', midi:'12h00', apmidi:'14h30' };
+  window._staffParId = {};
   try {
     var today = formatDateISO(new Date());
     // Membres du staff
@@ -2012,7 +2029,9 @@ async function loadStaff() {
       var prenom = s.prenom || '—';
       var nom = s.nom || '';
       var nomComplet = (prenom + ' ' + nom).trim();
-      var role = s.role || (i === 0 ? 'Administrateur' : 'Ranger · Terrain');
+      var ROLES = { ranger:'Ranger · Terrain', walker:'Type A — Walker', care:'Type B — Care', admin:'Administrateur' };
+      var roleBrut = (s.role || '').toString();
+      var role = ROLES[roleBrut.toLowerCase()] || roleBrut || (i === 0 ? 'Administrateur' : 'Ranger · Terrain');
       var initiales = ((prenom[0] || '') + (nom[0] || prenom[1] || '')).toUpperCase();
 
       var mine = resas.filter(function(r){ return (r.ranger_nom || '') === prenom; });
@@ -2041,7 +2060,8 @@ async function loadStaff() {
           }).join('')
         : '<div style="font-size:11px;color:var(--text-faint);padding:6px 0;">Aucune mission planifiée aujourd\'hui.</div>';
 
-      cardsHtml += '<div class="ranger-card">'
+      window._staffParId[s.id] = s;
+      cardsHtml += '<div class="ranger-card" data-staff="' + s.id + '" onclick="ouvrirFicheStaff(\'' + s.id + '\')" style="cursor:pointer;" title="Modifier cette fiche">'
         + '<div class="ranger-head">'
         + '<div class="r-avatar" style="background:' + grad + '">' + (initiales || '–') + '</div>'
         + '<div><div class="r-name">' + nomComplet + '</div><div class="r-role">' + role + '</div></div>'
@@ -2062,6 +2082,63 @@ async function loadStaff() {
     if (perf)  perf.innerHTML  = '<tr><td colspan="5" style="text-align:center;color:var(--red);padding:16px;font-size:12px;">' + (e.message || 'erreur') + '</td></tr>';
     console.error('loadStaff:', e);
   }
+}
+
+// ── FICHE STAFF : consultation et modification ──
+window._staffParId = window._staffParId || {};
+
+function ouvrirFicheStaff(id) {
+  var s = id ? (window._staffParId[id] || null) : null;
+  document.getElementById('modal-staff-titre').textContent = s ? 'Modifier la fiche' : 'Nouveau membre';
+  document.getElementById('staff-id').value     = s ? s.id : '';
+  document.getElementById('staff-prenom').value = s ? (s.prenom || '') : '';
+  document.getElementById('staff-nom').value    = s ? (s.nom || '') : '';
+  document.getElementById('staff-email').value  = s ? (s.email || '') : '';
+  document.getElementById('staff-tel').value    = s ? (s.telephone || '') : '';
+  var role = (s && s.role) ? String(s.role).toLowerCase() : 'ranger';
+  var selRole = document.getElementById('staff-role');
+  selRole.value = ['ranger','walker','care','admin'].indexOf(role) !== -1 ? role : 'ranger';
+  document.getElementById('staff-actif').value = (s && s.actif === false) ? 'false' : 'true';
+  document.getElementById('staff-btn-suppr').style.display = s ? '' : 'none';
+  document.getElementById('modal-staff').classList.add('open');
+}
+
+async function enregistrerStaff() {
+  var id     = document.getElementById('staff-id').value;
+  var prenom = document.getElementById('staff-prenom').value.trim();
+  var nom    = document.getElementById('staff-nom').value.trim();
+  var email  = document.getElementById('staff-email').value.trim();
+  if (!prenom || !nom) { showToastAdmin('Prénom et nom obligatoires', 'amber'); return; }
+  var ligne = {
+    prenom: prenom,
+    nom: nom,
+    email: email || null,
+    telephone: document.getElementById('staff-tel').value.trim() || null,
+    role: document.getElementById('staff-role').value,
+    actif: document.getElementById('staff-actif').value === 'true'
+  };
+  try {
+    var r = id
+      ? await db.from('staff').update(ligne).eq('id', id)
+      : await db.from('staff').insert(ligne);
+    if (r.error) throw r.error;
+    document.getElementById('modal-staff').classList.remove('open');
+    showToastAdmin(id ? '✓ Fiche mise à jour' : '✓ Membre ajouté', 'green');
+    loadStaff();
+  } catch(e) { showToastAdmin('Erreur : ' + (e.message || e), 'red'); }
+}
+
+async function desactiverStaff() {
+  var id = document.getElementById('staff-id').value;
+  if (!id) return;
+  if (!confirm('Désactiver ce membre ? Sa fiche et son historique sont conservés, il n\'apparaîtra plus dans les plannings.')) return;
+  try {
+    var r = await db.from('staff').update({ actif: false }).eq('id', id);
+    if (r.error) throw r.error;
+    document.getElementById('modal-staff').classList.remove('open');
+    showToastAdmin('✓ Membre désactivé', 'green');
+    loadStaff();
+  } catch(e) { showToastAdmin('Erreur : ' + (e.message || e), 'red'); }
 }
 
 // ── FACTURES (réel) ──
@@ -2138,8 +2215,44 @@ async function loadFacturesAdmin() {
 }
 
 // ── PARAMETRES (source unique : table Supabase `parametres`, défauts dans FR_PARAMS) ──
+// ── TARIFS DATÉS (migration v28) ──
+// Chaque grille porte sa date d'entrée en vigueur. Une prestation se facture
+// au tarif en vigueur À SA DATE : les anciennes factures gardent donc les
+// anciens prix, même après un changement.
+var _tarifsParDate = {};
+
+async function tarifsALaDate(dateISO, fidele) {
+  var suffixe = (fidele === false) ? 'nouveau' : 'fidele';
+  var cle = (String(dateISO || '').slice(0, 10) || 'courant') + '|' + suffixe;
+  if (_tarifsParDate[cle]) return _tarifsParDate[cle];
+  var T = {
+    walking:  FR_PARAMS.tarifs.walking[suffixe],
+    daycare:  FR_PARAMS.tarifs.daycare[suffixe],
+    boarding: FR_PARAMS.tarifs.boarding[suffixe]
+  };
+  try {
+    var d = String(dateISO || '').slice(0, 10);
+    var r = await db.rpc('fr_tarifs_applicables', { p_date: d || null });
+    var g = (!r.error && r.data) ? r.data : null;
+    if (g) {
+      var num = function(v, def) { var x = parseFloat(v); return isNaN(x) ? def : x; };
+      T = {
+        walking:  num(g['tarif_walking_'  + suffixe], T.walking),
+        daycare:  num(g['tarif_daycare_'  + suffixe], T.daycare),
+        boarding: num(g['tarif_boarding_' + suffixe], T.boarding)
+      };
+    }
+  } catch(e) { /* repli sur la grille courante */ }
+  _tarifsParDate[cle] = T;
+  return T;
+}
+
 // Lit la table clé/valeur écrite par forestrangers-parametres.html et fusionne dans FR_PARAMS.
 async function chargerParametresLive() {
+  // Si une grille datée est entrée en vigueur, elle est d'abord recopiée dans
+  // la table parametres : le reste de l'application continue de lire celle-ci.
+  try { await db.rpc('fr_tarifs_appliquer_courants'); } catch(e) { /* migration v28 absente */ }
+  _tarifsParDate = {};
   try {
     var { data } = await db.from('parametres').select('cle,valeur');
     if (!data) return;
@@ -2165,11 +2278,19 @@ async function chargerParametresLive() {
   } catch(e) { console.log('chargerParametresLive:', e); }
 }
 
+// ── ORGANISATION DE L'EQUIPE (vue « staff » de forestrangers-parametres.html) ──
+function loadStaffOrga() {
+  var frame = document.getElementById('staff-frame');
+  if (frame && !frame.getAttribute('src')) {
+    frame.setAttribute('src', 'forestrangers-parametres.html?vue=staff');
+  }
+}
+
 // ── PARAMETRES (ouvre l'éditeur intégré forestrangers-parametres.html) ──
 function loadParametres() {
   var frame = document.getElementById('parametres-frame');
   if (frame && !frame.getAttribute('src')) {
-    frame.setAttribute('src', 'forestrangers-parametres.html');
+    frame.setAttribute('src', 'forestrangers-parametres.html?vue=params');
   }
   // Rafraîchit les valeurs live (tarifs, etc.) utilisées par la facturation
   chargerParametresLive();
@@ -2370,8 +2491,8 @@ function renderChiens(chiens) {
       + (d.notes_sante ? '<div class="dog-note">' + d.notes_sante + '</div>' : '')
       + blocChaleurAdmin(d)
       + '<div style="display:flex;justify-content:flex-end;margin-top:8px;gap:6px;">'
-      + '<button onclick="editChien(\'' + d.id + '\')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;color:var(--text-dim);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:10px;font-weight:800;cursor:pointer;">Modifier</button>'
-      + '<button onclick="window.location.href=\'forestrangers-client-detail.html?id=' + (d.clients ? d.client_id : '') + '&from=chiens\'" style="background:var(--accent-dim);border:1px solid var(--accent-mid);border-radius:8px;padding:5px 12px;color:var(--accent);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:10px;font-weight:800;cursor:pointer;">Fiche client</button>'
+      + '<button onclick="ouvrirFicheChien(\'' + d.id + '\')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;color:var(--text-dim);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:10px;font-weight:800;cursor:pointer;">Fiche complète</button>'
+      + '<button onclick="ouvrirClientDepuisChien(\'' + (d.client_id || '') + '\')" style="background:var(--accent-dim);border:1px solid var(--accent-mid);border-radius:8px;padding:5px 12px;color:var(--accent);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:10px;font-weight:800;cursor:pointer;">Fiche client</button>'
       + '</div></div>';
   }).join('');
 }
@@ -2549,14 +2670,106 @@ function filterChiens(val) {
   }));
 }
 
-async function editChien(id) {
-  var notes = prompt('Notes de santé / comportement pour ce chien :');
-  if (notes === null) return;
+// ── FICHE COMPLÈTE DU CHIEN ──
+// Remplace l'ancien prompt() qui ne permettait de saisir que les notes de sante.
+function ouvrirFicheChien(id) {
+  var d = allChiens.filter(function(x) { return String(x.id) === String(id); })[0];
+  if (!d) { showToastAdmin('Chien introuvable', 'red'); return; }
+
+  function set(elId, val) {
+    var el = document.getElementById(elId);
+    if (el) el.value = (val == null ? '' : val);
+  }
+  document.getElementById('chien-modal-titre').textContent = d.nom || 'Fiche chien';
+  set('ch-id', d.id);
+  set('ch-nom', d.nom);
+  set('ch-race', d.race);
+  set('ch-sexe', (d.sexe || '').toLowerCase());
+  set('ch-naissance', d.date_naissance ? String(d.date_naissance).slice(0, 10) : '');
+  set('ch-poids', d.poids_kg);
+  set('ch-puce', d.numero_puce);
+  set('ch-sterilise', d.sterilise === true ? 'true' : (d.sterilise === false ? 'false' : ''));
+  set('ch-vaccins', d.vaccins === true ? 'true' : (d.vaccins === false ? 'false' : ''));
+  set('ch-comportement', d.comportement);
+  set('ch-notes', d.notes_sante);
+
+  var proprio = d.clients ? ((d.clients.prenom || '') + ' ' + (d.clients.nom || '')).trim() : '—';
+  var num = (d.clients && d.clients.numero_client) ? ' · #' + d.clients.numero_client : '';
+  document.getElementById('ch-proprio').textContent = proprio + num;
+  var btnCli = document.getElementById('ch-btn-client');
+  btnCli.style.display = d.client_id ? '' : 'none';
+  btnCli.onclick = function() {
+    document.getElementById('modal-chien').classList.remove('open');
+    ouvrirClientDepuisChien(d.client_id);
+  };
+  majGabaritChien();
+  document.getElementById('modal-chien').classList.add('open');
+}
+
+// Le repere « grand chien » suit le poids saisi (seuil 35 kg, comme ailleurs).
+function majGabaritChien() {
+  var p = parseFloat(document.getElementById('ch-poids').value);
+  var el = document.getElementById('ch-gabarit');
+  if (!el) return;
+  if (isNaN(p)) { el.textContent = ''; return; }
+  el.textContent = p >= 35 ? 'Grand chien (35 kg+) — place camionnette limitée' : 'Gabarit standard';
+  el.style.color = p >= 35 ? 'var(--amber)' : 'var(--text-faint)';
+}
+
+async function enregistrerChien() {
+  var id = document.getElementById('ch-id').value;
+  var nom = document.getElementById('ch-nom').value.trim();
+  if (!nom) { showToastAdmin('Le nom est obligatoire', 'amber'); return; }
+  function v(elId) { return (document.getElementById(elId).value || '').trim(); }
+  function boolOuNull(elId) { var x = v(elId); return x === '' ? null : (x === 'true'); }
+  var poids = parseFloat(v('ch-poids'));
+  var ligne = {
+    nom: nom,
+    race: v('ch-race') || null,
+    sexe: v('ch-sexe') || null,
+    date_naissance: v('ch-naissance') || null,
+    poids_kg: isNaN(poids) ? null : poids,
+    numero_puce: v('ch-puce').replace(/\s/g, '') || null,
+    sterilise: boolOuNull('ch-sterilise'),
+    vaccins: boolOuNull('ch-vaccins'),
+    grand_chien: isNaN(poids) ? null : (poids >= 35),
+    comportement: v('ch-comportement') || null,
+    notes_sante: v('ch-notes') || null
+  };
   try {
-    await db.from('chiens').update({ notes_sante: notes }).eq('id', id);
-    showToastAdmin('✓ Notes mises à jour', 'green');
+    var r = await db.from('chiens').update(ligne).eq('id', id);
+    if (r.error) throw r.error;
+    document.getElementById('modal-chien').classList.remove('open');
+    showToastAdmin('✓ Fiche de ' + nom + ' mise à jour', 'green');
     loadChiens();
-  } catch(e) { showToastAdmin('Erreur mise à jour', 'red'); }
+  } catch(e) { showToastAdmin('Erreur : ' + (e.message || e), 'red'); }
+}
+
+async function archiverChien() {
+  var id = document.getElementById('ch-id').value;
+  var nom = document.getElementById('ch-nom').value.trim();
+  if (!id) return;
+  if (!confirm('Archiver ' + (nom || 'ce chien') + ' ? Sa fiche et son historique sont conservés, il disparaît des listes et des plannings.')) return;
+  try {
+    var r = await db.from('chiens').update({ actif: false }).eq('id', id);
+    if (r.error) throw r.error;
+    document.getElementById('modal-chien').classList.remove('open');
+    showToastAdmin('✓ Fiche archivée', 'green');
+    loadChiens();
+  } catch(e) { showToastAdmin('Erreur : ' + (e.message || e), 'red'); }
+}
+
+// Depuis la page Chiens, la fiche client s'ouvre dans l'admin (iframe),
+// sans quitter la page ni perdre la barre laterale.
+function ouvrirClientDepuisChien(clientId) {
+  if (!clientId) { showToastAdmin('Ce chien n\'est rattaché à aucun client', 'amber'); return; }
+  var navEl = null;
+  document.querySelectorAll('.nav-item').forEach(function(n) {
+    if ((n.getAttribute('onclick') || '').indexOf("nav('clients'") === 0) navEl = n;
+  });
+  nav('clients', navEl);
+  if (!allClients || !allClients.length) setTimeout(function() { ouvrirFicheClient(clientId); }, 700);
+  else ouvrirFicheClient(clientId);
 }
 
 function showToastAdmin(msg, type) {
@@ -2819,6 +3032,8 @@ function slotHtml(rows, clientsMap, chiensMap, clientDogsMap, dateStr) {
 async function loadPlanning() {
   var grid = document.getElementById('planning-grid');
   if (!grid) return;
+  // Jours fériés et périodes clôturées : chargés une fois pour toute la session.
+  if (window.FR_CAL && !FR_CAL.estCharge()) { try { await FR_CAL.charger(db); } catch(e) {} }
   grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--text-faint);">Chargement...</div>';
   var today = formatDateISO(new Date());
   var now = new Date(); var debut, fin, labelText;
@@ -2898,6 +3113,21 @@ async function loadPlanning() {
   }
 }
 
+// ── JOURS FÉRIÉS ET PÉRIODES CLÔTURÉES DANS LE PLANNING ──
+// Les fériés sont calculés (fr-calendrier.js), les périodes viennent de
+// la table periodes_fermeture. Rien à saisir chaque année.
+function bandeauCalendrier(ds, compact) {
+  if (!window.FR_CAL) return '';
+  var v = FR_CAL.verdict(ds);
+  if (!v) return '';
+  var coul = (v.type === 'ferie') ? '#d65c8c' : (v.type === 'fermeture' ? 'var(--red)' : 'var(--amber)');
+  if (compact) {
+    return '<div title="' + v.nom + '" style="width:100%;height:3px;border-radius:2px;background:' + coul + ';margin-top:2px;"></div>';
+  }
+  return '<div style="font-size:10px;font-weight:700;color:' + coul + ';padding:3px 4px;text-align:center;'
+       + 'background:rgba(0,0,0,0.04);border-radius:4px;margin-bottom:4px;line-height:1.3;">' + v.nom + '</div>';
+}
+
 function renderPlanningSemaine(resas, clientsMap, chiensMap, clientDogsMap, debut, today) {
   var grid = document.getElementById('planning-grid');
   grid.style.gridTemplateColumns = 'repeat(7,1fr)';
@@ -2912,6 +3142,7 @@ function renderPlanningSemaine(resas, clientsMap, chiensMap, clientDogsMap, debu
     var dayOffset=daysBetween(day,todayMid);
     html+='<div class="week-col" onclick="if(event.target===this||event.target.classList.contains(\'week-col\')){vuePlanning=\'jour\';planningOffset='+dayOffset+';loadPlanning();}" style="cursor:pointer;">';
     html+='<div class="'+hc+'"><div class="week-day">'+JOURS_FR[day.getDay()]+'</div><div class="week-num">'+day.getDate()+'</div></div>';
+    html+=bandeauCalendrier(ds, false);
     if (!bookings.length) html+='<div style="padding:8px 4px;text-align:center;font-size:10px;color:var(--text-faint);">—</div>';
     else bookings.forEach(function(rows){html+=slotHtml(rows,clientsMap,chiensMap,clientDogsMap,ds);});
     html+='</div>';
@@ -2931,6 +3162,7 @@ function renderPlanningJour(resas, clientsMap, chiensMap, clientDogsMap, dateStr
   var html='<div style="width:100%;">';
   html+='<div class="'+hc+'" style="border-radius:10px 10px 0 0;padding:12px 16px;margin-bottom:8px;">';
   html+='<div class="week-day">'+JOURS_FR[day.getDay()]+'</div><div class="week-num" style="font-size:28px;">'+day.getDate()+' '+MOIS_FR[day.getMonth()]+'</div></div>';
+  html+=bandeauCalendrier(dateStr, false);
   if (!bookings.length) html+='<div style="text-align:center;padding:32px;color:var(--text-faint);font-size:13px;">Aucune reservation ce jour</div>';
   else bookings.forEach(function(rows) {
     var r=rows[0];
@@ -2972,6 +3204,7 @@ function renderPlanningMois(resas, clientsMap, debut, fin, today) {
     var hc = isT?'week-head month-cell today':isWE?'week-head month-cell weekend':'week-head month-cell other';
     html+='<div class="'+hc+'" onclick="vuePlanning=\'jour\';planningOffset='+off+';loadPlanning();">';
     html+='<div class="week-num">'+cur.getDate()+'</div>';
+    html+=bandeauCalendrier(ds, true);
     if (nbR>0) {
       html+='<div class="month-count">'+nbR+'</div>';
       html+='<div style="display:flex;gap:2px;flex-wrap:wrap;margin-top:2px;">';
@@ -4551,6 +4784,111 @@ if ('serviceWorker' in navigator) {
   </div>
 </div>
 
+<!-- ══ MODAL FICHE CHIEN ══ -->
+<div class="modal-overlay" id="modal-chien" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal-sheet" style="max-width:620px;max-height:88vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div class="modal-title" id="chien-modal-titre">Fiche chien</div>
+      <button onclick="document.getElementById('modal-chien').classList.remove('open')" style="background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:20px;">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;font-size:12px;color:var(--text-dim);">
+      <span>Propriétaire :</span><strong id="ch-proprio" style="color:var(--text);">—</strong>
+      <button class="btn btn-outline" id="ch-btn-client" style="padding:3px 10px;font-size:10px;margin-left:auto;">Ouvrir la fiche client</button>
+    </div>
+    <input type="hidden" id="ch-id">
+
+    <div style="font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);margin-bottom:8px;">Identité</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div class="form-group"><label class="form-label">Nom</label><input class="form-control" id="ch-nom" style="width:100%;"></div>
+      <div class="form-group"><label class="form-label">Race</label><input class="form-control" id="ch-race" style="width:100%;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div class="form-group">
+        <label class="form-label">Sexe</label>
+        <select class="form-control" id="ch-sexe" style="width:100%;">
+          <option value="">—</option><option value="male">Mâle</option><option value="femelle">Femelle</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Date de naissance</label><input type="date" class="form-control" id="ch-naissance" style="width:100%;"></div>
+      <div class="form-group"><label class="form-label">Poids (kg)</label><input type="number" step="0.1" min="0" class="form-control" id="ch-poids" oninput="majGabaritChien()" style="width:100%;"></div>
+    </div>
+    <div id="ch-gabarit" style="font-size:11.5px;color:var(--text-faint);margin:-4px 0 12px;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+      <div class="form-group">
+        <label class="form-label">Stérilisé(e)</label>
+        <select class="form-control" id="ch-sterilise" style="width:100%;">
+          <option value="">—</option><option value="true">Oui</option><option value="false">Non</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Vaccins à jour</label>
+        <select class="form-control" id="ch-vaccins" style="width:100%;">
+          <option value="">—</option><option value="true">Oui</option><option value="false">Non</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">N° de puce</label><input class="form-control" id="ch-puce" inputmode="numeric" maxlength="15" style="width:100%;"></div>
+    </div>
+
+    <div style="font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);margin-bottom:8px;">Santé &amp; comportement</div>
+    <div class="form-group" style="margin-bottom:10px;">
+      <label class="form-label">Comportement</label>
+      <textarea class="form-control" id="ch-comportement" style="width:100%;min-height:60px;resize:vertical;" placeholder="Liberté autorisée, rappel fiable, marche en laisse, énergie..."></textarea>
+    </div>
+    <div class="form-group" style="margin-bottom:16px;">
+      <label class="form-label">Notes de santé</label>
+      <textarea class="form-control" id="ch-notes" style="width:100%;min-height:70px;resize:vertical;" placeholder="Allergies, traitements, pathologies, vétérinaire..."></textarea>
+    </div>
+
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-outline" onclick="archiverChien()" style="margin-right:auto;color:var(--red);border-color:var(--red);">Archiver</button>
+      <button class="btn btn-outline" onclick="document.getElementById('modal-chien').classList.remove('open')">Annuler</button>
+      <button class="btn btn-accent" onclick="enregistrerChien()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL FICHE STAFF ══ -->
+<div class="modal-overlay" id="modal-staff" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal-sheet" style="max-width:480px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div class="modal-title" id="modal-staff-titre">Fiche membre</div>
+      <button onclick="document.getElementById('modal-staff').classList.remove('open')" style="background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:20px;">✕</button>
+    </div>
+    <input type="hidden" id="staff-id">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div class="form-group"><label class="form-label">Prénom</label><input class="form-control" id="staff-prenom" style="width:100%;"></div>
+      <div class="form-group"><label class="form-label">Nom</label><input class="form-control" id="staff-nom" style="width:100%;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div class="form-group"><label class="form-label">E-mail</label><input class="form-control" id="staff-email" type="email" style="width:100%;"></div>
+      <div class="form-group"><label class="form-label">Téléphone</label><input class="form-control" id="staff-tel" style="width:100%;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+      <div class="form-group">
+        <label class="form-label">Rôle</label>
+        <select class="form-control" id="staff-role" style="width:100%;">
+          <option value="ranger">Ranger · Terrain</option>
+          <option value="walker">Type A — Walker</option>
+          <option value="care">Type B — Care</option>
+          <option value="admin">Administrateur</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Statut</label>
+        <select class="form-control" id="staff-actif" style="width:100%;">
+          <option value="true">Actif</option>
+          <option value="false">Inactif</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-outline" id="staff-btn-suppr" onclick="desactiverStaff()" style="margin-right:auto;color:var(--red);border-color:var(--red);">Désactiver</button>
+      <button class="btn btn-outline" onclick="document.getElementById('modal-staff').classList.remove('open')">Annuler</button>
+      <button class="btn btn-accent" onclick="enregistrerStaff()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ MODAL NOUVELLE FACTURE ══ -->
 <div class="modal-overlay" id="modal-nouvelle-facture" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="modal-sheet" style="max-width:500px;">
@@ -4717,7 +5055,9 @@ async function creerFacture() {
     }
 
     // Numérotation : numero_client-AA-N (N = séquence par client pour l'année de la période)
-    var { data: clientRow } = await db.from('clients').select('numero_client').eq('id', clientId).single();
+    var { data: clientRow } = await db.from('clients')
+      .select('numero_client,client_fidele,tarif_walking,tarif_daycare,tarif_boarding')
+      .eq('id', clientId).single();
     var annee2 = periode.split('-')[0].slice(-2);
     var numClient = (clientRow && clientRow.numero_client) ? clientRow.numero_client : '0000';
     var prefix = numClient + '-' + annee2 + '-';
@@ -4735,9 +5075,21 @@ async function creerFacture() {
     if (factureType === 'auto') {
       var moisParts = periode.split('-');
       var finMoisFact = formatDateISO(new Date(parseInt(moisParts[0],10), parseInt(moisParts[1],10), 0));
-      var { data: resas } = await db.from('reservations').select('service').eq('client_id', clientId).gte('date_debut', periode + '-01').lte('date_debut', finMoisFact).neq('statut', 'annule');
-      var tarifs = { walking: FR_PARAMS.tarifs.walking.fidele, daycare: FR_PARAMS.tarifs.daycare.fidele, boarding: FR_PARAMS.tarifs.boarding.fidele };
-      total_ht = (resas||[]).reduce(function(s,r) { return s + (tarifs[r.service]||0); }, 0);
+      var { data: resas } = await db.from('reservations').select('service,date_debut').eq('client_id', clientId).gte('date_debut', periode + '-01').lte('date_debut', finMoisFact).neq('statut', 'annule');
+      // Une prestation est facturée au tarif en vigueur le jour où elle a eu lieu.
+      // Un tarif sur mesure enregistré sur la fiche client prime sur la grille.
+      var surMesure = clientRow && (clientRow.tarif_walking != null
+                                 || clientRow.tarif_daycare != null
+                                 || clientRow.tarif_boarding != null);
+      var fidele = !clientRow || clientRow.client_fidele !== false;
+      total_ht = 0;
+      for (var iR = 0; iR < (resas||[]).length; iR++) {
+        var rr = resas[iR];
+        var grille = surMesure
+          ? { walking: clientRow.tarif_walking, daycare: clientRow.tarif_daycare, boarding: clientRow.tarif_boarding }
+          : await tarifsALaDate(rr.date_debut, fidele);
+        total_ht += (parseFloat(grille[rr.service]) || 0);
+      }
       payload.notes = 'Auto — ' + (resas||[]).length + ' réservation(s)';
     } else {
       var desc = document.getElementById('facture-desc').value;

@@ -953,7 +953,9 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('topbar-back-label').textContent = label;
 
   if (clientId) {
-    loadClient(clientId);
+    // La grille de Paramètres avancés doit être en mémoire avant l'affichage
+    // des tarifs, sinon la fiche montrerait les valeurs de repli.
+    chargerGrilleTarifaire().then(function() { loadClient(clientId); });
   }
 });
 
@@ -1051,10 +1053,58 @@ async function loadClient(id) {
 var currentClient = null;
 var editMode = false;
 
+// ══ TARIFICATION ══
+// Trois modes :
+//   · « Client fidèle »  et « Nouveau client » suivent la grille saisie dans
+//     Paramètres avancés. Rien n'est figé sur la fiche : les colonnes
+//     tarif_* du client restent vides, donc une mise à jour de la grille
+//     s'applique immédiatement à ce client.
+//   · « Sur mesure » fige des montants propres à ce client.
+// GRILLE est chargée depuis la table parametres (valeurs de repli ci-dessous
+// si la table n'a jamais été renseignée).
+var GRILLE = {
+  fidele:  { walking: 28, daycare: 55, boarding: 68, reduction: 50 },
+  nouveau: { walking: 30, daycare: 60, boarding: 75, reduction: 30 },
+  supplement_hors_zone: 5
+};
+
+async function chargerGrilleTarifaire() {
+  try {
+    var { data } = await db.from('parametres').select('cle,valeur');
+    if (!data) return;
+    var p = {};
+    data.forEach(function(r) { p[r.cle] = r.valeur; });
+    function n(v, d) { var x = parseFloat(v); return isNaN(x) ? d : x; }
+    GRILLE.fidele = {
+      walking:   n(p.tarif_walking_fidele,   GRILLE.fidele.walking),
+      daycare:   n(p.tarif_daycare_fidele,   GRILLE.fidele.daycare),
+      boarding:  n(p.tarif_boarding_fidele,  GRILLE.fidele.boarding),
+      reduction: n(p.reduction_2chien_fidele, GRILLE.fidele.reduction)
+    };
+    GRILLE.nouveau = {
+      walking:   n(p.tarif_walking_nouveau,   GRILLE.nouveau.walking),
+      daycare:   n(p.tarif_daycare_nouveau,   GRILLE.nouveau.daycare),
+      boarding:  n(p.tarif_boarding_nouveau,  GRILLE.nouveau.boarding),
+      reduction: n(p.reduction_2chien_nouveau, GRILLE.nouveau.reduction)
+    };
+    GRILLE.supplement_hors_zone = n(p.supplement_hors_zone, GRILLE.supplement_hors_zone);
+  } catch(e) { /* on garde les valeurs de repli */ }
+}
+
+// Mode déduit des données : des montants enregistrés sur la fiche = sur mesure.
+function tarifMode(c) {
+  var surMesure = (c.tarif_walking != null) || (c.tarif_daycare != null)
+               || (c.tarif_boarding != null) || (c.tarif_reduction != null);
+  if (surMesure) return 'sur_mesure';
+  return c.client_fidele ? 'fidele' : 'nouveau';
+}
+
+function grilleDuClient(c) {
+  return c.client_fidele ? GRILLE.fidele : GRILLE.nouveau;
+}
+
 function getTarifValues(c) {
-  var def = c.client_fidele
-    ? { walking: 28, daycare: 55, boarding: 68, reduction: 50 }
-    : { walking: 30, daycare: 60, boarding: 75, reduction: 30 };
+  var def = grilleDuClient(c);
   return {
     walking:   (c.tarif_walking   != null) ? c.tarif_walking   : def.walking,
     daycare:   (c.tarif_daycare   != null) ? c.tarif_daycare   : def.daycare,
@@ -1062,6 +1112,12 @@ function getTarifValues(c) {
     reduction: (c.tarif_reduction != null) ? c.tarif_reduction : def.reduction
   };
 }
+
+var LIBELLE_MODE = {
+  fidele:     'Client fidèle',
+  nouveau:    'Nouveau client',
+  sur_mesure: 'Tarif sur mesure'
+};
 
 function escapeAttr(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
@@ -1077,6 +1133,7 @@ function renderInfosDisplay(c) {
   var grid = document.querySelector('#panel-infos .info-grid');
   if (!grid) return;
   var tarif = getTarifValues(c);
+  var mode  = tarifMode(c);
   var depuis = c.client_depuis || c.created_at;
 
   grid.innerHTML =
@@ -1094,12 +1151,17 @@ function renderInfosDisplay(c) {
   var tarifGrid = document.querySelectorAll('#panel-infos .info-grid')[1];
   if (tarifGrid) {
     tarifGrid.innerHTML =
-      '<div class="info-item"><div class="info-label">Type</div><div class="info-value" style="color:' + (c.client_fidele ? 'var(--green)' : 'var(--amber)') + ';">' + (c.client_fidele ? 'Client fidèle' : 'Nouveau client') + '</div></div>' +
-      '<div class="info-item"><div class="info-label">Zone</div><div class="info-value">' + (c.commune || '—') + ' · ' + (c.hors_zone ? 'Hors zone +5€' : 'Sans frais') + '</div></div>' +
+      '<div class="info-item"><div class="info-label">Type</div><div class="info-value" style="color:' + (mode === 'sur_mesure' ? 'var(--accent)' : (c.client_fidele ? 'var(--green)' : 'var(--amber)')) + ';">' + LIBELLE_MODE[mode] + '</div></div>' +
+      '<div class="info-item"><div class="info-label">Zone</div><div class="info-value">' + (c.commune || '—') + ' · ' + (c.hors_zone ? 'Hors zone +' + GRILLE.supplement_hors_zone + '€' : 'Sans frais') + '</div></div>' +
       '<div class="info-item"><div class="info-label">Dog Walking</div><div class="info-value">' + tarif.walking + ' € / séance</div></div>' +
       '<div class="info-item"><div class="info-label">Day Care</div><div class="info-value">' + tarif.daycare + ' € / journée</div></div>' +
       '<div class="info-item"><div class="info-label">Boarding</div><div class="info-value">' + tarif.boarding + ' € / nuit</div></div>' +
-      '<div class="info-item"><div class="info-label">Réduction 2e chien</div><div class="info-value" style="color:var(--green);">−' + tarif.reduction + '%</div></div>';
+      '<div class="info-item"><div class="info-label">Réduction 2e chien</div><div class="info-value" style="color:var(--green);">−' + tarif.reduction + '%</div></div>' +
+      '<div class="info-item" style="grid-column:1/-1;"><div class="info-value" style="font-size:11.5px;color:var(--tf);">'
+        + (mode === 'sur_mesure'
+            ? 'Montants propres à ce client : ils ne bougent pas quand la grille change.'
+            : 'Grille standard — ces montants suivent automatiquement Paramètres avancés.')
+        + '</div></div>';
   }
 
   renderPersonnesDisplay(c.personnes_autorisees);
@@ -1127,6 +1189,7 @@ function numFieldHtml(label, id, value) {
 
 function renderInfosEdit(c) {
   var tarif = getTarifValues(c);
+  var mode  = tarifMode(c);
   var depuis = c.client_depuis || c.created_at;
   var depuisVal = depuis ? new Date(depuis).toISOString().slice(0, 10) : '';
 
@@ -1145,32 +1208,49 @@ function renderInfosEdit(c) {
   var tarifGrid = document.querySelectorAll('#panel-infos .info-grid')[1];
   if (tarifGrid) {
     tarifGrid.innerHTML =
-      '<div class="info-item"><div class="info-label">Type</div><select class="edit-select" id="edit-client-fidele" onchange="onTypeChange()">' +
-        '<option value="true"' + (c.client_fidele ? ' selected' : '') + '>Client fidèle</option>' +
-        '<option value="false"' + (!c.client_fidele ? ' selected' : '') + '>Nouveau client</option>' +
+      '<div class="info-item"><div class="info-label">Type</div><select class="edit-select" id="edit-tarif-mode" onchange="onTypeChange()">' +
+        '<option value="fidele"' + (mode === 'fidele' ? ' selected' : '') + '>Client fidèle</option>' +
+        '<option value="nouveau"' + (mode === 'nouveau' ? ' selected' : '') + '>Nouveau client</option>' +
+        '<option value="sur_mesure"' + (mode === 'sur_mesure' ? ' selected' : '') + '>Tarif sur mesure</option>' +
       '</select></div>' +
       '<div class="info-item"><div class="info-label">Zone</div><select class="edit-select" id="edit-hors-zone">' +
         '<option value="false"' + (!c.hors_zone ? ' selected' : '') + '>Sans frais</option>' +
-        '<option value="true"' + (c.hors_zone ? ' selected' : '') + '>Hors zone (+5€)</option>' +
+        '<option value="true"' + (c.hors_zone ? ' selected' : '') + '>Hors zone (+' + GRILLE.supplement_hors_zone + '€)</option>' +
       '</select></div>' +
       numFieldHtml('Dog Walking (€ / séance)', 'edit-tarif-walking', tarif.walking) +
       numFieldHtml('Day Care (€ / journée)', 'edit-tarif-daycare', tarif.daycare) +
       numFieldHtml('Boarding (€ / nuit)', 'edit-tarif-boarding', tarif.boarding) +
-      numFieldHtml('Réduction 2e chien (%)', 'edit-tarif-reduction', tarif.reduction);
+      numFieldHtml('Réduction 2e chien (%)', 'edit-tarif-reduction', tarif.reduction) +
+      '<div class="info-item" style="grid-column:1/-1;"><div class="info-value" id="edit-tarif-note" style="font-size:11.5px;color:var(--tf);"></div></div>';
   }
 
   renderPersonnesEdit(c.personnes_autorisees);
 }
 
 function onTypeChange() {
-  var fidele = document.getElementById('edit-client-fidele').value === 'true';
-  var def = fidele
-    ? { walking: 28, daycare: 55, boarding: 68, reduction: 50 }
-    : { walking: 30, daycare: 60, boarding: 75, reduction: 30 };
+  var mode = document.getElementById('edit-tarif-mode').value;
+  var champs = ['edit-tarif-walking', 'edit-tarif-daycare', 'edit-tarif-boarding', 'edit-tarif-reduction'];
+  var note = document.getElementById('edit-tarif-note');
+
+  if (mode === 'sur_mesure') {
+    champs.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) { el.readOnly = false; el.style.opacity = '1'; }
+    });
+    if (note) note.textContent = 'Montants propres à ce client : ils ne suivront plus la grille de Paramètres avancés.';
+    return;
+  }
+
+  var def = (mode === 'fidele') ? GRILLE.fidele : GRILLE.nouveau;
   document.getElementById('edit-tarif-walking').value   = def.walking;
   document.getElementById('edit-tarif-daycare').value   = def.daycare;
   document.getElementById('edit-tarif-boarding').value  = def.boarding;
   document.getElementById('edit-tarif-reduction').value = def.reduction;
+  champs.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) { el.readOnly = true; el.style.opacity = '0.6'; }
+  });
+  if (note) note.textContent = 'Grille standard : ces montants suivront automatiquement Paramètres avancés.';
 }
 
 function personneRowHtml(p) {
@@ -1213,6 +1293,7 @@ function toggleEdit() {
   if (!currentClient) return;
   editMode = true;
   renderInfosEdit(currentClient);
+  onTypeChange();   // verrouille ou libère les montants selon le mode
   document.getElementById('btn-toggle-edit').style.display = 'none';
   document.getElementById('btn-cancel-edit').style.display = '';
   document.getElementById('btn-save-edit').style.display = '';
@@ -1263,7 +1344,7 @@ async function saveInfos() {
       adresse: document.getElementById('edit-adresse').value.trim(),
       commune: document.getElementById('edit-commune').value.trim(),
       client_depuis: document.getElementById('edit-client-depuis').value || null,
-      client_fidele: document.getElementById('edit-client-fidele').value === 'true',
+      client_fidele: document.getElementById('edit-tarif-mode').value !== 'nouveau',
       hors_zone: document.getElementById('edit-hors-zone').value === 'true',
       tarif_walking: parseFloat(document.getElementById('edit-tarif-walking').value),
       tarif_daycare: parseFloat(document.getElementById('edit-tarif-daycare').value),
@@ -1271,9 +1352,19 @@ async function saveInfos() {
       tarif_reduction: parseFloat(document.getElementById('edit-tarif-reduction').value),
       personnes_autorisees: collectPersonnesRows()
     };
-    ['tarif_walking', 'tarif_daycare', 'tarif_boarding', 'tarif_reduction'].forEach(function(k) {
-      if (isNaN(update[k])) update[k] = null;
-    });
+    // En mode standard, on ne fige RIEN sur la fiche : les colonnes tarif_*
+    // repassent a null, donc le client suit la grille de Parametres avances.
+    var modeChoisi = document.getElementById('edit-tarif-mode').value;
+    if (modeChoisi === 'sur_mesure') {
+      ['tarif_walking', 'tarif_daycare', 'tarif_boarding', 'tarif_reduction'].forEach(function(k) {
+        if (isNaN(update[k])) update[k] = null;
+      });
+    } else {
+      update.tarif_walking = null;
+      update.tarif_daycare = null;
+      update.tarif_boarding = null;
+      update.tarif_reduction = null;
+    }
 
     var { error } = await db.from('clients').update(update).eq('id', clientId);
     if (error) throw error;

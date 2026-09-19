@@ -292,6 +292,11 @@ select.form-input option { background: var(--surface); }
 .info-box.green { background: rgba(94,201,122,0.14); border: 1.5px solid rgba(94,201,122,0.4); color: #cdeed6; }
 .info-box.green svg { stroke: var(--green); fill: none; }
 .info-box.green strong { color: var(--green); }
+/* Thème clair : les teintes pâles ci-dessus (prévues pour le fond sombre)
+   passaient sous le seuil de contraste sur fond clair. */
+html.light .info-box.amber { background: rgba(180,80,0,0.10); border-color: rgba(180,80,0,0.35); color: #4a3200; }
+html.light .info-box.red   { background: rgba(198,40,40,0.09); border-color: rgba(198,40,40,0.32); color: #521414; }
+html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgba(46,125,50,0.32); color: #17351a; }
 .info-box strong { font-weight: 700; }
 
 /* ── SCROLLBAR ── */
@@ -371,6 +376,7 @@ select.form-input option { background: var(--surface); }
     frErreurReseau();
   }
   </script>
+  <script src="fr-calendrier.js"></script>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#ff5f1f">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -385,7 +391,7 @@ select.form-input option { background: var(--surface); }
   <!-- MAIN -->
   <main class="main">
     <div class="topbar">
-      <div class="page-title">Paramètres avancés</div>
+      <div class="page-title" id="page-title">Paramètres avancés</div>
       <div class="topbar-right">
         <button id="topbar-add-van" class="btn btn-accent" onclick="openModal('modal-add-van')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -396,14 +402,14 @@ select.form-input option { background: var(--surface); }
 
     <!-- TAB NAV -->
     <div class="tab-nav">
-      <div class="tab active" onclick="switchTab('camionnettes',this)">Camionnettes</div>
-      <div class="tab" onclick="switchTab('attribution',this)">Attribution quotidienne</div>
-      <div class="tab" onclick="switchTab('staff',this)">Staff & Rangers</div>
-      <div class="tab" onclick="switchTab('conges',this)">
+      <div class="tab active" data-vue="params" onclick="switchTab('camionnettes',this)">Camionnettes</div>
+      <div class="tab" data-vue="staff" onclick="switchTab('attribution',this)">Attribution quotidienne</div>
+      <div class="tab" data-vue="staff" onclick="switchTab('staff',this)">Staff & Rangers</div>
+      <div class="tab" data-vue="staff" onclick="switchTab('conges',this)">
         Congés
         <span class="tab-badge amber">2</span>
       </div>
-      <div class="tab" onclick="switchTab('regles',this)">Règles & Saisons</div>
+      <div class="tab" data-vue="params" onclick="switchTab('regles',this)">Règles & Saisons</div>
     </div>
 
     <div class="content">
@@ -969,17 +975,35 @@ select.form-input option { background: var(--surface); }
           </div>
         </div>
 
-        <!-- Autres périodes (extensible) -->
+        <!-- Autres périodes clôturées -->
         <div class="card" style="margin-bottom:16px;">
           <div class="card-head">
             <span class="card-title">📅 Autres périodes clôturées</span>
-            <button class="btn btn-outline" style="font-size:10px;padding:4px 10px;" onclick="addPeriode()">+ Ajouter</button>
+            <button class="btn btn-accent" style="font-size:10px;padding:6px 12px;" onclick="ouvrirPeriode(null)">+ Ajouter</button>
+          </div>
+          <div class="info-box amber" style="margin:12px 16px 4px;">
+            <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <div>Une période <strong>reconduite chaque année</strong> se règle en jour et mois : la règle vaut pour toutes les années à venir. <strong>Fermeture</strong> bloque toute prestation ; <strong>promenades suspendues</strong> ne bloque que les promenades, la crèche du jour et la pension restent réservables.</div>
           </div>
           <div id="autres-periodes">
-            <div style="padding:16px;text-align:center;font-size:12px;color:var(--text-faint);">
-              Aucune autre période configurée.<br>
-              <span style="font-size:11px;">Ex: vacances de Noël, Pâques, etc.</span>
+            <div style="padding:16px;text-align:center;font-size:12px;color:var(--text-faint);">Chargement…</div>
+          </div>
+        </div>
+
+        <!-- Jours fériés légaux -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-head">
+            <span class="card-title">🇱🇺 Jours fériés légaux</span>
+            <span style="font-size:11px;color:var(--text-faint);margin-left:auto;">Calculés automatiquement · article 10.1 des CGV</span>
+          </div>
+          <div style="padding:12px 16px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+              <button class="btn btn-outline" style="font-size:10px;padding:4px 10px;" onclick="changerAnneeFeries(-1)">←</button>
+              <span id="feries-annee" style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:14px;font-weight:800;color:var(--text);"></span>
+              <button class="btn btn-outline" style="font-size:10px;padding:4px 10px;" onclick="changerAnneeFeries(1)">→</button>
+              <span style="font-size:11px;color:var(--text-faint);margin-left:auto;">Aucune réservation possible ces jours-là.</span>
             </div>
+            <div id="feries-liste" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px;"></div>
           </div>
         </div>
 
@@ -987,7 +1011,7 @@ select.form-input option { background: var(--surface); }
         <div class="card" style="margin-bottom:16px;">
           <div class="card-head">
             <span class="card-title">💶 Tarifs</span>
-            <button class="btn btn-accent" style="font-size:10px;padding:6px 12px;" onclick="saveTarifs()">Enregistrer</button>
+            <span id="tarifs-grille-active" style="font-size:11px;color:var(--text-faint);margin-left:auto;margin-right:10px;"></span>
           </div>
           <div style="padding:14px 16px;">
             <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-faint);font-weight:700;margin-bottom:10px;">Clients fidèles</div>
@@ -1007,6 +1031,31 @@ select.form-input option { background: var(--surface); }
               <div><label class="form-label">Réduct. nouveau 2e chien</label><div style="display:flex;align-items:center;gap:4px;"><input type="number" class="form-input" id="reduction-nouveau" value="30" style="text-align:center;"><span style="color:var(--text-faint);font-size:12px;">%</span></div></div>
               <div><label class="form-label">Supplément hors zone</label><div style="display:flex;align-items:center;gap:4px;"><input type="number" class="form-input" id="supplement-hors-zone" value="5" style="text-align:center;"><span style="color:var(--text-faint);font-size:12px;">€</span></div></div>
             </div>
+
+            <!-- Entrée en vigueur -->
+            <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border);">
+              <div class="info-box amber" style="margin-bottom:12px;">
+                <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <div><strong>Préavis d'un mois :</strong> une nouvelle grille est notifiée aux clients et ne s'applique qu'aux prestations réalisées à partir de la date d'entrée en vigueur. Les factures déjà émises et les prestations antérieures gardent l'ancien tarif.</div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;">
+                <div>
+                  <label class="form-label">Entrée en vigueur</label>
+                  <input type="date" class="form-input" id="tarifs-date-effet">
+                </div>
+                <button class="btn btn-accent" style="font-size:11px;padding:9px 14px;" onclick="programmerTarifs()">Programmer &amp; notifier</button>
+              </div>
+              <label style="display:flex;align-items:center;gap:7px;margin-top:10px;font-size:12px;color:var(--text-dim);cursor:pointer;">
+                <input type="checkbox" id="tarifs-notifier" checked>
+                Prévenir les clients par notification
+              </label>
+            </div>
+
+            <!-- Grilles enregistrées -->
+            <div style="margin-top:16px;">
+              <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Grilles enregistrées</div>
+              <div id="tarifs-versions" style="font-size:12px;color:var(--text-faint);">—</div>
+            </div>
           </div>
         </div>
 
@@ -1014,7 +1063,7 @@ select.form-input option { background: var(--surface); }
         <div class="card" style="margin-bottom:16px;">
           <div class="card-head">
             <span class="card-title">🐕 Capacités</span>
-            <button class="btn btn-accent" style="font-size:10px;padding:6px 12px;" onclick="saveTarifs()">Enregistrer</button>
+            <button class="btn btn-accent" style="font-size:10px;padding:6px 12px;" onclick="saveCapacites()">Enregistrer</button>
           </div>
           <div style="padding:14px 16px;">
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
@@ -1027,7 +1076,13 @@ select.form-input option { background: var(--surface); }
 
         <!-- Zones -->
         <div class="card">
-          <div class="card-head"><span class="card-title">📍 Zones géographiques</span></div>
+          <div class="card-head">
+            <span class="card-title">📍 Zones géographiques</span>
+            <button class="btn btn-accent" style="font-size:10px;padding:6px 12px;" onclick="ouvrirZone(null)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Ajouter une zone
+            </button>
+          </div>
           <div id="zones-list">
             <div style="padding:13px 16px;border-bottom:1px solid var(--border);">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
@@ -1052,6 +1107,96 @@ select.form-input option { background: var(--surface); }
 </div>
 
 <!-- ══ MODALS ══ -->
+
+<!-- Modal : Période clôturée -->
+<div class="modal-overlay" id="modal-periode">
+  <div class="modal">
+    <div class="modal-title" id="modal-periode-titre">Ajouter une période</div>
+    <input type="hidden" id="periode-id">
+    <div class="form-group">
+      <label class="form-label">Intitulé</label>
+      <input type="text" class="form-input" id="periode-nom" placeholder="Ex : Vacances scolaires de fin d'année">
+    </div>
+    <div class="form-row-2">
+      <div class="form-group">
+        <label class="form-label">Effet</label>
+        <select class="form-input" id="periode-type">
+          <option value="promenades">Promenades suspendues</option>
+          <option value="fermeture">Fermeture complète</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Répétition</label>
+        <select class="form-input" id="periode-annuel" onchange="majChampsPeriode()">
+          <option value="true">Chaque année</option>
+          <option value="false">Cette fois seulement</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row-2" id="periode-champs-annuel">
+      <div class="form-group">
+        <label class="form-label">Du (jour / mois)</label>
+        <div style="display:flex;gap:6px;">
+          <input type="number" min="1" max="31" class="form-input" id="periode-jour-debut" placeholder="23" style="text-align:center;">
+          <select class="form-input" id="periode-mois-debut"></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Au (jour / mois)</label>
+        <div style="display:flex;gap:6px;">
+          <input type="number" min="1" max="31" class="form-input" id="periode-jour-fin" placeholder="4" style="text-align:center;">
+          <select class="form-input" id="periode-mois-fin"></select>
+        </div>
+      </div>
+    </div>
+    <div class="form-row-2" id="periode-champs-dates" style="display:none;">
+      <div class="form-group"><label class="form-label">Début</label><input type="date" class="form-input" id="periode-date-debut"></div>
+      <div class="form-group"><label class="form-label">Fin</label><input type="date" class="form-input" id="periode-date-fin"></div>
+    </div>
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-dim);cursor:pointer;">
+        <input type="checkbox" id="periode-actif" checked> Règle active
+      </label>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" id="periode-btn-suppr" onclick="supprimerPeriode()" style="margin-right:auto;color:var(--red);border-color:var(--red);">Supprimer</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-periode')">Annuler</button>
+      <button class="btn btn-accent" onclick="enregistrerPeriode()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal : Zone géographique -->
+<div class="modal-overlay" id="modal-zone">
+  <div class="modal">
+    <div class="modal-title" id="modal-zone-titre">Ajouter une zone</div>
+    <input type="hidden" id="zone-id">
+    <div class="form-row-2">
+      <div class="form-group">
+        <label class="form-label">Nom de la zone</label>
+        <input type="text" class="form-input" id="zone-nom" placeholder="Ex : Zone 1 — Sans frais">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Supplément déplacement (€ HT)</label>
+        <input type="number" step="0.5" min="0" class="form-input" id="zone-supplement" value="0">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Communes desservies</label>
+      <textarea class="form-input" id="zone-communes" rows="4"
+        placeholder="Kopstal, Bridel, Strassen, Bertrange..."
+        style="resize:vertical;min-height:80px;"></textarea>
+      <div style="font-size:11px;color:var(--text-faint);margin-top:5px;">
+        Séparez les communes par une virgule ou un retour à la ligne.
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" id="zone-btn-suppr" onclick="supprimerZone()" style="margin-right:auto;color:var(--red);border-color:var(--red);">Supprimer</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-zone')">Annuler</button>
+      <button class="btn btn-accent" onclick="enregistrerZone()">Enregistrer</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal : Ajouter camionnette -->
 <div class="modal-overlay" id="modal-add-van">
@@ -1224,6 +1369,34 @@ select.form-input option { background: var(--surface); }
 </div>
 
 <script>
+// ── VUES ──
+// Cette page sert deux ecrans de l'admin, dans deux iframes distinctes :
+//   ?vue=staff   -> Attribution quotidienne, Staff & Rangers, Conges
+//   (par defaut) -> Camionnettes, Regles & Saisons
+// Les onglets de l'autre vue sont simplement masques ; le code reste commun.
+var VUE = (new URLSearchParams(location.search).get('vue') || 'params').toLowerCase();
+if (VUE !== 'staff') VUE = 'params';
+
+function appliquerVue() {
+  var titre = document.getElementById('page-title');
+  if (titre) titre.textContent = (VUE === 'staff') ? 'Staff & Rangers' : 'Paramètres avancés';
+  // En vue staff, la page est encadree par une carte de l'admin qui porte deja
+  // son titre : on retire la barre du haut pour ne pas l'afficher deux fois.
+  if (VUE === 'staff') {
+    var bar = document.querySelector('.topbar');
+    if (bar) bar.style.display = 'none';
+  }
+  var premier = null;
+  document.querySelectorAll('.tab').forEach(function(t) {
+    var ok = (t.getAttribute('data-vue') === VUE);
+    t.style.display = ok ? '' : 'none';
+    t.classList.remove('active');
+    if (ok && !premier) premier = t;
+  });
+  document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.remove('active'); });
+  if (premier) premier.click();
+}
+
 function switchTab(id, el) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -1292,29 +1465,31 @@ function changeDay(delta) {
   renderAttribDate();
 }
 
-// ── POLICE NORWESTER : remplacer les lettres accentuées par leur équivalent ASCII majuscule ──
-var ACCENT_MAP = {
-  'à':'A','á':'A','â':'A','ä':'A','ã':'A','å':'A','À':'A','Á':'A','Â':'A','Ä':'A','Ã':'A',
-  'è':'E','é':'E','ê':'E','ë':'E','È':'E','É':'E','Ê':'E','Ë':'E',
-  'ì':'I','í':'I','î':'I','ï':'I','Ì':'I','Í':'I','Î':'I','Ï':'I',
-  'ò':'O','ó':'O','ô':'O','ö':'O','õ':'O','Ò':'O','Ó':'O','Ô':'O','Ö':'O','Õ':'O',
-  'ù':'U','ú':'U','û':'U','ü':'U','Ù':'U','Ú':'U','Û':'U','Ü':'U',
-  'ç':'C','Ç':'C','ñ':'N','Ñ':'N','ý':'Y','ÿ':'Y'
-};
+// ── POLICE NORWESTER ──
+// La police d'affichage n'a pas de glyphes accentues : le navigateur bascule
+// alors sur une police de secours pour la seule lettre accentuee, ce qui
+// donnait « ParamEtres avancEs » ou « AprEs-midi ». On retire donc l'accent
+// EN CONSERVANT LA CASSE (e reste e, E reste E), uniquement sur les textes
+// rendus en Norwester. Le corps de texte garde ses accents.
+function stripAccents(txt) {
+  return txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
 
-function normalizeNorwester() {
+function normalizeNorwester(root) {
   try {
-    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+    var scope = root || document.body;
+    if (!scope) return;
+    var walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, null);
     var nodes = [];
     while (walker.nextNode()) nodes.push(walker.currentNode);
     nodes.forEach(function(n) {
       var el = n.parentElement;
       if (!el) return;
+      if (!/[\u00C0-\u024F]/.test(n.nodeValue)) return;
       var ff = (getComputedStyle(el).fontFamily || '').toLowerCase();
       if (ff.indexOf('norwester') === -1) return;
-      var t = n.nodeValue;
-      var out = t.replace(/[À-ÿ]/g, function(c) { return ACCENT_MAP[c] || c; });
-      if (out !== t) n.nodeValue = out;
+      var out = stripAccents(n.nodeValue);
+      if (out !== n.nodeValue) n.nodeValue = out;
     });
   } catch(e) { /* noop */ }
 }
@@ -1408,19 +1583,179 @@ function resetCloture() {
   updateCloturePreview();
 }
 
-function addPeriode() {
-  var container = document.getElementById('autres-periodes');
-  var id = Date.now();
-  var html = '<div id="periode-' + id + '" style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;padding:12px;border-top:1px solid var(--border);align-items:end;">'
-    + '<div><label class="form-label">Début</label><input type="date" class="form-input"></div>'
-    + '<div><label class="form-label">Fin</label><input type="date" class="form-input"></div>'
-    + '<button class="btn btn-outline" style="padding:8px 12px;color:var(--red);border-color:rgba(224,90,90,0.3);" onclick="document.getElementById(\'periode-' + id + '\').remove()">'
-    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
-    + '</button></div>';
-  // Retirer le message vide si présent
-  var empty = container.querySelector('div[style*="text-align:center"]');
-  if (empty) empty.remove();
-  container.insertAdjacentHTML('beforeend', html);
+// ── AUTRES PÉRIODES CLÔTURÉES ──
+// Enregistrées dans la table periodes_fermeture (migration v29) et
+// appliquées partout via fr-calendrier.js.
+var MOIS_FR_CAL = ['janvier','février','mars','avril','mai','juin',
+                   'juillet','août','septembre','octobre','novembre','décembre'];
+var PERIODES_CACHE = [];
+
+function optionsMois(selected) {
+  return MOIS_FR_CAL.map(function(m, i) {
+    var v = (i + 1 < 10 ? '0' : '') + (i + 1);
+    return '<option value="' + v + '"' + (v === selected ? ' selected' : '') + '>' + m + '</option>';
+  }).join('');
+}
+
+async function loadPeriodes() {
+  var box = document.getElementById('autres-periodes');
+  try {
+    var { data, error } = await db.from('periodes_fermeture').select('*').order('ordre').order('debut');
+    if (error) throw error;
+    PERIODES_CACHE = data || [];
+    renderPeriodes();
+  } catch(e) {
+    if (box) box.innerHTML = '<div style="padding:16px;text-align:center;font-size:12px;color:var(--text-faint);">'
+      + 'Périodes indisponibles (migration v29 non appliquée ?).</div>';
+  }
+}
+
+function libellePeriode(p) {
+  function fmt(v) {
+    var t = String(v || '');
+    if (p.annuel) {
+      var mm = t.slice(0, 2), jj = parseInt(t.slice(3), 10);
+      return jj + ' ' + (MOIS_FR_CAL[parseInt(mm, 10) - 1] || '');
+    }
+    var d = t.split('-');
+    return parseInt(d[2], 10) + ' ' + (MOIS_FR_CAL[parseInt(d[1], 10) - 1] || '') + ' ' + d[0];
+  }
+  return 'Du ' + fmt(p.debut) + ' au ' + fmt(p.fin) + (p.annuel ? ' · chaque année' : '');
+}
+
+function renderPeriodes() {
+  var box = document.getElementById('autres-periodes');
+  if (!box) return;
+  if (!PERIODES_CACHE.length) {
+    box.innerHTML = '<div style="padding:16px;text-align:center;font-size:12px;color:var(--text-faint);">'
+      + 'Aucune autre période configurée.<br><span style="font-size:11px;">Ex : vacances scolaires, fermeture annuelle.</span></div>';
+    return;
+  }
+  box.innerHTML = PERIODES_CACHE.map(function(p) {
+    var effet = (p.type === 'fermeture')
+      ? '<span class="badge b-red">Fermeture complète</span>'
+      : '<span class="badge b-amber">Promenades suspendues</span>';
+    var etat = p.actif ? '' : '<span class="badge b-muted">Inactive</span>';
+    return '<div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+      + '<div style="flex:1;min-width:200px;">'
+      +   '<div style="font-weight:700;font-size:13px;color:var(--text);">' + echapper(p.nom) + '</div>'
+      +   '<div style="font-size:11.5px;color:var(--text-faint);margin-top:2px;">' + libellePeriode(p) + '</div>'
+      + '</div>'
+      + effet + etat
+      + '<button onclick="ouvrirPeriode(\'' + p.id + '\')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 10px;color:var(--text-dim);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:10px;font-weight:800;cursor:pointer;">Modifier</button>'
+      + '</div>';
+  }).join('');
+  normalizeNorwester(box);
+}
+
+function majChampsPeriode() {
+  var annuel = document.getElementById('periode-annuel').value === 'true';
+  document.getElementById('periode-champs-annuel').style.display = annuel ? '' : 'none';
+  document.getElementById('periode-champs-dates').style.display  = annuel ? 'none' : '';
+}
+
+function ouvrirPeriode(id) {
+  var p = id ? PERIODES_CACHE.filter(function(x) { return x.id === id; })[0] : null;
+  document.getElementById('modal-periode-titre').textContent = p ? 'Modifier la période' : 'Ajouter une période';
+  document.getElementById('periode-id').value    = p ? p.id : '';
+  document.getElementById('periode-nom').value   = p ? (p.nom || '') : '';
+  document.getElementById('periode-type').value  = p ? (p.type || 'promenades') : 'promenades';
+  document.getElementById('periode-annuel').value = p ? String(!!p.annuel) : 'true';
+  document.getElementById('periode-actif').checked = p ? (p.actif !== false) : true;
+
+  var annuel = p ? !!p.annuel : true;
+  var moisD = annuel && p ? String(p.debut).slice(0, 2) : '12';
+  var moisF = annuel && p ? String(p.fin).slice(0, 2)   : '01';
+  document.getElementById('periode-mois-debut').innerHTML = optionsMois(moisD);
+  document.getElementById('periode-mois-fin').innerHTML   = optionsMois(moisF);
+  document.getElementById('periode-jour-debut').value = (annuel && p) ? parseInt(String(p.debut).slice(3), 10) : '';
+  document.getElementById('periode-jour-fin').value   = (annuel && p) ? parseInt(String(p.fin).slice(3), 10)   : '';
+  document.getElementById('periode-date-debut').value = (!annuel && p) ? p.debut : '';
+  document.getElementById('periode-date-fin').value   = (!annuel && p) ? p.fin   : '';
+
+  document.getElementById('periode-btn-suppr').style.display = p ? '' : 'none';
+  majChampsPeriode();
+  openModal('modal-periode');
+}
+
+async function enregistrerPeriode() {
+  var id  = getVal('periode-id');
+  var nom = getVal('periode-nom').trim();
+  if (!nom) { showToast('L\'intitulé est obligatoire', 'amber'); return; }
+  var annuel = getVal('periode-annuel') === 'true';
+  var debut, fin;
+
+  if (annuel) {
+    var jd = parseInt(getVal('periode-jour-debut'), 10);
+    var jf = parseInt(getVal('periode-jour-fin'), 10);
+    if (!jd || !jf || jd < 1 || jd > 31 || jf < 1 || jf > 31) {
+      showToast('Indiquez un jour valide pour le début et la fin', 'amber'); return;
+    }
+    debut = getVal('periode-mois-debut') + '-' + (jd < 10 ? '0' : '') + jd;
+    fin   = getVal('periode-mois-fin')   + '-' + (jf < 10 ? '0' : '') + jf;
+  } else {
+    debut = getVal('periode-date-debut');
+    fin   = getVal('periode-date-fin');
+    if (!debut || !fin) { showToast('Indiquez la date de début et de fin', 'amber'); return; }
+    if (fin < debut)    { showToast('La fin doit suivre le début', 'amber'); return; }
+  }
+
+  var ligne = {
+    nom: nom,
+    type: getVal('periode-type'),
+    annuel: annuel,
+    debut: debut,
+    fin: fin,
+    actif: document.getElementById('periode-actif').checked,
+    updated_at: new Date().toISOString()
+  };
+  try {
+    var r = id
+      ? await db.from('periodes_fermeture').update(ligne).eq('id', id)
+      : await db.from('periodes_fermeture').insert(
+          Object.assign({ ordre: PERIODES_CACHE.length + 1 }, ligne));
+    if (r.error) throw r.error;
+    closeModal('modal-periode');
+    showToast('✓ Période enregistrée', 'green');
+    loadPeriodes();
+  } catch(e) { showToast('Erreur : ' + ((e && e.message) || e), 'red'); }
+}
+
+async function supprimerPeriode() {
+  var id = getVal('periode-id');
+  if (!id) return;
+  if (!confirm('Supprimer cette période ? Les dates concernées redeviennent réservables.')) return;
+  try {
+    var r = await db.from('periodes_fermeture').delete().eq('id', id);
+    if (r.error) throw r.error;
+    closeModal('modal-periode');
+    showToast('✓ Période supprimée', 'green');
+    loadPeriodes();
+  } catch(e) { showToast('Erreur : ' + ((e && e.message) || e), 'red'); }
+}
+
+// ── JOURS FÉRIÉS LÉGAUX (calculés, rien à saisir) ──
+var anneeFeries = new Date().getFullYear();
+
+function changerAnneeFeries(delta) {
+  anneeFeries += delta;
+  renderFeries();
+}
+
+function renderFeries() {
+  var label = document.getElementById('feries-annee');
+  var liste = document.getElementById('feries-liste');
+  if (!label || !liste || !window.FR_CAL) return;
+  label.textContent = anneeFeries;
+  var aujourdhui = new Date().toISOString().slice(0, 10);
+  liste.innerHTML = FR_CAL.feries(anneeFeries).map(function(f) {
+    var d = new Date(f.date + 'T00:00:00');
+    var passe = f.date < aujourdhui;
+    return '<div style="display:flex;justify-content:space-between;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);opacity:' + (passe ? '0.5' : '1') + ';">'
+      + '<span style="font-size:12px;color:var(--text);">' + f.nom + '</span>'
+      + '<span style="font-size:11.5px;color:var(--text-faint);white-space:nowrap;">'
+      + d.toLocaleDateString('fr-LU', { weekday: 'short', day: 'numeric', month: 'short' }) + '</span></div>';
+  }).join('');
 }
 
 // ── FONCTION GLOBALE : vérifier si une date est en période clôturée ──
@@ -1463,10 +1798,19 @@ document.addEventListener('DOMContentLoaded', function() {
   loadStaff();
   loadCamionnettes();
   loadZones();
+  loadPeriodes();
+  renderFeries();
+  chargerVersionsTarifs();
+
+  // Date d'entree en vigueur par defaut : un mois, comme le preavis des CGV
+  var dEffet = document.getElementById('tarifs-date-effet');
+  if (dEffet) { dEffet.value = dansUnMois(); dEffet.min = new Date().toISOString().slice(0,10); }
 
   // Date du jour pour l'attribution quotidienne
   renderAttribDate();
   // Le bouton "Ajouter camionnette" n'apparaît que sur l'onglet Camionnettes (actif par défaut)
+  appliquerVue();
+
   // Normaliser les accents dans la police Norwester sur toute la page
   normalizeNorwester();
   setTimeout(normalizeNorwester, 300); // re-passe après chargement des polices/données
@@ -1516,29 +1860,145 @@ async function saveParametre(cle, valeur) {
   } catch(e) { console.log('Erreur save param:', e); }
 }
 
-async function saveTarifs() {
-  var tarifs = [
-    ['tarif_walking_fidele',    getVal('tarif-walking-fidele')],
-    ['tarif_daycare_fidele',    getVal('tarif-daycare-fidele')],
-    ['tarif_boarding_fidele',   getVal('tarif-boarding-fidele')],
-    ['tarif_walking_nouveau',   getVal('tarif-walking-nouveau')],
-    ['tarif_daycare_nouveau',   getVal('tarif-daycare-nouveau')],
-    ['tarif_boarding_nouveau',  getVal('tarif-boarding-nouveau')],
-    ['reduction_2chien_fidele', getVal('reduction-fidele')],
-    ['reduction_2chien_nouveau',getVal('reduction-nouveau')],
-    ['supplement_hors_zone',    getVal('supplement-hors-zone')],
-    ['frais_rappel_impaye',     getVal('frais-rappel')],
-    ['capacite_max_tournee',    getVal('capacite-tournee')],
-    ['max_grands_chiens_tournee',getVal('max-grands-chiens')],
-    ['capacite_max_pension',    getVal('capacite-pension')],
-  ];
+// ── TARIFS DATÉS ──
+// Les prix ne sont plus écrasés en place : chaque grille est enregistrée avec
+// sa date d'entrée en vigueur (table tarifs_versions, migration v28). Une
+// facture se calcule au tarif en vigueur à la date de la prestation, donc les
+// anciennes factures gardent les anciens prix.
+var TARIF_KEYS = [
+  ['tarif_walking_fidele',     'tarif-walking-fidele'],
+  ['tarif_daycare_fidele',     'tarif-daycare-fidele'],
+  ['tarif_boarding_fidele',    'tarif-boarding-fidele'],
+  ['tarif_walking_nouveau',    'tarif-walking-nouveau'],
+  ['tarif_daycare_nouveau',    'tarif-daycare-nouveau'],
+  ['tarif_boarding_nouveau',   'tarif-boarding-nouveau'],
+  ['reduction_2chien_fidele',  'reduction-fidele'],
+  ['reduction_2chien_nouveau', 'reduction-nouveau'],
+  ['supplement_hors_zone',     'supplement-hors-zone'],
+  ['frais_rappel_impaye',      'frais-rappel']
+];
+
+var CAPACITE_KEYS = [
+  ['capacite_max_tournee',      'capacite-tournee'],
+  ['max_grands_chiens_tournee', 'max-grands-chiens'],
+  ['capacite_max_pension',      'capacite-pension']
+];
+
+function dansUnMois() {
+  var d = new Date();
+  d.setMonth(d.getMonth() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function dateFr(iso) {
+  if (!iso) return '—';
+  var p = String(iso).slice(0, 10).split('-');
+  return p[2] + '/' + p[1] + '/' + p[0];
+}
+
+async function saveCapacites() {
   try {
     await db.from('parametres').upsert(
-      tarifs.map(function(t) { return { cle: t[0], valeur: t[1], updated_at: new Date().toISOString() }; }),
+      CAPACITE_KEYS.map(function(k) {
+        return { cle: k[0], valeur: getVal(k[1]), updated_at: new Date().toISOString() };
+      }),
       { onConflict: 'cle' }
     );
-    showToast('✓ Tarifs et règles sauvegardés', 'green');
+    showToast('✓ Capacités enregistrées', 'green');
   } catch(e) { showToast('Erreur sauvegarde', 'red'); }
+}
+
+// Conserve l'ancien nom : d'autres boutons ou raccourcis peuvent l'appeler.
+async function saveTarifs() { return saveCapacites(); }
+
+async function programmerTarifs() {
+  var dateEffet = getVal('tarifs-date-effet');
+  if (!dateEffet) { showToast('Indiquez une date d\'entrée en vigueur', 'amber'); return; }
+
+  var valeurs = {};
+  var manquant = false;
+  TARIF_KEYS.forEach(function(k) {
+    var v = getVal(k[1]);
+    if (v === '' || v == null) manquant = true;
+    valeurs[k[0]] = String(v);
+  });
+  if (manquant) { showToast('Tous les tarifs doivent être renseignés', 'amber'); return; }
+
+  var notifier = document.getElementById('tarifs-notifier');
+  notifier = notifier ? notifier.checked : true;
+
+  var mini = dansUnMois();
+  var force = false;
+  if (dateEffet < mini) {
+    force = confirm('Le préavis d\'un mois prévu par les conditions générales n\'est pas respecté '
+      + '(première date possible : ' + dateFr(mini) + ').\n\n'
+      + 'Appliquer quand même au ' + dateFr(dateEffet) + ' ?');
+    if (!force) return;
+  }
+
+  if (notifier && !confirm('Programmer la nouvelle grille au ' + dateFr(dateEffet)
+      + ' et notifier tous les clients actifs ?')) return;
+
+  try {
+    var res = await db.rpc('fr_tarifs_programmer', {
+      p_date: dateEffet, p_valeurs: valeurs, p_notifier: notifier, p_force: force
+    });
+    if (res.error) throw res.error;
+    var d = res.data || {};
+    showToast('✓ Grille programmée au ' + dateFr(dateEffet)
+      + (d.nb_notifies ? ' · ' + d.nb_notifies + ' client(s) notifié(s)' : ''), 'green');
+    chargerVersionsTarifs();
+  } catch(e) {
+    var m = String((e && e.message) || e);
+    if (m.indexOf('preavis_insuffisant') !== -1)  showToast('Préavis d\'un mois non respecté', 'red');
+    else if (m.indexOf('acces_refuse') !== -1)    showToast('Réservé aux comptes staff', 'red');
+    else showToast('Erreur : ' + m, 'red');
+  }
+}
+
+async function chargerVersionsTarifs() {
+  var box = document.getElementById('tarifs-versions');
+  var actif = document.getElementById('tarifs-grille-active');
+  if (!box) return;
+  try {
+    var { data } = await db.from('tarifs_versions')
+      .select('id,date_effet,notifiee_le,nb_notifies')
+      .order('date_effet', { ascending: false }).limit(12);
+    if (!data || !data.length) {
+      box.innerHTML = 'Aucune grille datée : les tarifs ci-dessus sont ceux en vigueur.';
+      if (actif) actif.textContent = '';
+      return;
+    }
+    var today = new Date().toISOString().slice(0, 10);
+    var enVigueur = data.filter(function(v) { return v.date_effet <= today; })[0];
+    if (actif) actif.textContent = enVigueur
+      ? 'En vigueur depuis le ' + dateFr(enVigueur.date_effet) : '';
+
+    box.innerHTML = data.map(function(v) {
+      var futur = v.date_effet > today;
+      var courant = enVigueur && v.id === enVigueur.id;
+      var etat = futur ? 'Programmée' : (courant ? 'En vigueur' : 'Archivée');
+      var coul = futur ? 'var(--amber)' : (courant ? 'var(--green)' : 'var(--text-faint)');
+      return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);">'
+        + '<span style="font-weight:700;color:var(--text);min-width:90px;">' + dateFr(v.date_effet) + '</span>'
+        + '<span style="color:' + coul + ';font-weight:700;">' + etat + '</span>'
+        + '<span style="color:var(--text-faint);flex:1;">'
+        + (v.notifiee_le ? v.nb_notifies + ' client(s) notifié(s)' : 'non notifiée') + '</span>'
+        + (futur ? '<button onclick="annulerVersionTarif(\'' + v.id + '\')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:11px;font-weight:700;">Annuler</button>' : '')
+        + '</div>';
+    }).join('');
+  } catch(e) {
+    box.innerHTML = 'Historique indisponible (migration v28 non appliquée ?).';
+  }
+}
+
+async function annulerVersionTarif(id) {
+  if (!confirm('Annuler cette grille programmée ? Les clients déjà notifiés ne le seront pas automatiquement.')) return;
+  try {
+    await db.from('tarifs_versions').delete().eq('id', id);
+    showToast('✓ Grille annulée', 'green');
+    chargerVersionsTarifs();
+  } catch(e) { showToast('Erreur suppression', 'red'); }
 }
 
 function getVal(id) {
@@ -1662,29 +2122,110 @@ async function editCamionnette(id, kmActuel) {
 }
 
 // ── ZONES ──
+// Les secteurs sont edites ici (table zones, migration v28) : nom, communes
+// desservies et supplement de deplacement.
+var ZONES_CACHE = [];
+
 async function loadZones() {
+  var container = document.getElementById('zones-list');
   try {
-    var { data } = await db.from('zones').select('*').eq('actif', true);
-    if (!data) return;
-    renderZones(data);
-  } catch(e) { console.log('Erreur zones:', e); }
+    var { data, error } = await db.from('zones').select('*').order('ordre').order('nom');
+    if (error) throw error;
+    ZONES_CACHE = data || [];
+    renderZones(ZONES_CACHE);
+  } catch(e) {
+    if (container) container.innerHTML = '<div style="padding:14px 16px;font-size:12px;color:var(--text-faint);">'
+      + 'Zones indisponibles (migration v28 non appliquée ?).</div>';
+  }
 }
 
 function renderZones(zones) {
   var container = document.getElementById('zones-list');
   if (!container) return;
-  if (!zones || zones.length === 0) return;
+  if (!zones || !zones.length) {
+    container.innerHTML = '<div style="padding:14px 16px;font-size:12px;color:var(--text-faint);">'
+      + 'Aucune zone. Utilisez « Ajouter une zone ».</div>';
+    return;
+  }
   container.innerHTML = zones.map(function(z) {
-    var communes = z.communes ? z.communes.join(', ') : '—';
-    return '<div style="padding:14px 16px;border-bottom:1px solid var(--border);">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
-      + '<div style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:13px;font-weight:800;color:var(--text);">' + z.nom + '</div>'
-      + '<span style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:13px;font-weight:800;color:' + (z.supplement_ht > 0 ? 'var(--amber)' : 'var(--green)') + ';">'
-      + (z.supplement_ht > 0 ? '+' + z.supplement_ht + ' € HT' : 'Sans frais') + '</span>'
+    var communes = (z.communes && z.communes.length) ? z.communes.join(', ') : '—';
+    var supp = parseFloat(z.supplement_ht) || 0;
+    return '<div style="padding:13px 16px;border-bottom:1px solid var(--border);">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px;">'
+      +   '<div style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:13px;font-weight:800;color:var(--text);">' + echapper(z.nom || '—') + '</div>'
+      +   '<div style="display:flex;align-items:center;gap:10px;">'
+      +     '<span style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:13px;font-weight:800;color:' + (supp > 0 ? 'var(--amber)' : 'var(--green)') + ';">'
+      +       (supp > 0 ? '+' + supp + ' € HT' : 'Sans frais') + '</span>'
+      +     '<button onclick="ouvrirZone(\'' + z.id + '\')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 10px;color:var(--text-dim);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:10px;font-weight:800;cursor:pointer;">Modifier</button>'
+      +   '</div>'
       + '</div>'
-      + '<div style="font-size:11px;color:var(--text-faint);">' + communes + '</div>'
+      + '<div style="font-size:11px;color:var(--text-faint);">' + echapper(communes) + '</div>'
       + '</div>';
   }).join('');
+  normalizeNorwester(container);
+}
+
+function echapper(v) {
+  return String(v == null ? '' : v).replace(/[&<>"]/g, function(c) {
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c];
+  });
+}
+
+function ouvrirZone(id) {
+  var z = id ? ZONES_CACHE.filter(function(x) { return x.id === id; })[0] : null;
+  document.getElementById('modal-zone-titre').textContent = z ? 'Modifier la zone' : 'Ajouter une zone';
+  document.getElementById('zone-id').value         = z ? z.id : '';
+  document.getElementById('zone-nom').value        = z ? (z.nom || '') : '';
+  document.getElementById('zone-supplement').value = z ? (parseFloat(z.supplement_ht) || 0) : 0;
+  document.getElementById('zone-communes').value   = (z && z.communes) ? z.communes.join(', ') : '';
+  document.getElementById('zone-btn-suppr').style.display = z ? '' : 'none';
+  openModal('modal-zone');
+}
+
+function lireCommunes() {
+  return (document.getElementById('zone-communes').value || '')
+    .split(/[,\n;]/)
+    .map(function(c) { return c.trim(); })
+    .filter(function(c) { return c.length > 0; });
+}
+
+async function enregistrerZone() {
+  var id  = getVal('zone-id');
+  var nom = getVal('zone-nom').trim();
+  if (!nom) { showToast('Le nom de la zone est obligatoire', 'amber'); return; }
+  var ligne = {
+    nom: nom,
+    communes: lireCommunes(),
+    supplement_ht: parseFloat(getVal('zone-supplement')) || 0,
+    actif: true,
+    updated_at: new Date().toISOString()
+  };
+  try {
+    if (id) {
+      var r1 = await db.from('zones').update(ligne).eq('id', id);
+      if (r1.error) throw r1.error;
+    } else {
+      ligne.ordre = (ZONES_CACHE.length + 1);
+      var r2 = await db.from('zones').insert(ligne);
+      if (r2.error) throw r2.error;
+    }
+    closeModal('modal-zone');
+    showToast('✓ Zone enregistrée', 'green');
+    loadZones();
+  } catch(e) { showToast('Erreur : ' + ((e && e.message) || e), 'red'); }
+}
+
+async function supprimerZone() {
+  var id = getVal('zone-id');
+  if (!id) return;
+  if (!confirm('Supprimer cette zone ? Les communes qu\'elle contient ne seront plus rattachées à un secteur.')) return;
+  try {
+    var r = await db.from('zones').delete().eq('id', id);
+    if (r.error) throw r.error;
+    closeModal('modal-zone');
+    showToast('✓ Zone supprimée', 'green');
+    loadZones();
+  } catch(e) { showToast('Erreur : ' + ((e && e.message) || e), 'red'); }
 }
 
 // ── TOAST ──

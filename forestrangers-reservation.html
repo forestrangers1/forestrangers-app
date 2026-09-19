@@ -533,6 +533,7 @@ html.dark .tbl th, html.dark .tbl td { border-color: rgba(255,255,255,0.08) !imp
     frErreurReseau();
   }
   </script>
+  <script src="fr-calendrier.js"></script>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#ff5f1f">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -591,7 +592,7 @@ html.dark .tbl th, html.dark .tbl td { border-color: rgba(255,255,255,0.08) !imp
       <!-- Dog Walking -->
       <div class="service-card" onclick="selectService('walking',this)">
         <div class="service-icon">
-          <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M10 5.172C10 3.782 8.423 2.679 6.5 3c-2 .336-3.5 2.332-3.5 4.327 0 .644.198 1.885.5 2.669L10 21v-3.164"/><path d="M14 5.172C14 3.782 15.577 2.679 17.5 3c2 .336 3.5 2.332 3.5 4.327 0 .644-.198 1.885-.5 2.669L14 21v-3.164"/><path d="M12 12a2 2 0 100-4 2 2 0 000 4z"/></svg>
+          <svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="6.3" cy="9.8" rx="1.7" ry="2.2" transform="rotate(-22 6.3 9.8)"/><ellipse cx="10.3" cy="7.1" rx="1.7" ry="2.4" transform="rotate(-8 10.3 7.1)"/><ellipse cx="14.4" cy="7.1" rx="1.7" ry="2.4" transform="rotate(8 14.4 7.1)"/><ellipse cx="18.4" cy="9.8" rx="1.7" ry="2.2" transform="rotate(22 18.4 9.8)"/><path d="M12.3 11.9C15.3 11.9 18 14.1 18 16.6C18 18.6 16.3 20 14.2 19.6C13.4 19.5 12.9 19.3 12.3 19.3C11.7 19.3 11.2 19.5 10.4 19.6C8.3 20 6.6 18.6 6.6 16.6C6.6 14.1 9.3 11.9 12.3 11.9Z"/></svg>
         </div>
         <div class="service-name">Dog Walking</div>
         <div class="service-desc">Promenade en groupe · Min. 3 km · Lundi–Vendredi</div>
@@ -646,7 +647,7 @@ html.dark .tbl th, html.dark .tbl td { border-color: rgba(255,255,255,0.08) !imp
     <div class="section-block" style="margin-bottom:14px;" id="dog-selector-block">
       <div class="section-head">
         <div class="section-icon">
-          <svg viewBox="0 0 24 24" stroke-width="2"><path d="M10 5.172C10 3.782 8.423 2.679 6.5 3c-2 .336-3.5 2.332-3.5 4.327 0 .644.198 1.885.5 2.669L10 21v-3.164"/><path d="M14 5.172C14 3.782 15.577 2.679 17.5 3c2 .336 3.5 2.332 3.5 4.327 0 .644-.198 1.885-.5 2.669L14 21v-3.164"/></svg>
+          <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="6.3" cy="9.8" rx="1.7" ry="2.2" transform="rotate(-22 6.3 9.8)"/><ellipse cx="10.3" cy="7.1" rx="1.7" ry="2.4" transform="rotate(-8 10.3 7.1)"/><ellipse cx="14.4" cy="7.1" rx="1.7" ry="2.4" transform="rotate(8 14.4 7.1)"/><ellipse cx="18.4" cy="9.8" rx="1.7" ry="2.2" transform="rotate(22 18.4 9.8)"/><path d="M12.3 11.9C15.3 11.9 18 14.1 18 16.6C18 18.6 16.3 20 14.2 19.6C13.4 19.5 12.9 19.3 12.3 19.3C11.7 19.3 11.2 19.5 10.4 19.6C8.3 20 6.6 18.6 6.6 16.6C6.6 14.1 9.3 11.9 12.3 11.9Z"/></svg>
         </div>
         <div class="section-title">Quel(s) chien(s) ?</div>
       </div>
@@ -1263,6 +1264,17 @@ document.addEventListener('DOMContentLoaded', function() {
   setInterval(appliquerDateMin, 60000);
 });
 
+// Jours fériés et périodes clôturées : chargés une fois, puis appliqués
+// aux bornes de date et aux séances récurrentes.
+document.addEventListener('DOMContentLoaded', function() {
+  if (!window.FR_CAL) return;
+  FR_CAL.charger(typeof db !== 'undefined' ? db : null).then(function() {
+    majBanniereCloture();
+    var d = dateDebutChoisie();
+    if (d) checkClotureAlert(d);
+  });
+});
+
 // Alerte meteo du jour publiee par l'admin (table `alertes_meteo`)
 async function chargerAlerteMeteoBanner() {
   var el = document.getElementById('alerte-meteo-banner');
@@ -1379,16 +1391,31 @@ function selectService(type, el) {
 }
 
 // ── CLÔTURE ESTIVALE ──
+// Lue par fr-calendrier.js, qui interroge la base (l'ancienne version ne
+// regardait que le localStorage du navigateur : le réglage saisi par
+// l'admin n'atteignait jamais le client).
 function isDateClotureEstivale(dateStr) {
-  try {
-    var stored = localStorage.getItem('fr_cloture_estivale');
-    var annee = new Date().getFullYear();
-    if (!stored) stored = JSON.stringify({ cloture_active: true, cloture_debut: annee + '-06-01', cloture_fin: annee + '-08-31' });
-    var config = JSON.parse(stored);
-    if (!config.cloture_active) return false;
-    var d = new Date(dateStr);
-    return d >= new Date(config.cloture_debut) && d <= new Date(config.cloture_fin);
-  } catch(e) { return false; }
+  if (!dateStr || !window.FR_CAL) return false;
+  return !!FR_CAL.clotureEstivalePour(dateStr);
+}
+
+// ── JOURS FÉRIÉS ET PÉRIODES CLÔTURÉES ──
+// Renvoie le verdict du calendrier pour la date choisie, ou null.
+function verdictCalendrier(dateStr) {
+  if (!dateStr || !window.FR_CAL) return null;
+  return FR_CAL.verdict(dateStr, currentService);
+}
+
+function dateFermee(dateStr) {
+  var v = verdictCalendrier(dateStr);
+  return !!(v && v.bloque);
+}
+
+function messageCalendrier(v) {
+  return '<div><strong>' + v.nom + '.</strong> ' + v.message.replace(v.nom + ' — ', '')
+       + ' Pour une demande exceptionnelle, appelez Gabriel au '
+       + '<a href="tel:' + TEL_GABRIEL.replace(/\s/g, '') + '" style="color:inherit;font-weight:700;">'
+       + TEL_GABRIEL + '</a>.</div>';
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1505,6 +1532,13 @@ function majBanniereCloture() {
     box.style.display = 'flex';
     return;
   }
+  var vCal = verdictCalendrier(d);
+  if (vCal && vCal.type !== 'estivale') {
+    box.className = vCal.bloque ? 'info-box red' : 'info-box amber';
+    box.innerHTML = icone + messageCalendrier(vCal);
+    box.style.display = 'flex';
+    return;
+  }
   if (new Date().getHours() >= CUTOFF_HEURE) {
     box.className = 'info-box amber';
     box.innerHTML = icone + messageClotureInfo();
@@ -1518,7 +1552,7 @@ function majBanniereCloture() {
 function validateDatesAndContinue() {
   appliquerDateMin();
   var d = dateDebutChoisie();
-  if (dateWeekendInterdite(d) || dateTropTard(d)) {
+  if (dateWeekendInterdite(d) || dateTropTard(d) || dateFermee(d)) {
     majBanniereCloture();
     document.getElementById('cutoff-alert').scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
@@ -1667,7 +1701,13 @@ function occurrencesFR(svc, debut, fin, codes) {
     var wd = d.getDay();
     if (wd === 0 || wd === 6) continue;                    // pas de service le week-end
     if (idx.length && idx.indexOf(wd) === -1) continue;    // uniquement les jours cochés
-    out.push(isoDateFR(d));
+    var ds = isoDateFR(d);
+    // Jours fériés et périodes clôturées : la séance récurrente saute la date.
+    if (window.FR_CAL) {
+      var vv = FR_CAL.verdict(ds, svc);
+      if (vv && vv.bloque) continue;
+    }
+    out.push(ds);
   }
   // Repli : ne jamais reinjecter une date que la regle vient d'ecarter.
   var d0wd = d0.getDay();
@@ -1728,8 +1768,8 @@ function validateAndGoRecap() {
       if (errEl) errEl.style.display = 'none';
     }
   }
-  // Cloture 08h00 : impossible de continuer avec une date deja fermee
-  if (dateWeekendInterdite(dateDebutChoisie()) || dateTropTard(dateDebutChoisie())) {
+  // Cloture 08h00, jour ferie ou periode fermee : on ne va pas plus loin
+  if (dateWeekendInterdite(dateDebutChoisie()) || dateTropTard(dateDebutChoisie()) || dateFermee(dateDebutChoisie())) {
     goPage(2);
     setTimeout(function() {
       majBanniereCloture();
@@ -1872,7 +1912,7 @@ async function confirmBooking() {
 
   // Cloture 08h00 — dernier verrou cote navigateur.
   // Le verrou qui compte vraiment est le trigger fr_cutoff_reservation en base.
-  if (dateWeekendInterdite(dateDebutChoisie()) || dateTropTard(dateDebutChoisie())) {
+  if (dateWeekendInterdite(dateDebutChoisie()) || dateTropTard(dateDebutChoisie()) || dateFermee(dateDebutChoisie())) {
     goPage(2);
     setTimeout(function() {
       majBanniereCloture();
