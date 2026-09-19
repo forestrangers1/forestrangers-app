@@ -11,6 +11,23 @@
 try { if (localStorage.getItem('fr-theme') !== 'dark') document.documentElement.classList.add('light'); } catch(e) {}
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<!-- Correctif police : Norwester etait appelee dans font-family sans jamais
+     etre chargee. Elle ne s'affichait que sur les machines ou elle est
+     installee localement ; partout ailleurs le navigateur retombait sur un
+     sans-serif generique. Elle est desormais auto-hebergee (licence SIL OFL,
+     voir fonts/OFL-Norwester.txt). Oswald sert de repli condense si le
+     fichier est absent. -->
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+@font-face {
+  font-family: 'Norwester';
+  src: url('fonts/norwester.woff2') format('woff2'),
+       url('fonts/norwester.woff') format('woff');
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+</style>
   <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -94,7 +111,7 @@ html, body { height: 100%; font-family: 'Instrument Sans', sans-serif; backgroun
   background: var(--bg); border-bottom: 1px solid var(--border);
   display: flex; align-items: center; gap: 12px; padding: 0 20px;
 }
-.page-title { font-family: 'Norwester', sans-serif; font-size: 15px; font-weight: 800; }
+.page-title { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 15px; font-weight: 800; }
 .topbar-right { margin-left: auto; display: flex; gap: 8px; }
 
 /* ── CONTENT ── */
@@ -127,7 +144,7 @@ html, body { height: 100%; font-family: 'Instrument Sans', sans-serif; backgroun
 /* ── CARD ── */
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 14px; }
 .card-head { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-.card-title { font-family: 'Norwester', sans-serif; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-dim); }
+.card-title { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-dim); }
 .card-body { padding: 16px; }
 
 /* ── BADGE ── */
@@ -140,7 +157,7 @@ html, body { height: 100%; font-family: 'Instrument Sans', sans-serif; backgroun
 .b-muted  { background: rgba(255,255,255,0.06); color: var(--text-faint); }
 
 /* ── BTN ── */
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; font-family: 'Norwester', sans-serif; font-size: 11px; font-weight: 800; cursor: pointer; border: none; transition: all 0.15s; letter-spacing: 0.04em; text-transform: uppercase; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 800; cursor: pointer; border: none; transition: all 0.15s; letter-spacing: 0.04em; text-transform: uppercase; }
 .btn-accent { background: var(--accent); color: white; }
 .btn-accent:hover { background: #ff7a3d; }
 .btn-outline { background: transparent; border: 1px solid var(--border2); color: var(--text-dim); }
@@ -176,13 +193,13 @@ select.form-input option { background: var(--surface); }
   flex-shrink: 0; border: 1px solid var(--border2);
 }
 .van-icon svg { width: 22px; height: 22px; stroke: var(--accent); fill: none; }
-.van-name { font-family: 'Norwester', sans-serif; font-size: 14px; font-weight: 800; }
+.van-name { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 14px; font-weight: 800; }
 .van-plate { font-size: 11px; color: var(--text-faint); margin-top: 2px; font-family: monospace; }
 
 /* ── CAPACITY BARS ── */
 .cap-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
 .cap-item { text-align: center; }
-.cap-val { font-family: 'Norwester', sans-serif; font-size: 22px; font-weight: 800; line-height: 1; }
+.cap-val { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 22px; font-weight: 800; line-height: 1; }
 .cap-val.total { color: var(--accent); }
 .cap-val.large { color: var(--amber); }
 .cap-val.bonus { color: var(--blue); }
@@ -198,7 +215,7 @@ select.form-input option { background: var(--surface); }
   margin-bottom: 6px; transition: border-color 0.15s;
 }
 .slot-row:hover { border-color: var(--border2); }
-.slot-time { font-family: 'Norwester', sans-serif; font-size: 11px; font-weight: 700; color: var(--accent); min-width: 80px; }
+.slot-time { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 700; color: var(--accent); min-width: 80px; }
 .slot-ranger { flex: 1; }
 .slot-ranger select { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; color: var(--text); font-family: 'Instrument Sans', sans-serif; font-size: 12px; outline: none; width: 100%; max-width: 180px; }
 .slot-status { display: flex; align-items: center; gap: 6px; }
@@ -233,7 +250,7 @@ select.form-input option { background: var(--surface); }
 }
 .staff-row:first-child { border-top: none; }
 .staff-row:hover { background: rgba(255,255,255,0.02); }
-.staff-avatar { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-family: 'Norwester', sans-serif; font-size: 12px; font-weight: 800; flex-shrink: 0; border: 1px solid var(--border); }
+.staff-avatar { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 12px; font-weight: 800; flex-shrink: 0; border: 1px solid var(--border); }
 .staff-name { font-size: 13px; font-weight: 600; }
 .staff-role { font-size: 11px; color: var(--text-faint); margin-top: 1px; }
 .staff-actions { display: flex; gap: 6px; margin-left: auto; }
@@ -259,7 +276,7 @@ select.form-input option { background: var(--surface); }
 .modal-overlay { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.75); backdrop-filter: blur(6px); align-items: center; justify-content: center; }
 .modal-overlay.open { display: flex; }
 .modal { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius-lg); padding: 22px; width: 480px; max-width: 94vw; animation: fadeUp 0.2s ease; max-height: 90vh; overflow-y: auto; }
-.modal-title { font-family: 'Norwester', sans-serif; font-size: 14px; font-weight: 800; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.modal-title { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 14px; font-weight: 800; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
 .modal-title::before { content:''; display:block; width:3px; height:14px; background:var(--accent); border-radius:2px; }
 .modal-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 
@@ -414,7 +431,7 @@ select.form-input option { background: var(--surface); }
           <!-- Ranger par défaut -->
           <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;">
             <div style="font-size:12px;color:var(--text-dim);">
-              <span style="font-family:'Norwester',sans-serif;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);display:block;margin-bottom:4px;">Ranger par défaut</span>
+              <span style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);display:block;margin-bottom:4px;">Ranger par défaut</span>
               <select style="background:var(--surface3);border:1px solid var(--border2);border-radius:7px;padding:6px 10px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:12.5px;outline:none;">
                 <option>Gabriel Quiaios</option>
                 <option selected>Sophie Müller</option>
@@ -530,7 +547,7 @@ select.form-input option { background: var(--surface); }
           <!-- Ranger par défaut -->
           <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;">
             <div style="font-size:12px;color:var(--text-dim);">
-              <span style="font-family:'Norwester',sans-serif;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);display:block;margin-bottom:4px;">Ranger par défaut</span>
+              <span style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);display:block;margin-bottom:4px;">Ranger par défaut</span>
               <select style="background:var(--surface3);border:1px solid var(--border2);border-radius:7px;padding:6px 10px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:12.5px;outline:none;">
                 <option selected>Gabriel Quiaios</option>
                 <option>Sophie Müller</option>
@@ -619,7 +636,7 @@ select.form-input option { background: var(--surface); }
       <div class="tab-pane" id="tab-attribution">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
           <div>
-            <div id="attrib-date" style="font-family:'Norwester',sans-serif;font-size:15px;font-weight:800;">Vue d'ensemble</div>
+            <div id="attrib-date" style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:15px;font-weight:800;">Vue d'ensemble</div>
             <div style="font-size:12px;color:var(--text-faint);margin-top:2px;">Camionnettes et rangers par créneau</div>
           </div>
           <div style="display:flex;gap:8px;">
@@ -653,7 +670,7 @@ select.form-input option { background: var(--surface); }
                     <div style="font-size:11px;color:var(--text-faint);">3 chiens · 0 grand</div>
                   </td>
                   <td style="padding:12px 16px;">
-                    <span style="font-family:'Norwester',sans-serif;font-size:16px;font-weight:800;color:var(--accent);">10</span>
+                    <span style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:16px;font-weight:800;color:var(--accent);">10</span>
                     <span style="font-size:11px;color:var(--text-faint);margin-left:4px;">chiens</span>
                   </td>
                 </tr>
@@ -667,7 +684,7 @@ select.form-input option { background: var(--surface); }
                     <div style="font-size:12px;color:var(--text-faint);font-style:italic;">Non assignée</div>
                   </td>
                   <td style="padding:12px 16px;">
-                    <span style="font-family:'Norwester',sans-serif;font-size:16px;font-weight:800;color:var(--text-dim);">3</span>
+                    <span style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:16px;font-weight:800;color:var(--text-dim);">3</span>
                     <span style="font-size:11px;color:var(--text-faint);margin-left:4px;">chiens</span>
                   </td>
                 </tr>
@@ -682,7 +699,7 @@ select.form-input option { background: var(--surface); }
                     <div style="font-size:11px;color:var(--text-faint);">2 chiens · 0 grand</div>
                   </td>
                   <td style="padding:12px 16px;">
-                    <span style="font-family:'Norwester',sans-serif;font-size:16px;font-weight:800;color:var(--text-dim);">4</span>
+                    <span style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:16px;font-weight:800;color:var(--text-dim);">4</span>
                     <span style="font-size:11px;color:var(--text-faint);margin-left:4px;">chiens</span>
                   </td>
                 </tr>
@@ -735,7 +752,7 @@ select.form-input option { background: var(--surface); }
               <!-- Planning habituel -->
               <div style="width:100%;padding:10px 12px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);margin-top:2px;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                  <span style="font-family:'Norwester',sans-serif;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-faint);">Planning contractuel</span>
+                  <span style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-faint);">Planning contractuel</span>
                   <span style="font-size:11px;color:var(--text-faint);">20h / semaine</span>
                 </div>
                 <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;">
@@ -789,7 +806,7 @@ select.form-input option { background: var(--surface); }
       <!-- ══ CONGÉS ══ -->
       <div class="tab-pane" id="tab-conges">
 
-        <div style="font-family:'Norwester',sans-serif;font-size:13px;font-weight:800;margin-bottom:14px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;">
+        <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:13px;font-weight:800;margin-bottom:14px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;">
           Demandes en attente
           <span class="badge b-amber" style="margin-left:8px;vertical-align:middle;">2</span>
         </div>
@@ -864,7 +881,7 @@ select.form-input option { background: var(--surface); }
           </div>
         </div>
 
-        <div style="font-family:'Norwester',sans-serif;font-size:13px;font-weight:800;margin:20px 0 14px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;">
+        <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:13px;font-weight:800;margin:20px 0 14px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;">
           Congés approuvés
         </div>
 
@@ -938,15 +955,15 @@ select.form-input option { background: var(--surface); }
           <div class="card-head"><span class="card-title">📋 Règles d'annulation hors période estivale</span></div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:4px;">
             <div style="background:var(--surface2);border-radius:var(--radius);padding:12px;">
-              <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--text);margin-bottom:6px;">Dog Walking</div>
+              <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:12px;font-weight:800;color:var(--text);margin-bottom:6px;">Dog Walking</div>
               <div style="font-size:11px;color:var(--text-dim);line-height:1.6;">Gratuit avant la veille à 9h00<br><span style="color:var(--red);">Après → 100% facturé</span></div>
             </div>
             <div style="background:var(--surface2);border-radius:var(--radius);padding:12px;">
-              <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--text);margin-bottom:6px;">Day Care</div>
+              <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:12px;font-weight:800;color:var(--text);margin-bottom:6px;">Day Care</div>
               <div style="font-size:11px;color:var(--text-dim);line-height:1.6;">Gratuit avant la veille à 9h00<br><span style="color:var(--red);">Après → 100% facturé</span></div>
             </div>
             <div style="background:var(--surface2);border-radius:var(--radius);padding:12px;">
-              <div style="font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;color:var(--text);margin-bottom:6px;">Boarding</div>
+              <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:12px;font-weight:800;color:var(--text);margin-bottom:6px;">Boarding</div>
               <div style="font-size:11px;color:var(--text-dim);line-height:1.6;">Gratuit &gt;30j<br>50% entre 30–14j<br><span style="color:var(--red);">&lt;14j → 100% facturé</span></div>
             </div>
           </div>
@@ -1014,15 +1031,15 @@ select.form-input option { background: var(--surface); }
           <div id="zones-list">
             <div style="padding:13px 16px;border-bottom:1px solid var(--border);">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                <div style="font-family:'Norwester',sans-serif;font-size:13px;font-weight:800;">Zone centre</div>
-                <span style="font-family:'Norwester',sans-serif;font-size:13px;font-weight:800;color:var(--green);">Sans frais</span>
+                <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:13px;font-weight:800;">Zone centre</div>
+                <span style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:13px;font-weight:800;color:var(--green);">Sans frais</span>
               </div>
               <div style="font-size:11px;color:var(--text-faint);">Luxembourg-Ville, Hamm, Cents, Clausen</div>
             </div>
             <div style="padding:13px 16px;">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                <div style="font-family:'Norwester',sans-serif;font-size:13px;font-weight:800;">Zone périphérie</div>
-                <span style="font-family:'Norwester',sans-serif;font-size:13px;font-weight:800;color:var(--amber);">+5 € HT</span>
+                <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:13px;font-weight:800;">Zone périphérie</div>
+                <span style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:13px;font-weight:800;color:var(--amber);">+5 € HT</span>
               </div>
               <div style="font-size:11px;color:var(--text-faint);">Strassen, Bertrange, Walferdange, Hesperange</div>
             </div>
@@ -1621,7 +1638,7 @@ function renderCamionnettes(cams) {
   container.innerHTML = cams.map(function(c) {
     return '<div style="padding:14px 16px;border-bottom:1px solid var(--border);">'
       + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
-      + '<div style="font-family:\'Norwester\',sans-serif;font-size:14px;font-weight:800;color:var(--text);">' + c.nom + '</div>'
+      + '<div style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:14px;font-weight:800;color:var(--text);">' + c.nom + '</div>'
       + '<span class="badge b-green">Active</span></div>'
       + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px;color:var(--text-dim);">'
       + '<div>Immat : <strong style="color:var(--text);">' + (c.immatriculation || '—') + '</strong></div>'
@@ -1629,7 +1646,7 @@ function renderCamionnettes(cams) {
       + '<div>KM : <strong style="color:var(--text);">' + (c.km_actuel ? c.km_actuel.toLocaleString() : '—') + '</strong></div>'
       + '</div>'
       + '<div style="display:flex;justify-content:flex-end;margin-top:8px;">'
-      + '<button onclick="editCamionnette(\'' + c.id + '\',' + (c.km_actuel||0) + ')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;color:var(--text-dim);font-family:\'Norwester\',sans-serif;font-size:10px;font-weight:800;cursor:pointer;">Modifier km</button>'
+      + '<button onclick="editCamionnette(\'' + c.id + '\',' + (c.km_actuel||0) + ')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;color:var(--text-dim);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:10px;font-weight:800;cursor:pointer;">Modifier km</button>'
       + '</div></div>';
   }).join('');
 }
@@ -1661,8 +1678,8 @@ function renderZones(zones) {
     var communes = z.communes ? z.communes.join(', ') : '—';
     return '<div style="padding:14px 16px;border-bottom:1px solid var(--border);">'
       + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
-      + '<div style="font-family:\'Norwester\',sans-serif;font-size:13px;font-weight:800;color:var(--text);">' + z.nom + '</div>'
-      + '<span style="font-family:\'Norwester\',sans-serif;font-size:13px;font-weight:800;color:' + (z.supplement_ht > 0 ? 'var(--amber)' : 'var(--green)') + ';">'
+      + '<div style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:13px;font-weight:800;color:var(--text);">' + z.nom + '</div>'
+      + '<span style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:13px;font-weight:800;color:' + (z.supplement_ht > 0 ? 'var(--amber)' : 'var(--green)') + ';">'
       + (z.supplement_ht > 0 ? '+' + z.supplement_ht + ' € HT' : 'Sans frais') + '</span>'
       + '</div>'
       + '<div style="font-size:11px;color:var(--text-faint);">' + communes + '</div>'
@@ -1674,7 +1691,7 @@ function renderZones(zones) {
 function showToast(msg, type) {
   var colors = { green: '#5ec97a', red: '#e05a5a', amber: '#f0b429' };
   var toast = document.createElement('div');
-  toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:' + (colors[type]||colors.green) + ';color:white;padding:10px 20px;border-radius:10px;font-family:Norwester,sans-serif;font-size:13px;font-weight:800;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.3);white-space:nowrap;';
+  toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:' + (colors[type]||colors.green) + ';color:white;padding:10px 20px;border-radius:10px;font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-size:13px;font-weight:800;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.3);white-space:nowrap;';
   toast.textContent = msg;
   document.body.appendChild(toast);
   setTimeout(function() { toast.remove(); }, 2500);

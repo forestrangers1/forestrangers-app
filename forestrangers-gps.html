@@ -11,6 +11,23 @@
 try { if (localStorage.getItem('fr-theme') !== 'dark') document.documentElement.classList.add('light'); } catch(e) {}
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<!-- Correctif police : Norwester etait appelee dans font-family sans jamais
+     etre chargee. Elle ne s'affichait que sur les machines ou elle est
+     installee localement ; partout ailleurs le navigateur retombait sur un
+     sans-serif generique. Elle est desormais auto-hebergee (licence SIL OFL,
+     voir fonts/OFL-Norwester.txt). Oswald sert de repli condense si le
+     fichier est absent. -->
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+@font-face {
+  font-family: 'Norwester';
+  src: url('fonts/norwester.woff2') format('woff2'),
+       url('fonts/norwester.woff') format('woff');
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+</style>
   <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -89,9 +106,9 @@ html, body {
 .topbar { height: 52px; flex-shrink: 0; background: var(--bg); border-bottom: 1px solid rgba(255,255,255,0.07); display: flex; align-items: center; gap: 10px; padding: 0 20px; }
 .back-btn { width: 30px; height: 30px; border-radius: 8px; background: var(--s1); border: 1px solid var(--bd); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--td); flex-shrink: 0; }
 .back-btn svg { width: 13px; height: 13px; }
-.page-title { font-family: 'Norwester', sans-serif; font-size: 15px; font-weight: 800; }
+.page-title { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 15px; font-weight: 800; }
 .topbar-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; font-family: 'Norwester', sans-serif; font-size: 11px; font-weight: 800; cursor: pointer; border: none; transition: all 0.15s; letter-spacing: 0.04em; text-transform: uppercase; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 800; cursor: pointer; border: none; transition: all 0.15s; letter-spacing: 0.04em; text-transform: uppercase; }
 .btn-accent { background: var(--accent); color: white; }
 .btn-accent:hover { background: #ff7a3d; }
 .btn-outline { background: transparent; border: 1px solid var(--bd2); color: var(--td); }
@@ -207,7 +224,7 @@ html, body {
 .live-badge {
   position: absolute; top: 14px; left: 14px; z-index: 10;
   background: var(--green); color: var(--bg);
-  font-family: 'Norwester', sans-serif; font-size: 11px; font-weight: 800;
+  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 800;
   padding: 5px 12px; border-radius: 20px;
   display: flex; align-items: center; gap: 6px;
   animation: fadeUp 0.3s ease;
@@ -233,11 +250,11 @@ html, body {
 }
 .info-stat:last-child { border-right: none; }
 .is-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--tf); font-weight: 700; margin-bottom: 6px; }
-.is-val { font-family: 'Norwester', sans-serif; font-size: 24px; font-weight: 800; line-height: 1; color: var(--accent); }
+.is-val { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 24px; font-weight: 800; line-height: 1; color: var(--accent); }
 .is-sub { font-size: 11px; color: var(--tf); margin-top: 4px; }
 
 .info-detail { flex: 1; padding: 14px 16px; overflow-y: auto; }
-.id-title { font-family: 'Norwester', sans-serif; font-size: 13px; font-weight: 800; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+.id-title { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 13px; font-weight: 800; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
 .dog-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--bd); font-size: 12px; }
 .dog-row:first-of-type { border-top: none; }
 .dog-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }

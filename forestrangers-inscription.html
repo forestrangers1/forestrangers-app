@@ -11,6 +11,23 @@
 try { if (localStorage.getItem('fr-theme') === 'dark') document.documentElement.classList.add('dark'); } catch(e) {}
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<!-- Correctif police : Norwester etait appelee dans font-family sans jamais
+     etre chargee. Elle ne s'affichait que sur les machines ou elle est
+     installee localement ; partout ailleurs le navigateur retombait sur un
+     sans-serif generique. Elle est desormais auto-hebergee (licence SIL OFL,
+     voir fonts/OFL-Norwester.txt). Oswald sert de repli condense si le
+     fichier est absent. -->
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+@font-face {
+  font-family: 'Norwester';
+  src: url('fonts/norwester.woff2') format('woff2'),
+       url('fonts/norwester.woff') format('woff');
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+</style>
   <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -84,7 +101,7 @@ body {
 }
 .brand-mark svg { width: 16px; height: 16px; fill: white; }
 .brand-name {
-  font-family: 'Norwester', sans-serif; font-size: 13px; font-weight: 800;
+  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 13px; font-weight: 800;
   color: #eceee6; letter-spacing: 0.03em;
   line-height: 1.8; padding-bottom: 6px; overflow: visible;
   clip: auto; display: inline-block;
@@ -115,7 +132,7 @@ body {
   padding: 4px 12px; border-radius: 20px; margin-bottom: 14px;
 }
 .hero h1 {
-  font-family: 'Norwester', sans-serif; font-size: clamp(22px, 4vw, 32px);
+  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: clamp(22px, 4vw, 32px);
   font-weight: 800; color: white; line-height: 1.2; margin-bottom: 10px;
 }
 .hero h1 span { color: var(--accent); }
@@ -152,7 +169,7 @@ body {
 .step-num {
   width: 32px; height: 32px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-family: 'Norwester', sans-serif; font-size: 12px; font-weight: 800;
+  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 12px; font-weight: 800;
   flex-shrink: 0; transition: all 0.3s; position: relative; z-index: 1;
   border: 2px solid var(--border2); background: var(--bg); color: var(--text-faint);
 }
@@ -186,7 +203,7 @@ body {
 }
 .form-section-icon svg { width: 15px; height: 15px; stroke: white; fill: none; }
 .form-section-title {
-  font-family: 'Norwester', sans-serif; font-size: 12px; font-weight: 800;
+  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 12px; font-weight: 800;
   text-transform: uppercase; letter-spacing: 0.1em; color: white;
 }
 .form-section-body { padding: 20px; }
@@ -308,7 +325,7 @@ input[type=range]::-webkit-slider-runnable-track {
   position: relative;
 }
 .person-card-title {
-  font-family: 'Norwester', sans-serif; font-size: 11px; font-weight: 800;
+  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 800;
   text-transform: uppercase; letter-spacing: 0.1em;
   color: var(--kaki-light); margin-bottom: 10px;
 }
@@ -342,7 +359,7 @@ input[type=range]::-webkit-slider-runnable-track {
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   padding: 13px 24px; border-radius: 10px;
-  font-family: 'Norwester', sans-serif; font-size: 13px; font-weight: 800;
+  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 13px; font-weight: 800;
   cursor: pointer; border: none; transition: all 0.2s; letter-spacing: 0.02em;
 }
 .btn-accent { background: var(--accent); color: white; flex: 1; }
@@ -398,7 +415,7 @@ input[type=range]::-webkit-slider-runnable-track {
 }
 .success-icon svg { width: 36px; height: 36px; stroke: var(--green); }
 .success-title {
-  font-family: 'Norwester', sans-serif; font-size: 22px; font-weight: 800;
+  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 22px; font-weight: 800;
   color: var(--accent);
   margin-bottom: 10px;
 }
@@ -412,7 +429,7 @@ input[type=range]::-webkit-slider-runnable-track {
   margin-bottom: 16px;
 }
 .success-card-title {
-  font-family: 'Norwester', sans-serif; font-size: 10px; font-weight: 800;
+  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 10px; font-weight: 800;
   text-transform: uppercase; letter-spacing: 0.14em;
   color: var(--text-faint); margin-bottom: 10px;
 }
@@ -1058,7 +1075,7 @@ input[type=range]::-webkit-slider-runnable-track {
     <div id="chiens-supps-container"></div>
 
     <!-- Bouton ajouter un chien -->
-    <button onclick="ajouterChien()" style="width:100%;padding:12px;border-radius:10px;background:transparent;border:1.5px dashed rgba(255,95,31,0.4);color:var(--accent);font-family:'Norwester',sans-serif;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px;">
+    <button onclick="ajouterChien()" style="width:100%;padding:12px;border-radius:10px;background:transparent;border:1.5px dashed rgba(255,95,31,0.4);color:var(--accent);font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Ajouter un autre chien
     </button>
@@ -1778,56 +1795,107 @@ function stripDisplayAccents(root) {
 document.addEventListener('DOMContentLoaded', function() {
   loadRaces();
   stripDisplayAccents();
-  var params = new URLSearchParams(window.location.search);
-  var token  = params.get('token');
-  var prenom = params.get('prenom');
-  var email  = params.get('email');
-
-  if (token) {
-    // Vérifier token — sans filtrer sur expire_at pour debug
-    db.from('invitations')
-      .select('*')
-      .eq('token', token)
-      .single()
-      .then(function(res) {
-        if (res.error || !res.data) {
-          // Token vraiment introuvable
-          console.log('Token introuvable:', token);
-          // On laisse quand même l'utilisateur continuer
-          if (prenom) { var el = document.getElementById('prenom'); if (el) el.value = prenom; }
-          if (email)  { var el = document.getElementById('email');  if (el) el.value = email; }
-        } else {
-          var inv = res.data;
-          // Vérifier expiration
-          if (inv.utilise) {
-            var msg = document.createElement('div');
-            msg.style.cssText = 'background:rgba(224,90,90,0.15);border:1px solid rgba(224,90,90,0.3);border-radius:10px;padding:14px 16px;font-size:13px;color:#e05a5a;margin-bottom:16px;text-align:center;';
-            msg.textContent = '⚠️ Ce lien a déjà été utilisé. Votre compte est actif — connectez-vous sur app.forestrangers.lu';
-            var form = document.querySelector('.page-section.active');
-            if (form) form.prepend(msg);
-          } else {
-            // Token valide
-            window._invitationToken = token;
-            var emailEl  = document.getElementById('email');
-            var prenomEl = document.getElementById('prenom');
-            if (emailEl  && inv.email)  { emailEl.value  = inv.email;  emailEl.readOnly = true; }
-            if (prenomEl && inv.prenom) { prenomEl.value = inv.prenom; }
-          }
-        }
-      });
-  } else {
-    // Pré-remplir depuis URL si pas de token
-    if (prenom) { var el = document.getElementById('prenom'); if (el) el.value = prenom; }
-    if (email)  { var el = document.getElementById('email');  if (el) el.value = email; }
-  }
+  verifierInvitation();
 });
 
-async function sauvegarderInscription(motDePasse) {
+// ── INVITATION ──
+// Inscription sur invitation uniquement (§27.1). La page ne lit plus la table
+// invitations : elle interroge fr_invitation_lire() (migration v25), qui ne
+// renvoie l'email que si le lien est valable. Sans lien valable, le formulaire
+// est remplace par un ecran explicatif.
+window._invitationToken = null;
+window._invitationEmail = null;
+
+function frEchapper(t) {
+  return String(t == null ? '' : t).replace(/[&<>"']/g, function(c) {
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+
+function afficherInvitationInvalide(statut) {
+  var textes = {
+    absente:     ['Inscription sur invitation', 'L\'inscription se fait uniquement à partir du lien personnel que nous vous avons envoyé. Ouvrez-le directement depuis votre message.'],
+    introuvable: ['Lien non reconnu', 'Ce lien d\'inscription n\'est pas valable. Vérifiez qu\'il a été copié en entier, ou demandez-nous un nouveau lien.'],
+    expiree:     ['Lien expiré', 'Ce lien d\'inscription a dépassé sa durée de validité. Demandez-nous un nouveau lien, nous vous l\'envoyons aussitôt.'],
+    utilisee:    ['Compte déjà créé', 'Ce lien a déjà servi à créer votre compte. Connectez-vous avec votre email et votre mot de passe.'],
+    erreur:      ['Vérification impossible', 'Le lien n\'a pas pu être vérifié. Vérifiez votre connexion puis rechargez la page.']
+  };
+  var t = textes[statut] || textes.introuvable;
+  var bouton = statut === 'utilisee'
+    ? '<a class="btn btn-accent" style="width:100%;margin-top:18px;justify-content:center;text-decoration:none;" href="forestrangers-login.html">Se connecter</a>'
+    : (statut === 'erreur'
+      ? '<button class="btn btn-accent" style="width:100%;margin-top:18px;" onclick="location.reload()">Réessayer</button>'
+      : '<a class="btn btn-accent" style="width:100%;margin-top:18px;justify-content:center;text-decoration:none;" href="tel:+352661999113">Appeler Gabriel · +352 661 999 113</a>');
+  var cont = document.querySelector('.container');
+  if (cont) {
+    cont.innerHTML = '<div class="success-screen">'
+      + '<div class="success-title">' + t[0] + '</div>'
+      + '<div class="success-sub" style="line-height:1.6;">' + t[1] + '</div>'
+      + bouton + '</div>';
+  }
+  var steps = document.querySelector('.steps-wrap');
+  if (steps) steps.style.display = 'none';
+  stripDisplayAccents(cont);
+}
+
+async function verifierInvitation() {
+  var params = new URLSearchParams(window.location.search);
+  var token  = (params.get('token') || '').trim();
+  if (!token) { afficherInvitationInvalide('absente'); return; }
+  if (!db) return; // frErreurReseau() affiche deja l'ecran reseau
   try {
+    var res = await db.rpc('fr_invitation_lire', { p_token: token });
+    if (res.error) throw res.error;
+    var inv = res.data || {};
+    if (inv.statut !== 'valide') { afficherInvitationInvalide(inv.statut); return; }
+    window._invitationToken = token;
+    window._invitationEmail = inv.email;
+    var emailEl  = document.getElementById('email');
+    var prenomEl = document.getElementById('prenom');
+    if (emailEl) { emailEl.value = inv.email; emailEl.readOnly = true; emailEl.style.opacity = '0.7'; }
+    if (prenomEl && inv.prenom && !prenomEl.value) prenomEl.value = inv.prenom;
+  } catch (e) {
+    console.error('Verification invitation:', e);
+    afficherInvitationInvalide('erreur');
+  }
+}
+
+var _inscriptionEnCours = false;
+
+// Messages lisibles pour les codes renvoyes par fr_inscription_finaliser() et Supabase Auth
+function messageErreurInscription(e) {
+  var m = String((e && (e.message || e.error_description)) || e || '');
+  var codes = {
+    'token_absent':        'Le lien d\'invitation est absent. Ouvrez la page depuis le lien reçu.',
+    'token_introuvable':   'Ce lien d\'invitation n\'est pas valable. Demandez-nous un nouveau lien.',
+    'token_utilise':       'Ce lien a déjà servi à créer un compte. Connectez-vous depuis la page de connexion.',
+    'token_expire':        'Ce lien d\'invitation a expiré. Demandez-nous un nouveau lien.',
+    'compte_auth_absent':  'Votre compte n\'a pas pu être créé. Réessayez dans un instant ; si le problème persiste, appelez-nous au +352 661 999 113.',
+    'compte_deja_rattache':'Cet email est déjà associé à une autre fiche client. Appelez-nous au +352 661 999 113.',
+    'nom_obligatoire':     'Le prénom et le nom sont obligatoires.'
+  };
+  for (var k in codes) { if (m.indexOf('FR_INSCRIPTION:' + k) !== -1) return codes[k]; }
+  if (/signups? not allowed|signup is disabled/i.test(m)) return 'Les inscriptions sont momentanément fermées. Appelez-nous au +352 661 999 113.';
+  if (/rate limit/i.test(m)) return 'Trop de tentatives en peu de temps. Patientez quelques minutes puis réessayez.';
+  if (/password/i.test(m)) return 'Mot de passe refusé : ' + m;
+  if (/failed to fetch|network/i.test(m)) return 'Connexion au serveur impossible. Vérifiez votre réseau puis réessayez.';
+  return 'Une erreur est survenue : ' + m;
+}
+
+async function sauvegarderInscription(motDePasse) {
+  if (_inscriptionEnCours) return;
+  var btnFinal = document.querySelector('#page-3b .btn-accent[onclick*="validerMotDePasse"]');
+  var btnTexte = btnFinal ? btnFinal.innerHTML : '';
+  _inscriptionEnCours = true;
+  if (btnFinal) { btnFinal.disabled = true; btnFinal.style.opacity = '0.6'; btnFinal.textContent = 'Création du compte…'; }
+  try {
+    if (!window._invitationToken || !window._invitationEmail) {
+      throw new Error('FR_INSCRIPTION:token_absent');
+    }
     // Lire les vrais champs du formulaire
     var prenom    = (document.getElementById('prenom')    || {}).value || '';
     var nom       = (document.getElementById('nom')       || {}).value || '';
-    var email     = (document.getElementById('email')     || {}).value || '';
+    var email     = window._invitationEmail; // l'email de l'invitation fait foi
     var telephone = (document.getElementById('telephone') || {}).value || '';
     var adresse   = (document.getElementById('adresse')   || {}).value || '';
     var commune   = (document.getElementById('commune')   || {}).value || '';
@@ -1867,113 +1935,89 @@ async function sauvegarderInscription(motDePasse) {
       });
     }
 
-    // 1. Créer le compte Auth Supabase
+    // 1. Chiens a enregistrer (principal + supplementaires)
+    var chiens = [];
+    if (nomChien) {
+      chiens.push({
+        nom: nomChien.trim(),
+        race: race || null,
+        poids_kg: poids ? parseFloat(poids) : null,
+        sexe: sexe || null,
+        sterilise: sterilise,
+        numero_puce: numeroPuce,
+        grand_chien: !!(raceGrandGabarit || poidsGrandGabarit),
+        notes_sante: ((document.getElementById('remarques-chien') || {}).value || '').trim() || null,
+        comportement: readComportementPrincipal()
+      });
+    }
+    document.querySelectorAll('.chien-supplementaire').forEach(function(c) {
+      var n  = ((c.querySelector('.chien-nom')   || {}).value || '').trim();
+      var r  = (c.querySelector('.chien-race')   || {}).value;
+      var p  = (c.querySelector('.chien-poids')  || {}).value;
+      var sx = (c.querySelector('.chien-sexe')   || {}).value;
+      var st = (c.querySelector('.chien-steril') || {}).value;
+      var pu = (((c.querySelector('.chien-puce') || {}).value || '').trim().replace(/\s/g, '')) || null;
+      if (!n) return;
+      chiens.push({
+        nom: n,
+        race: r || null,
+        poids_kg: p ? parseFloat(p) : null,
+        sexe: sx || null,
+        sterilise: (st === '' || st == null) ? null : (st === 'true'),
+        numero_puce: pu,
+        grand_chien: p ? (parseFloat(p) >= 35) : null
+      });
+    });
+    chiens.forEach(function(c) { if (c.poids_kg !== null && isNaN(c.poids_kg)) c.poids_kg = null; });
+
+    // 2. Compte Auth. « Deja inscrit » n'est pas bloquant : c'est le cas d'une
+    //    tentative precedente interrompue (compte orphelin), que
+    //    fr_inscription_finaliser() rattache a la fiche.
+    var compteExistait = false;
     var authRes = await db.auth.signUp({ email: email, password: motDePasse });
-    if (authRes.error) throw authRes.error;
-    var authId = authRes.data.user ? authRes.data.user.id : null;
-
-    // 2. Fiche existante ? (testeurs déjà créés par l'admin → on rattache au lieu de dupliquer)
-    var existing = null;
-    try {
-      var exRes = await db.from('clients').select('id, numero_client, is_test, chiens(id)').eq('email', email).limit(1);
-      if (exRes.data && exRes.data.length) existing = exRes.data[0];
-    } catch(e) { /* lecture impossible → on créera une nouvelle fiche */ }
-
-    var clientId, nextNum;
-    if (existing) {
-      // Rattacher : on met à jour la fiche, on garde numero_client / is_test / client_fidele
-      nextNum = existing.numero_client;
-      var upd = await db.from('clients').update({
-        prenom:        prenom,
-        nom:           nom,
-        telephone:     telephone || null,
-        adresse:       adresse   || null,
-        commune:       commune   || null,
-        langue:        langue,
-        hors_zone:     horsZone,
-        personnes_autorisees: personnes,
-        auth_id:       authId,
-        actif:         true
-      }).eq('id', existing.id).select().single();
-      if (upd.error) throw upd.error;
-      clientId = existing.id;
-    } else {
-      // Nouveau client : numéro auto
-      var lastRes = await db.from('clients')
-        .select('numero_client').lt('numero_client', 9000)
-        .order('numero_client', { ascending: false }).limit(1);
-      nextNum = 1001;
-      if (lastRes.data && lastRes.data.length > 0 && lastRes.data[0].numero_client) {
-        nextNum = lastRes.data[0].numero_client + 1;
+    if (authRes.error) {
+      if (/already (registered|been registered)|already exists/i.test(authRes.error.message || '')) {
+        compteExistait = true;
+      } else {
+        throw authRes.error;
       }
-      var clientRes = await db.from('clients').insert({
-        numero_client: nextNum,
-        prenom:        prenom,
-        nom:           nom,
-        email:         email,
-        telephone:     telephone || null,
-        adresse:       adresse   || null,
-        commune:       commune   || null,
-        langue:        langue,
-        hors_zone:     horsZone,
-        auth_id:       authId,
-        actif:         true,
-        is_test:       false,
-        client_fidele: false,
+    } else if (authRes.data && authRes.data.user && Array.isArray(authRes.data.user.identities)
+               && authRes.data.user.identities.length === 0) {
+      // Avec « Confirm email » actif, Supabase masque le doublon derriere un faux succes
+      compteExistait = true;
+    }
+
+    // 3. Fiche client + chiens + invitation : UNE transaction cote base.
+    //    Si elle echoue, rien n'est ecrit et le lien reste valable.
+    var fin = await db.rpc('fr_inscription_finaliser', {
+      p_token: window._invitationToken,
+      p_client: {
+        prenom: prenom.trim(),
+        nom: nom.trim(),
+        telephone: telephone || null,
+        adresse: adresse || null,
+        commune: commune || null,
+        langue: langue,
+        hors_zone: horsZone,
         personnes_autorisees: personnes
-      }).select().single();
-      if (clientRes.error) throw clientRes.error;
-      clientId = clientRes.data.id;
-    }
+      },
+      p_chiens: chiens
+    });
+    if (fin.error) throw fin.error;
+    var nextNum = fin.data && fin.data.numero_client;
 
-    // 4. Chiens — on n'ajoute pas de doublon si la fiche a déjà des chiens
-    var hasDogsAlready = existing && existing.chiens && existing.chiens.length > 0;
-    if (!hasDogsAlready) {
-      if (nomChien) {
-        var comportementStr = readComportementPrincipal();
-        var remarquesStr = ((document.getElementById('remarques-chien') || {}).value || '').trim() || null;
-        var insChienRes = await db.from('chiens').insert({
-          client_id: clientId, nom: nomChien,
-          race: race || null, poids_kg: poids ? parseFloat(poids) : null,
-          sexe: sexe || null, sterilise: sterilise, numero_puce: numeroPuce,
-          grand_chien: (raceGrandGabarit || poidsGrandGabarit),
-          notes_sante: remarquesStr,
-          actif: true
-        }).select().single();
-        // Comportement : colonne non garantie → mise à jour best-effort (n'empêche pas l'inscription)
-        if (insChienRes && !insChienRes.error && insChienRes.data && comportementStr) {
-          var compUpd = await db.from('chiens').update({ comportement: comportementStr }).eq('id', insChienRes.data.id);
-          if (compUpd.error) console.log('Comportement non enregistré (colonne absente ?):', compUpd.error);
-        }
+    // 4. Ouvrir la session tout de suite (l'email est confirme par la fonction)
+    var connecte = false;
+    try {
+      var s = await db.auth.getSession();
+      connecte = !!(s && s.data && s.data.session);
+      if (!connecte) {
+        var si = await db.auth.signInWithPassword({ email: email, password: motDePasse });
+        connecte = !si.error;
       }
-      // Chiens supplémentaires
-      var chiensSupp = document.querySelectorAll('.chien-supplementaire');
-      for (var i = 0; i < chiensSupp.length; i++) {
-        var c = chiensSupp[i];
-        var n = (c.querySelector('.chien-nom')  || {}).value;
-        var r = (c.querySelector('.chien-race') || {}).value;
-        var p = (c.querySelector('.chien-poids')|| {}).value;
-        var sx = (c.querySelector('.chien-sexe')  || {}).value;
-        var st = (c.querySelector('.chien-steril')|| {}).value;
-        var pu = (((c.querySelector('.chien-puce') || {}).value || '').trim().replace(/\s/g, '')) || null;
-        if (n) {
-          await db.from('chiens').insert({
-            client_id: clientId, nom: n,
-            race: r || null, poids_kg: p ? parseFloat(p) : null,
-            sexe: sx || null,
-            sterilise: st === '' ? null : (st === 'true'),
-            numero_puce: pu,
-            grand_chien: p ? (parseFloat(p) >= 35) : null,
-            actif: true
-          });
-        }
-      }
-    }
-
-    // 5. Marquer l'invitation comme utilisée
-    if (window._invitationToken) {
-      await db.from('invitations').update({ utilise: true }).eq('token', window._invitationToken);
-    }
+    } catch (e) { connecte = false; }
+    window._inscriptionConnecte = connecte;
+    window._inscriptionCompteExistait = compteExistait;
 
     // Afficher page de confirmation avec les vraies données
     document.querySelectorAll('.page-section').forEach(function(p) { p.classList.remove('active'); });
@@ -1988,6 +2032,14 @@ async function sauvegarderInscription(motDePasse) {
     if (subEl) subEl.textContent = 'Bienvenue dans la famille Forest Rangers, ' + prenom + ' ! Votre n° client : ' + nextNum;
 
     // Récapitulatif réel
+    var bandeau = document.querySelector('#page-4 .info-banner');
+    if (bandeau && !connecte) {
+      bandeau.lastChild.textContent = compteExistait
+        ? ' Votre fiche est enregistrée. Un compte existait déjà pour cet email : connectez-vous avec le mot de passe choisi lors de votre première tentative, ou utilisez « Mot de passe oublié ».'
+        : ' Votre fiche est enregistrée. Connectez-vous avec votre email et le mot de passe que vous venez de choisir.';
+    }
+    prenom = frEchapper(prenom); nom = frEchapper(nom); email = frEchapper(email);
+    commune = frEchapper(commune); nomChien = frEchapper(nomChien); race = frEchapper(race);
     var recapEl = document.getElementById('recap-inscription');
     if (recapEl) {
       recapEl.innerHTML = '<div style="background:var(--surface2);border-radius:12px;padding:16px;margin-top:16px;font-size:13px;">'
@@ -1995,7 +2047,7 @@ async function sauvegarderInscription(motDePasse) {
         + '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-faint);">Email</span><span>' + email + '</span></div>'
         + '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-faint);">Commune</span><span>' + (commune || '—') + '</span></div>'
         + (nomChien ? '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-faint);">Chien</span><span>' + nomChien + (race ? ' · ' + race : '') + '</span></div>' : '')
-        + '<div style="display:flex;justify-content:space-between;padding:6px 0;"><span style="color:var(--text-faint);">N° client</span><span style="color:var(--accent);font-family:\'Norwester\',sans-serif;font-size:15px;font-weight:800;">#' + nextNum + '</span></div>'
+        + '<div style="display:flex;justify-content:space-between;padding:6px 0;"><span style="color:var(--text-faint);">N° client</span><span style="color:var(--accent);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:15px;font-weight:800;">#' + nextNum + '</span></div>'
         + '</div>';
     }
 
@@ -2004,7 +2056,10 @@ async function sauvegarderInscription(motDePasse) {
 
   } catch(e) {
     console.error('Erreur inscription:', e);
-    alert('Une erreur est survenue : ' + (e.message || e));
+    alert(messageErreurInscription(e));
+  } finally {
+    _inscriptionEnCours = false;
+    if (btnFinal) { btnFinal.disabled = false; btnFinal.style.opacity = ''; btnFinal.innerHTML = btnTexte; }
   }
 }
 

@@ -5,6 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Forest Rangers — Facture</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<!-- Correctif police : Norwester etait appelee dans font-family sans jamais
+     etre chargee. Elle ne s'affichait que sur les machines ou elle est
+     installee localement ; partout ailleurs le navigateur retombait sur un
+     sans-serif generique. Elle est desormais auto-hebergee (licence SIL OFL,
+     voir fonts/OFL-Norwester.txt). Oswald sert de repli condense si le
+     fichier est absent. -->
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+@font-face {
+  font-family: 'Norwester';
+  src: url('fonts/norwester.woff2') format('woff2'),
+       url('fonts/norwester.woff') format('woff');
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+</style>
   <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
 <script>
   // Reprend le choix jour/nuit du dashboard (clé partagée), appliqué avant l'affichage
@@ -63,7 +80,7 @@ html, body {
 .topbar { height: 52px; flex-shrink: 0; background: #1c1f14; border-bottom: 1px solid var(--bd); display: flex; align-items: center; gap: 10px; padding: 0 20px; }
 .back-btn { width: 30px; height: 30px; border-radius: 8px; background: var(--s1); border: 1px solid var(--bd); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--td); flex-shrink: 0; }
 .back-btn svg { width: 13px; height: 13px; }
-.page-title { font-family: 'Norwester', sans-serif; font-size: 15px; font-weight: 800; color: #eceee6; }
+.page-title { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 15px; font-weight: 800; color: #eceee6; }
 .breadcrumb { font-size: 12px; color: var(--tf); }
 .breadcrumb strong { color: var(--td); }
 .topbar-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
@@ -86,7 +103,7 @@ html.light .theme-toggle-knob { transform: translateX(20px); }
 .theme-toggle-knob svg { width: 9px; height: 9px; fill: white; }
 
 /* ── BTNS ── */
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; font-family: 'Norwester', sans-serif; font-size: 11px; font-weight: 800; cursor: pointer; border: none; transition: all 0.15s; letter-spacing: 0.04em; text-transform: uppercase; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 800; cursor: pointer; border: none; transition: all 0.15s; letter-spacing: 0.04em; text-transform: uppercase; }
 .btn-accent { background: var(--accent); color: white; }
 .btn-accent:hover { background: #ff7a3d; }
 .btn-outline { background: transparent; border: 1px solid var(--bd2); color: var(--td); }
@@ -124,7 +141,7 @@ html.light .theme-toggle-knob { transform: translateX(20px); }
 .section-head { padding: 11px 14px; border-bottom: 1px solid var(--bd); display: flex; align-items: center; gap: 9px; }
 .section-icon { width: 24px; height: 24px; border-radius: 6px; background: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .section-icon svg { width: 13px; height: 13px; stroke: white; fill: none; stroke-width: 2; }
-.section-title { font-family: 'Norwester', sans-serif; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(236,238,230,0.6); }
+.section-title { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(236,238,230,0.6); }
 .section-body { padding: 14px; }
 .form-group { margin-bottom: 10px; }
 .form-group:last-child { margin-bottom: 0; }
@@ -151,7 +168,7 @@ select.form-input option { background: #252a1a; color: #eceee6; }
 .li-date { font-size: 11px; color: var(--tf); min-width: 80px; }
 .li-desc { flex: 1; font-size: 12.5px; }
 .li-qty { font-size: 12px; color: var(--td); min-width: 30px; text-align: center; }
-.li-price { font-family: 'Norwester', sans-serif; font-size: 13px; font-weight: 800; color: var(--accent); min-width: 55px; text-align: right; }
+.li-price { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 13px; font-weight: 800; color: var(--accent); min-width: 55px; text-align: right; }
 .li-remove { width: 22px; height: 22px; border-radius: 5px; background: var(--rd); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--red); flex-shrink: 0; }
 .li-remove svg { width: 11px; height: 11px; }
 
@@ -172,7 +189,7 @@ select.form-input option { background: #252a1a; color: #eceee6; }
 .total-row { display: flex; justify-content: space-between; font-size: 12.5px; padding: 4px 0; }
 .total-row.main { padding-top: 10px; margin-top: 6px; border-top: 1.5px solid var(--bd2); }
 .total-label { color: var(--td); }
-.total-val { font-family: 'Norwester', sans-serif; font-weight: 800; }
+.total-val { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-weight: 800; }
 .total-row.main .total-val { font-size: 20px; color: var(--accent); }
 
 /* ── INVOICE PREVIEW ── */
@@ -194,11 +211,11 @@ select.form-input option { background: #252a1a; color: #eceee6; }
 .inv-brand { display: flex; align-items: center; gap: 10px; }
 .inv-brand-mark { width: 36px; height: 36px; border-radius: 9px; background: var(--accent); display: flex; align-items: center; justify-content: center; }
 .inv-brand-mark svg { width: 20px; height: 20px; fill: white; }
-.inv-brand-name { font-family: 'Norwester', sans-serif; font-size: 16px; font-weight: 800; color: white; }
+.inv-brand-name { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 16px; font-weight: 800; color: white; }
 .inv-brand-name span { color: var(--accent); }
 .inv-brand-sub { font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 2px; }
 .inv-num-block { text-align: right; }
-.inv-num { font-family: 'Norwester', sans-serif; font-size: 22px; font-weight: 800; color: white; }
+.inv-num { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 22px; font-weight: 800; color: white; }
 .inv-date-label { font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 4px; }
 .inv-date-val { font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 2px; }
 
@@ -208,7 +225,7 @@ select.form-input option { background: #252a1a; color: #eceee6; }
 /* Addresses */
 .inv-addresses { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px; }
 .inv-addr-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent); font-weight: 700; margin-bottom: 8px; }
-.inv-addr-name { font-family: 'Norwester', sans-serif; font-size: 14px; font-weight: 800; color: #1c1f14; margin-bottom: 4px; }
+.inv-addr-name { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 14px; font-weight: 800; color: #1c1f14; margin-bottom: 4px; }
 .inv-addr-detail { font-size: 12px; color: #555; line-height: 1.6; }
 
 /* Table */
@@ -216,23 +233,23 @@ select.form-input option { background: #252a1a; color: #eceee6; }
 .inv-table th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: #888; font-weight: 700; padding: 0 10px 10px; border-bottom: 1.5px solid #eee; }
 .inv-table th:last-child { text-align: right; }
 .inv-table td { padding: 11px 10px; font-size: 12.5px; border-top: 1px solid #f0f0f0; color: #333; vertical-align: top; }
-.inv-table td:last-child { text-align: right; font-family: 'Norwester', sans-serif; font-weight: 700; color: #1c1f14; }
+.inv-table td:last-child { text-align: right; font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-weight: 700; color: #1c1f14; }
 .inv-table tr:hover td { background: #fafafa; }
 .inv-td-service { font-weight: 600; color: #1c1f14; }
 .inv-td-date { font-size: 11px; color: #888; margin-top: 2px; }
 
 /* Discount line */
 .inv-discount-row td { color: #2e7d32 !important; font-size: 12px; }
-.inv-discount-row td:last-child { font-family: 'Norwester', sans-serif; font-weight: 700; color: #2e7d32 !important; }
+.inv-discount-row td:last-child { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-weight: 700; color: #2e7d32 !important; }
 
 /* Totals */
 .inv-totals { margin-left: auto; width: 280px; }
 .inv-total-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 13px; border-top: 1px solid #eee; }
 .inv-total-row:first-child { border-top: none; }
 .inv-total-row .lbl { color: #666; }
-.inv-total-row .val { font-family: 'Norwester', sans-serif; font-weight: 700; color: #1c1f14; }
+.inv-total-row .val { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-weight: 700; color: #1c1f14; }
 .inv-total-row.final { border-top: 2px solid #1c1f14; margin-top: 4px; padding-top: 10px; }
-.inv-total-row.final .lbl { font-family: 'Norwester', sans-serif; font-weight: 800; font-size: 14px; color: #1c1f14; }
+.inv-total-row.final .lbl { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-weight: 800; font-size: 14px; color: #1c1f14; }
 .inv-total-row.final .val { font-size: 22px; color: var(--accent); }
 
 /* Status badge on invoice */
@@ -272,7 +289,7 @@ select.form-input option { background: #252a1a; color: #eceee6; }
 .inv-conditions strong { color: #888; }
 
 /* ── PANEL TITLE ── */
-.panel-title { font-family: 'Norwester', sans-serif; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(236,238,230,0.4); margin-bottom: 14px; }
+.panel-title { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(236,238,230,0.4); margin-bottom: 14px; }
 
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar { width: 4px; }
@@ -604,7 +621,7 @@ html.light .actions-bar  { background: #f6f7f2; border-top-color: rgba(0,0,0,0.0
 
       <!-- ══ PREVIEW PANEL ══ -->
       <div class="preview-panel">
-        <div style="font-family:'Norwester',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;color:rgba(236,238,230,0.3);margin-bottom:16px;align-self:flex-start;">Aperçu facture</div>
+        <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;color:rgba(236,238,230,0.3);margin-bottom:16px;align-self:flex-start;">Aperçu facture</div>
 
         <div class="invoice-doc" id="invoiceDoc">
 
@@ -715,7 +732,7 @@ html.light .actions-bar  { background: #f6f7f2; border-top-color: rgba(0,0,0,0.0
         </div><!-- /invoice-doc -->
 
         <!-- Toast -->
-        <div id="toast" style="display:none;margin-top:16px;background:var(--green);color:#1c1f14;padding:12px 20px;border-radius:10px;font-family:'Norwester',sans-serif;font-size:12px;font-weight:800;text-align:center;">
+        <div id="toast" style="display:none;margin-top:16px;background:var(--green);color:#1c1f14;padding:12px 20px;border-radius:10px;font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:12px;font-weight:800;text-align:center;">
           ✓ Facture envoyée à marie.dupont@email.lu
         </div>
 

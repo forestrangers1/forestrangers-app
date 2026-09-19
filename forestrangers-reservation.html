@@ -12,6 +12,23 @@
 try { if (localStorage.getItem('fr-theme') === 'dark') document.documentElement.classList.add('dark'); } catch(e) {}
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<!-- Correctif police : Norwester etait appelee dans font-family sans jamais
+     etre chargee. Elle ne s'affichait que sur les machines ou elle est
+     installee localement ; partout ailleurs le navigateur retombait sur un
+     sans-serif generique. Elle est desormais auto-hebergee (licence SIL OFL,
+     voir fonts/OFL-Norwester.txt). Oswald sert de repli condense si le
+     fichier est absent. -->
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+@font-face {
+  font-family: 'Norwester';
+  src: url('fonts/norwester.woff2') format('woff2'),
+       url('fonts/norwester.woff') format('woff');
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+</style>
   <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -62,7 +79,7 @@ html, body {
 }
 .brand-mark svg { width: 15px; height: 15px; fill: white; }
 .brand-name {
-  font-family: 'Norwester', sans-serif; font-size: 13px; font-weight: 800;
+  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 13px; font-weight: 800;
   color: #eceee6; letter-spacing: 0.03em;
   line-height: 1.8; padding-bottom: 6px; overflow: visible;
   clip: auto; display: inline-block;
@@ -106,7 +123,7 @@ html, body {
 .step-num {
   width: 30px; height: 30px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-family: 'Norwester', sans-serif; font-size: 12px; font-weight: 800;
+  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 12px; font-weight: 800;
   flex-shrink: 0; border: 2px solid var(--border2);
   background: var(--bg); color: var(--text-faint);
   position: relative; z-index: 1; transition: all 0.2s;
@@ -149,7 +166,7 @@ html, body {
 .service-icon svg { width: 26px; height: 26px; stroke: #ffffff; fill: none; }
 .service-card.selected .service-icon svg { stroke: #ffffff; }
 .service-name {
-  font-family: 'Norwester', sans-serif; font-size: 13px; font-weight: 800;
+  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 13px; font-weight: 800;
   margin-bottom: 4px; color: #1c1f14;
 }
 .service-desc { font-size: 11px; color: #555; line-height: 1.4; }
@@ -177,7 +194,7 @@ html, body {
 }
 .section-icon svg { width: 16px; height: 16px; stroke: white; fill: none; stroke-width: 2; }
 .section-title {
-  font-family: 'Norwester', sans-serif; font-size: 12px; font-weight: 800;
+  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 12px; font-weight: 800;
   text-transform: uppercase; letter-spacing: 0.1em; color: #ffffff;
 }
 .section-body { padding: 16px; background: #ffffff; }
@@ -283,17 +300,17 @@ textarea.field-input { resize: vertical; min-height: 80px; }
   font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em;
   color: var(--text-faint); font-weight: 700; margin-bottom: 8px; display: block;
 }
-.recap-total-val { font-family: 'Norwester', sans-serif; font-weight: 800; color: var(--accent); }
+.recap-total-val { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-weight: 800; color: var(--accent); }
 .price-main { font-size: 24px; display: block; line-height: 1.2; }
 .price-breakdown { font-size: 12px; color: var(--text-dim); font-family: 'Instrument Sans',sans-serif; font-weight: 400; margin-top: 4px; display: block; }
-.price-total-line { font-size: 14px; color: var(--green); font-family: 'Norwester',sans-serif; font-weight: 800; margin-top: 2px; display: block; }
+.price-total-line { font-size: 14px; color: var(--green); font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-weight: 800; margin-top: 2px; display: block; }
 
 /* ── BTNS ── */
 .nav-btns { display: flex; gap: 10px; margin-top: 20px; }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   padding: 13px 22px; border-radius: 10px;
-  font-family: 'Norwester', sans-serif; font-size: 12px; font-weight: 800;
+  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 12px; font-weight: 800;
   cursor: pointer; border: none; transition: all 0.2s; letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -322,7 +339,7 @@ textarea.field-input { resize: vertical; min-height: 80px; }
 .success-icon.green svg { stroke: var(--green); }
 .success-icon.amber svg { stroke: var(--amber); }
 .success-title {
-  font-family: 'Norwester', sans-serif; font-size: 20px; font-weight: 800; margin-bottom: 8px;
+  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 20px; font-weight: 800; margin-bottom: 8px;
 }
 .success-sub {
   font-size: 13.5px; color: var(--text-dim); line-height: 1.7;
@@ -567,7 +584,7 @@ html.dark .tbl th, html.dark .tbl td { border-color: rgba(255,255,255,0.08) !imp
   ══════════════════════ -->
   <div class="page active" id="page-1">
 
-    <div style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;color:#1c1f14;">Quel service souhaitez-vous reserver ?</div>
+    <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;color:#1c1f14;">Quel service souhaitez-vous reserver ?</div>
     <div style="font-size:13px;color:rgba(28,31,20,0.55);margin-bottom:20px;">Sélectionnez un service pour voir les disponibilités.</div>
 
     <div class="service-cards">
@@ -666,7 +683,7 @@ html.dark .tbl th, html.dark .tbl td { border-color: rgba(255,255,255,0.08) !imp
 
     <!-- ── DOG WALKING ── -->
     <div id="form-walking">
-      <div style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;">Dog Walking — Promenade en groupe</div>
+      <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;">Dog Walking — Promenade en groupe</div>
       <div style="font-size:13px;color:var(--text-dim);margin-bottom:20px;">Votre chien sera promené avec un groupe (max. 6 chiens) sur au moins 3 km.</div>
 
       <div class="section-block">
@@ -768,7 +785,7 @@ html.dark .tbl th, html.dark .tbl td { border-color: rgba(255,255,255,0.08) !imp
 
     <!-- ── DAY CARE ── -->
     <div id="form-daycare" class="hidden">
-      <div style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;">Day Care — Creche du jour</div>
+      <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;">Day Care — Creche du jour</div>
       <div style="font-size:13px;color:var(--text-dim);margin-bottom:20px;">Gardiennage de 8h à 18h avec 2 promenades en groupe incluses.</div>
 
       <!-- Première fois ? -->
@@ -903,7 +920,7 @@ html.dark .tbl th, html.dark .tbl td { border-color: rgba(255,255,255,0.08) !imp
 
     <!-- ── BOARDING ── -->
     <div id="form-boarding" class="hidden">
-      <div style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;">Boarding — Pension</div>
+      <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;">Boarding — Pension</div>
       <div style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">Hébergement sans cage avec 2 promenades par jour. Minimum 2 nuits. Maximum 5 chiens simultanément.</div>
 
       <!-- Boarding : première fois = nuitée test -->
@@ -936,7 +953,7 @@ html.dark .tbl th, html.dark .tbl td { border-color: rgba(255,255,255,0.08) !imp
           </div>
           <div id="boarding-nights" class="hidden" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 13px;font-size:13px;margin-top:4px;">
             <span style="color:var(--text-dim);">Durée estimée : </span>
-            <strong id="nights-count" style="color:var(--accent);font-family:'Norwester',sans-serif;font-size:15px;font-weight:800;">—</strong>
+            <strong id="nights-count" style="color:var(--accent);font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:15px;font-weight:800;">—</strong>
             <span style="color:var(--text-faint);font-size:11px;margin-left:4px;">nuits</span>
           </div>
           <div class="info-box orange" style="margin-top:8px;">
@@ -1026,7 +1043,7 @@ html.dark .tbl th, html.dark .tbl td { border-color: rgba(255,255,255,0.08) !imp
        PAGE 3 — OPTIONS / MÉTÉO / CONDITIONS
   ══════════════════════ -->
   <div class="page" id="page-3">
-    <div style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;">Conditions importantes</div>
+    <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;">Conditions importantes</div>
     <div style="font-size:13px;color:var(--text-dim);margin-bottom:20px;">Veuillez prendre connaissance des points suivants avant de confirmer.</div>
 
     <div class="section-block">
@@ -1094,7 +1111,7 @@ html.dark .tbl th, html.dark .tbl td { border-color: rgba(255,255,255,0.08) !imp
        PAGE 4 — RÉCAPITULATIF
   ══════════════════════ -->
   <div class="page" id="page-4">
-    <div style="font-family:'Norwester',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;">Recapitulatif de votre demande</div>
+    <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;">Recapitulatif de votre demande</div>
     <div style="font-size:13px;color:var(--text-dim);margin-bottom:20px;">Vérifiez les informations avant de confirmer.</div>
 
     <div class="section-block" style="margin-bottom:14px;">
@@ -1410,6 +1427,48 @@ function messageCloture() {
        + TEL_GABRIEL + '</a>.</div>';
 }
 
+// Message d'information affiche des que l'heure de cloture est passee, meme
+// sans date choisie. Sans lui, le client trouvait la date du jour grisee dans
+// le calendrier sans la moindre explication : le message d'erreur ne pouvait
+// s'afficher que sur une date que le navigateur l'empechait justement de
+// selectionner.
+function messageClotureInfo() {
+  return '<div><strong>Aujourd\'hui n\'est plus reservable.</strong> Passe ' + CUTOFF_HEURE
+       + 'h00, les tournees sont lancees : la premiere date disponible est demain. '
+       + 'Pour une demande urgente, appelez Gabriel au '
+       + '<a href="tel:' + TEL_GABRIEL.replace(/\s/g, '') + '" style="color:inherit;font-weight:700;">'
+       + TEL_GABRIEL + '</a>.</div>';
+}
+
+// ── Week-end : Dog Walking et Day Care ne tournent que du lundi au vendredi ──
+// occurrencesFR ecartait deja samedi et dimanche, mais son repli final
+// (if (!out.length) out.push(d0)) reinjectait la date exclue : une seance
+// unique un samedi passait donc malgre la regle.
+function estWeekend(iso) {
+  if (!iso) return false;
+  var d = new Date(iso + 'T00:00:00');
+  if (isNaN(d)) return false;
+  var wd = d.getDay();
+  return wd === 0 || wd === 6;
+}
+
+function serviceSansWeekend() {
+  return currentService === 'walking' || currentService === 'daycare';
+}
+
+function dateWeekendInterdite(iso) {
+  return serviceSansWeekend() && estWeekend(iso);
+}
+
+function messageWeekend(iso) {
+  var d = new Date(iso + 'T00:00:00');
+  var jour = (d.getDay() === 6) ? 'samedi' : 'dimanche';
+  return '<div><strong>Pas de service le ' + jour + '.</strong> Le Dog Walking et le Day Care ont lieu '
+       + 'du lundi au vendredi. Choisissez un jour de semaine, ou appelez Gabriel au '
+       + '<a href="tel:' + TEL_GABRIEL.replace(/\s/g, '') + '" style="color:inherit;font-weight:700;">'
+       + TEL_GABRIEL + '</a> pour une demande exceptionnelle.</div>';
+}
+
 // Recalcule les bornes min des champs date et vide une date devenue invalide
 function appliquerDateMin() {
   var mini = premiereDateReservable();
@@ -1429,21 +1488,37 @@ function appliquerDateMin() {
 function majBanniereCloture() {
   var box = document.getElementById('cutoff-alert');
   if (!box) return;
-  if (dateTropTard(dateDebutChoisie())) {
-    box.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
-      + '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>'
-      + '<line x1="12" y1="16" x2="12.01" y2="16"/></svg>' + messageCloture();
+  var icone = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+    + '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>'
+    + '<line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+  var d = dateDebutChoisie();
+
+  if (dateWeekendInterdite(d)) {
+    box.className = 'info-box red';
+    box.innerHTML = icone + messageWeekend(d);
     box.style.display = 'flex';
-  } else {
-    box.style.display = 'none';
+    return;
   }
+  if (dateTropTard(d)) {
+    box.className = 'info-box red';
+    box.innerHTML = icone + messageCloture();
+    box.style.display = 'flex';
+    return;
+  }
+  if (new Date().getHours() >= CUTOFF_HEURE) {
+    box.className = 'info-box amber';
+    box.innerHTML = icone + messageClotureInfo();
+    box.style.display = 'flex';
+    return;
+  }
+  box.style.display = 'none';
 }
 
 // Verrou avant de passer a l'etape suivante
 function validateDatesAndContinue() {
   appliquerDateMin();
   var d = dateDebutChoisie();
-  if (dateTropTard(d)) {
+  if (dateWeekendInterdite(d) || dateTropTard(d)) {
     majBanniereCloture();
     document.getElementById('cutoff-alert').scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
@@ -1452,6 +1527,7 @@ function validateDatesAndContinue() {
 }
 
 function checkClotureAlert(dateStr) {
+  majBanniereCloture();   // week-end / cloture 08h00 : reevalue a chaque choix de date
   var enCloture = dateStr && isDateClotureEstivale(dateStr);
 
   // Tables "normales" (hors clôture estivale), propres à chaque service
@@ -1593,7 +1669,9 @@ function occurrencesFR(svc, debut, fin, codes) {
     if (idx.length && idx.indexOf(wd) === -1) continue;    // uniquement les jours cochés
     out.push(isoDateFR(d));
   }
-  if (!out.length) out.push(isoDateFR(d0));
+  // Repli : ne jamais reinjecter une date que la regle vient d'ecarter.
+  var d0wd = d0.getDay();
+  if (!out.length && !(svc !== 'boarding' && (d0wd === 0 || d0wd === 6))) out.push(isoDateFR(d0));
   return out;
 }
 
@@ -1651,7 +1729,7 @@ function validateAndGoRecap() {
     }
   }
   // Cloture 08h00 : impossible de continuer avec une date deja fermee
-  if (dateTropTard(dateDebutChoisie())) {
+  if (dateWeekendInterdite(dateDebutChoisie()) || dateTropTard(dateDebutChoisie())) {
     goPage(2);
     setTimeout(function() {
       majBanniereCloture();
@@ -1794,7 +1872,7 @@ async function confirmBooking() {
 
   // Cloture 08h00 — dernier verrou cote navigateur.
   // Le verrou qui compte vraiment est le trigger fr_cutoff_reservation en base.
-  if (dateTropTard(dateDebutChoisie())) {
+  if (dateWeekendInterdite(dateDebutChoisie()) || dateTropTard(dateDebutChoisie())) {
     goPage(2);
     setTimeout(function() {
       majBanniereCloture();
