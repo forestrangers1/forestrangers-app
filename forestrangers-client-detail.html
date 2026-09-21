@@ -39,6 +39,7 @@ try {
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="fr-calendrier.js"></script>
 <script src="fr-facturation.js"></script>
+<script src="fr-email.js"></script>
 <!-- Repli CDN : si jsDelivr n'a pas repondu, on tente unpkg avant d'abandonner. -->
 <script>if (!window.supabase) { document.write('<scr' + 'ipt src="https://unpkg.com/@supabase/supabase-js@2"><\/scr' + 'ipt>'); }</script>
 <script>
@@ -581,6 +582,12 @@ tr:hover td { background: rgba(255,255,255,0.02); }
           </table>
         </div>
       </div>
+
+      <!-- Journal des emails (migration v32) — masqué si la table n'existe pas -->
+      <div class="card" id="emails-card" style="display:none;">
+        <div class="card-head"><div class="card-title">Emails envoyés</div></div>
+        <div id="emails-list"></div>
+      </div>
     </div>
 
     <!-- ── ONGLET HISTORIQUE ── -->
@@ -903,7 +910,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <div class="modal-foot" style="margin-top:0;">
       <button class="btn btn-outline" style="width:auto;" onclick="document.getElementById('modal-message').classList.remove('open')">Annuler</button>
       <div style="flex:1;"></div>
-      <button class="btn btn-accent" style="width:auto;margin-bottom:0;" onclick="sendMessageClient()">
+      <button class="btn btn-accent" id="btn-send-message" style="width:auto;margin-bottom:0;" onclick="sendMessageClient()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
         Envoyer par email
       </button>
@@ -1024,6 +1031,7 @@ async function loadClient(id) {
       .eq('client_id', id)
       .order('created_at', { ascending: false });
     loadFactures(factures || []);
+    loadJournalEmails();
     var nbImpayes = factures ? factures.filter(function(f) { return f.statut === 'impayee'; }).length : 0;
     document.getElementById('stat-factures').textContent = nbImpayes;
     if (nbImpayes > 0) document.getElementById('stat-factures').style.color = 'var(--red)';
@@ -1537,6 +1545,32 @@ async function loadAnnulationDetails(resas) {
   document.getElementById('ann-tardifs').textContent   = tardifs;
   document.getElementById('ann-sans-frais').textContent = sansFrais;
   document.getElementById('ann-gabriel').textContent   = parGabriel;
+}
+
+var EMAIL_TYPES = { invitation: 'Invitation', facture: 'Facture', rappel_1: 'Rappel 1', rappel_2: 'Rappel 2',
+                    mise_en_demeure: 'Mise en demeure', message: 'Message' };
+async function loadJournalEmails() {
+  var card = document.getElementById('emails-card'), el = document.getElementById('emails-list');
+  if (!card || !el || !db || !clientId) return;
+  try {
+    var r = await db.from('emails_envoyes').select('*').eq('client_id', clientId).order('created_at', { ascending: false }).limit(50);
+    if (r.error) { card.style.display = 'none'; return; }
+    card.style.display = '';
+    var liste = r.data || [];
+    if (!liste.length) { el.innerHTML = '<div style="padding:14px 16px;font-size:12px;color:var(--td);">Aucun email envoyé depuis l\'application pour ce client.</div>'; return; }
+    function e(v) { return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    el.innerHTML = liste.map(function(m) {
+      var d = new Date(m.created_at);
+      var quand = d.toLocaleDateString('fr-LU', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + d.toLocaleTimeString('fr-LU', { hour: '2-digit', minute: '2-digit' });
+      var ok = m.statut === 'envoye';
+      return '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 16px;border-top:1px solid var(--border);">'
+        + '<span class="badge ' + (ok ? 'b-green' : 'b-red') + '" style="flex-shrink:0;">' + (ok ? 'Envoyé' : 'Échec') + '</span>'
+        + '<div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:600;">' + e(EMAIL_TYPES[m.type] || m.type) + ' — ' + e(m.objet || '') + '</div>'
+        + '<div style="font-size:11px;color:var(--td);">' + quand + ' · à ' + e(m.destinataire)
+        + (m.destinataire_original ? ' (compte test, prévu pour ' + e(m.destinataire_original) + ')' : '')
+        + (m.erreur ? ' · <span style="color:var(--red);">' + e(m.erreur) + '</span>' : '') + '</div></div></div>';
+    }).join('');
+  } catch (_) { card.style.display = 'none'; }
 }
 
 function loadFactures(factures) {
@@ -2159,13 +2193,32 @@ function openMessageModal() {
   document.getElementById('modal-message').classList.add('open');
 }
 
-function sendMessageClient() {
+async function sendMessageClient() {
   if (!currentClient || !currentClient.email) { alert('Aucune adresse email enregistrée pour ce client.'); return; }
   var sujet = document.getElementById('message-sujet').value.trim();
   var corps = document.getElementById('message-corps').value.trim();
-  var mailto = 'mailto:' + encodeURIComponent(currentClient.email) + '?subject=' + encodeURIComponent(sujet) + '&body=' + encodeURIComponent(corps);
-  window.location.href = mailto;
-  document.getElementById('modal-message').classList.remove('open');
+  if (!sujet || !corps) { alert('Sujet et message sont nécessaires.'); return; }
+  var btn = document.getElementById('btn-send-message');
+  var ancien = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = 'Envoi…'; }
+  var r = await FR_MAIL.envoyer(db, { type: 'message', to: currentClient.email, subject: sujet, text: corps, client_id: currentClient.id });
+  if (btn) { btn.disabled = false; btn.innerHTML = ancien; }
+  if (r.ok) {
+    document.getElementById('modal-message').classList.remove('open');
+    if (typeof showToast === 'function') showToast('✓ Email envoyé à ' + (r.destinataire || currentClient.email));
+    else alert('Email envoyé à ' + (r.destinataire || currentClient.email));
+    loadJournalEmails();
+    return;
+  }
+  if (r.indisponible) {
+    if (confirm('L\'envoi automatique ne répond pas (' + (r.erreur || '') + ').\n\nOuvrir votre messagerie à la place ?')) {
+      FR_MAIL.ouvrirMessagerie(currentClient.email, sujet, corps);
+      document.getElementById('modal-message').classList.remove('open');
+    }
+    return;
+  }
+  alert('Email non envoyé.\n\n' + (r.erreur || 'Erreur inconnue'));
+  loadJournalEmails();
 }
 
 function contacterClient() {

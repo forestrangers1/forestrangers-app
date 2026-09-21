@@ -367,6 +367,7 @@ html.light .actions-bar  { background: #f6f7f2; border-top-color: rgba(0,0,0,0.0
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="fr-calendrier.js"></script>
   <script src="fr-facturation.js"></script>
+  <script src="fr-email.js"></script>
 <!-- Repli CDN : si jsDelivr n'a pas repondu, on tente unpkg avant d'abandonner. -->
 <script>if (!window.supabase) { document.write('<scr' + 'ipt src="https://unpkg.com/@supabase/supabase-js@2"><\/scr' + 'ipt>'); }</script>
   <script>
@@ -588,7 +589,7 @@ html.light .actions-bar  { background: #f6f7f2; border-top-color: rgba(0,0,0,0.0
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Frais de rappel</label>
+              <label class="form-label">Frais de dossier (hors TVA)</label>
               <select class="form-input" id="facture-rappel-select" onchange="updatePreview()">
                 <option value="0" selected>Aucun</option>
                 <option value="25">+25 € · facture impayée</option>
@@ -607,8 +608,8 @@ html.light .actions-bar  { background: #f6f7f2; border-top-color: rgba(0,0,0,0.0
           <div class="total-row" id="row-hors-zone" style="color:#ff7a3d;display:none;"><span class="total-label" style="color:#ff7a3d;">Supplément zone HT</span><span class="total-val" style="color:#ff7a3d;" id="supplement-zone">+0,00 €</span></div>
           <div class="total-row" style="border-top:1.5px solid rgba(255,255,255,0.15);padding-top:8px;margin-top:4px;"><span class="total-label" style="color:var(--tx);font-weight:700;">Total HT</span><span class="total-val" style="color:var(--tx);" id="total-ht">0,00 €</span></div>
           <div id="tva-rows-form"></div>
-          <div class="total-row"><span class="total-label">Frais de rappel</span><span class="total-val" id="frais-rappel">—</span></div>
-          <div class="total-row main"><span class="total-label">Total à payer TTC</span><span class="total-val" id="total-ttc">0,00 €</span></div>
+          <div class="total-row"><span class="total-label">Frais de dossier (hors TVA)</span><span class="total-val" id="frais-rappel">—</span></div>
+          <div class="total-row main"><span class="total-label">Total à payer</span><span class="total-val" id="total-ttc">0,00 €</span></div>
         </div>
 
         <!-- Actions -->
@@ -693,8 +694,8 @@ html.light .actions-bar  { background: #f6f7f2; border-top-color: rgba(0,0,0,0.0
               <div class="inv-total-row" id="inv-row-hors-zone" style="color:#e65100;display:none;"><span class="lbl" style="color:#e65100;">Supplément hors zone HT<br><span style="font-size:10px;font-weight:400;color:#aaa;" id="inv-hors-zone-detail"></span></span><span class="val" style="color:#e65100;" id="inv-hors-zone">+0,00 €</span></div>
               <div class="inv-total-row" style="border-top:1.5px solid #ddd;padding-top:10px;margin-top:4px;"><span class="lbl" style="font-weight:700;color:#333;">Total HT</span><span class="val" style="color:#1c1f14;" id="inv-total-ht">0,00 €</span></div>
               <div id="tva-rows-inv"></div>
-              <div class="inv-total-row"><span class="lbl">Frais de rappel</span><span class="val" id="inv-frais">—</span></div>
-              <div class="inv-total-row final"><span class="lbl">Total à payer TTC</span><span class="val" id="inv-total">0,00 €</span></div>
+              <div class="inv-total-row"><span class="lbl">Frais de dossier (hors TVA)</span><span class="val" id="inv-frais">—</span></div>
+              <div class="inv-total-row final"><span class="lbl">Total à payer</span><span class="val" id="inv-total">0,00 €</span></div>
             </div>
 
             <div id="inv-note" style="margin-top:14px;font-size:12px;color:#666;font-style:italic;display:none;"></div>
@@ -717,7 +718,7 @@ html.light .actions-bar  { background: #f6f7f2; border-top-color: rgba(0,0,0,0.0
 
           <!-- Conditions -->
           <div class="inv-conditions">
-            <p><strong>Conditions de paiement :</strong> Paiement dans les 30 jours. Tout retard entraîne une indemnité forfaitaire de 25 € et des intérêts de retard au taux légal en vigueur. · <strong>Annulations :</strong> Planning clôturé la veille à 9h00. Annulation tardive facturée intégralement conformément aux conditions générales.</p>
+            <p><strong>Conditions de paiement :</strong> Paiement dans les 14 jours suivant l'émission (CGV art. 7.4). Tout retard entraîne des intérêts de retard au taux légal et une indemnité forfaitaire de 25 € par rappel émis (CGV art. 7.5). · <strong>Annulations :</strong> Planning clôturé la veille à 9h00. Annulation tardive facturée intégralement conformément aux conditions générales.</p>
           </div>
 
           <!-- Footer -->
@@ -756,6 +757,7 @@ var urlClientId = params.get('client_id');
 var currentClient  = null;
 var currentChiens  = [];
 var currentFacture = null;
+var EDIT_V31 = false;   // migration v31 présente (frais_dossier, paiements)
 var lineItemsData  = [];
 var horsZoneCount  = 0;
 
@@ -926,12 +928,15 @@ function applyStoredTotals() {
   tvaByRate[rate] = tva;
   renderTvaRows(tvaByRate);
 
-  document.getElementById('frais-rappel').textContent = '—';
-  document.getElementById('inv-frais').textContent = '—';
-  document.getElementById('total-ttc').textContent = eur(totalTtc);
-  document.getElementById('inv-total').textContent = eur(totalTtc);
+  // Frais de dossier (v31) : hors TVA, après la TVA
+  var frais = parseFloat(f.frais_dossier) || 0;
+  var fraisLabel = frais > 0 ? '+' + eur(frais) : '—';
+  document.getElementById('frais-rappel').textContent = fraisLabel;
+  document.getElementById('inv-frais').textContent = fraisLabel;
+  document.getElementById('total-ttc').textContent = eur(totalTtc + frais);
+  document.getElementById('inv-total').textContent = eur(totalTtc + frais);
 
-  return { totalHt: totalHt, totalTtc: totalTtc };
+  return { totalHt: totalHt, totalTtc: totalTtc, fraisDossier: frais, totalAPayer: totalTtc + frais };
 }
 
 function recalculateTotals() {
@@ -952,7 +957,7 @@ function recalculateTotals() {
   tvaByRate[TVA_RATES.default] = r2(servicesTtc - totalHt);
 
   var fraisRappel = parseFloat(document.getElementById('facture-rappel-select').value) || 0;
-  var totalTtc = r2(servicesTtc + fraisRappel);
+  var totalTtc = r2(servicesTtc + fraisRappel);   // total à payer (frais hors TVA compris)
 
   document.getElementById('subtotal').textContent = eur(subtotal);
   document.getElementById('inv-subtotal').textContent = eur(subtotal);
@@ -982,7 +987,8 @@ function recalculateTotals() {
   document.getElementById('total-ttc').textContent = eur(totalTtc);
   document.getElementById('inv-total').textContent = eur(totalTtc);
 
-  return { totalHt: totalHt, totalTtc: totalTtc };
+  // totalTtc = prestations seules (colonne total_ttc) ; frais de dossier à part (v31)
+  return { totalHt: totalHt, totalTtc: servicesTtc, fraisDossier: fraisRappel, totalAPayer: totalTtc };
 }
 
 // ════════════════════════════════════════
@@ -1303,10 +1309,19 @@ async function initFactureExistante(id) {
   document.getElementById('facture-periode-input').value = f.periode || '';
   document.getElementById('facture-statut-input').value = f.statut || 'impayee';
   document.getElementById('facture-horszone-select').value = currentClient.hors_zone ? '5' : '0';
+  var selFrais = document.getElementById('facture-rappel-select');
+  var fd = parseFloat(f.frais_dossier) || 0;
+  if (selFrais) {
+    if (fd > 0 && !selFrais.querySelector('option[value="' + fd + '"]')) {
+      var o = document.createElement('option'); o.value = String(fd); o.textContent = '+' + fd + ' € · frais de dossier'; selFrais.appendChild(o);
+    }
+    selFrais.value = String(fd > 0 ? fd : 0);
+  }
 
-  var created = f.created_at ? new Date(f.created_at) : new Date();
+  // Émission et échéance : celles de la base (v31), sinon création + 14 jours (CGV 7.4)
+  var created = f.date_emission ? new Date(f.date_emission + 'T00:00:00') : (f.created_at ? new Date(f.created_at) : new Date());
   document.getElementById('facture-emission-input').value = formatDateISO(created);
-  var ech = new Date(created); ech.setDate(ech.getDate() + 30);
+  var ech = f.date_echeance ? new Date(f.date_echeance + 'T00:00:00') : new Date(created.getTime() + 14 * 86400000);
   document.getElementById('facture-echeance-input').value = formatDateISO(ech);
 
   // Pas de detail de lignes stocke en base : on affiche le montant global de la facture
@@ -1389,6 +1404,15 @@ async function enregistrerFacture() {
     total_ttc: Math.round(totals.totalTtc * 100) / 100,
     notes: notes
   };
+  if (EDIT_V31) {
+    // v31 : les frais de dossier ont leur colonne ; le statut « payée » ne se pose
+    // que par un paiement daté (Admin → Factures → Paiement reçu).
+    payload.frais_dossier = Math.round((totals.fraisDossier || 0) * 100) / 100;
+    if (currentFacture && currentFacture.id) delete payload.statut;
+    else payload.statut = 'impayee';
+  } else {
+    payload.total_ttc = Math.round((totals.totalAPayer != null ? totals.totalAPayer : totals.totalTtc) * 100) / 100;
+  }
 
   var btn = document.getElementById('btn-save-draft');
   var orig = btn.textContent;
@@ -1418,25 +1442,114 @@ async function enregistrerFacture() {
   }
 }
 
-function envoyerFacture() {
+function toastFacture(msg, ok) {
+  var toast = document.getElementById('toast');
+  if (!toast) return;
+  toast.textContent = msg;
+  toast.style.background = ok === false ? 'var(--red, #e05a5a)' : 'var(--green)';
+  toast.style.display = 'block';
+  setTimeout(function() { toast.style.display = 'none'; }, 4500);
+}
+
+function optionsPDF() {
+  var numero = (document.getElementById('facture-numero-input').value || 'facture').replace(/[^a-zA-Z0-9_-]/g, '_');
+  return {
+    margin: 0,
+    filename: 'ForestRangers_' + numero + '.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, backgroundColor: '#ffffff', useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+}
+
+// Envoi de la facture au client par email (Resend), PDF en pièce jointe.
+// Repli sur la messagerie si l'envoi automatique n'est pas disponible.
+var _envoiEnCours = false;
+async function envoyerFacture() {
+  if (_envoiEnCours) return;
   if (!currentClient || !currentClient.email) { alert('Aucune adresse email enregistrée pour ce client.'); return; }
+
+  // Une facture doit exister en base avant de partir (numéro, échéance, suivi)
+  if (!currentFacture || !currentFacture.id) {
+    if (!confirm('La facture n\'est pas encore enregistrée. L\'enregistrer puis l\'envoyer ?')) return;
+    await enregistrerFacture();
+    if (!currentFacture || !currentFacture.id) return;
+  }
+
   var numero  = document.getElementById('facture-numero-input').value;
   var periode = document.getElementById('facture-periode-input').value;
   var total   = document.getElementById('total-ttc').textContent;
-  var sujet = 'Facture ' + numero + ' — Forest Rangers';
-  var corps = 'Bonjour ' + currentClient.prenom + ',\n\nVeuillez trouver votre facture ' + numero
-    + (periode ? ' pour la période ' + periodeLabel(periode) : '')
-    + ', d\'un montant de ' + total + '.\n\nMerci pour votre confiance.\n\nL\'équipe Forest Rangers';
-  window.location.href = 'mailto:' + encodeURIComponent(currentClient.email) + '?subject=' + encodeURIComponent(sujet) + '&body=' + encodeURIComponent(corps);
+  var echIso  = document.getElementById('facture-echeance-input').value;
+  var m = FR_MAIL.modeles.facture({
+    prenom: currentClient.prenom, numero: numero,
+    periode: periode ? periodeLabel(periode).toLowerCase() : '',
+    montant: total, echeance: echIso ? formatDateLongFR(echIso) : ''
+  });
 
-  var toast = document.getElementById('toast');
-  toast.textContent = '✓ Ouverture de votre messagerie vers ' + currentClient.email;
-  toast.style.display = 'block';
-  setTimeout(function() { toast.style.display = 'none'; }, 3500);
+  // Déjà envoyée ? (journal v32, s'il existe)
+  var deja = '';
+  try {
+    var j = await db.from('emails_envoyes').select('created_at,destinataire').eq('facture_id', currentFacture.id)
+      .eq('type', 'facture').eq('statut', 'envoye').order('created_at', { ascending: false }).limit(1);
+    if (!j.error && j.data && j.data.length) deja = '\n\nATTENTION : déjà envoyée le ' + new Date(j.data[0].created_at).toLocaleDateString('fr-LU') + ' à ' + j.data[0].destinataire + '.';
+  } catch (_) {}
+
+  if (!confirm('Envoyer la facture ' + numero + ' (' + total + ') à ' + currentClient.email + ' ?\n\nLe PDF est joint à l\'email, envoyé depuis info@forestrangers.lu.' + deja)) return;
+
+  _envoiEnCours = true;
+  var btns = [document.getElementById('btn-send'), document.getElementById('btn-send-invoice')];
+  var anciens = btns.map(function(b) { return b ? b.innerHTML : ''; });
+  btns.forEach(function(b) { if (b) { b.disabled = true; b.innerHTML = 'Envoi…'; } });
+  try {
+    var pieces = [];
+    try {
+      var b64 = await FR_MAIL.pdfBase64(document.getElementById('invoiceDoc'), optionsPDF());
+      if (b64) pieces.push({ filename: optionsPDF().filename, content: b64 });
+    } catch (e) { console.log('PDF non généré :', e); }
+    if (!pieces.length && !confirm('Le PDF n\'a pas pu être généré. Envoyer l\'email sans pièce jointe ?')) return;
+
+    var r = await FR_MAIL.envoyer(db, {
+      type: 'facture', to: currentClient.email, subject: m.objet, text: m.texte, bouton: m.bouton,
+      client_id: currentClient.id, facture_id: String(currentFacture.id), attachments: pieces
+    });
+    if (r.ok) {
+      toastFacture('✓ Facture envoyée à ' + (r.destinataire || currentClient.email) + (r.redirige_depuis ? ' (compte test)' : ''));
+    } else if (r.indisponible) {
+      if (confirm('L\'envoi automatique ne répond pas (' + (r.erreur || '') + ').\n\nOuvrir votre messagerie à la place ? Pensez à joindre le PDF (bouton Télécharger PDF).')) {
+        FR_MAIL.ouvrirMessagerie(currentClient.email, m.objet, m.texte);
+      }
+    } else {
+      alert('La facture n\'a pas été envoyée.\n\n' + (r.erreur || 'Erreur inconnue'));
+    }
+  } finally {
+    _envoiEnCours = false;
+    btns.forEach(function(b, k) { if (b) { b.disabled = false; b.innerHTML = anciens[k]; } });
+  }
 }
 
 async function marquerPayeeFacture() {
   if (!currentFacture || !currentFacture.id) { alert("Enregistrez d'abord la facture (« Enregistrer brouillon »)."); return; }
+  if (EDIT_V31) {
+    // Le paiement est enregistré avec la date du virement et imputé (v31)
+    var sv = await db.from('v_factures_suivi').select('solde,client_id,numero').eq('id', currentFacture.id).single();
+    var solde = sv.data ? parseFloat(sv.data.solde) || 0 : 0;
+    if (solde <= 0) { alert('Cette facture est déjà soldée.'); return; }
+    var auj = formatDateISO(new Date());
+    var d = prompt('Date du virement sur votre relevé (AAAA-MM-JJ) :', auj);
+    if (!d) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || d > auj) { alert('Date invalide ou dans le futur.'); return; }
+    var mt = prompt('Montant reçu (€) — solde de la facture : ' + eur(solde), String(solde));
+    if (!mt) return;
+    var r = await db.rpc('fr_paiement_enregistrer', { p_client: sv.data.client_id, p_date: d, p_montant: parseFloat(String(mt).replace(',', '.')), p_reference: sv.data.numero });
+    if (r.error) { alert('Erreur : ' + r.error.message); return; }
+    var sv2 = await db.from('v_factures_suivi').select('statut').eq('id', currentFacture.id).single();
+    currentFacture.statut = (sv2.data && sv2.data.statut) || currentFacture.statut;
+    document.getElementById('facture-statut-input').value = currentFacture.statut;
+    updateStatusPill();
+    document.getElementById('btn-mark-paid').style.display = currentFacture.statut === 'payee' ? 'none' : '';
+    alert(currentFacture.statut === 'payee' ? '✓ Paiement enregistré : facture soldée.' : '✓ Paiement enregistré : la facture reste partiellement due.');
+    return;
+  }
   try {
     var { error } = await db.from('factures').update({ statut: 'payee' }).eq('id', currentFacture.id);
     if (error) throw error;
@@ -1546,11 +1659,21 @@ function toggleMobilePreview() {
 // ════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async function() {
   try { if (window.FR_FACT) await FR_FACT.chargerTarifs(db); } catch(e) {}
+  try {
+    var t31 = await db.from('factures').select('frais_dossier').limit(1);
+    EDIT_V31 = !t31.error;
+    if (EDIT_V31) {
+      var st = document.getElementById('facture-statut-input');
+      if (st) { st.disabled = true; st.title = 'Géré par les paiements : Admin → Factures → Paiement reçu'; }
+    }
+  } catch(e) {}
   initTheme();
   checkMobile();
   try {
     if (factureId) {
       await initFactureExistante(factureId);
+      // Arrivée depuis Admin → Factures → « ✉ Envoyer »
+      if (params.get('envoyer') === '1' && currentFacture) setTimeout(envoyerFacture, 700);
     } else if (urlClientId) {
       await initNouvelleFacture(urlClientId);
     } else {

@@ -1143,7 +1143,7 @@ html, body {
         <div style="font-size:13px;color:var(--text-dim);margin-bottom:18px;">Historique et à venir</div>
 
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
-          <button class="btn-big btn-accent desk-inline" style="flex:1;min-width:180px;" onclick="window.location.href='forestrangers-reservation.html'">
+          <button class="btn-big btn-accent desk-inline" style="flex:1;min-width:180px;" onclick="allerReserver()">
             <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Nouvelle reservation
           </button>
@@ -1208,6 +1208,9 @@ html, body {
 
         <!-- Estimation du mois en cours (rempli par loadMoisCourant) -->
         <div id="facture-mois-courant"></div>
+
+        <!-- Situation de compte : solde dû, avoir (rempli par renderSituationCompte) -->
+        <div id="facture-situation"></div>
 
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Factures émises</div>
 
@@ -1351,7 +1354,7 @@ html, body {
         <div class="nav-act" onclick="basculerTheme(event)" id="desk-theme-btn" title="Changer d'apparence">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="desk-theme-icon"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
         </div>
-        <div class="nav-act" onclick="window.location.href='forestrangers-reservation.html'" title="Nouvelle réservation">
+        <div class="nav-act" onclick="allerReserver()" title="Nouvelle réservation">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </div>
         <div class="nav-act danger" onclick="seDeconnecter()" title="Se déconnecter">
@@ -2338,15 +2341,28 @@ function renderAlertesAccueil() {
   if (!el) return;
   var html = htmlAlerteMeteo();
 
-  // Factures impayées
-  var impayees = (facturesData || []).filter(function(f) { return f.statut === 'impayee'; });
+  // Réservations suspendues (décision de Gabriel, jamais automatique)
+  if (clientData && clientData.reservations_suspendues) {
+    html += '<div onclick="goTab(\'screen-invoices\',\'tab-invoices\')" style="background:var(--red-dim);border:1px solid rgba(224,90,90,0.4);border-radius:var(--radius);padding:13px 15px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:11px;">'
+      + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>'
+      + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--red);">Nouvelles réservations suspendues</div>'
+      + '<div style="font-size:11.5px;color:var(--text-dim);">Des factures restent impayées. Vos réservations déjà confirmées sont maintenues ; les nouvelles seront possibles dès réception du paiement.</div></div>'
+      + '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5" style="flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>'
+      + '</div>';
+  }
+
+  // Factures à régler : solde réel (paiements partiels et frais de dossier compris)
+  var impayees = (facturesData || []).filter(function(f) { return soldeFacture(f) > 0.004; });
   if (impayees.length) {
-    var total = impayees.reduce(function(a, f) { return a + (parseFloat(f.total_ttc) || 0); }, 0);
+    var total = impayees.reduce(function(a, f) { return a + soldeFacture(f); }, 0);
+    var maxRetard = impayees.reduce(function(a, f) { return Math.max(a, retardFacture(f)); }, 0);
+    var sousTitre = eur(total) + ' en attente de paiement'
+      + (maxRetard > 0 ? ' · ' + maxRetard + ' jour' + (maxRetard > 1 ? 's' : '') + ' de retard' : '');
     html += '<div onclick="goTab(\'screen-invoices\',\'tab-invoices\')" style="background:var(--red-dim);border:1px solid rgba(224,90,90,0.3);border-radius:var(--radius);padding:13px 15px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:11px;">'
       + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
       + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--red);">'
       +   (impayees.length > 1 ? impayees.length + ' factures à régler' : 'Facture à régler') + '</div>'
-      + '<div style="font-size:11.5px;color:var(--text-dim);">' + eur(total) + ' en attente de paiement</div></div>'
+      + '<div style="font-size:11.5px;color:var(--text-dim);">' + sousTitre + '</div></div>'
       + '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5" style="flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>'
       + '</div>';
   }
@@ -2639,7 +2655,7 @@ async function loadProchainePromenade(id) {
       el.onclick = null;
       el.innerHTML = '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--accent);font-weight:700;margin-bottom:8px;">Prochaine promenade</div>'
         + '<div style="font-size:13px;color:var(--text-dim);">Aucune réservation à venir</div>'
-        + '<div style="margin-top:12px;"><a href="forestrangers-reservation.html" style="background:var(--accent);color:white;padding:8px 14px;border-radius:8px;font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:11px;font-weight:800;text-decoration:none;">Reserver maintenant</a></div>';
+        + '<div style="margin-top:12px;"><a href="javascript:void(0)" onclick="allerReserver()" style="background:var(--accent);color:white;padding:8px 14px;border-radius:8px;font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:11px;font-weight:800;text-decoration:none;">Reserver maintenant</a></div>';
       return;
     }
 
@@ -3600,29 +3616,151 @@ async function confirmerAbsence() {
 // ══════════════════════════════════════════════════════════════
 var facturesData   = [];
 var moisCourantData = null;
+var situationCompte = null;   // v_clients_recouvrement (v31) — null si absente
+var suiviV31 = false;         // true si v_factures_suivi est disponible
+
+var FR_IBAN = 'LU80 0019 7355 9489 5000';
+var FR_BIC  = 'BCEELULL';
+
+function frNum(v) { var x = parseFloat(v); return isNaN(x) ? 0 : x; }
+function fraisFacture(f)   { return frNum(f.frais_dossier); }
+function totalAPayer(f)    { return f.total_a_payer != null ? frNum(f.total_a_payer) : frNum(f.total_ttc) + fraisFacture(f); }
+function payeFacture(f)    { return f.statut === 'payee' ? totalAPayer(f) : frNum(f.montant_paye); }
+function soldeFacture(f) {
+  if (f.solde != null) return frNum(f.solde);
+  if (f.statut === 'payee') return 0;
+  return Math.max(totalAPayer(f) - frNum(f.montant_paye), 0);
+}
+function isoJour(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function echeanceFacture(f) {
+  if (f.date_echeance) return String(f.date_echeance).slice(0, 10);
+  var base = f.date_emission || f.created_at;
+  if (!base) return null;
+  var d = new Date(String(base).slice(0, 10) + 'T12:00:00');
+  d.setDate(d.getDate() + 14);
+  return isoJour(d);
+}
+function retardFacture(f) {
+  if (soldeFacture(f) <= 0.004) return 0;
+  if (f.jours_retard != null) return parseInt(f.jours_retard, 10) || 0;
+  var e = echeanceFacture(f);
+  if (!e) return 0;
+  var auj = new Date(isoJour(new Date()) + 'T12:00:00');
+  return Math.max(Math.round((auj - new Date(e + 'T12:00:00')) / 86400000), 0);
+}
+
+// Badge d'état d'une facture : payée / partiellement payée / en retard / à payer
+function badgeFacture(f) {
+  var solde = soldeFacture(f);
+  if (solde <= 0.004) {
+    return '<span class="badge b-green">Payée' + (f.date_paiement ? ' le ' + esc(dateCourte(f.date_paiement)) : '') + '</span>';
+  }
+  var retard = retardFacture(f);
+  var partiel = frNum(f.montant_paye) > 0.004;
+  if (retard > 0) {
+    return '<span class="badge" style="background:var(--red-dim);color:var(--red);border:1px solid rgba(224,90,90,0.35);">'
+      + retard + ' j de retard</span>';
+  }
+  var e = echeanceFacture(f);
+  return '<span class="badge b-accent">' + (partiel ? 'Partiellement payée' : 'À payer')
+    + (e ? ' · avant le ' + esc(dateCourte(e)) : '') + '</span>';
+}
 
 async function loadFactures(id) {
   var container = document.getElementById('factures-list');
   try {
-    var { data: factures, error } = await db.from('factures')
-      .select('*')
-      .eq('client_id', id)
-      .order('created_at', { ascending: false })
-      .limit(60);
+    // v31 : vue de suivi (solde, échéance, retard). Le client ne voit que
+    // ses propres factures (RLS). Repli sur la table si la vue manque.
+    var res = await db.from('v_factures_suivi').select('*')
+      .eq('client_id', id).order('created_at', { ascending: false }).limit(60);
+    suiviV31 = !res.error;
+    if (res.error) {
+      res = await db.from('factures').select('*')
+        .eq('client_id', id).order('created_at', { ascending: false }).limit(60);
+    }
+
+    situationCompte = null;
+    if (suiviV31) {
+      try {
+        var sc = await db.from('v_clients_recouvrement')
+          .select('solde_du,nb_factures_ouvertes,avoir,dernier_virement,reservations_suspendues')
+          .eq('client_id', id).maybeSingle();
+        if (!sc.error && sc.data) situationCompte = sc.data;
+      } catch(e) { /* facultatif */ }
+    }
 
     if (!container) return;
 
-    if (error) {
-      console.log('Erreur lecture factures (Supabase):', error);
-      container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--red);font-size:12px;">Lecture impossible : ' + esc(error.message || 'erreur inconnue') + '</div>';
+    if (res.error) {
+      console.log('Erreur lecture factures (Supabase):', res.error);
+      container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--red);font-size:12px;">Lecture impossible : ' + esc(res.error.message || 'erreur inconnue') + '</div>';
       return;
     }
 
-    facturesData = factures || [];
+    facturesData = res.data || [];
+    if (situationCompte && clientData && situationCompte.reservations_suspendues != null) {
+      clientData.reservations_suspendues = situationCompte.reservations_suspendues;
+    }
+    renderSituationCompte();
     renderFactures();
     renderAlertesAccueil();
 
   } catch(e) { console.log('Erreur factures:', e); }
+}
+
+// Carte « Situation de votre compte » : solde dû, virement à faire, avoir
+function renderSituationCompte() {
+  var el = document.getElementById('facture-situation');
+  if (!el) return;
+  var ouvertes = facturesData.filter(function(f) { return soldeFacture(f) > 0.004; })
+    .sort(function(a, b) { return String(a.date_emission || a.created_at || '').localeCompare(String(b.date_emission || b.created_at || '')); });
+  var solde = ouvertes.reduce(function(a, f) { return a + soldeFacture(f); }, 0);
+  var avoir = situationCompte ? frNum(situationCompte.avoir) : 0;
+  var suspendu = !!(clientData && clientData.reservations_suspendues);
+
+  if (solde <= 0.004 && avoir <= 0.004 && !suspendu) {
+    el.innerHTML = facturesData.length
+      ? '<div style="background:rgba(76,175,80,0.08);border:1px solid rgba(76,175,80,0.25);border-radius:var(--radius);padding:12px 14px;margin-bottom:18px;font-size:12.5px;color:var(--text-dim);display:flex;align-items:center;gap:10px;">'
+        + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>'
+        + 'Votre compte est à jour. Merci !</div>'
+      : '';
+    return;
+  }
+
+  var maxRetard = ouvertes.reduce(function(a, f) { return Math.max(a, retardFacture(f)); }, 0);
+  var numeros = ouvertes.map(function(f) { return f.numero; }).filter(Boolean);
+  var html = '<div style="background:var(--card,rgba(255,255,255,0.03));border:1px solid ' + (maxRetard > 0 ? 'rgba(224,90,90,0.35)' : 'var(--border)') + ';border-radius:var(--radius-lg);padding:16px;margin-bottom:18px;">'
+    + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--text-faint);font-weight:700;margin-bottom:6px;">Situation de votre compte</div>';
+
+  if (suspendu) {
+    html += '<div class="warn-box" style="background:var(--red-dim);border:1px solid rgba(224,90,90,0.35);color:var(--red);border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.5;margin-bottom:12px;">'
+      + '<strong>Nouvelles réservations suspendues.</strong> Vos réservations déjà confirmées sont maintenues. Les nouvelles réservations seront de nouveau possibles dès réception du paiement.</div>';
+  }
+
+  if (solde > 0.004) {
+    html += '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;">'
+      + '<div style="font-size:13px;color:var(--text-dim);">Solde à régler</div>'
+      + '<div style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:24px;font-weight:800;color:' + (maxRetard > 0 ? 'var(--red)' : 'var(--text)') + ';">' + eur(solde) + '</div></div>'
+      + '<div style="font-size:11.5px;color:' + (maxRetard > 0 ? 'var(--red)' : 'var(--text-dim)') + ';margin-bottom:10px;">'
+      +   ouvertes.length + (ouvertes.length > 1 ? ' factures ouvertes' : ' facture ouverte')
+      +   (maxRetard > 0 ? ' · la plus ancienne a ' + maxRetard + ' jour' + (maxRetard > 1 ? 's' : '') + ' de retard' : '')
+      + '</div>'
+      + '<div style="font-size:11.5px;color:var(--text-dim);line-height:1.6;background:rgba(128,128,128,0.08);border:1px solid var(--border);border-radius:10px;padding:10px 12px;">'
+      +   'Virement à <strong>ARCANIN S.à r.l.</strong><br>'
+      +   'IBAN <strong style="letter-spacing:0.03em;">' + FR_IBAN + '</strong> · BIC ' + FR_BIC + '<br>'
+      +   'Communication : <strong>' + esc(numeros.join(', ') || 'votre numéro de facture') + '</strong>'
+      + '</div>'
+      + '<div style="font-size:10.5px;color:var(--text-faint);margin-top:8px;line-height:1.5;">Un virement est imputé à la facture la plus ancienne. Le statut est mis à jour dès que Gabriel a pointé le virement sur le compte.</div>';
+  }
+
+  if (avoir > 0.004) {
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:' + (solde > 0.004 ? '12' : '0') + 'px;padding-top:' + (solde > 0.004 ? '12' : '0') + 'px;' + (solde > 0.004 ? 'border-top:1px solid var(--border);' : '') + '">'
+      + '<div><div style="font-size:13px;color:var(--green);font-weight:600;">Avoir disponible</div>'
+      + '<div style="font-size:11px;color:var(--text-faint);">Déduit automatiquement de votre prochaine facture</div></div>'
+      + '<div style="font-size:17px;font-weight:700;color:var(--green);">' + eur(avoir) + '</div></div>';
+  }
+
+  el.innerHTML = html + '</div>';
 }
 
 function periodeLabel(f) {
@@ -3638,30 +3776,43 @@ function renderFactures() {
   var c = document.getElementById('factures-list');
   if (!c) return;
   var input = document.getElementById('facture-search');
-  var q = input ? input.value.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') : '';
+  var q = input ? input.value.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '') : '';
 
   var list = facturesData.filter(function(f) {
     if (!q) return true;
-    var t = [f.numero || '', periodeLabel(f), f.statut === 'payee' ? 'payée payee' : 'à payer impayée impayee',
-             String(f.total_ttc || ''), String(f.total_ht || ''), f.notes || ''].join(' ');
-    return t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').indexOf(q) !== -1;
+    var etat = soldeFacture(f) <= 0.004 ? 'payée payee' : (retardFacture(f) > 0 ? 'retard à payer impayée impayee' : 'à payer impayée impayee');
+    var t = [f.numero || '', periodeLabel(f), etat,
+             String(f.total_ttc || ''), String(totalAPayer(f)), String(f.total_ht || ''), f.notes || ''].join(' ');
+    return t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').indexOf(q) !== -1;
   });
 
   if (!facturesData.length) { c.innerHTML = vide('Aucune facture'); return; }
   if (!list.length)         { c.innerHTML = vide('Aucun résultat pour cette recherche'); return; }
 
-  var badges = { payee: '<span class="badge b-green">Payée</span>', impayee: '<span class="badge b-accent">À payer</span>' };
-
   c.innerHTML = list.map(function(f) {
-    return '<div onclick="openFactureDetail(\'' + esc(f.id) + '\')" style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;">'
+    var solde = soldeFacture(f), frais = fraisFacture(f), retard = retardFacture(f);
+    var sous = esc(periodeLabel(f));
+    if (frais > 0.004) sous += ' · <span style="color:var(--red);">+ ' + eur(frais) + ' frais de dossier</span>';
+    if (solde > 0.004 && frNum(f.montant_paye) > 0.004) sous += ' · reste ' + eur(solde);
+    return '<div onclick="openFactureDetail(\'' + esc(f.id) + '\')" style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;' + (retard > 0 ? 'border-left:3px solid var(--red);' : '') + '">'
       + '<div style="min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--text);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;">' + esc(f.numero || '—') + '</div>'
-      +   '<div style="font-size:11px;color:var(--text-dim);margin-top:2px;">' + esc(periodeLabel(f)) + '</div></div>'
+      +   '<div style="font-size:11px;color:var(--text-dim);margin-top:2px;">' + sous + '</div></div>'
       + '<div style="display:flex;align-items:center;gap:10px;">'
-      +   '<div style="text-align:right;"><div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px;">' + eur(f.total_ttc) + '</div>'
-      +   (badges[f.statut] || '') + '</div>'
+      +   '<div style="text-align:right;"><div style="font-size:14px;font-weight:700;color:' + (retard > 0 ? 'var(--red)' : 'var(--text)') + ';margin-bottom:3px;">' + eur(totalAPayer(f)) + '</div>'
+      +   badgeFacture(f) + '</div>'
       +   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>'
       + '</div></div>';
   }).join('');
+}
+
+// Bouton « Nouvelle réservation » : refusé poliment si les réservations sont suspendues
+function allerReserver() {
+  if (clientData && clientData.reservations_suspendues) {
+    showToast('✗ Nouvelles réservations suspendues : des factures restent à régler', true);
+    goTab('screen-invoices', 'tab-invoices');
+    return;
+  }
+  window.location.href = 'forestrangers-reservation.html';
 }
 
 // ── Estimation du mois en cours (cliquable, jamais téléchargeable en PDF) ──
@@ -3857,7 +4008,12 @@ function factureDocHTML(opts) {
     + '<div style="margin-top:14px;">'
     +   '<div class="inv-tot"><span style="color:#6b7450;">Total HT</span><span>' + eur(totalHT) + '</span></div>'
     +   '<div class="inv-tot"><span style="color:#6b7450;">TVA 17 %</span><span>' + eur(tva) + '</span></div>'
-    +   '<div class="inv-tot big"><span>Total TTC</span><span>' + eur(opts.totalTTC) + '</span></div>'
+    +   '<div class="inv-tot' + (opts.fraisDossier || opts.montantPaye ? '' : ' big') + '"><span' + (opts.fraisDossier || opts.montantPaye ? ' style="color:#6b7450;"' : '') + '>Total TTC</span><span>' + eur(opts.totalTTC) + '</span></div>'
+    +   (opts.fraisDossier ? '<div class="inv-tot"><span style="color:#a33;">Frais de dossier (hors TVA)</span><span style="color:#a33;">' + eur(opts.fraisDossier) + '</span></div>'
+                          + '<div class="inv-tot big"><span>Total à payer</span><span>' + eur(opts.totalTTC + opts.fraisDossier) + '</span></div>' : '')
+    +   (opts.montantPaye ? '<div class="inv-tot"><span style="color:#2e7d32;">Déjà payé</span><span style="color:#2e7d32;">− ' + eur(opts.montantPaye) + '</span></div>'
+                         + '<div class="inv-tot big"><span>Reste à payer</span><span>' + eur(opts.reste || 0) + '</span></div>' : '')
+    +   (opts.echeance ? '<div style="font-size:10.5px;color:#6b7450;margin-top:8px;">Échéance : ' + esc(dateCourte(opts.echeance)) + ' · IBAN ' + FR_IBAN + ' · BIC ' + FR_BIC + '</div>' : '')
     + '</div>'
     + '</div>';
 }
@@ -3872,19 +4028,26 @@ async function openFactureDetail(id) {
   document.getElementById('factureModal').classList.add('open');
 
   var lignes = await lignesPeriode(f.periode);
-  var badge = f.statut === 'payee'
-    ? '<span class="badge b-green">Payée</span>'
-    : '<span class="badge b-accent">À payer</span>';
+  var badge = badgeFacture(f);
+  var solde = soldeFacture(f), frais = fraisFacture(f);
+  var paye = solde > 0.004 ? frNum(f.montant_paye) : 0;
+  var retard = retardFacture(f);
 
   window._factureCourante = f;
 
   body.innerHTML =
       '<div style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;">Facture ' + esc(f.numero || '') + '</div>'
-    + '<div style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">' + esc(periodeLabel(f)) + ' · émise le ' + esc(dateCourte(f.created_at)) + ' &nbsp;' + badge + '</div>'
+    + '<div style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">' + esc(periodeLabel(f)) + ' · émise le ' + esc(dateCourte(f.date_emission || f.created_at)) + ' &nbsp;' + badge + '</div>'
+    + (retard > 0 ? '<div class="warn-box" style="background:var(--red-dim);border:1px solid rgba(224,90,90,0.35);color:var(--red);border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.5;margin-bottom:12px;">'
+        + 'Échéance dépassée depuis ' + retard + ' jour' + (retard > 1 ? 's' : '') + '. Reste à payer : <strong>' + eur(solde) + '</strong>. Si vous avez déjà fait le virement, il sera pointé très prochainement.</div>' : '')
     + factureDocHTML({
         numero: f.numero, periode: periodeLabel(f),
         totalTTC: parseFloat(f.total_ttc) || 0,
         totalHT: f.total_ht != null ? parseFloat(f.total_ht) : null,
+        fraisDossier: frais > 0.004 ? frais : 0,
+        montantPaye: paye > 0.004 ? paye : 0,
+        reste: solde,
+        echeance: solde > 0.004 ? echeanceFacture(f) : null,
         lignes: lignes
       })
     + '<button class="btn-big btn-accent" id="pdf-btn" style="margin-top:16px;" onclick="telechargerFacturePDF()">'

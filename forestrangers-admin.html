@@ -410,6 +410,17 @@ html.light .brand-name .rangers { color: var(--accent); }
 .b-red    { background: var(--red-dim);    color: var(--red); }
 .b-blue   { background: var(--blue-dim);   color: var(--blue); }
 .b-muted  { background: rgba(255,255,255,0.06); color: var(--text-faint); }
+.b-amber  { background: rgba(240,180,41,0.14); color: #d99a00; }
+/* Recouvrement */
+.rc-row { display:flex; align-items:center; gap:10px; padding:10px 16px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+.rc-row:last-child { border-bottom:none; }
+.rc-main { flex:1; min-width:180px; }
+.rc-meta { font-size:11px; color:var(--text-faint); margin-top:2px; }
+.rc-btn { font-size:10.5px; border-radius:6px; padding:5px 10px; cursor:pointer; font-family:Norwester,Oswald,Arial Narrow,sans-serif; font-weight:700; letter-spacing:.02em; white-space:nowrap; border:1px solid var(--border); background:var(--surface2); color:var(--text-dim); }
+.rc-btn.pay { background:var(--green-dim); border-color:rgba(94,201,122,0.3); color:var(--green); }
+.rc-btn.go  { background:var(--accent-dim); border-color:var(--accent-mid); color:var(--accent); }
+.rc-btn.red { background:var(--red-dim); border-color:rgba(224,90,90,0.3); color:var(--red); }
+.rc-montant { font-family:Norwester,Oswald,Arial Narrow,sans-serif; font-size:14px; font-weight:800; text-align:right; min-width:92px; }
 
 /* ─── SLOT / PLANNING ─── */
 .slot-group-label {
@@ -764,6 +775,7 @@ textarea.form-control { resize: vertical; }
   </script>
   <script src="fr-calendrier.js"></script>
   <script src="fr-facturation.js"></script>
+  <script src="fr-email.js"></script>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#ff5f1f">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1125,13 +1137,45 @@ textarea.form-control { resize: vertical; }
       </div>
       <!-- Estimation du mois en cours, tous clients (fr-facturation.js) -->
       <div id="factures-estimation" style="margin-bottom:14px;"></div>
-      <div class="card">
+      <!-- Recouvrement (migration v31) : ce que l'horloge propose, jamais appliqué seul -->
+      <div class="card" id="recouv-card" style="margin-bottom:14px;display:none;">
         <div class="card-head">
+          <span class="card-title">À traiter</span>
+          <span style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+            <span style="font-size:11px;color:var(--text-faint);">Pointez vos virements avant d'envoyer un rappel</span>
+            <button class="rc-btn go" id="btn-rappels-groupes" style="display:none;" onclick="envoyerRappels1Groupes()">Envoyer les rappels 1</button>
+          </span>
+        </div>
+        <div id="recouv-list"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head" style="gap:8px;flex-wrap:wrap;">
           <span class="card-title">Toutes les factures</span>
-          <button class="btn btn-accent" style="padding:5px 12px;font-size:11px;" onclick="ouvrirNouvelleFacture()">+ Nouvelle facture</button>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            <select class="form-control" id="factures-filtre" onchange="renderFacturesSuivi()" style="width:auto;padding:5px 10px;font-size:11px;">
+              <option value="ouvertes">Non soldées</option>
+              <option value="retard">En retard</option>
+              <option value="payees">Payées</option>
+              <option value="toutes">Toutes</option>
+            </select>
+            <button class="btn btn-outline" style="padding:5px 12px;font-size:11px;" onclick="ouvrirPaiement({})">Enregistrer un paiement</button>
+            <button class="btn btn-accent" style="padding:5px 12px;font-size:11px;" onclick="ouvrirNouvelleFacture()">+ Nouvelle facture</button>
+          </div>
         </div>
         <div id="factures-list">
           <div style="padding:16px;text-align:center;color:var(--text-faint);font-size:12px;">Chargement…</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;margin-top:14px;">
+        <div class="card" id="recouv-clients-card" style="display:none;">
+          <div class="card-head"><span class="card-title">Situation des clients</span></div>
+          <div id="recouv-clients"></div>
+        </div>
+        <div class="card" id="paiements-card" style="display:none;">
+          <div class="card-head"><span class="card-title">Derniers paiements</span></div>
+          <div id="paiements-list"></div>
         </div>
       </div>
     </div>
@@ -1226,7 +1270,7 @@ textarea.form-control { resize: vertical; }
             </div>
             <button onclick="genererLien()" class="btn btn-accent" style="width:100%;padding:11px;justify-content:center;font-size:12px;">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-              Générer le lien d'invitation
+              Créer et envoyer l'invitation
             </button>
           </div>
         </div>
@@ -1243,7 +1287,8 @@ textarea.form-control { resize: vertical; }
               <div id="lien-url" style="font-family:monospace;font-size:11px;color:var(--accent);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
               <button onclick="copyLien()" style="background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text-dim);font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-size:10px;font-weight:700;cursor:pointer;flex-shrink:0;text-transform:uppercase;">Copier</button>
             </div>
-            <div style="font-size:11px;color:var(--text-faint);line-height:1.5;">Aucun email n'est envoyé automatiquement pour l'instant : copiez ce lien et transmettez-le au client (email, WhatsApp, SMS). Il est personnel, utilisable une seule fois, et expire après 7 jours.</div>
+            <div id="lien-envoi" style="font-size:12px;line-height:1.5;margin-bottom:8px;"></div>
+            <div style="font-size:11px;color:var(--text-faint);line-height:1.5;">Le lien est aussi copiable ici (WhatsApp, SMS). Il est personnel, utilisable une seule fois, et expire à la date indiquée.</div>
           </div>
         </div>
 
@@ -1635,21 +1680,6 @@ function nav(id, el) {
   if (id === 'parametres')   loadParametres();
 }
 
-function genererLien() {
-  const prenom = document.getElementById('inv-prenom').value.trim();
-  const email  = document.getElementById('inv-email').value.trim();
-  if (!prenom || !email) {
-    if (!prenom) document.getElementById('inv-prenom').style.borderColor = '#e05a5a';
-    if (!email)  document.getElementById('inv-email').style.borderColor  = '#e05a5a';
-    return;
-  }
-  const token = Math.random().toString(36).substring(2,12);
-  document.getElementById('lien-dest').textContent = email;
-  document.getElementById('lien-url').textContent  =
-    `https://app.forestrangers.lu/inscription?token=${token}&nom=${encodeURIComponent(prenom)}`;
-  document.getElementById('lien-genere').style.display = 'block';
-  document.getElementById('lien-genere').scrollIntoView({behavior:'smooth'});
-}
 function copyLien() {
   const url = document.getElementById('lien-url').textContent;
   navigator.clipboard?.writeText(url);
@@ -1716,6 +1746,8 @@ async function genererLien() {
     document.querySelector('#lien-genere .badge').textContent = expireText;
     document.getElementById('lien-genere').style.display = 'block';
     document.getElementById('lien-genere').scrollIntoView({ behavior: 'smooth' });
+    await envoyerInvitationEmail({ prenom: prenom, email: email, lien: lien, expire_at: expireAt.toISOString(), langue: langue },
+                                 document.getElementById('lien-envoi'));
 
     // Vider le formulaire
     document.getElementById('inv-prenom').value = '';
@@ -1763,6 +1795,7 @@ async function loadInvitations() {
     }
 
     var now = new Date();
+    window._invitations = data;
     container.innerHTML = '';
     var countEl = document.getElementById('invitations-count');
     if (countEl) countEl.textContent = data.length;
@@ -1781,13 +1814,14 @@ async function loadInvitations() {
         badge = '<span class="badge b-green">Inscription complete</span>';
       } else if (expired) {
         badge = '<span class="badge b-muted">Expire</span>';
-        extra = '<button style="font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 8px;color:var(--text-dim);cursor:pointer;font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-weight:700;margin-top:4px;" onclick="renvoyerInvitation(this,\''+inv.email+'\',\''+inv.prenom+'\',\''+(inv.langue||'fr')+'\')" title="Crée un nouveau lien valable 7 jours et le copie">Nouveau lien</button>';
+        extra = '<button style="font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 8px;color:var(--text-dim);cursor:pointer;font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-weight:700;margin-top:4px;" onclick="renvoyerInvitation(this,\''+inv.email+'\',\''+inv.prenom+'\',\''+(inv.langue||'fr')+'\')" title="Crée un nouveau lien valable 7 jours, l\'envoie par email et le copie">Nouveau lien</button>';
       } else {
         badge = '<span class="badge b-amber">En attente</span>';
         extra = '<span style="font-size:10px;color:var(--text-faint);">Expire dans ' + joursRestants + ' jour' + (joursRestants > 1 ? 's' : '') + '</span>';
       }
 
       var btnCopier = !inv.utilise ? '<button onclick="copierLienInvitation(this,\'' + lien + '\')" style="font-size:10px;background:var(--accent-dim);border:1px solid var(--accent-mid);border-radius:6px;padding:4px 10px;color:var(--accent);cursor:pointer;font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-weight:700;margin-top:4px;">📋 Copier lien</button>' : '';
+      if (!inv.utilise && !expired) btnCopier += '<button onclick="renvoyerEmailInvitation(this,\'' + inv.id + '\')" style="font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--text-dim);cursor:pointer;font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-weight:700;margin-top:4px;">✉ Renvoyer</button>';
       var btnSupprimer = '<button onclick="supprimerInvitation(this,\'' + inv.id + '\')" style="font-size:10px;background:transparent;border:none;color:var(--red);cursor:pointer;margin-top:4px;padding:2px 6px;">✕</button>';
 
       var opacity = expired && !inv.utilise ? '0.6' : '1';
@@ -1825,6 +1859,33 @@ async function supprimerInvitation(btn, id) {
   } catch(e) { console.error('Erreur suppression:', e); }
 }
 
+// Envoi de l'invitation par Resend. statusEl (facultatif) reçoit le résultat.
+async function envoyerInvitationEmail(o, statusEl) {
+  var m = FR_MAIL.modeles.invitation(o);
+  if (statusEl) statusEl.innerHTML = '<span style="color:var(--text-faint);">Envoi de l\'email à ' + rcEsc(o.email) + '…</span>';
+  var r = await FR_MAIL.envoyer(db, { type: 'invitation', to: o.email, subject: m.objet, text: m.texte, bouton: m.bouton });
+  if (statusEl) {
+    statusEl.innerHTML = r.ok
+      ? '<span style="color:var(--green);font-weight:600;">✓ Invitation envoyée par email à ' + rcEsc(r.destinataire || o.email) + '</span>'
+      : '<span style="color:var(--red);font-weight:600;">✗ Email non envoyé : ' + rcEsc(r.erreur || 'erreur') + '</span>'
+        + '<div style="color:var(--text-dim);margin-top:3px;">Copiez le lien ci-dessous et transmettez-le au client, ou '
+        + '<a href="javascript:void(0)" onclick="FR_MAIL.ouvrirMessagerie(' + rcEsc(JSON.stringify(o.email)) + ',' + rcEsc(JSON.stringify(m.objet)) + ',' + rcEsc(JSON.stringify(m.texte)) + ')" style="color:var(--accent);">ouvrez votre messagerie</a>.</div>';
+  }
+  return r;
+}
+
+// Même lien, renvoyé par email (invitation encore valable)
+async function renvoyerEmailInvitation(btn, id) {
+  var inv = (window._invitations || []).filter(function(x) { return String(x.id) === String(id); })[0];
+  if (!inv) return;
+  btn.disabled = true; btn.textContent = 'Envoi…';
+  var r = await envoyerInvitationEmail({ prenom: inv.prenom, email: inv.email, lien: lienInvitation(inv.token), expire_at: inv.expire_at, langue: inv.langue || 'fr' });
+  btn.textContent = r.ok ? '✓ Envoyé' : '✗ Échec';
+  btn.style.color = r.ok ? 'var(--green)' : 'var(--red)';
+  if (!r.ok) showToastAdmin('Email non envoyé : ' + (r.erreur || 'erreur'), 'red');
+  setTimeout(function() { btn.disabled = false; btn.textContent = '✉ Renvoyer'; btn.style.color = ''; }, 2500);
+}
+
 async function renvoyerInvitation(btn, email, prenom, langue) {
   // Générer un nouveau token
   var token = genererTokenInvitation();
@@ -1841,8 +1902,9 @@ async function renvoyerInvitation(btn, email, prenom, langue) {
     }]);
     if (error) throw error;
     try { await navigator.clipboard.writeText(lien); } catch(_) {}
-    btn.textContent = '✓ Nouveau lien copie';
-    btn.style.color = 'var(--green)';
+    var r = await envoyerInvitationEmail({ prenom: prenom, email: email, lien: lien, expire_at: expireAt.toISOString(), langue: langue || 'fr' });
+    btn.textContent = r.ok ? '✓ Nouveau lien envoyé' : '✓ Nouveau lien copié (email non envoyé)';
+    btn.style.color = r.ok ? 'var(--green)' : 'var(--amber, #f0b429)';
     setTimeout(loadInvitations, 1500);
   } catch(e) {
     console.error('Erreur renvoi invitation:', e);
@@ -2270,8 +2332,443 @@ async function facturerDepuisEstimation(clientId, periode) {
 }
 
 // ── FACTURES (réel) ──
+// ══════════════════════════════════════════════════════════════
+//  FACTURES & RECOUVREMENT (migration v31 — master § 34, 38, 39)
+//  L'horloge propose (v_factures_suivi.etape_suggeree), l'admin décide :
+//  aucun rappel, aucun frais, aucune suspension ne part sans un clic.
+// ══════════════════════════════════════════════════════════════
+var RC = { factures: [], clients: {}, situation: [], paiements: [], v31: false };
+var RC_IBAN = 'LU80 0019 7355 9489 5000', RC_BIC = 'BCEELULL';
+
+function rcEur(n) { return (parseFloat(n) || 0).toLocaleString('fr-LU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; }
+function rcEur0(n) { return (parseFloat(n) || 0).toLocaleString('fr-LU', { maximumFractionDigits: 0 }) + ' €'; }
+function rcEsc(v) { return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function rcDate(d) { if (!d) return '—'; var x = String(d).slice(0,10).split('-'); return x.length === 3 ? x[2] + '/' + x[1] + '/' + x[0] : d; }
+function rcNomClient(id) { var c = RC.clients[id]; return c ? ((c.prenom || '') + ' ' + (c.nom || '')).trim() : '—'; }
+var RC_ETAPES = { rappel_1: 'Rappel 1', rappel_2: 'Rappel 2 (+ frais)', mise_en_demeure: 'Mise en demeure' };
+
 async function loadFacturesAdmin() {
   chargerEstimationAdmin();   // en parallèle : ne retarde pas la liste
+  var list = document.getElementById('factures-list');
+  if (list) list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-faint);font-size:12px;">Chargement…</div>';
+  try {
+    var v = await db.from('v_factures_suivi').select('*').order('date_emission', { ascending: false }).limit(500);
+    if (v.error) throw v.error;
+    RC.v31 = true;
+    var cl = await db.from('clients').select('id,prenom,nom,email,numero_client,is_test,langue');
+    RC.clients = {};
+    (cl.data || []).forEach(function(c) { RC.clients[c.id] = c; });
+    RC.factures = (v.data || []).filter(function(f) { var c = RC.clients[f.client_id]; return !(c && c.is_test); });
+    var sit = await db.from('v_clients_recouvrement').select('*');
+    RC.situation = (sit.data || []).filter(function(c) { var x = RC.clients[c.client_id]; return !(x && x.is_test); });
+    var pa = await db.from('paiements').select('*').order('date_virement', { ascending: false }).order('created_at', { ascending: false }).limit(30);
+    RC.paiements = pa.data || [];
+    // Journal des emails (v32) : date d'envoi de chaque facture. Absent → on n'affiche rien.
+    RC.envois = null;
+    try {
+      var je = await db.from('emails_envoyes').select('facture_id,created_at,type,statut').eq('statut', 'envoye').eq('type', 'facture')
+        .order('created_at', { ascending: false }).limit(1000);
+      if (!je.error) { RC.envois = {}; (je.data || []).forEach(function(x) { if (x.facture_id && !RC.envois[x.facture_id]) RC.envois[x.facture_id] = x.created_at; }); }
+    } catch (_) {}
+    renderStatsFactures();
+    renderRecouvrement();
+    renderFacturesSuivi();
+    renderSituationClients();
+    renderPaiements();
+  } catch (e) {
+    // Migration v31 absente : ancienne liste, avec un avertissement
+    RC.v31 = false;
+    console.log('v_factures_suivi indisponible, repli :', e && e.message);
+    await loadFacturesAdminAncien();
+    if (list) list.insertAdjacentHTML('afterbegin', '<div class="alert alert-a" style="margin:10px 14px;"><div class="alert-dot"></div><div class="alert-body">'
+      + '<strong>Migration v31 non appliquée</strong><div class="alert-time">Lancez sql/fr_migration_v31_recouvrement.sql dans Supabase pour activer paiements, échéances et rappels.</div></div></div>');
+  }
+}
+
+function renderStatsFactures() {
+  var el = document.getElementById('factures-stats');
+  if (!el) return;
+  var now = new Date();
+  var mois = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  var encaisse = RC.paiements.filter(function(p) { return !p.annule_le && String(p.date_virement).slice(0, 7) === mois; })
+                             .reduce(function(a, p) { return a + (parseFloat(p.montant) || 0); }, 0);
+  var ouvertes = RC.factures.filter(function(f) { return parseFloat(f.solde) > 0; });
+  var du = ouvertes.reduce(function(a, f) { return a + (parseFloat(f.solde) || 0); }, 0);
+  var retard = ouvertes.filter(function(f) { return (f.jours_retard || 0) > 0; });
+  var aTraiter = RC.factures.filter(function(f) { return f.etape_suggeree; });
+  var emises = RC.factures.filter(function(f) { return String(f.date_emission || '').slice(0, 7) === mois; });
+  function card(cls, label, val, sub) {
+    return '<div class="stat-card ' + cls + '"><div class="stat-accent-bar"></div><div class="stat-label">' + label
+      + '</div><div class="stat-val">' + val + '</div>' + (sub ? '<div class="stat-sub">' + sub + '</div>' : '') + '</div>';
+  }
+  el.innerHTML = card('c-green', 'Encaissé ce mois', rcEur0(encaisse), 'virements reçus')
+    + card('c-red', 'Reste dû', rcEur0(du), ouvertes.length + ' facture' + (ouvertes.length > 1 ? 's' : '') + (retard.length ? ' · ' + retard.length + ' en retard' : ''))
+    + card('c-accent', 'À traiter', aTraiter.length + '', aTraiter.length ? 'rappel ou mise en demeure proposé' : 'rien à faire')
+    + card('c-blue', 'Émises ce mois', emises.length + '', emises.reduce(function(a, f) { return a + (parseFloat(f.total_a_payer) || 0); }, 0) ? rcEur0(emises.reduce(function(a, f) { return a + (parseFloat(f.total_a_payer) || 0); }, 0)) : '');
+}
+
+function rcBadge(f) {
+  if (parseFloat(f.solde) <= 0) return '<span class="badge b-green">Payée' + (f.date_paiement ? ' le ' + rcDate(f.date_paiement) : '') + '</span>';
+  var j = f.jours_retard || 0;
+  var etape = f.etape && f.etape !== 'aucune' ? ' · ' + (RC_ETAPES[f.etape] || f.etape).replace(' (+ frais)', '') : '';
+  if (j > 0) return '<span class="badge b-red">' + j + ' j de retard' + etape + '</span>';
+  if (parseFloat(f.montant_paye) > 0) return '<span class="badge b-amber">Partiellement payée</span>';
+  return '<span class="badge b-muted">À payer · échéance ' + rcDate(f.date_echeance) + '</span>';
+}
+
+function rcLigneFacture(f, avecSuggestion) {
+  var reste = parseFloat(f.solde) || 0;
+  var detail = [rcNomClient(f.client_id), f.periode ? 'période ' + f.periode : null, 'émise le ' + rcDate(f.date_emission)];
+  if (parseFloat(f.frais_dossier) > 0) detail.push('dont ' + rcEur(f.frais_dossier) + ' de frais de dossier');
+  if (parseFloat(f.montant_paye) > 0 && reste > 0) detail.push('payé ' + rcEur(f.montant_paye));
+  if (RC.envois) detail.push(RC.envois[f.id] ? 'envoyée le ' + rcDate(RC.envois[f.id]) : 'pas encore envoyée par email');
+  var actions = '';
+  if (RC.envois && !RC.envois[f.id]) actions += '<button class="rc-btn" title="Ouvre la facture et l\'envoie au client avec le PDF" onclick="window.location.href=\'forestrangers-facture.html?id=' + encodeURIComponent(f.id) + '&envoyer=1\'">✉ Envoyer</button>';
+  if (reste > 0) {
+    actions += '<button class="rc-btn pay" onclick="ouvrirPaiement({ clientId: \'' + f.client_id + '\', montant: ' + reste + ', reference: \'' + rcEsc(f.numero || '') + '\' })">Paiement reçu</button>';
+    var sug = f.etape_suggeree;
+    if (avecSuggestion && sug) actions += '<button class="rc-btn go" onclick="ouvrirEtape(\'' + f.id + '\',\'' + sug + '\')">' + RC_ETAPES[sug] + '</button>';
+    else {
+      var prochaine = !f.rappel_1_le ? 'rappel_1' : (!f.rappel_2_le ? 'rappel_2' : (!f.mise_en_demeure_le ? 'mise_en_demeure' : null));
+      if (prochaine && (f.jours_retard || 0) > 0) actions += '<button class="rc-btn" onclick="ouvrirEtape(\'' + f.id + '\',\'' + prochaine + '\')">' + RC_ETAPES[prochaine] + '</button>';
+    }
+  }
+  return '<div class="rc-row">'
+    + '<span class="inv-num">' + rcEsc(f.numero || '—') + '</span>'
+    + '<div class="rc-main"><div class="inv-client">' + rcEsc(rcNomClient(f.client_id)) + '</div><div class="rc-meta">' + rcEsc(detail.slice(1).join(' · ')) + '</div></div>'
+    + rcBadge(f)
+    + '<div class="rc-montant" style="color:' + (reste > 0 ? 'var(--red)' : 'var(--green)') + ';">' + rcEur(reste > 0 ? reste : f.total_a_payer)
+    +   (reste > 0 && reste < parseFloat(f.total_a_payer) ? '<div style="font-size:10px;color:var(--text-faint);font-family:inherit;font-weight:400;">sur ' + rcEur(f.total_a_payer) + '</div>' : '') + '</div>'
+    + '<div class="inv-actions">' + actions + '</div>'
+    + '</div>';
+}
+
+function renderRecouvrement() {
+  var card = document.getElementById('recouv-card'), el = document.getElementById('recouv-list');
+  if (!card || !el) return;
+  var aTraiter = RC.factures.filter(function(f) { return f.etape_suggeree; })
+    .sort(function(a, b) { return (b.jours_retard || 0) - (a.jours_retard || 0); });
+  card.style.display = aTraiter.length ? '' : 'none';
+  el.innerHTML = aTraiter.map(function(f) { return rcLigneFacture(f, true); }).join('');
+  var n1 = aTraiter.filter(function(f) { return f.etape_suggeree === 'rappel_1'; }).length;
+  var bg = document.getElementById('btn-rappels-groupes');
+  if (bg) { bg.style.display = n1 > 1 ? '' : 'none'; bg.textContent = 'Envoyer les ' + n1 + ' rappels 1'; }
+}
+
+function renderFacturesSuivi() {
+  var el = document.getElementById('factures-list');
+  if (!el || !RC.v31) return;
+  var filtre = (document.getElementById('factures-filtre') || {}).value || 'ouvertes';
+  var liste = RC.factures.filter(function(f) {
+    var reste = parseFloat(f.solde) || 0;
+    if (filtre === 'ouvertes') return reste > 0;
+    if (filtre === 'retard') return reste > 0 && (f.jours_retard || 0) > 0;
+    if (filtre === 'payees') return reste <= 0;
+    return true;
+  });
+  el.innerHTML = liste.length ? liste.map(function(f) { return rcLigneFacture(f, false); }).join('')
+    : '<div style="padding:20px;text-align:center;color:var(--text-faint);font-size:12.5px;">' + (RC.factures.length ? 'Aucune facture dans ce filtre.' : 'Aucune facture pour le moment.') + '</div>';
+}
+
+function renderSituationClients() {
+  var card = document.getElementById('recouv-clients-card'), el = document.getElementById('recouv-clients');
+  if (!card || !el) return;
+  var lignes = RC.situation.filter(function(c) { return parseFloat(c.solde_du) > 0 || parseFloat(c.avoir) > 0 || c.reservations_suspendues; })
+    .sort(function(a, b) { return (parseFloat(b.solde_du) || 0) - (parseFloat(a.solde_du) || 0); });
+  card.style.display = lignes.length ? '' : 'none';
+  el.innerHTML = lignes.map(function(c) {
+    var meta = [];
+    if (parseFloat(c.solde_du) > 0) meta.push(c.nb_factures_ouvertes + ' facture' + (c.nb_factures_ouvertes > 1 ? 's' : '') + ' ouverte' + (c.nb_factures_ouvertes > 1 ? 's' : '') + ', la plus ancienne depuis ' + (c.jours_plus_ancienne || 0) + ' j');
+    meta.push(c.dernier_virement ? 'dernier virement le ' + rcDate(c.dernier_virement) : 'aucun virement enregistré');
+    if (parseFloat(c.avoir) > 0) meta.push('avoir ' + rcEur(c.avoir));
+    var badge = c.reservations_suspendues ? '<span class="badge b-red">Réservations suspendues</span>'
+      : (c.suspension_possible ? '<span class="badge b-amber">Suspension possible</span>' : '');
+    var btn = c.reservations_suspendues
+      ? '<button class="rc-btn" onclick="suspendreClient(\'' + c.client_id + '\', false)">Rétablir</button>'
+      : (c.suspension_possible ? '<button class="rc-btn red" onclick="suspendreClient(\'' + c.client_id + '\', true)">Suspendre</button>' : '');
+    return '<div class="rc-row"><div class="rc-main"><div class="inv-client">#' + rcEsc(c.numero_client || '—') + ' ' + rcEsc((c.prenom || '') + ' ' + (c.nom || '')) + '</div>'
+      + '<div class="rc-meta">' + rcEsc(meta.join(' · ')) + (c.suspension_motif ? '<br>Motif : ' + rcEsc(c.suspension_motif) : '') + '</div></div>'
+      + badge + '<div class="rc-montant" style="color:' + (parseFloat(c.solde_du) > 0 ? 'var(--red)' : 'var(--green)') + ';">' + rcEur(parseFloat(c.solde_du) > 0 ? c.solde_du : c.avoir) + '</div>'
+      + '<div class="inv-actions">' + btn + '</div></div>';
+  }).join('');
+}
+
+function renderPaiements() {
+  var card = document.getElementById('paiements-card'), el = document.getElementById('paiements-list');
+  if (!card || !el) return;
+  var liste = RC.paiements.filter(function(p) { var c = RC.clients[p.client_id]; return !(c && c.is_test); });
+  card.style.display = liste.length ? '' : 'none';
+  el.innerHTML = liste.map(function(p) {
+    var annule = !!p.annule_le;
+    return '<div class="rc-row" style="' + (annule ? 'opacity:.5;' : '') + '"><div class="rc-main"><div class="inv-client">' + rcEsc(rcNomClient(p.client_id)) + '</div>'
+      + '<div class="rc-meta">Virement du ' + rcDate(p.date_virement) + (p.reference ? ' · ' + rcEsc(p.reference) : '') + (annule ? ' · annulé' : '') + '</div></div>'
+      + '<div class="rc-montant" style="color:var(--green);' + (annule ? 'text-decoration:line-through;' : '') + '">' + rcEur(p.montant) + '</div>'
+      + '<div class="inv-actions">' + (annule ? '' : '<button class="rc-btn" title="Erreur de saisie : retire ce paiement et rouvre les factures concernées" onclick="annulerPaiement(\'' + p.id + '\')">Annuler</button>') + '</div></div>';
+  }).join('');
+}
+
+// ── Paiement ──
+// Remplace l'ancien bouton « ✓ Payée » partout où il était appelé.
+function marquerPayee(factureId) {
+  var f = RC.factures.filter(function(x) { return String(x.id) === String(factureId); })[0];
+  if (f) return ouvrirPaiement({ clientId: f.client_id, montant: parseFloat(f.solde) || 0, reference: f.numero });
+  // Page Factures pas encore chargée : on lit la facture
+  db.from('v_factures_suivi').select('*').eq('id', factureId).single().then(async function(r) {
+    if (r.error || !r.data) {
+      // Sans la migration v31 : ancien comportement (statut seul), avec confirmation
+      if (!confirm('La migration v31 n\'est pas appliquée : la facture sera simplement marquée payée, sans date de virement. Continuer ?')) return;
+      var u = await db.from('factures').update({ statut: 'payee' }).eq('id', factureId);
+      if (u.error) { showToastAdmin('Erreur : ' + u.error.message, 'red'); return; }
+      showToastAdmin('✓ Facture marquée payée', 'green'); loadDashboardStats(); loadFacturesAdmin();
+      return;
+    }
+    RC.factures.push(r.data);
+    ouvrirPaiement({ clientId: r.data.client_id, montant: parseFloat(r.data.solde) || 0, reference: r.data.numero });
+  });
+}
+
+async function ouvrirPaiement(opts) {
+  opts = opts || {};
+  var sel = document.getElementById('pay-client');
+  if (!Object.keys(RC.clients).length) {
+    var cl = await db.from('clients').select('id,prenom,nom,email,numero_client,is_test,langue');
+    (cl.data || []).forEach(function(c) { RC.clients[c.id] = c; });
+  }
+  var ids = Object.keys(RC.clients).filter(function(id) { return !RC.clients[id].is_test; })
+    .sort(function(a, b) { return rcNomClient(a).localeCompare(rcNomClient(b)); });
+  sel.innerHTML = '<option value="">— Choisir —</option>' + ids.map(function(id) {
+    var c = RC.clients[id];
+    return '<option value="' + id + '">' + rcEsc(rcNomClient(id)) + (c.numero_client ? ' · #' + c.numero_client : '') + '</option>';
+  }).join('');
+  sel.value = opts.clientId || '';
+  var auj = new Date(); var iso = auj.getFullYear() + '-' + String(auj.getMonth() + 1).padStart(2, '0') + '-' + String(auj.getDate()).padStart(2, '0');
+  var d = document.getElementById('pay-date'); d.value = iso; d.max = iso;
+  document.getElementById('pay-montant').value = opts.montant ? (Math.round(opts.montant * 100) / 100) : '';
+  document.getElementById('pay-ref').value = opts.reference || '';
+  document.getElementById('modal-paiement').classList.add('open');
+  apercuPaiement();
+}
+
+// Simulation de l'imputation, identique à fr_paiement_enregistrer()
+function apercuPaiement() {
+  var el = document.getElementById('pay-apercu');
+  var cid = document.getElementById('pay-client').value;
+  var montant = parseFloat(document.getElementById('pay-montant').value) || 0;
+  if (!cid) { el.innerHTML = ''; return; }
+  var ouvertes = RC.factures.filter(function(f) { return f.client_id === cid && parseFloat(f.solde) > 0; })
+    .sort(function(a, b) { return String(a.date_echeance || '').localeCompare(String(b.date_echeance || '')) || String(a.date_emission || '').localeCompare(String(b.date_emission || '')); });
+  var sit = RC.situation.filter(function(c) { return c.client_id === cid; })[0];
+  var reste = montant + (sit ? (parseFloat(sit.avoir) || 0) : 0);
+  if (!ouvertes.length) {
+    el.innerHTML = '<div class="alert alert-a"><div class="alert-dot"></div><div class="alert-body">Aucune facture ouverte pour ce client : le montant restera en <strong>avoir</strong> et sera imputé sur sa prochaine facture.</div></div>';
+    return;
+  }
+  var html = '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--text-faint);font-weight:700;margin-bottom:6px;">Imputation prévue</div>';
+  ouvertes.forEach(function(f) {
+    var solde = parseFloat(f.solde) || 0;
+    var part = Math.max(0, Math.min(reste, solde));
+    reste = Math.round((reste - part) * 100) / 100;
+    var etat = part <= 0 ? '<span style="color:var(--text-faint);">non touchée</span>'
+      : (part >= solde - 0.004 ? '<span style="color:var(--green);font-weight:600;">soldée</span>' : '<span style="color:#d99a00;font-weight:600;">reste ' + rcEur(solde - part) + '</span>');
+    html += '<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:5px 0;border-bottom:1px solid var(--border);">'
+      + '<span>' + rcEsc(f.numero || '—') + ' · échéance ' + rcDate(f.date_echeance) + ' · dû ' + rcEur(solde) + '</span>'
+      + '<span>' + (part > 0 ? rcEur(part) + ' → ' : '') + etat + '</span></div>';
+  });
+  if (reste > 0.004) html += '<div style="font-size:12px;padding:6px 0;color:var(--accent);">Excédent : ' + rcEur(reste) + ' restera en avoir.</div>';
+  if (sit && parseFloat(sit.avoir) > 0) html += '<div style="font-size:11px;color:var(--text-faint);padding-top:4px;">Avoir existant de ' + rcEur(sit.avoir) + ' compris dans le calcul.</div>';
+  el.innerHTML = html;
+}
+
+async function validerPaiement() {
+  var cid = document.getElementById('pay-client').value;
+  var date = document.getElementById('pay-date').value;
+  var montant = parseFloat(document.getElementById('pay-montant').value);
+  var ref = document.getElementById('pay-ref').value;
+  if (!cid || !date || !(montant > 0)) { showToastAdmin('Client, date et montant sont obligatoires', 'amber'); return; }
+  var btn = document.getElementById('pay-valider'); btn.disabled = true;
+  try {
+    var r = await db.rpc('fr_paiement_enregistrer', { p_client: cid, p_date: date, p_montant: montant, p_reference: ref || null });
+    if (r.error) throw r.error;
+    var res = r.data || {};
+    var soldees = (res.imputations || []).filter(function(i) { return i.soldee; }).map(function(i) { return i.numero; });
+    document.getElementById('modal-paiement').classList.remove('open');
+    showToastAdmin('✓ ' + rcEur(montant) + ' enregistrés' + (soldees.length ? ' · soldée' + (soldees.length > 1 ? 's' : '') + ' : ' + soldees.join(', ') : '')
+      + (parseFloat(res.avoir_client) > 0 ? ' · avoir ' + rcEur(res.avoir_client) : ''), 'green');
+    await loadFacturesAdmin();
+    loadDashboardStats(); chargerAlertes();
+  } catch (e) {
+    var m = (e && e.message) || String(e);
+    showToastAdmin(/date_future/.test(m) ? 'La date du virement ne peut pas être dans le futur' : /interdit/.test(m) ? 'Réservé au compte administrateur' : 'Erreur : ' + m, 'red');
+  } finally { btn.disabled = false; }
+}
+
+async function annulerPaiement(id) {
+  var p = RC.paiements.filter(function(x) { return x.id === id; })[0];
+  if (!p) return;
+  var motif = prompt('Annuler le paiement de ' + rcEur(p.montant) + ' du ' + rcDate(p.date_virement) + ' (' + rcNomClient(p.client_id) + ') ?\n\n'
+    + 'À utiliser pour une erreur de saisie : les factures qu\'il soldait redeviendront ouvertes.\n\nMotif (facultatif) :', 'Erreur de saisie');
+  if (motif === null) return;
+  var r = await db.rpc('fr_paiement_annuler', { p_paiement: id, p_motif: motif || null });
+  if (r.error) { showToastAdmin('Erreur : ' + r.error.message, 'red'); return; }
+  showToastAdmin('✓ Paiement annulé, soldes recalculés', 'green');
+  await loadFacturesAdmin(); chargerAlertes();
+}
+
+// ── Étapes : rappel 1, rappel 2 (+ frais), mise en demeure ──
+var _etape = null;
+function ouvrirEtape(factureId, etape) {
+  var f = RC.factures.filter(function(x) { return String(x.id) === String(factureId); })[0];
+  if (!f) return;
+  var c = RC.clients[f.client_id] || {};
+  var sit = RC.situation.filter(function(x) { return x.client_id === f.client_id; })[0] || {};
+  _etape = { f: f, c: c, etape: etape };
+  document.getElementById('etape-titre').textContent = RC_ETAPES[etape] + ' — ' + (f.numero || '');
+  var frais = FR_PARAMS.frais_rappel || 25;
+  document.getElementById('etape-frais-montant').textContent = rcEur(frais);
+  document.getElementById('etape-frais-ligne').style.display = (etape === 'rappel_2' && !f.rappel_2_le) ? 'flex' : 'none';
+  document.getElementById('etape-frais').checked = true;
+  document.getElementById('etape-email').value = c.email || '';
+  document.getElementById('etape-contexte').innerHTML =
+      '<strong>' + rcEsc(rcNomClient(f.client_id)) + '</strong> · facture ' + rcEsc(f.numero || '') + ' du ' + rcDate(f.date_emission)
+    + ' · échéance ' + rcDate(f.date_echeance) + ' · <strong style="color:var(--red);">reste ' + rcEur(f.solde) + '</strong> (' + (f.jours_retard || 0) + ' j de retard)<br>'
+    + '<span style="color:' + (sit.dernier_virement ? 'var(--text-dim)' : 'var(--text-faint)') + ';">Dernier virement enregistré pour ce client : '
+    + (sit.dernier_virement ? rcDate(sit.dernier_virement) : 'aucun') + '. Vérifiez votre relevé avant d\'envoyer.</span>';
+  majTexteEtape();
+  document.getElementById('modal-etape').classList.add('open');
+}
+
+function majTexteEtape() {
+  if (!_etape) return;
+  var t = texteEtape(_etape.f, _etape.c, _etape.etape, document.getElementById('etape-frais').checked);
+  document.getElementById('etape-objet').value = t.objet;
+  document.getElementById('etape-texte').value = t.texte;
+}
+
+// Texte d'un rappel ou d'une mise en demeure (utilisé par la fenêtre et par l'envoi groupé)
+function texteEtape(f, c, e, fraisCoches) {
+  c = c || {};
+  var fraisAjoutes = (e === 'rappel_2' && !f.rappel_2_le && fraisCoches) ? (FR_PARAMS.frais_rappel || 25) : 0;
+  var solde = (parseFloat(f.solde) || 0) + fraisAjoutes;
+  var prenom = c.prenom || '';
+  var banque = 'Coordonnées bancaires :\nARCANIN S.à r.l. — Forest Rangers\nIBAN : ' + RC_IBAN + ' — BIC : ' + RC_BIC + '\nCommunication : ' + (f.numero || '');
+  var objet, texte;
+  if (e === 'rappel_1') {
+    objet = 'Forest Rangers — rappel facture ' + (f.numero || '');
+    texte = 'Bonjour ' + prenom + ',\n\nSauf erreur de notre part, la facture ' + (f.numero || '') + ' du ' + rcDate(f.date_emission) + ', arrivée à échéance le '
+      + rcDate(f.date_echeance) + ', reste à régler : ' + rcEur(f.solde) + '.\n\nSi votre virement est déjà parti, merci de ne pas tenir compte de ce message.\n\n'
+      + banque + '\n\nBelle journée,\nGabriel — Forest Rangers';
+  } else if (e === 'rappel_2') {
+    objet = 'Forest Rangers — second rappel, facture ' + (f.numero || '');
+    texte = 'Bonjour ' + prenom + ',\n\nMalgré notre rappel' + (f.rappel_1_le ? ' du ' + rcDate(f.rappel_1_le) : '') + ', la facture ' + (f.numero || '') + ' du '
+      + rcDate(f.date_emission) + ' (échéance ' + rcDate(f.date_echeance) + ') reste impayée.\n\n'
+      + (fraisAjoutes ? 'Conformément à l\'article 7.5 de nos conditions générales, des frais de dossier de ' + rcEur(fraisAjoutes) + ' sont ajoutés, sans préjudice des intérêts de retard. ' : '')
+      + 'Le montant à régler s\'élève à ' + rcEur(solde) + '.\n\nMerci d\'effectuer le virement dans les sept jours.\n\n' + banque + '\n\nCordialement,\nGabriel — Forest Rangers';
+  } else {
+    objet = 'Mise en demeure — facture ' + (f.numero || '');
+    texte = 'Madame, Monsieur ' + (c.nom || '') + ',\n\nPar la présente, nous vous mettons en demeure de régler la somme de ' + rcEur(f.solde)
+      + ' due au titre de la facture ' + (f.numero || '') + ' du ' + rcDate(f.date_emission) + ' (échéance ' + rcDate(f.date_echeance) + '), restée impayée malgré nos rappels'
+      + (f.rappel_1_le ? ' du ' + rcDate(f.rappel_1_le) : '') + (f.rappel_2_le ? ' et du ' + rcDate(f.rappel_2_le) : '') + '.\n\n'
+      + 'À défaut de paiement dans un délai de sept (7) jours à compter de la présente, nous nous réservons le droit de résilier le contrat conformément à l\'article 8.3 '
+      + 'de nos conditions générales, sans préjudice des intérêts de retard et des frais de recouvrement.\n\n' + banque
+      + '\n\nARCANIN S.à r.l. — Forest Rangers\n42, rue de Mersch, L-8181 Kopstal';
+  }
+  return { objet: objet, texte: texte };
+}
+
+// mode : 'envoyer' (Resend), 'messagerie' (ouvre la messagerie), 'sans' (enregistre seulement)
+async function validerEtape(mode) {
+  if (!_etape) return;
+  if (mode === true) mode = 'envoyer';
+  if (mode === false) mode = 'sans';
+  var f = _etape.f, e = _etape.etape;
+  var frais = (e === 'rappel_2') ? document.getElementById('etape-frais').checked : false;
+  var to = document.getElementById('etape-email').value.trim();
+  var objet = document.getElementById('etape-objet').value, texte = document.getElementById('etape-texte').value;
+  if (mode !== 'sans' && !to) { showToastAdmin('Adresse e-mail du client manquante', 'amber'); return; }
+
+  var envoye = null;
+  if (mode === 'envoyer') {
+    var btn = document.getElementById('etape-btn-envoyer');
+    if (btn) { btn.disabled = true; btn.textContent = 'Envoi…'; }
+    var r0 = await FR_MAIL.envoyer(db, { type: e, to: to, subject: objet, text: texte, client_id: f.client_id, facture_id: String(f.id) });
+    if (btn) { btn.disabled = false; btn.textContent = 'Envoyer et enregistrer'; }
+    if (!r0.ok) {
+      // Rien n'est enregistré tant que l'email n'est pas parti
+      if (r0.indisponible && confirm('L\'envoi automatique ne répond pas (' + (r0.erreur || '') + ').\n\nOuvrir votre messagerie avec ce texte, puis enregistrer l\'étape ?')) {
+        mode = 'messagerie';
+      } else {
+        showToastAdmin('Email non envoyé : ' + (r0.erreur || 'erreur') + '. Étape non enregistrée.', 'red');
+        return;
+      }
+    } else envoye = r0;
+  }
+  if (mode === 'messagerie') FR_MAIL.ouvrirMessagerie(to, objet, texte);
+
+  var r = await db.rpc('fr_facture_etape', { p_facture: String(f.id), p_etape: e, p_frais: frais });
+  if (r.error) { showToastAdmin('Erreur : ' + r.error.message + (envoye ? ' (l\'email est parti)' : ''), 'red'); return; }
+  document.getElementById('modal-etape').classList.remove('open');
+  var ajout = (r.data && parseFloat(r.data.frais_ajoutes) > 0) ? ' · ' + rcEur(r.data.frais_ajoutes) + ' de frais ajoutés' : '';
+  var par = envoye ? ' · email envoyé à ' + (envoye.destinataire || to) : '';
+  showToastAdmin('✓ ' + RC_ETAPES[e].replace(' (+ frais)', '') + ' enregistré' + (e === 'mise_en_demeure' ? 'e' : '') + ' pour ' + (f.numero || '') + ajout + par, 'green');
+  await loadFacturesAdmin(); chargerAlertes();
+}
+
+// Rappel 1 groupé : après pointage des virements, un clic pour toutes les factures concernées
+async function envoyerRappels1Groupes() {
+  var liste = RC.factures.filter(function(f) { return f.etape_suggeree === 'rappel_1'; });
+  if (!liste.length) return;
+  var sansEmail = liste.filter(function(f) { return !(RC.clients[f.client_id] || {}).email; });
+  var avecEmail = liste.filter(function(f) { return (RC.clients[f.client_id] || {}).email; });
+  if (!avecEmail.length) { showToastAdmin('Aucune de ces factures n\'a d\'adresse email client', 'amber'); return; }
+  var recap = avecEmail.map(function(f) { return '• ' + (f.numero || '') + ' — ' + rcNomClient(f.client_id) + ' — reste ' + rcEur(f.solde); }).join('\n');
+  if (!confirm('Envoyer le rappel 1 (courtois, sans frais) à ' + avecEmail.length + ' facture' + (avecEmail.length > 1 ? 's' : '') + ' ?\n\n' + recap
+    + (sansEmail.length ? '\n\nSans adresse email, ignorées : ' + sansEmail.map(function(f) { return f.numero; }).join(', ') : '')
+    + '\n\nAvez-vous pointé vos virements du jour ?')) return;
+
+  var btn = document.getElementById('btn-rappels-groupes');
+  var ok = 0, echecs = [];
+  for (var k = 0; k < avecEmail.length; k++) {
+    var f = avecEmail[k], c = RC.clients[f.client_id] || {};
+    if (btn) btn.textContent = 'Envoi ' + (k + 1) + '/' + avecEmail.length + '…';
+    var t = texteEtape(f, c, 'rappel_1', false);
+    var r = await FR_MAIL.envoyer(db, { type: 'rappel_1', to: c.email, subject: t.objet, text: t.texte, client_id: f.client_id, facture_id: String(f.id) });
+    if (!r.ok) {
+      echecs.push((f.numero || '') + ' : ' + (r.erreur || 'erreur'));
+      if (r.indisponible) { echecs.push('Envoi automatique indisponible — arrêt.'); break; }
+      continue;
+    }
+    var e2 = await db.rpc('fr_facture_etape', { p_facture: String(f.id), p_etape: 'rappel_1', p_frais: false });
+    if (e2.error) echecs.push((f.numero || '') + ' : email parti, étape non enregistrée (' + e2.error.message + ')');
+    else ok++;
+  }
+  if (echecs.length) alert(ok + ' rappel' + (ok > 1 ? 's' : '') + ' envoyé' + (ok > 1 ? 's' : '') + '.\n\nProblèmes :\n' + echecs.join('\n'));
+  else showToastAdmin('✓ ' + ok + ' rappel' + (ok > 1 ? 's' : '') + ' 1 envoyé' + (ok > 1 ? 's' : ''), 'green');
+  await loadFacturesAdmin(); chargerAlertes();
+}
+
+// ── Suspension des réservations (CGV art. 8.5) ──
+async function suspendreClient(clientId, suspendre) {
+  var nom = rcNomClient(clientId);
+  if (suspendre) {
+    if (!confirm('Suspendre les réservations de ' + nom + ' ?\n\n'
+      + 'Base : CGV article 8.5 (suspension pour impayé, version octobre 2026). Le client en est informé dans son espace client.\n\n'
+      + 'Le client ne pourra plus réserver lui-même ; vous pourrez toujours réserver pour lui.')) return;
+    var motif = prompt('Motif (visible dans l\'admin) :', 'Impayé — mise en demeure sans effet');
+    if (motif === null) return;
+    var r = await db.rpc('fr_client_suspendre', { p_client: clientId, p_suspendre: true, p_motif: motif });
+    if (r.error) { showToastAdmin('Erreur : ' + r.error.message, 'red'); return; }
+    showToastAdmin('Réservations de ' + nom + ' suspendues', 'amber');
+  } else {
+    if (!confirm('Rétablir les réservations de ' + nom + ' ?')) return;
+    var r2 = await db.rpc('fr_client_suspendre', { p_client: clientId, p_suspendre: false, p_motif: null });
+    if (r2.error) { showToastAdmin('Erreur : ' + r2.error.message, 'red'); return; }
+    showToastAdmin('✓ Réservations de ' + nom + ' rétablies', 'green');
+  }
+  await loadFacturesAdmin(); chargerAlertes();
+}
+
+// Liste d'avant la v31, conservée en repli tant que la migration n'est pas passée
+async function loadFacturesAdminAncien() {
   var statsRow = document.getElementById('factures-stats');
   var list = document.getElementById('factures-list');
   if (list) list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-faint);font-size:12px;">Chargement…</div>';
@@ -4586,9 +5083,46 @@ async function chargerAlertes() {
         + '</div></div>';
     }
 
-    // Factures impayées
-    var { data: impayees } = await db.from('factures')
-      .select('id,numero,total_ttc,created_at').eq('statut','impayee').limit(50);
+    // Recouvrement (migration v31) : ce que l'horloge propose, à traiter après pointage
+    var suivi = await db.from('v_factures_suivi').select('id,client_id,numero,solde,jours_retard,etape_suggeree').gt('solde', 0).limit(300);
+    var impayees = null;
+    if (!suivi.error) {
+      // Comptes de test exclus, comme partout ailleurs
+      var testsR = await db.from('clients').select('id').eq('is_test', true);
+      var idsTest = (testsR.data || []).map(function(c) { return c.id; });
+      var lignesS = (suivi.data || []).filter(function(f) { return idsTest.indexOf(f.client_id) === -1; });
+      var parEtape = { rappel_1: 0, rappel_2: 0, mise_en_demeure: 0 };
+      lignesS.forEach(function(f) { if (f.etape_suggeree) parEtape[f.etape_suggeree]++; });
+      var nbAT = parEtape.rappel_1 + parEtape.rappel_2 + parEtape.mise_en_demeure;
+      if (nbAT) {
+        var detailAT = [];
+        if (parEtape.rappel_1) detailAT.push(parEtape.rappel_1 + ' rappel' + (parEtape.rappel_1 > 1 ? 's' : '') + ' 1');
+        if (parEtape.rappel_2) detailAT.push(parEtape.rappel_2 + ' rappel' + (parEtape.rappel_2 > 1 ? 's' : '') + ' 2');
+        if (parEtape.mise_en_demeure) detailAT.push(parEtape.mise_en_demeure + ' mise' + (parEtape.mise_en_demeure > 1 ? 's' : '') + ' en demeure');
+        html += '<div class="alert alert-r" style="cursor:pointer;" onclick="navVers(\'factures\')">'
+          + '<div class="alert-dot"></div><div class="alert-body">'
+          + '<strong>' + nbAT + ' facture' + (nbAT > 1 ? 's' : '') + ' échue' + (nbAT > 1 ? 's' : '') + ' à vérifier</strong> — ' + detailAT.join(', ')
+          + '<div class="alert-time">Pointez vos virements, puis traitez-les dans Factures → À traiter</div>'
+          + '</div></div>';
+      }
+      var enRetard = lignesS.filter(function(f) { return (f.jours_retard || 0) > 0 && !f.etape_suggeree; });
+      if (enRetard.length) {
+        var totR = enRetard.reduce(function(a, f) { return a + (parseFloat(f.solde) || 0); }, 0);
+        html += '<div class="alert alert-a" style="cursor:pointer;" onclick="navVers(\'factures\')"><div class="alert-dot"></div><div class="alert-body">'
+          + '<strong>' + enRetard.length + ' facture' + (enRetard.length > 1 ? 's' : '') + ' en retard</strong> — '
+          + totR.toLocaleString('fr-LU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €, étape déjà faite'
+          + '<div class="alert-time">Suivi dans l\'onglet Factures</div></div></div>';
+      }
+      var sitA = await db.from('v_clients_recouvrement').select('client_id,prenom,nom,suspension_possible,reservations_suspendues').eq('suspension_possible', true);
+      var candidats = (sitA.data || []).filter(function(c) { return !c.reservations_suspendues && idsTest.indexOf(c.client_id) === -1; });
+      if (candidats.length) {
+        html += '<div class="alert alert-r" style="cursor:pointer;" onclick="navVers(\'factures\')"><div class="alert-dot"></div><div class="alert-body">'
+          + '<strong>Suspension possible</strong> — ' + candidats.map(function(c) { return msgEsc((c.prenom || '') + ' ' + (c.nom || '')); }).join(', ')
+          + '<div class="alert-time">Mise en demeure sans virement depuis le 2e rappel — décision à prendre dans Factures</div></div></div>';
+      }
+    } else {
+      impayees = (await db.from('factures').select('id,numero,total_ttc,created_at').eq('statut','impayee').limit(50)).data;
+    }
     if (impayees && impayees.length) {
       var tot = impayees.reduce(function(a,f){ return a + (parseFloat(f.total_ttc)||0); }, 0);
       html += '<div class="alert alert-a"><div class="alert-dot"></div><div class="alert-body">'
@@ -5231,6 +5765,53 @@ if ('serviceWorker' in navigator) {
 </div>
 
 <!-- ══ MODAL NOUVELLE FACTURE ══ -->
+<!-- ══ MODAL PAIEMENT (migration v31) ══ -->
+<div class="modal-overlay" id="modal-paiement" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal-sheet" style="max-width:520px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div class="modal-title">Enregistrer un paiement</div>
+      <button onclick="document.getElementById('modal-paiement').classList.remove('open')" style="background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:20px;">✕</button>
+    </div>
+    <div style="font-size:11.5px;color:var(--text-faint);margin-bottom:14px;line-height:1.5;">Saisissez le virement tel qu'il figure sur votre relevé. Il sera imputé sur la facture ouverte la plus ancienne, puis la suivante ; un excédent reste en avoir.</div>
+    <div class="form-group"><label class="form-label">Client</label><select class="form-control" id="pay-client" onchange="apercuPaiement()" style="width:100%;"></select></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="form-group"><label class="form-label">Date du virement (relevé)</label><input type="date" class="form-control" id="pay-date" oninput="apercuPaiement()" style="width:100%;"></div>
+      <div class="form-group"><label class="form-label">Montant reçu (€)</label><input type="number" step="0.01" min="0" class="form-control" id="pay-montant" oninput="apercuPaiement()" style="width:100%;"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Référence / communication</label><input class="form-control" id="pay-ref" style="width:100%;" placeholder="Ex : 9003-26-2"></div>
+    <div id="pay-apercu" style="margin:6px 0 14px;"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="document.getElementById('modal-paiement').classList.remove('open')">Annuler</button>
+      <button class="btn btn-accent" id="pay-valider" onclick="validerPaiement()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL ÉTAPE DE RECOUVREMENT (rappel 1, rappel 2, mise en demeure) ══ -->
+<div class="modal-overlay" id="modal-etape" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal-sheet" style="max-width:600px;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div class="modal-title" id="etape-titre">Rappel</div>
+      <button onclick="document.getElementById('modal-etape').classList.remove('open')" style="background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:20px;">✕</button>
+    </div>
+    <div id="etape-contexte" style="font-size:12px;color:var(--text-dim);line-height:1.55;margin-bottom:12px;"></div>
+    <label id="etape-frais-ligne" style="display:none;align-items:center;gap:9px;font-size:12.5px;margin-bottom:12px;cursor:pointer;">
+      <input type="checkbox" id="etape-frais" checked onchange="majTexteEtape()" style="width:15px;height:15px;accent-color:#ff5f1f;">
+      <span>Ajouter les frais de dossier (<span id="etape-frais-montant">25,00 €</span>, hors TVA, CGV art. 7.5)</span>
+    </label>
+    <div class="form-group"><label class="form-label">Destinataire</label><input class="form-control" id="etape-email" style="width:100%;"></div>
+    <div class="form-group"><label class="form-label">Objet</label><input class="form-control" id="etape-objet" style="width:100%;"></div>
+    <div class="form-group"><label class="form-label">Message (modifiable)</label><textarea class="form-control" id="etape-texte" style="width:100%;min-height:230px;font-size:12px;line-height:1.5;"></textarea></div>
+    <div style="font-size:11px;color:var(--text-faint);margin-bottom:12px;line-height:1.5;">« Envoyer et enregistrer » envoie cet email depuis info@forestrangers.lu, puis enregistre l'étape (date, et frais si cochés). Si l'envoi échoue, rien n'est enregistré. Les comptes test sont redirigés vers votre adresse.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+      <button class="btn btn-outline" onclick="document.getElementById('modal-etape').classList.remove('open')">Annuler</button>
+      <button class="btn btn-outline" onclick="validerEtape('sans')">Enregistrer sans email</button>
+      <button class="btn btn-outline" onclick="validerEtape('messagerie')">Via ma messagerie</button>
+      <button class="btn btn-accent" id="etape-btn-envoyer" onclick="validerEtape('envoyer')">Envoyer et enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-nouvelle-facture" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="modal-sheet" style="max-width:500px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
@@ -5349,15 +5930,7 @@ async function openStatDetail(type) {
   } catch(e) { content.innerHTML = '<div style="padding:20px;text-align:center;color:var(--red);">Erreur : ' + (e.message||e) + '</div>'; }
 }
 
-async function marquerPayee(factureId) {
-  try {
-    await db.from('factures').update({ statut: 'payee' }).eq('id', factureId);
-    showToastAdmin('✓ Facture marquée payée', 'green');
-    loadDashboardStats();
-    if (document.getElementById('page-factures').classList.contains('active')) loadFacturesAdmin();
-    else openStatDetail('impayes');
-  } catch(e) { showToastAdmin('Erreur', 'red'); }
-}
+// marquerPayee() : voir « FACTURES & RECOUVREMENT » — passe désormais par un paiement daté.
 
 // ── NOUVELLE FACTURE ──
 var factureType = 'auto';
