@@ -305,14 +305,14 @@ textarea.field-input { resize: vertical; min-height: 72px; }
   font-size: 10px; color: var(--text-faint);
 }
 input[type=range] {
-  width: 100%; margin: 4px 0;
+  width: 100%; margin: 4px 0; height: 20px;
   -webkit-appearance: none; background: transparent;
 }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none; width: 18px; height: 18px;
   border-radius: 50%; background: var(--accent);
   border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-  cursor: pointer;
+  cursor: pointer; margin-top: -7px;   /* centré sur la piste de 4 px */
 }
 input[type=range]::-webkit-slider-runnable-track {
   height: 4px; border-radius: 2px; background: var(--border2);
@@ -470,6 +470,14 @@ input[type=range]::-webkit-slider-runnable-track {
   border-radius: 10px; font-size: 11.5px; color: var(--text-dim); line-height: 1.5;
 }
 .field-hint.open { display: block; }
+
+/* ── Sous-section dans la carte d'un chien supplémentaire ── */
+.sub-section-title {
+  margin: 20px 0 12px; padding-top: 16px; border-top: 1px solid var(--border);
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--accent);
+}
+.field-note { margin: -4px 0 12px; font-size: 11.5px; color: var(--text-faint); line-height: 1.45; }
 
 @media (max-width: 500px) {
   .form-row.cols-2, .form-row.cols-3 { grid-template-columns: 1fr; }
@@ -759,6 +767,9 @@ input[type=range]::-webkit-slider-runnable-track {
 "Champs obligatoires manquants : ": "Missing required fields: ",
 "Numéro de puce (15 chiffres)": "Microchip number (15 digits)",
 "Où trouver ce numéro ?": "Where can I find this number?",
+"Laissé vide : même vétérinaire que le premier chien.": "Left empty: same vet as the first dog.",
+"Assurance responsabilité civile": "Third-party liability insurance",
+"Les conditions générales (art. 5.2) demandent une assurance responsabilité civile couvrant votre chien. Vous pouvez terminer l'inscription ; merci de la souscrire avant la première prestation.": "The terms and conditions (art. 5.2) require third-party liability insurance covering your dog. You can complete your registration; please take out this insurance before the first service.",
 "Où le trouver ? Dans le passeport européen de votre chien, rubrique III « Marquage de l'animal », point 1 « Code alphanumérique du transpondeur » — 15 chiffres.": "Where to find it? In your dog's EU pet passport, section III \"Marking of animal\", point 1 \"Transponder alphanumeric code\" — 15 digits.",
 "Pourquoi ces informations comptent": "Why these details matter",
 "Prenez le temps de les remplir correctement : elles ne servent pas qu'à nous.": "Take the time to fill them in properly — they are not only useful to us.",
@@ -975,6 +986,9 @@ input[type=range]::-webkit-slider-runnable-track {
 "Champs obligatoires manquants : ": "Et feelen obligatoresch Felder: ",
 "Numéro de puce (15 chiffres)": "Chipnummer (15 Zifferen)",
 "Où trouver ce numéro ?": "Wou fannen ech dës Nummer?",
+"Laissé vide : même vétérinaire que le premier chien.": "Eidel gelooss: selwechten Veterinär wéi fir den éischten Hond.",
+"Assurance responsabilité civile": "Haftflichtversécherung",
+"Les conditions générales (art. 5.2) demandent une assurance responsabilité civile couvrant votre chien. Vous pouvez terminer l'inscription ; merci de la souscrire avant la première prestation.": "D'Allgemeng Konditiounen (Art. 5.2) verlaangen eng Haftflichtversécherung fir Ären Hond. Dir kënnt d'Aschreiwung ofschléissen; schléisst se w.e.g. virun der éischter Prestatioun of.",
 "Où le trouver ? Dans le passeport européen de votre chien, rubrique III « Marquage de l'animal », point 1 « Code alphanumérique du transpondeur » — 15 chiffres.": "Wou fannen ech en? Am europäesche Pass vun Ärem Hond, Rubrik III « Beschreibung des Tieres », Punkt 1 « Alphanumerischer Transponder-Code » — 15 Zifferen.",
 "Pourquoi ces informations comptent": "Firwat dës Informatioune wichteg sinn",
 "Prenez le temps de les remplir correctement : elles ne servent pas qu'à nous.": "Huelt Iech d'Zäit fir se richteg auszefëllen — si notzen net nëmmen eis.",
@@ -1477,11 +1491,11 @@ input[type=range]::-webkit-slider-runnable-track {
         <div class="form-row cols-2">
           <div class="field">
             <label class="field-label">Vétérinaire</label>
-            <input class="field-input" type="text" placeholder="Dr. Muller">
+            <input class="field-input" id="veto-chien" type="text" placeholder="Dr. Muller">
           </div>
           <div class="field">
             <label class="field-label">Téléphone vétérinaire</label>
-            <input class="field-input" type="tel" placeholder="+352 26 00 00">
+            <input class="field-input" id="veto-tel-chien" type="tel" placeholder="+352 26 00 00">
           </div>
         </div>
         <div class="form-row solo">
@@ -1496,20 +1510,30 @@ input[type=range]::-webkit-slider-runnable-track {
         </div>
         <div class="form-row solo">
           <div class="field">
+            <label class="field-label">Assurance responsabilité civile <span class="req">*</span></label>
+            <div class="radio-pills assurance-pills" id="assurance-pills" style="margin-top:4px;">
+              <div class="radio-pill" onclick="choisirAssurance(this)">Oui</div>
+              <div class="radio-pill" onclick="choisirAssurance(this)">Non</div>
+            </div>
+            <div class="field-note assurance-note" style="display:none;margin:8px 0 0;">Les conditions générales (art. 5.2) demandent une assurance responsabilité civile couvrant votre chien. Vous pouvez terminer l'inscription ; merci de la souscrire avant la première prestation.</div>
+          </div>
+        </div>
+        <div class="form-row solo">
+          <div class="field">
             <label class="field-label">Allergies</label>
-            <input class="field-input" type="text" placeholder="Ex : acariens, certains aliments...">
+            <input class="field-input" id="allergies-chien" type="text" placeholder="Ex : acariens, certains aliments...">
           </div>
         </div>
         <div class="form-row solo">
           <div class="field">
             <label class="field-label">Médicaments en cours</label>
-            <textarea class="field-input" placeholder="Nom, dosage, fréquence..."></textarea>
+            <textarea class="field-input" id="medicaments-chien" placeholder="Nom, dosage, fréquence..."></textarea>
           </div>
         </div>
         <div class="form-row solo">
           <div class="field">
             <label class="field-label">Pathologies / Antécédents</label>
-            <textarea class="field-input" placeholder="Ex : dysplasie, épilepsie, chirurgies..."></textarea>
+            <textarea class="field-input" id="pathologies-chien" placeholder="Ex : dysplasie, épilepsie, chirurgies..."></textarea>
           </div>
         </div>
       </div>
@@ -1524,7 +1548,7 @@ input[type=range]::-webkit-slider-runnable-track {
         <div class="form-section-title">Comportement</div>
       </div>
       <div class="form-section-body">
-        <div class="behavior-grid" style="margin-bottom:14px;">
+        <div class="behavior-grid" id="behavior-grid-principal" style="margin-bottom:14px;">
           <!-- DOM ordonné pour un rendu en 2 colonnes :
                Col 1 : Liberté autorisée · Rappel fiable · Instinct chasseur · Réactif en laisse
                Col 2 : Protection nourriture · Dominant · Sociable femelles · Sociable mâles -->
@@ -2016,6 +2040,12 @@ function validerPage2() {
     if (puce) puce.style.borderColor = '#e05a5a';
     erreurs.push('Numéro de puce (15 chiffres)');
   }
+  var assPrincipal = document.getElementById('assurance-pills');
+  if (assPrincipal) assPrincipal.style.outline = '';
+  if (!document.querySelector('#assurance-pills .radio-pill.selected')) {
+    if (assPrincipal) { assPrincipal.style.outline = '1.5px solid #e05a5a'; assPrincipal.style.outlineOffset = '4px'; assPrincipal.style.borderRadius = '20px'; }
+    erreurs.push('Assurance responsabilité civile');
+  }
   // Chiens supplementaires : controles seulement si le chien a un nom.
   var cartes = document.querySelectorAll('#chiens-supps-container .chien-supplementaire');
   for (var i = 0; i < cartes.length; i++) {
@@ -2039,6 +2069,12 @@ function validerPage2() {
     if (!pv || !/^\d{15}$/.test(pv)) {
       if (ePuce) ePuce.style.borderColor = '#e05a5a';
       erreurs.push(pref + t('Numéro de puce (15 chiffres)'));
+    }
+    var eAss = c.querySelector('.assurance-pills');
+    if (eAss) eAss.style.outline = '';
+    if (!c.querySelector('.assurance-pills .radio-pill.selected')) {
+      if (eAss) { eAss.style.outline = '1.5px solid #e05a5a'; eAss.style.outlineOffset = '4px'; eAss.style.borderRadius = '20px'; }
+      erreurs.push(pref + t('Assurance responsabilité civile'));
     }
   }
 
@@ -2266,6 +2302,102 @@ function ajouterChien() {
     +       '<div class="field-hint">Où le trouver ? Dans le passeport européen de votre chien, rubrique III « Marquage de l\'animal », point 1 « Code alphanumérique du transpondeur » — 15 chiffres.</div>'
     +     '</div>'
     +   '</div>'
+
+    // Santé (migration v30) — mêmes champs que pour le premier chien
+    +   '<div class="sub-section-title">Santé</div>'
+    +   '<div class="form-row cols-2">'
+    +     '<div class="field">'
+    +       '<label class="field-label">Vétérinaire</label>'
+    +       '<input class="field-input chien-veto" type="text" placeholder="Dr. Muller">'
+    +     '</div>'
+    +     '<div class="field">'
+    +       '<label class="field-label">Téléphone vétérinaire</label>'
+    +       '<input class="field-input chien-veto-tel" type="tel" placeholder="+352 26 00 00">'
+    +     '</div>'
+    +   '</div>'
+    +   '<div class="field-note">Laissé vide : même vétérinaire que le premier chien.</div>'
+    +   '<div class="form-row solo">'
+    +     '<div class="field">'
+    +       '<label class="field-label">Vaccins à jour</label>'
+    +       '<div class="radio-pills chien-vaccins-pills" style="margin-top:4px;">'
+    +         '<div class="radio-pill selected" onclick="selectPillLocal(this)">Oui</div>'
+    +         '<div class="radio-pill" onclick="selectPillLocal(this)">Non</div>'
+    +         '<div class="radio-pill" onclick="selectPillLocal(this)">En cours</div>'
+    +       '</div>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div class="form-row solo">'
+    +     '<div class="field">'
+    +       '<label class="field-label">Assurance responsabilité civile <span class="req">*</span></label>'
+    +       '<div class="radio-pills assurance-pills" style="margin-top:4px;">'
+    +         '<div class="radio-pill" onclick="choisirAssurance(this)">Oui</div>'
+    +         '<div class="radio-pill" onclick="choisirAssurance(this)">Non</div>'
+    +       '</div>'
+    +       '<div class="field-note assurance-note" style="display:none;margin:8px 0 0;">Les conditions générales (art. 5.2) demandent une assurance responsabilité civile couvrant votre chien. Vous pouvez terminer l\'inscription ; merci de la souscrire avant la première prestation.</div>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div class="form-row solo">'
+    +     '<div class="field">'
+    +       '<label class="field-label">Allergies</label>'
+    +       '<input class="field-input chien-allergies" type="text" placeholder="Ex : acariens, certains aliments...">'
+    +     '</div>'
+    +   '</div>'
+    +   '<div class="form-row solo">'
+    +     '<div class="field">'
+    +       '<label class="field-label">Médicaments en cours</label>'
+    +       '<textarea class="field-input chien-medicaments" placeholder="Nom, dosage, fréquence..."></textarea>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div class="form-row solo">'
+    +     '<div class="field">'
+    +       '<label class="field-label">Pathologies / Antécédents</label>'
+    +       '<textarea class="field-input chien-pathologies" placeholder="Ex : dysplasie, épilepsie, chirurgies..."></textarea>'
+    +     '</div>'
+    +   '</div>'
+    // Comportement — mêmes contrôles que pour le premier chien
+    +   '<div class="sub-section-title">Comportement</div>'
+    +   '<div class="behavior-grid chien-behavior-grid" style="margin-bottom:14px;">'
+    +     '<div class="behavior-item"><div><div class="behavior-label">Liberté autorisée</div></div><div class="toggle on" onclick="toggleSwitch(this)"><div class="toggle-knob"></div></div></div>'
+    +     '<div class="behavior-item"><div><div class="behavior-label">Protection nourriture</div></div><div class="toggle" onclick="toggleSwitch(this)"><div class="toggle-knob"></div></div></div>'
+    +     '<div class="behavior-item"><div><div class="behavior-label">Rappel fiable</div></div><div class="toggle" onclick="toggleSwitch(this)"><div class="toggle-knob"></div></div></div>'
+    +     '<div class="behavior-item"><div><div class="behavior-label">Dominant</div></div><div class="toggle" onclick="toggleSwitch(this)"><div class="toggle-knob"></div></div></div>'
+    +     '<div class="behavior-item"><div><div class="behavior-label">Instinct chasseur</div></div><div class="toggle" onclick="toggleSwitch(this)"><div class="toggle-knob"></div></div></div>'
+    +     '<div class="behavior-item"><div><div class="behavior-label">Sociable avec femelles</div></div><div class="toggle" onclick="toggleSwitch(this)"><div class="toggle-knob"></div></div></div>'
+    +     '<div class="behavior-item"><div><div class="behavior-label">Réactif en laisse</div></div><div class="toggle" onclick="toggleSwitch(this)"><div class="toggle-knob"></div></div></div>'
+    +     '<div class="behavior-item"><div><div class="behavior-label">Sociable avec mâles</div></div><div class="toggle" onclick="toggleSwitch(this)"><div class="toggle-knob"></div></div></div>'
+    +     '<div class="behavior-item"><div><div class="behavior-label">Adore l\'eau</div></div><div class="toggle" onclick="toggleSwitch(this)"><div class="toggle-knob"></div></div></div>'
+    +     '<div class="behavior-item important"><div><div class="behavior-label">Rescue dog</div></div><div class="toggle" onclick="toggleSwitch(this)"><div class="toggle-knob"></div></div></div>'
+    +   '</div>'
+    +   '<div class="field" style="margin-bottom:14px;">'
+    +     '<label class="field-label">Peurs / Phobies</label>'
+    +     '<input class="field-input chien-peurs" type="text" placeholder="Ex : orage, feux d\'artifice, voitures...">'
+    +   '</div>'
+    +   '<div class="field" style="margin-bottom:14px;">'
+    +     '<label class="field-label">Marche en laisse</label>'
+    +     '<div class="radio-pills chien-laisse-pills" style="margin-top:6px;">'
+    +       '<div class="radio-pill selected" onclick="selectPillLocal(this)">Bien</div>'
+    +       '<div class="radio-pill" onclick="selectPillLocal(this)">À améliorer</div>'
+    +       '<div class="radio-pill" onclick="selectPillLocal(this)">Tire fort</div>'
+    +       '<div class="radio-pill" onclick="selectPillLocal(this)">Harnais requis</div>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div class="field" style="margin-bottom:14px;">'
+    +     '<label class="field-label">Niveau d\'énergie</label>'
+    +     '<div style="margin-top:8px;">'
+    +       '<input type="range" min="1" max="5" value="3" class="chien-energy" oninput="majEnergieCarte(this)">'
+    +       '<div class="energy-labels">'
+    +         '<span>Très calme</span>'
+    +         '<span class="chien-energy-label" data-fr="Moyen" style="color:var(--accent);font-weight:700;">Moyen</span>'
+    +         '<span>Très énergique</span>'
+    +       '</div>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div class="form-row solo">'
+    +     '<div class="field">'
+    +       '<label class="field-label">Remarques importantes</label>'
+    +       '<textarea class="field-input chien-remarques" placeholder="Tout ce qui est utile pour nous : habitudes, préférences, consignes particulières, petites manies (ex : aboie sur tous les bulldogs)..."></textarea>'
+    +     '</div>'
+    +   '</div>'
     + '</div>';
 
   document.getElementById('chiens-supps-container').appendChild(div);
@@ -2466,6 +2598,10 @@ function setLang(lang) {
     if (btn) btn.classList.toggle('active', l === lang);
   });
   appliquerLangue();
+  // Libellés d'énergie déjà modifiés par le curseur : retraduits depuis leur valeur FR
+  document.querySelectorAll('#energyLabel, .chien-energy-label').forEach(function(el) {
+    if (el.dataset && el.dataset.fr) el.textContent = t(el.dataset.fr);
+  });
   try { localStorage.setItem('fr-langue', lang); } catch(e) {}
 }
 
@@ -2694,7 +2830,8 @@ function renderPreRecap() {
     [t('Chien'),      v('nom-chien')],
     [t('Race'),       ((document.getElementById('race-value') || {}).value || v('race')).trim()],
     [t('Poids'),      poids ? poids + ' kg' : ''],
-    [t('N° de puce'), v('puce-chien')]
+    [t('N° de puce'), v('puce-chien')],
+    [t('Vétérinaire'), v('veto-chien')]
   ], false);
 
   // Chiens supplementaires : un bloc par chien renseigne.
@@ -2708,7 +2845,8 @@ function renderPreRecap() {
       [t('Chien'),      nom],
       [t('Race'),       cv('.chien-race') || cv('.race-autocomplete input')],
       [t('Poids'),      p ? p + ' kg' : ''],
-      [t('N° de puce'), cv('.chien-puce')]
+      [t('N° de puce'), cv('.chien-puce')],
+      [t('Vétérinaire'), cv('.chien-veto') || v('veto-chien')]
     ], false);
   });
 
@@ -2971,9 +3109,21 @@ async function sauvegarderInscription(motDePasse) {
         numero_puce: numeroPuce,
         grand_chien: !!(raceGrandGabarit || poidsGrandGabarit),
         notes_sante: ((document.getElementById('remarques-chien') || {}).value || '').trim() || null,
-        comportement: readComportementPrincipal()
+        comportement: readComportementPrincipal(),
+        // Santé (migration v30) — jusqu'ici saisie mais jamais transmise
+        vaccins_ok:      vaccinsDepuisPill(document.querySelector('[onclick*="\'vaccin\'"].selected')),
+        assurance_ok:    assuranceDepuis((document.getElementById('assurance-pills') || {}).parentNode),
+        veterinaire:     valId('veto-chien')        || null,
+        veterinaire_tel: valId('veto-tel-chien')    || null,
+        allergies:       valId('allergies-chien')   || null,
+        medicaments:     valId('medicaments-chien') || null,
+        pathologies:     valId('pathologies-chien') || null
       });
     }
+    // Vétérinaire du premier chien : repris pour les chiens supplémentaires
+    // dont le champ est resté vide (cas le plus courant : un seul cabinet).
+    var vetoPrincipal    = valId('veto-chien')     || null;
+    var vetoTelPrincipal = valId('veto-tel-chien') || null;
     document.querySelectorAll('.chien-supplementaire').forEach(function(c) {
       var idx = parseInt(c.getAttribute('data-idx'), 10);
       var etat = chiensSuppEtat[idx] || {};
@@ -2994,7 +3144,17 @@ async function sauvegarderInscription(motDePasse) {
         date_naissance: dn || null,
         sterilise: (st === '' || st == null) ? null : (st === 'true'),
         numero_puce: pu,
-        grand_chien: !!(etat.raceGrand || etat.poidsGrand)
+        grand_chien: !!(etat.raceGrand || etat.poidsGrand),
+        // Santé (migration v30)
+        vaccins_ok:      vaccinsDepuisPill(c.querySelector('.chien-vaccins-pills .radio-pill.selected')),
+        assurance_ok:    assuranceDepuis(c),
+        comportement:    readComportementCarte(c),
+        veterinaire:     valSel(c, '.chien-veto')        || vetoPrincipal,
+        veterinaire_tel: valSel(c, '.chien-veto-tel')    || vetoTelPrincipal,
+        allergies:       valSel(c, '.chien-allergies')   || null,
+        medicaments:     valSel(c, '.chien-medicaments') || null,
+        pathologies:     valSel(c, '.chien-pathologies') || null,
+        notes_sante:     valSel(c, '.chien-remarques')   || null
       });
     });
     chiens.forEach(function(c) { if (c.poids_kg !== null && isNaN(c.poids_kg)) c.poids_kg = null; });
@@ -3137,10 +3297,66 @@ function updateEnergy(val) {
 }
 
 // ── LECTURE DU COMPORTEMENT (chien principal) → résumé lisible ──
+// ── LECTURE DES CHAMPS SANTÉ ──
+function valId(id) { var e = document.getElementById(id); return e ? String(e.value || '').trim() : ''; }
+function valSel(scope, sel) { var e = scope ? scope.querySelector(sel) : null; return e ? String(e.value || '').trim() : ''; }
+// Pastille « Vaccins à jour » : Oui → true ; Non et En cours → false
+// (pas encore à jour : le client le corrigera dans son espace une fois fait).
+function vaccinsDepuisPill(el) {
+  if (!el) return null;
+  return frOriginal(el) === 'Oui';
+}
+// Pastilles locales à une carte de chien supplémentaire : ne touche que
+// le groupe cliqué (selectPill() agit sur toute la page).
+function selectPillLocal(el) {
+  var pills = el.parentNode.querySelectorAll('.radio-pill');
+  for (var i = 0; i < pills.length; i++) pills[i].classList.remove('selected');
+  el.classList.add('selected');
+}
+
+// Assurance RC (CGV art. 5.2) : réponse obligatoire ; « Non » affiche un rappel
+// mais ne bloque pas l'inscription.
+function choisirAssurance(el) {
+  selectPillLocal(el);
+  var champ = el.closest ? el.closest('.field') : null;
+  var note = champ ? champ.querySelector('.assurance-note') : null;
+  if (note) note.style.display = (frOriginal(el) === 'Non') ? 'block' : 'none';
+}
+function assuranceDepuis(scope) {
+  var el = scope ? scope.querySelector('.assurance-pills .radio-pill.selected') : null;
+  if (!el) return null;
+  return frOriginal(el) === 'Oui';
+}
+// Curseur d'énergie d'une carte de chien supplémentaire
+function majEnergieCarte(input) {
+  var champ = input.closest ? input.closest('.field') : input.parentNode;
+  var lbl = champ ? champ.querySelector('.chien-energy-label') : null;
+  if (!lbl) return;
+  lbl.dataset.fr = labels[input.value];
+  lbl.textContent = t(labels[input.value]);
+}
+// Comportement d'une carte → même format texte que le premier chien
+function readComportementCarte(c) {
+  var parts = [], on = [];
+  c.querySelectorAll('.chien-behavior-grid .behavior-item').forEach(function(it) {
+    var lbl = it.querySelector('.behavior-label'), tg = it.querySelector('.toggle');
+    if (lbl && tg && tg.classList.contains('on')) on.push(frOriginal(lbl));
+  });
+  if (on.length) parts.push(on.join(', '));
+  var peurs = valSel(c, '.chien-peurs');
+  if (peurs) parts.push('Peurs : ' + peurs);
+  var laisse = c.querySelector('.chien-laisse-pills .radio-pill.selected');
+  if (laisse) parts.push('Marche en laisse : ' + frOriginal(laisse));
+  var en = c.querySelector('.chien-energy-label');
+  var energy = en ? (en.dataset.fr || '').trim() : '';
+  if (energy) parts.push('Énergie : ' + energy);
+  return parts.join(' · ') || null;
+}
+
 function readComportementPrincipal() {
   var parts = [];
   var on = [];
-  document.querySelectorAll('.behavior-grid .behavior-item').forEach(function(it) {
+  document.querySelectorAll('#behavior-grid-principal .behavior-item').forEach(function(it) {
     var lbl = it.querySelector('.behavior-label');
     var tg = it.querySelector('.toggle');
     if (lbl && tg && tg.classList.contains('on')) on.push(frOriginal(lbl));

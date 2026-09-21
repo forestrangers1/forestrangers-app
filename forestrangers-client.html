@@ -1524,6 +1524,29 @@ html, body {
         </select>
       </div>
     </div>
+    <!-- Santé (migration v30) : mêmes champs qu'à l'inscription -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="field-group">
+        <label class="field-label">Vétérinaire</label>
+        <input class="field-input" id="dog-edit-veto" type="text" placeholder="Dr. Muller">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Tél. vétérinaire</label>
+        <input class="field-input" id="dog-edit-veto-tel" type="tel" inputmode="tel" placeholder="+352 26 00 00">
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Allergies</label>
+      <input class="field-input" id="dog-edit-allergies" type="text" placeholder="Ex : acariens, certains aliments...">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Médicaments en cours</label>
+      <textarea class="field-input" id="dog-edit-medicaments" rows="2" style="resize:vertical;" placeholder="Nom, dosage, fréquence..."></textarea>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Pathologies / Antécédents</label>
+      <textarea class="field-input" id="dog-edit-pathologies" rows="2" style="resize:vertical;" placeholder="Ex : dysplasie, épilepsie, chirurgies..."></textarea>
+    </div>
     <div class="field-group">
       <label class="field-label">Comportement</label>
       <div class="dog-behavior-grid" id="dog-behavior-grid" style="margin-bottom:14px;">
@@ -1564,8 +1587,8 @@ html, body {
       </div>
     </div>
     <div class="field-group">
-      <label class="field-label">Notes</label>
-      <textarea class="field-input" id="dog-edit-notes" rows="2" style="resize:none;" placeholder="Allergies, vétérinaire, traitement..."></textarea>
+      <label class="field-label">Remarques importantes</label>
+      <textarea class="field-input" id="dog-edit-notes" rows="2" style="resize:vertical;" placeholder="Habitudes, consignes particulières, petites manies..."></textarea>
     </div>
 
     <button class="btn-big btn-accent" style="margin-top:4px;" onclick="saveDogEdit()" id="dog-edit-save">
@@ -4383,7 +4406,14 @@ function openDogFull(idx) {
   } else {
     html += row('Comportement', '—');
   }
-  html += row('Notes santé', txt(d.notes_sante));
+  // Santé et vétérinaire (migration v30)
+  var tel = d.veterinaire_tel ? '<a href="tel:' + String(d.veterinaire_tel).replace(/[^+\d]/g, '') + '" style="color:var(--accent);text-decoration:none;">' + esc(d.veterinaire_tel) + '</a>' : '—';
+  html += row('Vétérinaire', d.veterinaire ? esc(d.veterinaire) : '—');
+  html += row('Tél. vétérinaire', tel);
+  html += row('Allergies', d.allergies ? esc(d.allergies) : '—');
+  html += row('Médicaments', d.medicaments ? esc(d.medicaments) : '—');
+  html += row('Pathologies', d.pathologies ? esc(d.pathologies) : '—');
+  html += row('Remarques', d.notes_sante ? esc(d.notes_sante) : '—');
   document.getElementById('dog-full-body').innerHTML = html;
   document.getElementById('dogFullModal').classList.add('open');
 }
@@ -4428,6 +4458,8 @@ function dogReadComportement() {
   if (laisse) parts.push('Marche en laisse : ' + laisse.textContent.trim());
   var energy = ((document.getElementById('dog-energy-label') || {}).textContent || '').trim();
   if (energy) parts.push('Énergie : ' + energy);
+  // Mentions libres saisies dans l'admin : conservées telles quelles
+  if (window._dogComportementAutres && window._dogComportementAutres.length) parts.push(window._dogComportementAutres.join(', '));
   return parts.join(' · ') || null;
 }
 // Remplit les contrôles depuis le résumé texte stocké
@@ -4437,6 +4469,7 @@ function dogFillComportement(str) {
   document.querySelectorAll('#dog-laisse-pills .dog-laisse-pill').forEach(function(p) { p.classList.remove('selected'); });
   var slider = document.getElementById('dog-energy-slider'); if (slider) slider.value = 3;
   dogUpdateEnergy(3);
+  window._dogComportementAutres = [];
   if (!str) return;
   String(str).split(' · ').forEach(function(seg) {
     seg = seg.trim();
@@ -4448,11 +4481,14 @@ function dogFillComportement(str) {
       var idx = DOG_ENERGY_LABELS.indexOf(seg.slice(10).trim());
       if (idx > 0) { if (slider) slider.value = idx; dogUpdateEnergy(idx); }
     } else {
-      var names = seg.split(',').map(function(s) { return s.trim(); });
+      var names = seg.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+      var connus = [];
       document.querySelectorAll('#dog-behavior-grid .dog-behavior-item').forEach(function(it) {
         var lbl = it.querySelector('.dog-behavior-label'), tg = it.querySelector('.dog-toggle');
-        if (lbl && tg && names.indexOf(lbl.textContent.trim()) >= 0) tg.classList.add('on');
+        if (lbl && tg && names.indexOf(lbl.textContent.trim()) >= 0) { tg.classList.add('on'); connus.push(lbl.textContent.trim()); }
       });
+      // Tout ce qui ne correspond à aucune case est gardé pour être réécrit
+      names.forEach(function(n) { if (connus.indexOf(n) < 0) window._dogComportementAutres.push(n); });
     }
   });
 }
@@ -4476,6 +4512,11 @@ function openDogEdit(idx) {
   set('dog-edit-puce', d.numero_puce || '');
   set('dog-edit-vaccins', boolSel(d.vaccins_ok));
   set('dog-edit-assurance', boolSel(d.assurance_ok));
+  set('dog-edit-veto', d.veterinaire || '');
+  set('dog-edit-veto-tel', d.veterinaire_tel || '');
+  set('dog-edit-allergies', d.allergies || '');
+  set('dog-edit-medicaments', d.medicaments || '');
+  set('dog-edit-pathologies', d.pathologies || '');
   dogFillComportement(d.comportement || '');
   set('dog-edit-notes', d.notes_sante || '');
   var rdd = document.getElementById('dog-race-dropdown'); if (rdd) rdd.style.display = 'none';
@@ -4508,7 +4549,8 @@ function openDogAdd() {
   var t = document.getElementById('dog-modal-title'); if (t) t.textContent = 'Ajouter un chien';
   function set(id, val) { var e = document.getElementById(id); if (e) e.value = (val == null ? '' : val); }
   ['dog-edit-prenom','dog-edit-race','dog-edit-poids','dog-edit-sexe','dog-edit-naissance',
-   'dog-edit-sterilise','dog-edit-puce','dog-edit-vaccins','dog-edit-assurance','dog-edit-notes']
+   'dog-edit-sterilise','dog-edit-puce','dog-edit-vaccins','dog-edit-assurance','dog-edit-notes',
+   'dog-edit-veto','dog-edit-veto-tel','dog-edit-allergies','dog-edit-medicaments','dog-edit-pathologies']
     .forEach(function(id) { set(id, ''); });
   dogFillComportement('');
   var rdd = document.getElementById('dog-race-dropdown'); if (rdd) rdd.style.display = 'none';
@@ -4565,6 +4607,11 @@ async function saveDogEdit() {
       sterilise: triA('dog-edit-sterilise'),
       vaccins_ok: triA('dog-edit-vaccins'),
       assurance_ok: triA('dog-edit-assurance'),
+      veterinaire: valA('dog-edit-veto') || null,
+      veterinaire_tel: valA('dog-edit-veto-tel') || null,
+      allergies: valA('dog-edit-allergies') || null,
+      medicaments: valA('dog-edit-medicaments') || null,
+      pathologies: valA('dog-edit-pathologies') || null,
       // Grand gabarit automatique : race grand gabarit OU poids >= 35 kg
       grand_chien: dogComputeGrand(raceA, poidsA)
     };
@@ -4624,7 +4671,12 @@ async function saveDogEdit() {
     sexe: val('dog-edit-sexe') || null,
     date_naissance: val('dog-edit-naissance') || null,
     comportement: dogReadComportement(),
-    notes_sante: val('dog-edit-notes') || null
+    notes_sante: val('dog-edit-notes') || null,
+    veterinaire: val('dog-edit-veto') || null,
+    veterinaire_tel: val('dog-edit-veto-tel') || null,
+    allergies: val('dog-edit-allergies') || null,
+    medicaments: val('dog-edit-medicaments') || null,
+    pathologies: val('dog-edit-pathologies') || null
   };
   var poids = val('dog-edit-poids');
   var poidsNum = poids !== '' ? parseFloat(poids.replace(',', '.')) : null;

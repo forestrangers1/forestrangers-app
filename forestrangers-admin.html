@@ -627,6 +627,47 @@ html.light .week-head.weekend .month-count { color: #5a9ae0 !important; }
 .form-control:focus { border-color: var(--accent); }
 select.form-control option { background: var(--k800); }
 textarea.form-control { resize: vertical; }
+
+/* ─── FICHE CHIEN (modal) — mêmes contrôles que l'espace client ─── */
+#modal-chien .ch-section {
+  font-family:Norwester,Oswald,Arial Narrow,sans-serif; font-size:10px; font-weight:800;
+  letter-spacing:.1em; text-transform:uppercase; color:var(--accent);
+  margin:18px 0 10px; padding-top:14px; border-top:1px solid var(--border);
+}
+#modal-chien .ch-photo {
+  width:76px; height:76px; border-radius:14px; flex-shrink:0; overflow:hidden; cursor:pointer;
+  background:var(--surface2); border:1.5px dashed var(--border2);
+  display:flex; align-items:center; justify-content:center;
+}
+#modal-chien .ch-photo img { width:100%; height:100%; object-fit:cover; }
+#modal-chien .ch-photo svg { width:24px; height:24px; color:var(--text-faint); }
+#modal-chien .ch-behavior-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+#modal-chien .ch-behavior-item {
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:8px 11px;
+}
+#modal-chien .ch-behavior-label { font-size:12.5px; color:var(--text); }
+#modal-chien .ch-behavior-item.important { background:var(--accent-dim); border-color:rgba(255,95,31,0.5); }
+#modal-chien .ch-behavior-item.important .ch-behavior-label { font-weight:800; color:var(--accent); }
+#modal-chien .ch-toggle {
+  width:40px; height:22px; border-radius:11px; background:var(--border2);
+  position:relative; cursor:pointer; transition:background .2s; flex-shrink:0;
+}
+#modal-chien .ch-toggle.on { background:var(--accent); }
+#modal-chien .ch-toggle .toggle-knob {
+  position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%;
+  background:#fff; transition:transform .2s; box-shadow:0 1px 3px rgba(0,0,0,.2);
+}
+#modal-chien .ch-toggle.on .toggle-knob { transform:translateX(18px); }
+#modal-chien .ch-laisse-pills { display:flex; gap:6px; flex-wrap:wrap; }
+#modal-chien .ch-laisse-pill {
+  padding:6px 14px; border-radius:20px; border:1.5px solid var(--border2); background:var(--surface2);
+  font-size:12px; font-weight:600; cursor:pointer; color:var(--text-dim); transition:all .15s;
+}
+#modal-chien .ch-laisse-pill.selected { background:var(--accent); border-color:var(--accent); color:#fff; }
+#modal-chien #ch-energy-slider { width:100%; margin:6px 0 2px; accent-color:var(--accent); }
+#modal-chien .ch-energy-labels { display:flex; justify-content:space-between; font-size:10px; color:var(--text-faint); }
+@media (max-width:520px) { #modal-chien .ch-behavior-grid { grid-template-columns:1fr; } }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
 /* ─── MODAL ─── */
@@ -2689,9 +2730,23 @@ function ouvrirFicheChien(id) {
   set('ch-poids', d.poids_kg);
   set('ch-puce', d.numero_puce);
   set('ch-sterilise', d.sterilise === true ? 'true' : (d.sterilise === false ? 'false' : ''));
-  set('ch-vaccins', d.vaccins === true ? 'true' : (d.vaccins === false ? 'false' : ''));
-  set('ch-comportement', d.comportement);
+  function tri(v) { return v === true ? 'true' : (v === false ? 'false' : ''); }
+  // vaccins_ok est la colonne lue par l'espace client ; « vaccins » n'existe pas.
+  set('ch-vaccins', tri(d.vaccins_ok));
+  set('ch-assurance', tri(d.assurance_ok));
+  set('ch-veto', d.veterinaire);
+  set('ch-veto-tel', d.veterinaire_tel);
+  set('ch-allergies', d.allergies);
+  set('ch-medicaments', d.medicaments);
+  set('ch-pathologies', d.pathologies);
+  chFillComportement(d.comportement || '');
   set('ch-notes', d.notes_sante);
+
+  // Photo
+  chPhotoEnAttente = null;
+  var pi = document.getElementById('ch-photo-input'); if (pi) pi.value = '';
+  var box = document.getElementById('ch-photo-box');
+  if (box) box.innerHTML = d.photo_url ? '<img src="' + d.photo_url + '" alt="">' : CH_PHOTO_VIDE;
 
   var proprio = d.clients ? ((d.clients.prenom || '') + ' ' + (d.clients.nom || '')).trim() : '—';
   var num = (d.clients && d.clients.numero_client) ? ' · #' + d.clients.numero_client : '';
@@ -2720,29 +2775,151 @@ async function enregistrerChien() {
   var id = document.getElementById('ch-id').value;
   var nom = document.getElementById('ch-nom').value.trim();
   if (!nom) { showToastAdmin('Le nom est obligatoire', 'amber'); return; }
-  function v(elId) { return (document.getElementById(elId).value || '').trim(); }
+  function v(elId) { var el = document.getElementById(elId); return el ? String(el.value || '').trim() : ''; }
   function boolOuNull(elId) { var x = v(elId); return x === '' ? null : (x === 'true'); }
   var poids = parseFloat(v('ch-poids'));
+  var race = v('ch-race');
+  // Grand gabarit : race grand gabarit OU poids >= 35 kg (même règle que l'espace client)
+  var raceGrande = await chRaceEstGrande(race);
   var ligne = {
     nom: nom,
-    race: v('ch-race') || null,
+    race: race || null,
     sexe: v('ch-sexe') || null,
     date_naissance: v('ch-naissance') || null,
     poids_kg: isNaN(poids) ? null : poids,
     numero_puce: v('ch-puce').replace(/\s/g, '') || null,
     sterilise: boolOuNull('ch-sterilise'),
-    vaccins: boolOuNull('ch-vaccins'),
-    grand_chien: isNaN(poids) ? null : (poids >= 35),
-    comportement: v('ch-comportement') || null,
+    vaccins_ok: boolOuNull('ch-vaccins'),
+    assurance_ok: boolOuNull('ch-assurance'),
+    veterinaire: v('ch-veto') || null,
+    veterinaire_tel: v('ch-veto-tel') || null,
+    allergies: v('ch-allergies') || null,
+    medicaments: v('ch-medicaments') || null,
+    pathologies: v('ch-pathologies') || null,
+    grand_chien: raceGrande || (!isNaN(poids) && poids >= 35),
+    comportement: chReadComportement(),
     notes_sante: v('ch-notes') || null
   };
+  // Ne jamais écrire une colonne absente (migration v30 pas encore passée) :
+  // on ne garde que celles présentes dans la ligne chargée.
+  var d = allChiens.filter(function(x) { return String(x.id) === String(id); })[0] || {};
+  var manquantes = [];
+  Object.keys(ligne).forEach(function(k) { if (!(k in d)) { manquantes.push(k); delete ligne[k]; } });
   try {
+    if (chPhotoEnAttente && ('photo_url' in d)) {
+      try {
+        var ext = (chPhotoEnAttente.name.split('.').pop() || 'jpg').toLowerCase();
+        var path = (d.client_id || 'admin') + '/' + id + '-' + Date.now() + '.' + ext;
+        var up = await db.storage.from('chiens-photos').upload(path, chPhotoEnAttente, { upsert: true, contentType: chPhotoEnAttente.type });
+        if (up.error) throw up.error;
+        ligne.photo_url = db.storage.from('chiens-photos').getPublicUrl(path).data.publicUrl;
+      } catch(pe) {
+        console.log('Photo chien (admin):', pe);
+        showToastAdmin('Photo non envoyée — le reste est enregistré', 'amber');
+      }
+    }
     var r = await db.from('chiens').update(ligne).eq('id', id);
     if (r.error) throw r.error;
+    chPhotoEnAttente = null;
     document.getElementById('modal-chien').classList.remove('open');
-    showToastAdmin('✓ Fiche de ' + nom + ' mise à jour', 'green');
+    if (manquantes.length) {
+      console.log('Colonnes absentes, non enregistrées :', manquantes.join(', '));
+      showToastAdmin('✓ Enregistré — lancez la migration v30 pour les champs santé', 'amber');
+    } else {
+      showToastAdmin('✓ Fiche de ' + nom + ' mise à jour', 'green');
+    }
     loadChiens();
   } catch(e) { showToastAdmin('Erreur : ' + (e.message || e), 'red'); }
+}
+
+// ── Fiche chien : photo, comportement, gabarit ──
+var CH_PHOTO_VIDE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
+var chPhotoEnAttente = null;
+function onChienPhotoAdmin(e) {
+  var f = e.target.files && e.target.files[0];
+  if (!f) return;
+  chPhotoEnAttente = f;
+  var box = document.getElementById('ch-photo-box');
+  if (box) box.innerHTML = '<img src="' + URL.createObjectURL(f) + '" alt="">';
+}
+
+async function chRaceEstGrande(race) {
+  if (!race) return false;
+  try {
+    var r = await db.from('races').select('grand_gabarit').ilike('nom', race).limit(1);
+    return !!(r.data && r.data[0] && r.data[0].grand_gabarit);
+  } catch(e) { return false; }
+}
+
+// Le comportement est stocké en texte, au format de l'inscription et de
+// l'espace client : « Rappel fiable, Adore l'eau · Peurs : orage ·
+// Marche en laisse : Bien · Énergie : Moyen ». Toute mention qui ne
+// correspond à aucune case (ancien texte libre saisi dans l'admin) est
+// placée dans « Autres observations » et réécrite telle quelle : rien
+// n'est perdu à l'enregistrement.
+var CH_ENERGY_LABELS = ['', 'Très calme', 'Calme', 'Moyen', 'Énergique', 'Très énergique'];
+function chToggle(el) { el.classList.toggle('on'); }
+function chSelectLaisse(el) {
+  var deja = el.classList.contains('selected');
+  document.querySelectorAll('#ch-laisse-pills .ch-laisse-pill').forEach(function(p) { p.classList.remove('selected'); });
+  if (!deja) el.classList.add('selected');
+}
+function chUpdateEnergy(val) {
+  var e = document.getElementById('ch-energy-label'); if (e) e.textContent = CH_ENERGY_LABELS[val] || '';
+}
+function chFillComportement(str) {
+  document.querySelectorAll('#ch-behavior-grid .ch-toggle').forEach(function(t) { t.classList.remove('on'); });
+  document.querySelectorAll('#ch-laisse-pills .ch-laisse-pill').forEach(function(p) { p.classList.remove('selected'); });
+  var peurs = document.getElementById('ch-peurs'); if (peurs) peurs.value = '';
+  var autresEl = document.getElementById('ch-comportement-autres'); if (autresEl) autresEl.value = '';
+  var slider = document.getElementById('ch-energy-slider'); if (slider) slider.value = 3;
+  chUpdateEnergy(3);
+  var energieConnue = false, autres = [];
+  String(str || '').split(' · ').forEach(function(seg) {
+    seg = seg.trim();
+    if (!seg) return;
+    if (seg.indexOf('Peurs : ') === 0) { if (peurs) peurs.value = seg.slice(8).trim(); }
+    else if (seg.indexOf('Marche en laisse : ') === 0) {
+      var val = seg.slice(19).trim(), trouve = false;
+      document.querySelectorAll('#ch-laisse-pills .ch-laisse-pill').forEach(function(p) { if (p.textContent.trim() === val) { p.classList.add('selected'); trouve = true; } });
+      if (!trouve) autres.push(seg);
+    } else if (seg.indexOf('Énergie : ') === 0) {
+      var idx = CH_ENERGY_LABELS.indexOf(seg.slice(10).trim());
+      if (idx > 0) { if (slider) slider.value = idx; chUpdateEnergy(idx); energieConnue = true; }
+      else autres.push(seg);
+    } else {
+      seg.split(',').forEach(function(nomCase) {
+        nomCase = nomCase.trim(); if (!nomCase) return;
+        var coche = false;
+        document.querySelectorAll('#ch-behavior-grid .ch-behavior-item').forEach(function(it) {
+          var lbl = it.querySelector('.ch-behavior-label'), tg = it.querySelector('.ch-toggle');
+          if (lbl && tg && lbl.textContent.trim() === nomCase) { tg.classList.add('on'); coche = true; }
+        });
+        if (!coche) autres.push(nomCase);
+      });
+    }
+  });
+  if (autresEl) autresEl.value = autres.join(', ');
+  // Énergie jamais renseignée : le curseur reste au milieu mais n'est pas
+  // enregistré tant que l'admin n'y touche pas.
+  if (slider) slider.dataset.touche = energieConnue ? '1' : '';
+}
+function chReadComportement() {
+  var parts = [], on = [];
+  document.querySelectorAll('#ch-behavior-grid .ch-behavior-item').forEach(function(it) {
+    var lbl = it.querySelector('.ch-behavior-label'), tg = it.querySelector('.ch-toggle');
+    if (lbl && tg && tg.classList.contains('on')) on.push(lbl.textContent.trim());
+  });
+  if (on.length) parts.push(on.join(', '));
+  var peurs = (document.getElementById('ch-peurs') || {}).value;
+  if (peurs && peurs.trim()) parts.push('Peurs : ' + peurs.trim());
+  var laisse = document.querySelector('#ch-laisse-pills .ch-laisse-pill.selected');
+  if (laisse) parts.push('Marche en laisse : ' + laisse.textContent.trim());
+  var slider = document.getElementById('ch-energy-slider');
+  if (slider && slider.dataset.touche) parts.push('Énergie : ' + (CH_ENERGY_LABELS[slider.value] || 'Moyen'));
+  var autres = (document.getElementById('ch-comportement-autres') || {}).value;
+  if (autres && autres.trim()) parts.push(autres.trim());
+  return parts.join(' · ') || null;
 }
 
 async function archiverChien() {
@@ -4797,7 +4974,17 @@ if ('serviceWorker' in navigator) {
     </div>
     <input type="hidden" id="ch-id">
 
-    <div style="font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);margin-bottom:8px;">Identité</div>
+    <!-- Fiche alignée sur l'inscription et l'espace client (migration v30) -->
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+      <label class="ch-photo" for="ch-photo-input" id="ch-photo-box" title="Changer la photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></label>
+      <input type="file" id="ch-photo-input" accept="image/*" style="display:none;" onchange="onChienPhotoAdmin(event)">
+      <div style="flex:1;font-size:11.5px;color:var(--text-faint);line-height:1.5;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;">Photo du chien</div>
+        Cliquez sur le carré pour la remplacer. Elle sera visible par le client.
+      </div>
+    </div>
+
+    <div class="ch-section">Identité</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
       <div class="form-group"><label class="form-label">Nom</label><input class="form-control" id="ch-nom" style="width:100%;"></div>
       <div class="form-group"><label class="form-label">Race</label><input class="form-control" id="ch-race" style="width:100%;"></div>
@@ -4813,30 +5000,75 @@ if ('serviceWorker' in navigator) {
       <div class="form-group"><label class="form-label">Poids (kg)</label><input type="number" step="0.1" min="0" class="form-control" id="ch-poids" oninput="majGabaritChien()" style="width:100%;"></div>
     </div>
     <div id="ch-gabarit" style="font-size:11.5px;color:var(--text-faint);margin:-4px 0 12px;"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:10px;">
       <div class="form-group">
         <label class="form-label">Stérilisé(e)</label>
         <select class="form-control" id="ch-sterilise" style="width:100%;">
           <option value="">—</option><option value="true">Oui</option><option value="false">Non</option>
         </select>
       </div>
+      <div class="form-group"><label class="form-label">N° de puce</label><input class="form-control" id="ch-puce" inputmode="numeric" maxlength="15" style="width:100%;"></div>
+    </div>
+
+    <div class="ch-section">Santé</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <div class="form-group">
         <label class="form-label">Vaccins à jour</label>
         <select class="form-control" id="ch-vaccins" style="width:100%;">
           <option value="">—</option><option value="true">Oui</option><option value="false">Non</option>
         </select>
       </div>
-      <div class="form-group"><label class="form-label">N° de puce</label><input class="form-control" id="ch-puce" inputmode="numeric" maxlength="15" style="width:100%;"></div>
+      <div class="form-group">
+        <label class="form-label">Assurance</label>
+        <select class="form-control" id="ch-assurance" style="width:100%;">
+          <option value="">—</option><option value="true">Oui</option><option value="false">Non</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="form-group"><label class="form-label">Vétérinaire</label><input class="form-control" id="ch-veto" style="width:100%;"></div>
+      <div class="form-group"><label class="form-label">Tél. vétérinaire</label><input class="form-control" id="ch-veto-tel" type="tel" style="width:100%;"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Allergies</label><input class="form-control" id="ch-allergies" style="width:100%;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="form-group"><label class="form-label">Médicaments en cours</label><textarea class="form-control" id="ch-medicaments" style="width:100%;min-height:58px;" placeholder="Nom, dosage, fréquence..."></textarea></div>
+      <div class="form-group"><label class="form-label">Pathologies / Antécédents</label><textarea class="form-control" id="ch-pathologies" style="width:100%;min-height:58px;"></textarea></div>
     </div>
 
-    <div style="font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);margin-bottom:8px;">Santé &amp; comportement</div>
-    <div class="form-group" style="margin-bottom:10px;">
-      <label class="form-label">Comportement</label>
-      <textarea class="form-control" id="ch-comportement" style="width:100%;min-height:60px;resize:vertical;" placeholder="Liberté autorisée, rappel fiable, marche en laisse, énergie..."></textarea>
+    <div class="ch-section">Comportement</div>
+    <div class="ch-behavior-grid" id="ch-behavior-grid" style="margin-bottom:12px;">
+        <div class="ch-behavior-item"><div class="ch-behavior-label">Liberté autorisée</div><div class="ch-toggle" onclick="chToggle(this)"><div class="toggle-knob"></div></div></div>
+        <div class="ch-behavior-item"><div class="ch-behavior-label">Protection nourriture</div><div class="ch-toggle" onclick="chToggle(this)"><div class="toggle-knob"></div></div></div>
+        <div class="ch-behavior-item"><div class="ch-behavior-label">Rappel fiable</div><div class="ch-toggle" onclick="chToggle(this)"><div class="toggle-knob"></div></div></div>
+        <div class="ch-behavior-item"><div class="ch-behavior-label">Dominant</div><div class="ch-toggle" onclick="chToggle(this)"><div class="toggle-knob"></div></div></div>
+        <div class="ch-behavior-item"><div class="ch-behavior-label">Instinct chasseur</div><div class="ch-toggle" onclick="chToggle(this)"><div class="toggle-knob"></div></div></div>
+        <div class="ch-behavior-item"><div class="ch-behavior-label">Sociable avec femelles</div><div class="ch-toggle" onclick="chToggle(this)"><div class="toggle-knob"></div></div></div>
+        <div class="ch-behavior-item"><div class="ch-behavior-label">Réactif en laisse</div><div class="ch-toggle" onclick="chToggle(this)"><div class="toggle-knob"></div></div></div>
+        <div class="ch-behavior-item"><div class="ch-behavior-label">Sociable avec mâles</div><div class="ch-toggle" onclick="chToggle(this)"><div class="toggle-knob"></div></div></div>
+        <div class="ch-behavior-item"><div class="ch-behavior-label">Adore l'eau</div><div class="ch-toggle" onclick="chToggle(this)"><div class="toggle-knob"></div></div></div>
+        <div class="ch-behavior-item important"><div class="ch-behavior-label">Rescue dog</div><div class="ch-toggle" onclick="chToggle(this)"><div class="toggle-knob"></div></div></div>
     </div>
+    <div class="form-group"><label class="form-label">Peurs / Phobies</label><input class="form-control" id="ch-peurs" style="width:100%;"></div>
+    <div class="form-group">
+      <label class="form-label">Marche en laisse</label>
+      <div class="ch-laisse-pills" id="ch-laisse-pills">
+        <div class="ch-laisse-pill" onclick="chSelectLaisse(this)">Bien</div>
+        <div class="ch-laisse-pill" onclick="chSelectLaisse(this)">À améliorer</div>
+        <div class="ch-laisse-pill" onclick="chSelectLaisse(this)">Tire fort</div>
+        <div class="ch-laisse-pill" onclick="chSelectLaisse(this)">Harnais requis</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Niveau d'énergie</label>
+      <input type="range" min="1" max="5" value="3" id="ch-energy-slider" oninput="chUpdateEnergy(this.value);this.dataset.touche='1'">
+      <div class="ch-energy-labels"><span>Très calme</span><span id="ch-energy-label" style="color:var(--accent);font-weight:700;">Moyen</span><span>Très énergique</span></div>
+    </div>
+    <div class="form-group"><label class="form-label">Autres observations</label><input class="form-control" id="ch-comportement-autres" style="width:100%;" placeholder="Ce qui ne rentre dans aucune case ci-dessus"></div>
+
+    <div class="ch-section">Remarques</div>
     <div class="form-group" style="margin-bottom:16px;">
-      <label class="form-label">Notes de santé</label>
-      <textarea class="form-control" id="ch-notes" style="width:100%;min-height:70px;resize:vertical;" placeholder="Allergies, traitements, pathologies, vétérinaire..."></textarea>
+      <label class="form-label">Remarques importantes</label>
+      <textarea class="form-control" id="ch-notes" style="width:100%;min-height:64px;resize:vertical;" placeholder="Habitudes, consignes particulières, petites manies..."></textarea>
     </div>
 
     <div style="display:flex;gap:8px;">

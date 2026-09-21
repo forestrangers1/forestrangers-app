@@ -1667,6 +1667,17 @@ function openChienDetail(chienId) {
     + '<strong>Âge</strong> ' + ageTxt + '<br>'
     + '<strong>Gabarit</strong> ' + (d.grand_chien ? 'Grand chien (35kg et +)' : 'Petit / moyen gabarit')
     + (d.chien_dangereux ? '<br><span style="color:var(--red);">⚠ Désigné comme chien dangereux</span>' : '');
+  // Santé et comportement (migration v30) — mêmes informations que l'inscription
+  function h(v) { return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function ligne(lbl, v) { return v ? '<br><strong>' + lbl + '</strong> ' + h(v) : ''; }
+  var veto = d.veterinaire ? h(d.veterinaire) : '';
+  if (d.veterinaire_tel) veto += (veto ? ' · ' : '') + '<a href="tel:' + String(d.veterinaire_tel).replace(/[^+\d]/g, '') + '" style="color:var(--accent);">' + h(d.veterinaire_tel) + '</a>';
+  infos += ligne('N° de puce', d.numero_puce)
+    + (veto ? '<br><strong>Vétérinaire</strong> ' + veto : '')
+    + ligne('Allergies', d.allergies)
+    + ligne('Médicaments', d.medicaments)
+    + ligne('Pathologies', d.pathologies)
+    + ligne('Comportement', d.comportement);
   document.getElementById('chien-detail-infos').innerHTML = infos;
 
   document.getElementById('chien-detail-notes').value = d.notes_sante || '';
