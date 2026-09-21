@@ -365,6 +365,8 @@ html.light .total-block  { background: #ffffff; border-color: rgba(0,0,0,0.08); 
 html.light .actions-bar  { background: #f6f7f2; border-top-color: rgba(0,0,0,0.08); }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="fr-calendrier.js"></script>
+  <script src="fr-facturation.js"></script>
 <!-- Repli CDN : si jsDelivr n'a pas repondu, on tente unpkg avant d'abandonner. -->
 <script>if (!window.supabase) { document.write('<scr' + 'ipt src="https://unpkg.com/@supabase/supabase-js@2"><\/scr' + 'ipt>'); }</script>
   <script>
@@ -551,9 +553,10 @@ html.light .actions-bar  { background: #f6f7f2; border-top-color: rgba(0,0,0,0.0
                   <option value="walking">Dog Walking</option>
                   <option value="daycare">Day Care</option>
                   <option value="boarding">Boarding</option>
+                  <option value="deplacement">Frais de déplacement inutile</option>
                 </select>
               </div>
-              <div class="form-group">
+              <div class="form-group" id="add-line-chien-group">
                 <label class="form-label">Chien</label>
                 <select class="form-input" id="add-line-chien"></select>
               </div>
@@ -793,16 +796,15 @@ function periodeLabel(periode) {
 // ════════════════════════════════════════
 // ── TARIFS (alignés sur la fiche client) ──
 // ════════════════════════════════════════
+// Tarifs TTC du client (grille de Paramètres ou tarif sur mesure), via
+// fr-facturation.js — plus de valeurs écrites en dur ici.
 function getTarifs(c) {
-  var def = c.client_fidele
-    ? { walking: 28, daycare: 55, boarding: 68, reduction: 50 }
-    : { walking: 30, daycare: 60, boarding: 75, reduction: 30 };
-  return {
-    walking:   c.tarif_walking   != null ? parseFloat(c.tarif_walking)   : def.walking,
-    daycare:   c.tarif_daycare   != null ? parseFloat(c.tarif_daycare)   : def.daycare,
-    boarding:  c.tarif_boarding  != null ? parseFloat(c.tarif_boarding)  : def.boarding,
-    reduction: c.tarif_reduction != null ? parseFloat(c.tarif_reduction) : def.reduction
-  };
+  if (window.FR_FACT) {
+    var fin = (document.getElementById('facture-periode-input') || {}).value;
+    var b = fin ? FR_FACT.periodeMois(fin) : null;
+    return FR_FACT.tarifsPour(c, b ? b.fin : new Date().toISOString().slice(0, 10));
+  }
+  return { walking: 0, daycare: 0, boarding: 0, reduction: 0 };
 }
 // Liste des dates (ou nuits, pour le boarding) facturables d'une réservation sur une période donnée
 function occurrenceDates(r, periodStart, periodEnd) {
@@ -877,12 +879,14 @@ function renderInvoiceTable() {
     var subColor = isRed ? 'color:#e57373;' : isGreen ? 'color:#2e7d32;' : '';
     var priceColor = isRed ? 'color:#c62828;font-weight:700;' : isGreen ? 'color:#2e7d32;font-weight:700;' : '';
     var rate = it.tvaRate != null ? it.tvaRate : TVA_RATES.default;
-    var tvaAmount = it.total * (rate / 100);
-    var totalTtcLigne = it.total + tvaAmount;
+    // Prix TTC : on affiche le prix unitaire HT et la TVA contenue
+    var totalTtcLigne = it.total;
+    var tvaAmount = it.total - it.total / (1 + rate / 100);
+    var prixUnitHt = it.prixUnit / (1 + rate / 100);
     return '<tr style="' + rowStyle + '">'
       + '<td><div class="inv-td-service" style="' + serviceColor + '">' + it.label + '</div>' + (it.sousLabel ? '<div class="inv-td-date" style="' + subColor + '">' + it.sousLabel + '</div>' : '') + (it.discountNote ? '<div class="inv-td-date" style="color:#2e7d32;">' + it.discountNote + '</div>' : '') + '</td>'
       + '<td style="color:#888;font-size:12px;">' + it.qte + '</td>'
-      + '<td style="' + (isRed ? 'color:#c62828;' : 'color:#888;') + '">' + eur(it.prixUnit) + '</td>'
+      + '<td style="' + (isRed ? 'color:#c62828;' : 'color:#888;') + '">' + eur(prixUnitHt) + '</td>'
       + '<td style="' + (isRed ? 'color:#c62828;' : 'color:#888;') + 'font-size:12px;">' + eur(tvaAmount) + ' <span style="font-size:9px;color:#aaa;">(' + rate + '%)</span></td>'
       + '<td style="' + priceColor + '">' + eur(totalTtcLigne) + '</td>'
       + '</tr>';
@@ -933,24 +937,22 @@ function applyStoredTotals() {
 function recalculateTotals() {
   if (useStoredTotals && currentFacture) return applyStoredTotals();
 
-  var subtotal = lineItemsData.reduce(function(s, it) { return s + it.total; }, 0);
+  // Tous les prix sont TTC (Paramètres). La TVA est EXTRAITE du total TTC,
+  // jamais ajoutée par-dessus ; les frais de dossier (hors TVA) viennent après.
+  var r2 = function(x) { return Math.round(x * 100) / 100; };
+  var taux = TVA_RATES.default / 100;
+  var lignesTtc = lineItemsData.reduce(function(s, it) { return s + it.total; }, 0);
   var horsZoneUnit = parseFloat(document.getElementById('facture-horszone-select').value) || 0;
-  var horsZoneTotal = horsZoneUnit * horsZoneCount;
-  var totalHt = subtotal + horsZoneTotal;
-
+  var horsZoneTtc = horsZoneUnit * horsZoneCount;
+  var servicesTtc = r2(lignesTtc + horsZoneTtc);
+  var totalHt = r2(servicesTtc / (1 + taux));
+  var subtotal = r2(lignesTtc / (1 + taux));
+  var horsZoneTotal = r2(totalHt - subtotal);
   var tvaByRate = {};
-  lineItemsData.forEach(function(it) {
-    var rate = it.tvaRate != null ? it.tvaRate : TVA_RATES.default;
-    tvaByRate[rate] = (tvaByRate[rate] || 0) + it.total * (rate / 100);
-  });
-  if (horsZoneTotal > 0) {
-    var hzRate = TVA_RATES.default;
-    tvaByRate[hzRate] = (tvaByRate[hzRate] || 0) + horsZoneTotal * (hzRate / 100);
-  }
-  var totalTva = Object.keys(tvaByRate).reduce(function(s, r) { return s + tvaByRate[r]; }, 0);
+  tvaByRate[TVA_RATES.default] = r2(servicesTtc - totalHt);
 
   var fraisRappel = parseFloat(document.getElementById('facture-rappel-select').value) || 0;
-  var totalTtc = totalHt + totalTva + fraisRappel;
+  var totalTtc = r2(servicesTtc + fraisRappel);
 
   document.getElementById('subtotal').textContent = eur(subtotal);
   document.getElementById('inv-subtotal').textContent = eur(subtotal);
@@ -962,7 +964,7 @@ function recalculateTotals() {
     invRowHZ.style.display = '';
     document.getElementById('supplement-zone').textContent = '+' + eur(horsZoneTotal);
     document.getElementById('inv-hors-zone').textContent = '+' + eur(horsZoneTotal);
-    document.getElementById('inv-hors-zone-detail').textContent = horsZoneCount + ' visite' + (horsZoneCount > 1 ? 's' : '') + ' × ' + eur(horsZoneUnit) + ' · par trajet';
+    document.getElementById('inv-hors-zone-detail').textContent = horsZoneCount + ' visite' + (horsZoneCount > 1 ? 's' : '') + ' × ' + eur(horsZoneUnit / (1 + taux)) + ' · par trajet';
   } else {
     rowHZ.style.display = 'none';
     invRowHZ.style.display = 'none';
@@ -999,6 +1001,7 @@ function parseNum(v) {
 
 // Unités par service (pour libellés de quantité)
 var UNITES = {
+  deplacement: { s: 'déplacement', p: 'déplacements' },
   walking:  { s: 'séance',  p: 'séances'  },
   daycare:  { s: 'journée', p: 'journées' },
   boarding: { s: 'nuit',    p: 'nuits'    }
@@ -1008,6 +1011,8 @@ function updateAddLineUnitLabel() {
   var svc = document.getElementById('add-line-service').value;
   var u = UNITES[svc] || UNITES.walking;
   document.getElementById('add-line-qte-label').textContent = 'Quantité (' + u.p + ')';
+  var gc = document.getElementById('add-line-chien-group');
+  if (gc) gc.style.display = (svc === 'deplacement') ? 'none' : '';
 }
 
 function toggleAddLineForm() {
@@ -1044,6 +1049,24 @@ function confirmAddLine() {
   qte = Math.round(qte);
 
   var tarifs     = getTarifs(currentClient);
+
+  // Déplacement inutile (chien absent, accès impossible…) : 5 € HT, soit 5,85 € TTC
+  if (service === 'deplacement') {
+    var fraisTtc = tarifs.frais_deplacement_ttc || 5.85;
+    var fraisHt  = tarifs.frais_deplacement_ht  || 5;
+    lineItemsData.push({
+      label: 'Frais de déplacement · déplacement inutile',
+      sousLabel: qte + ' ' + (qte > 1 ? 'déplacements' : 'déplacement') + ' · ' + eur(fraisHt) + ' HT l\'unité',
+      qte: qte, prixUnit: fraisTtc, total: Math.round(qte * fraisTtc * 100) / 100,
+      color: null, tvaRate: getTvaRate('frais_deplacement')
+    });
+    useStoredTotals = false;
+    renderLineItems();
+    recalculateTotals();
+    document.getElementById('add-line-form').style.display = 'none';
+    return;
+  }
+
   var prixBase   = tarifs[service] || 0;
   var prixReduit = prixBase * (1 - tarifs.reduction / 100);
   var svc = SVC_NAMES[service] || service;
@@ -1086,140 +1109,37 @@ function confirmAddLine() {
 // ── DEPUIS PLANNING (réservations réelles) ──
 // ════════════════════════════════════════
 async function chargerLignesPourPeriode(periodStart, periodEnd, annee, mois) {
-  var { data: resas, error } = await db.from('reservations')
-    .select('*')
-    .eq('client_id', currentClient.id)
-    .lte('date_debut', formatDateISO(periodEnd));
-  if (error) throw error;
-
-  var relevant = (resas || []).filter(function(r) {
-    if (!r.date_debut) return false;
-    var debut = new Date(r.date_debut + 'T00:00:00');
-    var finRef;
-    if (r.service === 'boarding') finRef = r.date_fin ? new Date(r.date_fin + 'T00:00:00') : debut;
-    else finRef = r.date_fin_recurrence ? new Date(r.date_fin_recurrence + 'T00:00:00') : debut;
-    if (finRef < periodStart || debut > periodEnd) return false;
-    if (r.statut === 'annule' && !((r.facture_pourcentage || 0) > 0)) return false;
-    return true;
-  });
-
-  var tarifs = getTarifs(currentClient);
-  var items = [];
+  // Calcul unique (fr-facturation.js) : le même que la facture automatique de
+  // l'admin et que l'estimation affichée au client. Rien n'est recalculé ici.
+  var debut = formatDateISO(periodStart), fin = formatDateISO(periodEnd);
   var moisLabel = MOIS_FR[mois - 1].charAt(0).toUpperCase() + MOIS_FR[mois - 1].slice(1) + ' ' + annee;
+  var calc = await FR_FACT.calculerClient(db, currentClient.id, debut, fin, { label: moisLabel });
 
-  // ── Pass 1 : dates d'occurrence par chien et par service (réservations actives uniquement) ──
-  // occSets['<chienId ou "tous">|<service>'] = Set des dates (ISO) facturables sur la période
-  var occSets = {};
-  relevant.forEach(function(r) {
-    if (r.statut === 'annule') return;
-    var dates = occurrenceDates(r, periodStart, periodEnd);
-    r._occDates = dates;
-    if (!dates.length) return;
-    var key = (r.chien_id || 'tous') + '|' + r.service;
-    if (!occSets[key]) occSets[key] = new Set();
-    dates.forEach(function(d) { occSets[key].add(d); });
-  });
-
-  // ── Pass 2 : annulations (lignes rouges) ──
-  // Affiche les vrais noms de chiens même pour une réservation "tous les chiens".
-  relevant.forEach(function(r) {
-    if (r.statut !== 'annule') return;
-    var chienNom = r.chien_id
-      ? (function() { var c = currentChiens.find(function(x) { return x.id === r.chien_id; }); return c ? c.nom : '—'; })()
-      : (currentChiens.length ? currentChiens.map(function(c) { return c.nom; }).join(' + ') : 'Tous les chiens');
-    var svc = SVC_NAMES[r.service] || r.service;
-    var prixBase = tarifs[r.service] || 0;
-    var pct = r.facture_pourcentage || 0;
-    var montant = prixBase * (pct / 100);
-    if (montant <= 0) return;
-    items.push({
-      label: 'Annulation' + (r.annulation_tardive ? ' tardive' : '') + ' · ' + svc + ' · ' + chienNom,
-      sousLabel: formatDateLongFR(r.date_debut) + ' · ' + pct + '% facturé (CGV)',
-      qte: 1, prixUnit: montant, total: montant, color: 'red', tvaRate: getTvaRate('annulation')
-    });
-  });
-
-  // ── Pass 3 : prestations actives, REGROUPÉES par occurrence co-présente ──
-  // Pour chaque service, on liste les chiens du foyer présents chaque jour facturable,
-  // puis on regroupe les jours partageant exactement le même groupe de chiens en UNE
-  // seule ligne. Un jour avec ≥2 chiens = 1 chien plein tarif + (n−1) chiens à −réduction%,
-  // facturés ENSEMBLE sur une seule ligne (ex. 42 € HT = 28 € + 14 €), avec mention verte.
-  // Une réservation "tous les chiens" (chien_id null) compte tous les chiens du client.
-  var presenceByService = {};
-  relevant.forEach(function(r) {
-    if (r.statut === 'annule') return;
-    var dates = r._occDates || [];
-    if (!dates.length) return;
-    if (!presenceByService[r.service]) presenceByService[r.service] = {};
-    var svcMap = presenceByService[r.service];
-    var dogIds = r.chien_id ? [r.chien_id] : currentChiens.map(function(c) { return c.id; });
-    dates.forEach(function(d) {
-      if (!svcMap[d]) svcMap[d] = [];
-      dogIds.forEach(function(id) { if (svcMap[d].indexOf(id) === -1) svcMap[d].push(id); });
-    });
-  });
-
-  Object.keys(presenceByService).forEach(function(service) {
-    var svcMap     = presenceByService[service];
-    var svc        = SVC_NAMES[service] || service;
-    var prixBase   = tarifs[service] || 0;
-    var prixReduit = prixBase * (1 - tarifs.reduction / 100);
-    var unite      = service === 'boarding' ? 'nuit'  : (service === 'daycare' ? 'journée'  : 'séance');
-    var unitePlur  = service === 'boarding' ? 'nuits' : (service === 'daycare' ? 'journées' : 'séances');
-
-    // Regroupe les dates par groupe de chiens identique (ordre = ordre des chiens du client)
-    var groups = {};
-    Object.keys(svcMap).forEach(function(d) {
-      var present = currentChiens.filter(function(c) { return svcMap[d].indexOf(c.id) !== -1; }).map(function(c) { return c.id; });
-      if (!present.length) return;
-      var sig = present.join('+');
-      if (!groups[sig]) groups[sig] = { dogIds: present, dates: [] };
-      groups[sig].dates.push(d);
-    });
-
-    Object.keys(groups).forEach(function(sig) {
-      var g = groups[sig];
-      var n = g.dates.length;
-      var nbDogs = g.dogIds.length;
-      var noms = g.dogIds.map(function(id) { var c = currentChiens.find(function(x) { return x.id === id; }); return c ? c.nom : '?'; });
-      var uLabel = moisLabel + ' · ' + n + ' ' + (n > 1 ? unitePlur : unite);
-
-      if (nbDogs <= 1) {
-        items.push({
-          label: svc + ' · ' + (noms[0] || '—'),
-          sousLabel: uLabel,
-          qte: n, prixUnit: prixBase, total: n * prixBase, color: null, tvaRate: getTvaRate(service)
-        });
-      } else {
-        // Une occurrence du groupe = plein tarif (1er chien) + tarif réduit (chiens suivants)
-        var combine = prixBase + prixReduit * (nbDogs - 1);
-        var detail = eur(prixBase) + ' + ' + (nbDogs - 1) + ' × ' + eur(prixReduit)
-                   + ' · 2e chien' + (nbDogs > 2 ? ' (et suivants)' : '') + ' −' + tarifs.reduction + '%';
-        items.push({
-          label: svc + ' · ' + noms.join(' + '),
-          sousLabel: uLabel,
-          discountNote: detail,
-          qte: n, prixUnit: combine, total: n * combine, color: null, tvaRate: getTvaRate(service)
-        });
+  var items = [], hz = 0;
+  calc.lignes.forEach(function(l) {
+    if (l.type === 'supplement') {                           // géré par le sélecteur hors zone
+      hz = l.qte;
+      var sel = document.getElementById('facture-horszone-select');
+      if (sel && sel.options[1]) {                            // montant du paramètre, pas « 5 » en dur
+        sel.options[1].value = String(l.prixUnit);
+        sel.options[1].textContent = '+' + eur(l.prixUnit).replace(',00', '') + ' / prestation';
+        sel.value = String(l.prixUnit);
       }
+      return;
+    }
+    items.push({
+      label: l.label,
+      sousLabel: l.sousLabel,
+      discountNote: l.discountNote || null,
+      qte: l.qte, prixUnit: l.prixUnit, total: l.total,
+      color: l.type === 'annulation' ? 'red' : null,
+      tvaRate: getTvaRate(l.type === 'annulation' ? 'annulation' : l.service)
     });
   });
-
-  // ── Supplément hors zone : +X € par trajet, donc par jour (et non par chien) ──
-  var horsZoneOcc = 0;
-  if (currentClient.hors_zone) {
-    ['walking', 'daycare'].forEach(function(service) {
-      var union = new Set();
-      Object.keys(occSets).forEach(function(key) {
-        if (key.split('|')[1] === service) occSets[key].forEach(function(d) { union.add(d); });
-      });
-      horsZoneOcc += union.size;
-    });
-  }
 
   useStoredTotals = false;
   lineItemsData = items;
-  horsZoneCount = horsZoneOcc;
+  horsZoneCount = hz;
   renderLineItems();
   recalculateTotals();
 }
@@ -1625,6 +1545,7 @@ function toggleMobilePreview() {
 // ── DÉMARRAGE ──
 // ════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async function() {
+  try { if (window.FR_FACT) await FR_FACT.chargerTarifs(db); } catch(e) {}
   initTheme();
   checkMobile();
   try {

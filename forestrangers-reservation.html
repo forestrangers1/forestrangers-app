@@ -534,6 +534,7 @@ html.dark .tbl th, html.dark .tbl td { border-color: rgba(255,255,255,0.08) !imp
   }
   </script>
   <script src="fr-calendrier.js"></script>
+  <script src="fr-facturation.js"></script>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#ff5f1f">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1233,14 +1234,28 @@ html.dark .tbl th, html.dark .tbl td { border-color: rgba(255,255,255,0.08) !imp
 
 <script>
 let currentService = null;
-const prices = { walking: 30, daycare: 60, boarding: 75 };
+// Prix TTC d'une séance pour CE client : grille fidèle / nouveau ou tarif
+// sur mesure, en vigueur aujourd'hui (fr-facturation.js). Les tarifs de
+// Paramètres sont TTC. Valeurs de secours tant que la grille n'est pas lue.
+let prices = { walking: 35, daycare: 65, boarding: 80 };
+let REDUCTION_2E = 30;   // remise sur chaque chien supplémentaire, en %
 
-// Prix d'UNE séance pour N chiens : 1er chien plein tarif, chaque chien
-// supplémentaire à -30%. Source unique utilisée par le récap ET le montant stocké.
+async function chargerPrixClient(clientRow) {
+  if (!window.FR_FACT) return;
+  try {
+    await FR_FACT.chargerTarifs(db);
+    const t = FR_FACT.tarifsPour(clientRow, new Date().toISOString().slice(0, 10));
+    prices = { walking: t.walking, daycare: t.daycare, boarding: t.boarding };
+    REDUCTION_2E = t.reduction;
+  } catch (e) { console.log('Grille tarifaire indisponible :', e); }
+}
+
+// Prix TTC d'UNE séance pour N chiens : 1er chien plein tarif, chaque chien
+// supplémentaire à −REDUCTION_2E %. Même règle que la facture (fr-facturation.js).
 function tarifSeance(svc, dogCount) {
   const p = prices[svc] || 0;
   const n = Math.max(1, dogCount || 1);
-  return p + (n - 1) * Math.round(p * 0.7);
+  return Math.round((p + (n - 1) * p * (1 - REDUCTION_2E / 100)) * 100) / 100;
 }
 const serviceNames = { walking: 'Dog Walking', daycare: 'Day Care', boarding: 'Boarding' };
 
@@ -1306,11 +1321,12 @@ async function loadProfileAndDogs() {
     const userId = session.session.user.id;
 
     const { data: client } = await db.from('clients')
-      .select('id, prenom, nom')
+      .select('id, prenom, nom, client_fidele, tarif_walking, tarif_daycare, tarif_boarding, tarif_reduction, hors_zone')
       .eq('auth_id', userId)
       .single();
     if (!client) return;
     clientId = client.id;
+    await chargerPrixClient(client);
 
     const { data: chiens, error: chiensErr } = await db.from('chiens')
       .select('id, nom, race, poids_kg, sexe, sterilise, chaleur_debut, chaleur_fin')
@@ -1812,12 +1828,12 @@ function buildRecap() {
     document.getElementById('recap-recur-row').style.display = 'none';
     document.getElementById('recap-nights').textContent = nights >= 2 ? `${nights} nuits` : 'À définir (min. 2 nuits)';
     const boDogCount = getSelectedDogs().length || 1;
-    const boPerNight = tarifSeance(svc, boDogCount); // 1re chien plein tarif, suivants −30%
+    const boPerNight = tarifSeance(svc, boDogCount); // 1er chien plein tarif, suivants −REDUCTION_2E %
     const boTotal = nights >= 2 ? nights * boPerNight : 0;
     const boFmt = (n) => n % 1 === 0 ? n + ' €' : n.toFixed(2).replace('.',',') + ' €';
-    const boDogNote = boDogCount > 1 ? ` · ${boDogCount} chiens (−30% dès le 2e)` : '';
+    const boDogNote = boDogCount > 1 ? ` · ${boDogCount} chiens (−${REDUCTION_2E} % dès le 2e)` : '';
     document.getElementById('recap-price').innerHTML = nights >= 2
-      ? `<span class="price-main">${boFmt(boPerNight)}</span><span class="price-breakdown">par nuit × ${nights} nuits${boDogNote}</span><span class="price-total-line">Total : ${boFmt(boTotal)}</span>`
+      ? `<span class="price-main">${boFmt(boPerNight)}</span><span class="price-breakdown">par nuit × ${nights} nuits${boDogNote} · TVA incluse</span><span class="price-total-line">Total : ${boFmt(boTotal)}</span>`
       : '<span class="price-main">—</span><span class="price-breakdown">Minimum 2 nuits requis</span>';
     document.getElementById('recap-validation').innerHTML = '<span class="badge b-amber">Validation Gabriel requise</span>';
     document.getElementById('boarding-manual-alert').classList.remove('hidden');
@@ -1867,14 +1883,14 @@ function buildRecap() {
           const perSeance = tarifSeance(svc, dogCount);
           const totalPrice = total * perSeance;
           const fmtR = (n) => n % 1 === 0 ? n + ' €' : n.toFixed(2).replace('.',',') + ' €';
-          const dogNote = dogCount > 1 ? ` · ${dogCount} chiens (−30% dès le 2e)` : '';
-          document.getElementById('recap-price').innerHTML = `<span class="price-main">${fmtR(perSeance)}</span><span class="price-breakdown">par séance × ${total} séances${dogNote}</span><span class="price-total-line">Total : ${fmtR(totalPrice)}</span>`;
+          const dogNote = dogCount > 1 ? ` · ${dogCount} chiens (−${REDUCTION_2E} % dès le 2e)` : '';
+          document.getElementById('recap-price').innerHTML = `<span class="price-main">${fmtR(perSeance)}</span><span class="price-breakdown">par séance × ${total} séances${dogNote} · TVA incluse</span><span class="price-total-line">Total : ${fmtR(totalPrice)}</span>`;
           if (priceLabel) priceLabel.textContent = 'Total estimé';
         } else {
-          document.getElementById('recap-price').textContent = `${prices[svc]} € / séance`;
+          document.getElementById('recap-price').textContent = ((p) => (p % 1 === 0 ? p : p.toFixed(2).replace('.', ',')) + ' € TTC / séance')(prices[svc]);
         }
       } else {
-        document.getElementById('recap-price').textContent = `${prices[svc]} € / séance`;
+        document.getElementById('recap-price').textContent = ((p) => (p % 1 === 0 ? p : p.toFixed(2).replace('.', ',')) + ' € TTC / séance')(prices[svc]);
       }
     } else {
       document.getElementById('recap-recur').textContent = 'Ponctuelle — une seule fois';
@@ -1883,10 +1899,10 @@ function buildRecap() {
     const totalPrice = tarifSeance(svc, dogCount);
     let priceNote = 'par séance';
     if (dogCount > 1) {
-      priceNote = `${dogCount} chiens · −30% dès le 2e chien`;
+      priceNote = `${dogCount} chiens · −${REDUCTION_2E} % dès le 2e chien`;
     }
     const fmt = (n) => n % 1 === 0 ? n + ' €' : n.toFixed(2).replace('.',',') + ' €';
-    document.getElementById('recap-price').innerHTML = `<span class="price-main">${fmt(totalPrice)}</span><span class="price-breakdown">${priceNote}</span>`;
+    document.getElementById('recap-price').innerHTML = `<span class="price-main">${fmt(totalPrice)}</span><span class="price-breakdown">${priceNote} · TVA incluse</span>`;
     }
 
     const dateVal = svc === 'walking'

@@ -874,6 +874,8 @@ html, body {
 .inv-doc .inv-tot.big { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 16px; font-weight: 800; border-top: 1.5px solid #1c1f14; margin-top: 6px; padding-top: 8px; }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="fr-calendrier.js"></script>
+  <script src="fr-facturation.js"></script>
 <!-- Repli CDN : si jsDelivr n'a pas repondu, on tente unpkg avant d'abandonner. -->
 <script>if (!window.supabase) { document.write('<scr' + 'ipt src="https://unpkg.com/@supabase/supabase-js@2"><\/scr' + 'ipt>'); }</script>
   <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
@@ -3286,11 +3288,13 @@ async function annulerResa(portee) {
 
   // Ce que ça change sur la facture, annoncé avant de confirmer
   var ligneTarif = '';
-  var mt = montantResa(r), nTot = nbChiensResa(r), nbS = occurrencesBrutes(r).length || 1;
-  if (mt && nTot > 1) {
-    var p = prixUnitaire(mt / nbS, nTot);
-    var avant = prixPourChiens(p, etAvant.actifs.length);
-    var apres = prixPourChiens(p, restants.length);
+  var nTot = nbChiensResa(r);
+  if (window.FR_FACT && nTot > 1) {
+    // Tarif du client à la date de la séance (fr-facturation.js), remise de Paramètres
+    var tf = FR_FACT.tarifsPour(clientData || {}, dateRef);
+    var base = tf[r.service] || 0;
+    var avant = FR_FACT.prixPourChiens(base, etAvant.actifs.length, tf.reduction);
+    var apres = FR_FACT.prixPourChiens(base, restants.length, tf.reduction);
     ligneTarif = '\n\nSéance concernée : ' + eur(avant) + ' → ' + eur(apres)
       + (partielle ? ' (le chien qui reste repasse au tarif plein)' : '');
   }
@@ -3298,8 +3302,14 @@ async function annulerResa(portee) {
   var quoi = partielle
     ? nomsAnnul.join(' + ') + ' (' + nomsRest.join(' + ') + ' maintenu' + (nomsRest.length > 1 ? 's' : '') + ')'
     : 'tous les chiens';
+  // Série déjà commencée : elle est arrêtée, pas effacée (master § 37)
+  var planArret = (portee !== 'occurrence' && window.FR_FACT) ? FR_FACT.planArretSerie(r, today) : null;
+  if (planArret && planArret.mode === 'rien') { showToast('Cette série est déjà terminée', true); return; }
   var msg = (portee === 'occurrence')
     ? 'Annuler la séance du ' + dateLongue(dateRef) + ' pour ' + quoi + ' ?\n\nLe reste de la récurrence est conservé.'
+    : (planArret && planArret.mode === 'arreter')
+    ? 'Arrêter la série à partir du ' + dateLongue(planArret.date) + ' pour ' + quoi + ' ?\n\n' + planArret.aVenir + ' séance' + (planArret.aVenir > 1 ? 's' : '') + ' à venir ' + (planArret.aVenir > 1 ? 'seront annulées' : 'sera annulée') + ' ; '
+      + planArret.tenues + ' séance' + (planArret.tenues > 1 ? 's' : '') + ' déjà effectuée' + (planArret.tenues > 1 ? 's restent dues.' : ' reste due.')
     : (occ.length > 1
         ? 'Annuler toute la série pour ' + quoi + ' ?\n\n' + occ.length + ' séances à venir seront annulées.'
         : 'Annuler cette réservation pour ' + quoi + ' ?');
@@ -3332,6 +3342,19 @@ async function annulerResa(portee) {
         + (partielle ? ' — ' + nomsRest.join(' + ') + ' maintenu' + (nomsRest.length > 1 ? 's' : '') : '')
         + (pol.pourcentage > 0 ? ' — facturation applicable : ' + pol.pourcentage + ' %.' : ' — dans les délais, sans frais.'));
       showToast('✓ Séance du ' + dateCourte(dateRef) + ' annulée pour ' + nomsAnnul.join(' + '));
+    } else if (planArret && planArret.mode === 'arreter') {
+      await FR_FACT.arreterSerie(db, cibles, planArret.date, { annule_par: 'client', tardive: pol.tardive, pct: pol.pourcentage });
+      cibles.forEach(function(y) {
+        y.date_fin = planArret.date; y.date_fin_recurrence = planArret.date;
+        var ex = datesExclues(y); if (ex.indexOf(planArret.date) === -1) ex.push(planArret.date);
+        y.dates_exclues = ex.join(',');
+      });
+      await previenirGabriel('Arrêt de la série ' + (SVC_NAMES[r.service] || r.service)
+        + ' à partir du ' + dateLongue(planArret.date) + ' pour ' + nomsAnnul.join(' + ')
+        + (partielle ? ' — ' + nomsRest.join(' + ') + ' maintenu' + (nomsRest.length > 1 ? 's' : '') : '')
+        + ' — ' + planArret.tenues + ' séance(s) effectuée(s) conservée(s)'
+        + (pol.pourcentage > 0 ? ' — séance du ' + dateLongue(planArret.date) + ' facturée à ' + pol.pourcentage + ' %.' : ' — dans les délais, sans frais.'));
+      showToast('✓ Série arrêtée à partir du ' + dateCourte(planArret.date));
     } else {
       for (var j = 0; j < cibles.length; j++) {
         var y = cibles[j];
@@ -3648,35 +3671,21 @@ async function loadMoisCourant(id) {
 
   var now = new Date();
   var an = now.getFullYear(), mois = now.getMonth();
-  var debut = new Date(an, mois, 1);
-  var debutMoisProchain = new Date(an, mois + 1, 1);
 
   try {
-    // Les annulations sont incluses : elles doivent apparaitre sur l'estimation,
-    // facturees ou non selon la regle appliquee par Gabriel.
-    var { data: resas, error } = await db.from('reservations')
-      .select('*')
-      .eq('client_id', id)
-      .gte('date_debut', isoDate(debut))
-      .lt('date_debut', isoDate(debutMoisProchain));
+    // Calcul unique (fr-facturation.js) : chaque séance du mois — y compris
+    // celles d'une série commencée le mois précédent — au tarif en vigueur
+    // le jour de la séance. C'est le montant que produira la facture.
+    if (!window.FR_FACT) { el.innerHTML = ''; moisCourantData = null; return; }
+    var b = FR_FACT.periodeMois(an + '-' + String(mois + 1).padStart(2, '0'));
+    var calc = await FR_FACT.calculerClient(db, id, b.debut, b.fin, { label: b.label });
+    var totalTTC = calc.total_ttc, nbSeances = calc.nb_seances, nbAnnulees = calc.nb_annulees;
+    if (!calc.lignes.length) { el.innerHTML = ''; moisCourantData = null; return; }
 
-    if (error) { console.log('Estimation mois en cours indisponible:', error.message); el.innerHTML = ''; moisCourantData = null; return; }
-    if (!resas || !resas.length) { el.innerHTML = ''; moisCourantData = null; return; }
+    moisCourantData = { mois: mois, an: an, totalTTC: totalTTC, totalHT: calc.total_ht, nbSeances: nbSeances, nbAnnulees: nbAnnulees, calc: calc };
 
-    var groupes = grouperResas(resas);
-    var totalTTC = 0, nbSeances = 0, nbAnnulees = 0;
-    groupes.forEach(function(g) {
-      var d = detailFacture(g);
-      totalTTC += d.du;
-      nbSeances += d.tenues;
-      nbAnnulees += d.lignes.length;
-    });
-    if (totalTTC <= 0 && !nbAnnulees) { el.innerHTML = ''; moisCourantData = null; return; }
-
-    moisCourantData = { mois: mois, an: an, totalTTC: totalTTC, nbSeances: nbSeances, nbAnnulees: nbAnnulees, groupes: groupes };
-
-    var totalHT = totalTTC / (1 + TVA_TAUX);
-    var tva = totalTTC - totalHT;
+    var totalHT = calc.total_ht;
+    var tva = calc.tva;
     var seanceLabel = nbSeances > 0 ? (nbSeances + (nbSeances > 1 ? ' séances' : ' séance')) : '';
     if (nbAnnulees) seanceLabel += (seanceLabel ? ' · ' : '') + nbAnnulees + ' annulée' + (nbAnnulees > 1 ? 's' : '');
 
@@ -3699,18 +3708,12 @@ async function loadMoisCourant(id) {
 
 // Lignes de détail à partir des réservations d'une période AAAA-MM
 async function lignesPeriode(periode) {
-  if (!clientId || !periode || !/^\d{4}-\d{2}$/.test(periode)) return null;
-  var p = periode.split('-');
-  var an = parseInt(p[0], 10), mo = parseInt(p[1], 10) - 1;
+  if (!clientId || !periode || !/^\d{4}-\d{2}$/.test(periode) || !window.FR_FACT) return null;
   try {
-    var { data, error } = await db.from('reservations')
-      .select('*')
-      .eq('client_id', clientId)
-      .gte('date_debut', isoDate(new Date(an, mo, 1)))
-      .lt('date_debut', isoDate(new Date(an, mo + 1, 1)));
-    if (error) return null;
-    return grouperResas(data || []);
-  } catch(e) { return null; }
+    var b = FR_FACT.periodeMois(periode);
+    var calc = await FR_FACT.calculerClient(db, clientId, b.debut, b.fin, { label: b.label });
+    return calc.lignes;
+  } catch(e) { console.log('Détail de facture indisponible:', e); return null; }
 }
 
 // Une reservation = une ligne par chien en base. On regroupe pour ne pas
@@ -3781,6 +3784,18 @@ function detailFacture(g) {
 
 function montantFacture(g) { return detailFacture(g).du; }
 
+// Ligne issue de fr-facturation.js (prestation, annulation facturée, supplément)
+function ligneCalcHTML(l) {
+  var ttc = l.total;   // prix TTC (fr-facturation.js)
+  var rouge = l.type === 'annulation';
+  var detail = esc(l.sousLabel || '');
+  if (l.discountNote) detail += '<div style="font-size:10px;color:#2e7d32;margin-top:1px;">' + esc(l.discountNote) + '</div>';
+  return '<tr><td style="' + (rouge ? 'color:#a33;' : '') + '">' + esc(l.label)
+    + '<div style="font-size:10px;color:' + (rouge ? '#c62828' : '#6b7450') + ';margin-top:2px;">' + detail + '</div></td>'
+    + '<td class="num qte">' + l.qte + '</td>'
+    + '<td class="num ttc">' + eur(ttc) + '</td></tr>';
+}
+
 function ligneFactureHTML(g) {
   var d = detailFacture(g);
   var toutAnnule = d.tenues === 0;
@@ -3824,7 +3839,7 @@ function factureDocHTML(opts) {
   var totalHT = opts.totalHT != null ? opts.totalHT : opts.totalTTC / (1 + TVA_TAUX);
   var tva = opts.totalTTC - totalHT;
   var lignes = (opts.lignes && opts.lignes.length)
-    ? opts.lignes.map(ligneFactureHTML).join('')
+    ? opts.lignes.map(function(l) { return (l && l.label !== undefined && l.qte !== undefined) ? ligneCalcHTML(l) : ligneFactureHTML(l); }).join('')
     : '<tr><td colspan="3" style="color:#6b7450;font-size:11px;">Détail des prestations indisponible</td></tr>';
 
   return '<div class="inv-doc" id="facture-doc">'
@@ -3891,7 +3906,7 @@ function openMoisCourantDetail() {
     + '<div class="warn-box warn-amber">Facture non encore émise. Le montant peut évoluer jusqu\'à la fin du mois (annulations, séances ajoutées). Le PDF sera disponible une fois la facture définitive émise par Gabriel.</div>'
     + factureDocHTML({
         numero: null, periode: MOIS_LONG[m.mois] + ' ' + m.an + ' — estimation',
-        totalTTC: m.totalTTC, lignes: m.groupes
+        totalTTC: m.totalTTC, totalHT: m.totalHT, lignes: m.calc ? m.calc.lignes : []
       });
 
   document.getElementById('factureModal').classList.add('open');

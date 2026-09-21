@@ -37,6 +37,8 @@ try {
 } catch(e) {}
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="fr-calendrier.js"></script>
+<script src="fr-facturation.js"></script>
 <!-- Repli CDN : si jsDelivr n'a pas repondu, on tente unpkg avant d'abandonner. -->
 <script>if (!window.supabase) { document.write('<scr' + 'ipt src="https://unpkg.com/@supabase/supabase-js@2"><\/scr' + 'ipt>'); }</script>
 <script>
@@ -2038,7 +2040,11 @@ function openAnnulationResa() {
 function dateRefAnnulation() {
   var r = currentResaDetail;
   var portee = document.getElementById('annulation-portee').value;
-  if (portee !== 'occurrence') return r.date_debut;
+  if (portee !== 'occurrence') {
+    // Série déjà commencée : elle sera arrêtée à sa prochaine séance (master § 37)
+    var plan = window.FR_FACT ? FR_FACT.planArretSerie(r, FR_FACT.aujourdhui()) : null;
+    return (plan && plan.mode === 'arreter') ? plan.date : r.date_debut;
+  }
   var sel = document.getElementById('annulation-date');
   return (sel && sel.value) || r._occurrenceDate || r.date_debut;
 }
@@ -2053,6 +2059,9 @@ function majSuggestionAnnulation() {
   var sugg = calculerSuggestionAnnulation(r, dateRef);
   var raisonTxt = sugg.raison;
   if (portee === 'occurrence') raisonTxt = 'Pour le ' + formatDateFR(dateRef) + ' : ' + raisonTxt;
+  var planA = (portee !== 'occurrence' && window.FR_FACT) ? FR_FACT.planArretSerie(r, FR_FACT.aujourdhui()) : null;
+  if (planA && planA.mode === 'arreter') raisonTxt = 'Série commencée (' + planA.tenues + ' séance' + (planA.tenues > 1 ? 's' : '') + ' effectuée' + (planA.tenues > 1 ? 's' : '')
+    + ', qui restent dues) : elle sera arrêtée au ' + formatDateFR(planA.date) + '. Pour cette séance : ' + raisonTxt;
   document.getElementById('annulation-raison').textContent = raisonTxt + ' → suggestion : ' + sugg.pourcentage + ' %.';
   var selPct = document.getElementById('annulation-pourcentage');
   selPct.value = String(sugg.pourcentage);
@@ -2100,6 +2109,19 @@ async function confirmerAnnulationResa() {
         + (pct > 0 ? ' Elle reste facturée à ' + pct + ' % selon les conditions d\'annulation.' : ' Elle ne vous sera pas facturée.')
         + ' Le reste de vos séances récurrentes est inchangé.');
       alert('✓ Séance du ' + formatDateFR(dateRef) + ' annulée. Le client a été prévenu.');
+    } else if (estRecurrente && window.FR_FACT && FR_FACT.planArretSerie(r, FR_FACT.aujourdhui()).mode !== 'annuler') {
+      // Série déjà commencée : arrêtée, pas effacée — les séances faites restent dues
+      var plan = FR_FACT.planArretSerie(r, FR_FACT.aujourdhui());
+      if (plan.mode === 'rien') { alert('Cette série est déjà terminée : rien à annuler.'); return; }
+      var lignesSerie = await FR_FACT.lignesDeReservation(db, r);
+      if (!lignesSerie.length) lignesSerie = [r];
+      var nA = await FR_FACT.arreterSerie(db, lignesSerie, plan.date, { annule_par: qui, tardive: sugg.tardive, pct: pct });
+      await notifierClientAnnulation(r.client_id,
+        'Votre série ' + (SVC_NAMES[r.service] || r.service) + ' est arrêtée à partir du ' + formatDateFR(plan.date)
+        + (qui === 'client' ? ', à votre demande.' : ', par Forest Rangers.')
+        + (pct > 0 ? ' La séance du ' + formatDateFR(plan.date) + ' reste facturée à ' + pct + ' % selon les conditions d\'annulation.' : ' Aucune séance à venir ne vous sera facturée.')
+        + ' Les ' + plan.tenues + ' séance' + (plan.tenues > 1 ? 's' : '') + ' déjà effectuée' + (plan.tenues > 1 ? 's restent dues' : ' reste due') + '.');
+      alert('✓ Série arrêtée au ' + formatDateFR(plan.date) + ' (' + nA + ' ligne' + (nA > 1 ? 's' : '') + '). Le client a été prévenu.');
     } else {
       var n = await majLignesReservation(r, {
         statut: 'annule',

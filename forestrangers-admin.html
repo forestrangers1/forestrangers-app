@@ -763,6 +763,7 @@ textarea.form-control { resize: vertical; }
   }
   </script>
   <script src="fr-calendrier.js"></script>
+  <script src="fr-facturation.js"></script>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#ff5f1f">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1122,6 +1123,8 @@ textarea.form-control { resize: vertical; }
         <div class="stat-card c-accent"><div class="stat-accent-bar"></div><div class="stat-label">Émises ce mois</div><div class="stat-val">—</div></div>
         <div class="stat-card c-blue"><div class="stat-accent-bar"></div><div class="stat-label">Total facturé</div><div class="stat-val">—</div></div>
       </div>
+      <!-- Estimation du mois en cours, tous clients (fr-facturation.js) -->
+      <div id="factures-estimation" style="margin-bottom:14px;"></div>
       <div class="card">
         <div class="card-head">
           <span class="card-title">Toutes les factures</span>
@@ -2182,8 +2185,93 @@ async function desactiverStaff() {
   } catch(e) { showToastAdmin('Erreur : ' + (e.message || e), 'red'); }
 }
 
+// ── ESTIMATION DU MOIS EN COURS (tous clients) ──
+// Même calcul que l'estimation affichée à chaque client et que la facture
+// automatique : la somme des lignes ci-dessous est ce qui sera facturé.
+var _estimationAdmin = null;
+async function chargerEstimationAdmin() {
+  var el = document.getElementById('factures-estimation');
+  if (!el || !window.FR_FACT) return;
+  var now = new Date();
+  var periode = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  var b = FR_FACT.periodeMois(periode);
+  el.innerHTML = '<div class="card" style="padding:14px 18px;font-size:12px;color:var(--text-faint);">Estimation du mois en cours…</div>';
+  try {
+    var est = await FR_FACT.calculerTous(db, b.debut, b.fin, { label: b.label });
+    _estimationAdmin = { periode: periode, label: b.label, data: est };
+    renderEstimationAdmin(false);
+  } catch (e) {
+    console.error('Estimation du mois :', e);
+    el.innerHTML = '<div class="card" style="padding:14px 18px;font-size:12px;color:var(--red);">Estimation indisponible : ' + (e.message || e) + '</div>';
+  }
+}
+
+function renderEstimationAdmin(ouvert) {
+  var el = document.getElementById('factures-estimation');
+  var E = _estimationAdmin;
+  if (!el || !E) return;
+  function eur(n) { return (parseFloat(n) || 0).toLocaleString('fr-LU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; }
+  var d = E.data, nbCli = d.clients.length;
+  var nbS = d.clients.reduce(function (a, c) { return a + c.nb_seances; }, 0);
+  var html = '<div class="card" style="overflow:hidden;border-color:rgba(255,95,31,0.3);">'
+    + '<div onclick="renderEstimationAdmin(' + (!ouvert) + ')" style="cursor:pointer;padding:16px 18px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;'
+    +   'background:linear-gradient(135deg,rgba(255,95,31,0.13),rgba(255,95,31,0.03));">'
+    +   '<div style="flex:1;min-width:200px;">'
+    +     '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--accent);font-weight:700;margin-bottom:4px;">Estimation · ' + E.label + '</div>'
+    +     '<div style="font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-size:28px;font-weight:800;color:var(--text);">' + eur(d.total_ttc) + '</div>'
+    +     '<div style="font-size:11.5px;color:var(--text-dim);">dont ' + eur(d.tva) + ' de TVA · ' + eur(d.total_ht) + ' HT</div>'
+    +   '</div>'
+    +   '<div style="font-size:12px;color:var(--text-dim);line-height:1.6;text-align:right;">'
+    +     nbCli + ' client' + (nbCli > 1 ? 's' : '') + ' · ' + nbS + ' séance' + (nbS > 1 ? 's' : '') + '<br>'
+    +     '<span style="color:var(--accent);font-weight:600;">' + (ouvert ? 'Masquer le détail ▲' : 'Voir le détail par client ▼') + '</span>'
+    +   '</div>'
+    + '</div>';
+  if (ouvert) {
+    if (!nbCli) {
+      html += '<div style="padding:16px;text-align:center;font-size:12px;color:var(--text-faint);">Aucune prestation ce mois-ci.</div>';
+    } else {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:12.5px;">'
+        + '<thead><tr style="border-bottom:1px solid var(--border);color:var(--text-faint);font-size:10px;text-transform:uppercase;letter-spacing:.1em;">'
+        + '<th style="text-align:left;padding:9px 18px;">Client</th><th style="text-align:right;padding:9px 8px;">Séances</th>'
+        + '<th style="text-align:right;padding:9px 8px;">HT</th><th style="text-align:right;padding:9px 8px;">TTC</th><th style="padding:9px 18px;"></th></tr></thead><tbody>';
+      d.clients.forEach(function (r) {
+        var c = r.client || {};
+        var ann = r.nb_annulees ? ' <span style="color:var(--red);font-size:11px;">· ' + r.nb_annulees + ' annulée' + (r.nb_annulees > 1 ? 's' : '') + '</span>' : '';
+        html += '<tr style="border-bottom:1px solid var(--border);">'
+          + '<td style="padding:9px 18px;"><span style="color:var(--accent);font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-size:11px;">#' + (c.numero_client || '—') + '</span> '
+          +   (c.prenom || '') + ' ' + (c.nom || '') + (c.hors_zone ? ' <span style="font-size:10px;color:var(--text-faint);">hors zone</span>' : '') + '</td>'
+          + '<td style="padding:9px 8px;text-align:right;">' + r.nb_seances + ann + '</td>'
+          + '<td style="padding:9px 8px;text-align:right;color:var(--text-dim);">' + eur(r.total_ht) + '</td>'
+          + '<td style="padding:9px 8px;text-align:right;font-weight:600;">' + eur(r.total_ttc) + '</td>'
+          + '<td style="padding:9px 18px;text-align:right;"><button class="btn btn-outline" style="padding:3px 10px;font-size:10px;" '
+          +   'onclick="facturerDepuisEstimation(\'' + c.id + '\',\'' + E.periode + '\')">Facturer</button></td>'
+          + '</tr>';
+      });
+      html += '</tbody></table>'
+        + '<div style="padding:10px 18px;font-size:11px;color:var(--text-faint);line-height:1.5;">Montants prévisionnels d\'après les réservations, au tarif en vigueur le jour de chaque séance. '
+        + 'Ce sont exactement les montants que chaque client voit dans son espace, et ceux que produira la facture automatique.</div>';
+    }
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+// Ouvre « Nouvelle facture » en mode automatique, client et mois déjà choisis
+async function facturerDepuisEstimation(clientId, periode) {
+  ouvrirNouvelleFacture();
+  if (typeof setFactureType === 'function') setFactureType('auto');
+  var sel = document.getElementById('facture-client-id');
+  for (var i = 0; i < 30 && sel && !sel.querySelector('option[value="' + clientId + '"]'); i++) {
+    await new Promise(function (r) { setTimeout(r, 100); });
+  }
+  if (sel) sel.value = clientId;
+  var m = document.getElementById('facture-mois');
+  if (m) m.value = periode;
+}
+
 // ── FACTURES (réel) ──
 async function loadFacturesAdmin() {
+  chargerEstimationAdmin();   // en parallèle : ne retarde pas la liste
   var statsRow = document.getElementById('factures-stats');
   var list = document.getElementById('factures-list');
   if (list) list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-faint);font-size:12px;">Chargement…</div>';
@@ -3631,9 +3719,15 @@ function majSuggestionAnnulation() {
   var r = currentResaDetail;
   var portee = document.getElementById('annulation-portee').value;
   var dateRef = portee === 'occurrence' ? r._occurrenceDate : r.date_debut;
+  // Série déjà commencée : elle sera arrêtée à sa prochaine séance, c'est
+  // donc cette séance-là qui porte le délai d'annulation, pas le début de série.
+  var plan = (portee !== 'occurrence' && window.FR_FACT) ? FR_FACT.planArretSerie(r, FR_FACT.aujourdhui()) : null;
+  if (plan && plan.mode === 'arreter') dateRef = plan.date;
   var sugg = calculerSuggestionAnnulation(r, dateRef);
   var raisonTxt = sugg.raison;
   if (portee === 'occurrence') raisonTxt = 'Pour le ' + formatDateFR(dateRef) + ' : ' + raisonTxt;
+  if (plan && plan.mode === 'arreter') raisonTxt = 'Série commencée (' + plan.tenues + ' séance' + (plan.tenues > 1 ? 's' : '') + ' effectuée' + (plan.tenues > 1 ? 's' : '')
+    + ', qui restent dues) : elle sera arrêtée au ' + formatDateFR(plan.date) + '. Pour cette séance : ' + raisonTxt;
   document.getElementById('annulation-raison').textContent = raisonTxt + ' → suggestion : ' + sugg.pourcentage + ' %.';
   var selPct = document.getElementById('annulation-pourcentage');
   selPct.value = String(sugg.pourcentage);
@@ -3719,6 +3813,21 @@ async function confirmerAnnulationResa() {
         + (partielle ? ' Vos autres chiens sont maintenus sur cette séance.' : '')
         + ' Le reste de vos séances récurrentes est inchangé.');
       showToastAdmin('✓ Occurrence du ' + formatDateFR(dateRef) + ' annulee' + mention, 'green');
+    } else if (estRecurrente && window.FR_FACT && FR_FACT.planArretSerie(r, FR_FACT.aujourdhui()).mode !== 'annuler') {
+      // Série déjà commencée : on l'ARRÊTE (fin avancée) au lieu de l'annuler
+      // en entier — les séances déjà effectuées restent dues (master § 37).
+      var plan = FR_FACT.planArretSerie(r, FR_FACT.aujourdhui());
+      if (plan.mode === 'rien') { showToastAdmin('Cette série est déjà terminée : rien à annuler.', 'amber'); return; }
+      var lignesSerie = await FR_FACT.lignesDeReservation(db, r);
+      if (ciblesIds.length) lignesSerie = lignesSerie.filter(function(x) { return ciblesIds.indexOf(x.id) !== -1; });
+      if (!lignesSerie.length) lignesSerie = [r];
+      var nA = await FR_FACT.arreterSerie(db, lignesSerie, plan.date, { annule_par: qui, tardive: sugg.tardive, pct: pct });
+      await notifierClientAnnulation(r.client_id,
+        'Votre série ' + (SVC_NAMES[r.service] || r.service) + mention + ' est arrêtée à partir du ' + formatDateFR(plan.date)
+        + (qui === 'client' ? ', à votre demande.' : ', par Forest Rangers.')
+        + (pct > 0 ? ' La séance du ' + formatDateFR(plan.date) + ' reste facturée à ' + pct + ' % selon les conditions d\'annulation.' : ' Aucune séance à venir ne vous sera facturée.')
+        + ' Les ' + plan.tenues + ' séance' + (plan.tenues > 1 ? 's' : '') + ' déjà effectuée' + (plan.tenues > 1 ? 's restent dues' : ' reste due') + '.');
+      showToastAdmin('✓ Série arrêtée au ' + formatDateFR(plan.date) + ' (' + nA + ' ligne' + (nA > 1 ? 's' : '') + ')' + mention, 'green');
     } else {
       var payload = { statut: 'annule', annule_par: qui, annulation_tardive: sugg.tardive, facture_pourcentage: pct };
       var n;
@@ -5177,7 +5286,7 @@ if ('serviceWorker' in navigator) {
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Montant HT (€)</label>
+          <label class="form-label">Montant TTC (€)</label>
           <input type="number" class="form-control" id="facture-montant" placeholder="0.00" step="0.01" style="width:100%;">
         </div>
       </div>
@@ -5305,33 +5414,26 @@ async function creerFacture() {
     var payload = { client_id: clientId, numero: numero, statut: 'impayee', created_at: now.toISOString(), periode: periode };
     var total_ht;
     if (factureType === 'auto') {
-      var moisParts = periode.split('-');
-      var finMoisFact = formatDateISO(new Date(parseInt(moisParts[0],10), parseInt(moisParts[1],10), 0));
-      var { data: resas } = await db.from('reservations').select('service,date_debut').eq('client_id', clientId).gte('date_debut', periode + '-01').lte('date_debut', finMoisFact).neq('statut', 'annule');
-      // Une prestation est facturée au tarif en vigueur le jour où elle a eu lieu.
-      // Un tarif sur mesure enregistré sur la fiche client prime sur la grille.
-      var surMesure = clientRow && (clientRow.tarif_walking != null
-                                 || clientRow.tarif_daycare != null
-                                 || clientRow.tarif_boarding != null);
-      var fidele = !clientRow || clientRow.client_fidele !== false;
-      total_ht = 0;
-      for (var iR = 0; iR < (resas||[]).length; iR++) {
-        var rr = resas[iR];
-        var grille = surMesure
-          ? { walking: clientRow.tarif_walking, daycare: clientRow.tarif_daycare, boarding: clientRow.tarif_boarding }
-          : await tarifsALaDate(rr.date_debut, fidele);
-        total_ht += (parseFloat(grille[rr.service]) || 0);
-      }
-      payload.notes = 'Auto — ' + (resas||[]).length + ' réservation(s)';
+      // Calcul unique (fr-facturation.js) : chaque séance réelle du mois, au tarif
+      // en vigueur le jour de la séance, remise multi-chiens et annulations
+      // comprises — le même montant que l'estimation vue par le client.
+      var bornes = FR_FACT.periodeMois(periode);
+      var calc = await FR_FACT.calculerClient(db, clientId, bornes.debut, bornes.fin, { label: bornes.label });
+      if (!calc.lignes.length) { showToastAdmin('Aucune prestation à facturer sur ' + bornes.label, 'amber'); return; }
+      total_ht = calc.total_ht;
+      var total_ttc = calc.total_ttc;
+      payload.notes = 'Auto — ' + calc.nb_seances + ' séance(s)' + (calc.nb_annulees ? ', ' + calc.nb_annulees + ' annulée(s)' : '');
     } else {
       var desc = document.getElementById('facture-desc').value;
-      total_ht = parseFloat(document.getElementById('facture-montant').value) || 0;
-      if (!desc || !total_ht) { showToastAdmin('Description et montant obligatoires', 'amber'); return; }
+      // Montant saisi TTC, comme tous les prix de Forest Rangers : la TVA en est extraite
+      var total_ttc = parseFloat(document.getElementById('facture-montant').value) || 0;
+      if (!desc || !total_ttc) { showToastAdmin('Description et montant obligatoires', 'amber'); return; }
+      total_ht = Math.round(total_ttc / (1 + FR_PARAMS.tva) * 100) / 100;
       payload.notes = desc;
     }
-    // TVA sur les prestations (taux centralisé dans FR_PARAMS)
+    // Prix TTC : la TVA est comprise, jamais ajoutée par-dessus
     payload.total_ht = total_ht;
-    payload.total_ttc = Math.round(total_ht * (1 + FR_PARAMS.tva) * 100) / 100;
+    payload.total_ttc = Math.round(total_ttc * 100) / 100;
 
     var { error: errFact } = await db.from('factures').insert(payload);
     if (errFact) throw errFact;
