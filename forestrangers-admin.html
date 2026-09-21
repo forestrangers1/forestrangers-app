@@ -1934,12 +1934,13 @@ async function loadDashboardStats() {
 
   try {
     // 2. Total des chiens gérés aujourd'hui (promenade + day care + pension)
+    await assurerCalendrier();
     var { data: resaJour } = await db.from('reservations')
-      .select('chien_id, client_id')
+      .select('id,service,creneau,statut,date_debut,date_fin,jours_recurrence,date_fin_recurrence,dates_exclues,client_id,chien_id')
       .lte('date_debut', today)
       .gte('date_fin', today)
       .neq('statut', 'annule');
-    resaJour = resaJour || [];
+    resaJour = filterResasForDay(resaJour || [], today);
     var nbChiens = 0, clientsTous = [];
     resaJour.forEach(function(r) {
       if (r.chien_id) nbChiens++;            // 1 ligne = 1 chien
@@ -1999,13 +2000,13 @@ async function loadDashboardStats() {
   try {
     // 5. Charger planning du jour dans le tableau
     var planRes = await db.from('reservations')
-      .select('id, service, creneau, statut, ranger_nom, client_id, chien_id, clients(prenom, nom, numero_client)')
+      .select('id,service,creneau,statut,date_debut,date_fin,jours_recurrence,date_fin_recurrence,dates_exclues,client_id,chien_id, ranger_nom, clients(prenom, nom, numero_client, is_test)')
       .lte('date_debut', today)
       .gte('date_fin', today)
       .neq('statut', 'annule')
       .order('creneau', { ascending: true });
 
-    loadPlanningToday(planRes.data || [], today);
+    loadPlanningToday(filterResasForDay(planRes.data || [], today), today);
   } catch(e) { console.log('planning:', e); }
 
   try {
@@ -2036,6 +2037,7 @@ function loadPlanningToday(reservations, today) {
       creneau: r.creneau, service: r.service, statut: r.statut,
       ranger: r.ranger_nom || '',
       client: r.clients ? (r.clients.prenom + ' ' + r.clients.nom) : '—',
+      test: !!(r.clients && r.clients.is_test),
       dogs: 0
     };
     groups[key].dogs++;
@@ -2063,7 +2065,8 @@ function loadPlanningToday(reservations, today) {
     html += '<div class="slot">'
       + '<div class="slot-time">' + c[1] + '</div>'
       + '<div class="slot-info">'
-      +   '<div class="slot-title">' + (SVC[g.service] || g.service) + ' — ' + g.client + '</div>'
+      +   '<div class="slot-title">' + (SVC[g.service] || g.service) + ' — ' + g.client
+      +     (g.test ? ' <span class="badge b-muted" style="font-size:9px;vertical-align:middle;">Test</span>' : '') + '</div>'
       +   '<div class="slot-meta">' + meta + '</div>'
       + '</div>'
       + '<span class="badge ' + b[0] + '">' + b[1] + '</span>'
@@ -2108,17 +2111,31 @@ async function loadStaff() {
     var sun = new Date(mon); sun.setDate(mon.getDate() + 6);
     var debutSem = formatDateISO(mon), finSem = formatDateISO(sun);
 
-    var { data: resas } = await db.from('reservations')
-      .select('id,service,creneau,statut,date_debut,ranger_nom,client_id,chien_id')
-      .gte('date_debut', debutSem).lte('date_debut', finSem);
-    resas = resas || [];
+    await assurerCalendrier();
+    var { data: resasBrutes } = await db.from('reservations')
+      .select('id,service,creneau,statut,date_debut,date_fin,jours_recurrence,date_fin_recurrence,dates_exclues,client_id,chien_id,ranger_nom')
+      .lte('date_debut', finSem).gte('date_fin', debutSem);
+    resasBrutes = resasBrutes || [];
+    // Une ligne par séance réelle de la semaine (séries récurrentes dépliées).
+    // Séance prévue mais annulée (série annulée ou date exclue) : gardée, marquée annulée.
+    var resas = [];
+    for (var dj = new Date(mon); dj <= sun; dj.setDate(dj.getDate() + 1)) {
+      var dsj = formatDateISO(dj);
+      resasBrutes.forEach(function(r){
+        var prevue = window.FR_FACT ? FR_FACT.prevueLe(r, dsj, { depart: true }) : (r.date_debut === dsj);
+        if (!prevue) return;
+        var active = filterResasForDay([r], dsj).length > 0;
+        resas.push(Object.assign({}, r, { _date: dsj, _annule: !active }));
+      });
+    }
 
     // Regroupe les lignes (1 par chien) en missions, filtré par ranger
     function groupe(rows){
       var g = {};
       rows.forEach(function(r){
-        var key = [r.client_id, r.service, r.date_debut, r.creneau].join('|');
-        if (!g[key]) g[key] = { annule: r.statut === 'annule', dogs: 0, service: r.service, creneau: r.creneau, date: r.date_debut };
+        var key = [r.client_id, r.service, r._date, r.creneau].join('|');
+        if (!g[key]) g[key] = { annule: r._annule, dogs: 0, service: r.service, creneau: r.creneau, date: r._date };
+        if (!r._annule) g[key].annule = false;
         if (r.chien_id) g[key].dogs++;
       });
       return Object.keys(g).map(function(k){ return g[k]; });
@@ -2971,11 +2988,17 @@ async function loadStats() {
     // Réservations du mois
     var debutMois = periodePrefix + '-01';
     var finMois   = formatDateISO(new Date(target.getFullYear(), target.getMonth()+1, 0));
-    var { data: resas, count: nbResas } = await db.from('reservations')
-      .select('service', { count: 'exact' })
-      .gte('date_debut', debutMois)
+    // Séances réelles du mois (une par chien et par jour, pension en nuits)
+    await assurerCalendrier();
+    var { data: resasMois } = await db.from('reservations')
+      .select('id,service,creneau,statut,date_debut,date_fin,jours_recurrence,date_fin_recurrence,dates_exclues,client_id,chien_id')
       .lte('date_debut', finMois)
+      .gte('date_fin', debutMois)
       .neq('statut', 'annule');
+    var nbResas = 0;
+    for (var dm = new Date(debutMois + 'T00:00:00'); formatDateISO(dm) <= finMois; dm.setDate(dm.getDate() + 1)) {
+      nbResas += filterResasForDay(resasMois || [], formatDateISO(dm), { nuits: true }).length;
+    }
     var promsEl = document.getElementById('stats-promenades-mois');
     if (promsEl) promsEl.textContent = nbResas || 0;
 
@@ -3727,7 +3750,13 @@ function naviguerPlanning(dir) {
   loadPlanning();
 }
 
-function filterResasForDay(resas, dateStr) {
+// Séances réelles d'un jour : filtre commun (fr-facturation.js), le même que
+// la facturation. options.nuits = true pour compter la pension en nuits
+// (sans le jour du départ) ; par défaut vue opérationnelle (départ inclus).
+function filterResasForDay(resas, dateStr, options) {
+  var nuits = options && options.nuits;
+  if (window.FR_FACT && FR_FACT.seancesDuJour) return FR_FACT.seancesDuJour(resas, dateStr, { depart: !nuits });
+  // Repli (module absent) : ancienne règle
   var jourMap = {lun:1,mar:2,mer:3,jeu:4,ven:5,sam:6,dim:0};
   var d = new Date(dateStr+'T00:00:00'); d.setHours(0,0,0,0);
   return (resas||[]).filter(function(r) {
@@ -3736,17 +3765,23 @@ function filterResasForDay(resas, dateStr) {
     var df = new Date(r.date_fin);   df.setHours(0,0,0,0);
     if (d<dd||d>df) return false;
     if (r.statut==='annule') return false;
-    if (r.dates_exclues) {
-      var exclues = r.dates_exclues.split(',').map(function(x){return x.trim();});
-      if (exclues.indexOf(dateStr) !== -1) return false;
-    }
-    // Promenades et day care : jamais le week-end (règle métier — lundi au vendredi)
+    if (r.dates_exclues && r.dates_exclues.split(',').map(function(x){return x.trim();}).indexOf(dateStr) !== -1) return false;
     if (r.service!=='boarding' && (d.getDay()===0 || d.getDay()===6)) return false;
-    if (r.service!=='boarding'&&r.jours_recurrence&&r.jours_recurrence.length>0) {
+    if (r.service!=='boarding'&&r.jours_recurrence&&r.jours_recurrence.length>0)
       return r.jours_recurrence.split(',').some(function(j){return jourMap[j.trim()]===d.getDay();});
-    }
     return true;
   });
+}
+
+// Jours fériés et fermetures : chargés une fois, avant tout comptage de séances
+async function assurerCalendrier() {
+  if (window.FR_CAL && !FR_CAL.estCharge()) { try { await FR_CAL.charger(db); } catch(e) {} }
+}
+
+// Ids des comptes test : exclus des factures et du chiffre d'affaires uniquement
+async function idsClientsTest() {
+  try { var r = await db.from('clients').select('id').eq('is_test', true); return (r.data || []).map(function(c){ return c.id; }); }
+  catch(e) { return []; }
 }
 
 // Regroupe des lignes de réservation (1 par chien) en réservations distinctes.
@@ -4890,7 +4925,7 @@ async function chargerDestinatairesAlerte() {
       alerteDestinataires = rt.data || [];
     } else {
       var rr = await db.from('reservations')
-        .select('id,service,statut,date_debut,date_fin,jours_recurrence,dates_exclues,client_id')
+        .select('id,service,creneau,statut,date_debut,date_fin,jours_recurrence,date_fin_recurrence,dates_exclues,client_id,chien_id')
         .lte('date_debut', ds).gte('date_fin', ds);
       if (rr.error) throw rr.error;
       var duJour = filterResasForDay(rr.data || [], ds)
@@ -5189,16 +5224,15 @@ async function chargerBlocsDashboard() {
   // ── Pension ce soir ──
   try {
     var body = document.getElementById('dash-pension-body');
+    await assurerCalendrier();
     var { data: pens } = await db.from('reservations')
-      .select('id,client_id,chien_id,date_debut,date_fin,statut,dates_exclues')
+      .select('id,service,creneau,statut,date_debut,date_fin,jours_recurrence,date_fin_recurrence,dates_exclues,client_id,chien_id')
       .eq('service', 'boarding')
       .lte('date_debut', today).gte('date_fin', today)
       .neq('statut', 'annule');
 
-    pens = (pens || []).filter(function(r) {
-      var ex = (r.dates_exclues || '').split(',').map(function(x){ return x.trim(); });
-      return ex.indexOf(today) === -1;
-    });
+    // Ce soir = une nuit : le chien qui repart aujourd'hui n'est plus compté
+    pens = filterResasForDay(pens || [], today, { nuits: true });
 
     if (body) {
       if (!pens.length) {
@@ -5251,17 +5285,19 @@ async function chargerBlocsDashboard() {
   try {
     var fin7 = new Date(); fin7.setHours(0,0,0,0);
     var deb7 = new Date(fin7); deb7.setDate(deb7.getDate() - 6);
+    await assurerCalendrier();
+    var testsCA = await idsClientsTest();   // exclus du chiffre d'affaires, pas du nombre de séances
     var { data: r7 } = await db.from('reservations')
-      .select('id,service,statut,date_debut,date_fin,jours_recurrence,dates_exclues,montant_ttc,nb_seances')
+      .select('id,service,creneau,statut,date_debut,date_fin,jours_recurrence,date_fin_recurrence,dates_exclues,client_id,chien_id,montant_ttc,nb_seances')
       .lte('date_debut', formatDateISO(fin7)).gte('date_fin', formatDateISO(deb7));
 
     var jours = [], maxN = 0, totalN = 0, totalEur = 0;
     for (var i = 0; i < 7; i++) {
       var d = new Date(deb7); d.setDate(deb7.getDate() + i);
       var iso = formatDateISO(d);
-      var duJour = filterResasForDay(r7 || [], iso);
+      var duJour = filterResasForDay(r7 || [], iso, { nuits: true });
       var eur = 0;
-      duJour.forEach(function(r){ eur += montantParSeance(r); });
+      duJour.forEach(function(r){ if (testsCA.indexOf(r.client_id) === -1) eur += montantParSeance(r); });
       jours.push({ iso: iso, label: JOURS_FR[d.getDay()][0], n: duJour.length, eur: eur });
       if (duJour.length > maxN) maxN = duJour.length;
       totalN += duJour.length;
@@ -5291,15 +5327,17 @@ async function chargerBlocsDashboard() {
     var now = new Date();
     var m0 = new Date(now.getFullYear(), now.getMonth(), 1);
     var m1 = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    await assurerCalendrier();
+    var testsCA2 = await idsClientsTest();
     var { data: rm } = await db.from('reservations')
-      .select('id,service,statut,date_debut,date_fin,jours_recurrence,dates_exclues,montant_ttc,nb_seances,annulation_tardive')
+      .select('id,service,creneau,statut,date_debut,date_fin,jours_recurrence,date_fin_recurrence,dates_exclues,client_id,chien_id,montant_ttc,nb_seances,annulation_tardive')
       .lte('date_debut', formatDateISO(m1)).gte('date_fin', formatDateISO(m0));
 
     var parSvc = { walking:{n:0,eur:0}, daycare:{n:0,eur:0}, boarding:{n:0,eur:0} };
     for (var d2 = new Date(m0); d2 <= m1; d2.setDate(d2.getDate() + 1)) {
-      filterResasForDay(rm || [], formatDateISO(d2)).forEach(function(r) {
+      filterResasForDay(rm || [], formatDateISO(d2), { nuits: true }).forEach(function(r) {
         var k = parSvc[r.service] || (parSvc[r.service] = { n:0, eur:0 });
-        k.n++; k.eur += montantParSeance(r);
+        k.n++; if (testsCA2.indexOf(r.client_id) === -1) k.eur += montantParSeance(r);
       });
     }
     var totalN2 = parSvc.walking.n + parSvc.daycare.n + parSvc.boarding.n;
@@ -5901,7 +5939,9 @@ async function openStatDetail(type) {
   try {
     if (type === 'promenades') {
       title.textContent = '🐾 Réservations du jour';
-      var { data } = await db.from('reservations').select('service, creneau, statut, clients(prenom, nom)').lte('date_debut', today).gte('date_fin', today).neq('statut', 'annule').order('creneau');
+      await assurerCalendrier();
+      var { data } = await db.from('reservations').select('id,service,creneau,statut,date_debut,date_fin,jours_recurrence,date_fin_recurrence,dates_exclues,client_id,chien_id, clients(prenom, nom, is_test)').lte('date_debut', today).gte('date_fin', today).neq('statut', 'annule').order('creneau');
+      data = filterResasForDay(data || [], today);
       if (!data || !data.length) { content.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-faint);">Aucune réservation aujourd\'hui</div>'; return; }
       var svc = { walking: 'Dog Walking', daycare: 'Day Care', boarding: 'Boarding' };
       var cr  = { matin: '09h00', midi: '12h00', apmidi: '14h30' };

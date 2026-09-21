@@ -214,6 +214,34 @@
   }
 
   // ══════════════════════════════════════════════════════════════
+  //  SÉANCES D'UN JOUR — filtre commun (tableau de bord, planning,
+  //  statistiques). Même règle que la facturation : jours de la série,
+  //  jamais le week-end, fériés et fermetures exclus, série arrêtée,
+  //  dates exclues (annulation d'une seule date), série annulée.
+  //  options.depart (pension) : true = le jour du départ compte aussi
+  //  (vue opérationnelle : le chien est encore là le matin) ; par défaut
+  //  on compte les nuits, de l'arrivée à la veille du départ.
+  // ══════════════════════════════════════════════════════════════
+  function prevueLe(r, dateISO, options) {
+    if (!r || !r.service || !r.date_debut) return false;
+    var d = jour(dateISO);
+    if (!d) return false;
+    if (r.service === 'boarding' && options && options.depart) {
+      var dep = jour(r.date_fin || r.date_debut);
+      if (d === dep && d >= jour(r.date_debut)) return !jourFerme(d, r.service);
+    }
+    return datesPrevues(r, d, d).indexOf(d) !== -1;
+  }
+  function aSeanceLe(r, dateISO, options) {
+    if (!r || r.statut === 'annule') return false;
+    if (!prevueLe(r, dateISO, options)) return false;
+    return datesExclues(r).indexOf(jour(dateISO)) === -1;
+  }
+  function seancesDuJour(rows, dateISO, options) {
+    return (rows || []).filter(function (r) { return aSeanceLe(r, dateISO, options); });
+  }
+
+  // ══════════════════════════════════════════════════════════════
   //  CALCUL
   //  donnees : { client, chiens, reservations, annulations }
   //    reservations : lignes brutes (une par chien, ou chien_id null =
@@ -566,6 +594,9 @@
     tarifsPour: tarifsPour,
     prixPourChiens: prixPourChiens,
     datesPrevues: datesPrevues,
+    prevueLe: prevueLe,
+    aSeanceLe: aSeanceLe,
+    seancesDuJour: seancesDuJour,
     calculer: calculer,
     chargerDonnees: chargerDonnees,
     calculerClient: calculerClient,
