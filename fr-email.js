@@ -76,7 +76,7 @@
       fr: {
         objet: 'Votre espace client Forest Rangers',
         texte: 'Bonjour ' + (o.prenom || '') + ',\n\n'
-          + 'Suite à notre rencontre, voici votre lien personnel pour créer votre espace client Forest Rangers et remplir la fiche de votre chien :\n\n'
+          + 'Voici votre lien personnel pour créer votre espace client Forest Rangers et remplir la fiche de votre chien :\n\n'
           + o.lien + '\n\n'
           + 'Ce lien est valable jusqu\'au ' + date + ' et ne sert qu\'une fois. Merci de ne pas le transférer.\n\n'
           + 'À très vite,\nGabriel — Forest Rangers',
@@ -85,7 +85,7 @@
       en: {
         objet: 'Your Forest Rangers client account',
         texte: 'Hello ' + (o.prenom || '') + ',\n\n'
-          + 'Following our meeting, here is your personal link to create your Forest Rangers client account and fill in your dog\'s profile:\n\n'
+          + 'Here is your personal link to create your Forest Rangers client account and fill in your dog\'s profile:\n\n'
           + o.lien + '\n\n'
           + 'This link is valid until ' + date + ' and can only be used once. Please do not forward it.\n\n'
           + 'See you soon,\nGabriel — Forest Rangers',
@@ -94,7 +94,7 @@
       lu: {
         objet: 'Äre Clientsberäich bei Forest Rangers',
         texte: 'Moien ' + (o.prenom || '') + ',\n\n'
-          + 'No eisem Treffen hei Äre perséinleche Link, fir Äre Clientsberäich bei Forest Rangers unzeleeën an de Profil vun Ärem Hond auszefëllen:\n\n'
+          + 'Hei ass Äre perséinleche Link, fir Äre Clientsberäich bei Forest Rangers unzeleeën an de Profil vun Ärem Hond auszefëllen:\n\n'
           + o.lien + '\n\n'
           + 'Dëse Link ass gëlteg bis den ' + date + ' a funktionéiert nëmmen eemol. W.e.g. net weiderginn.\n\n'
           + 'Bis geschwënn,\nGabriel — Forest Rangers',
