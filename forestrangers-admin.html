@@ -1223,7 +1223,7 @@ textarea.form-control { resize: vertical; }
             </div>
             <button onclick="genererLien()" class="btn btn-accent" style="width:100%;padding:11px;justify-content:center;font-size:12px;">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-              Générer et envoyer par email
+              Générer le lien d'invitation
             </button>
           </div>
         </div>
@@ -1235,19 +1235,19 @@ textarea.form-control { resize: vertical; }
             <span class="badge b-green">Expire dans 7 jours</span>
           </div>
           <div class="card-body">
-            <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">Envoyé à : <strong id="lien-dest" style="color:var(--text);">—</strong></div>
+            <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">Destinataire : <strong id="lien-dest" style="color:var(--text);">—</strong></div>
             <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:8px;margin-bottom:8px;">
               <div id="lien-url" style="font-family:monospace;font-size:11px;color:var(--accent);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
               <button onclick="copyLien()" style="background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text-dim);font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-size:10px;font-weight:700;cursor:pointer;flex-shrink:0;text-transform:uppercase;">Copier</button>
             </div>
-            <div style="font-size:11px;color:var(--text-faint);line-height:1.5;">Le client recevra un email avec ce lien. Il expire automatiquement après 7 jours.</div>
+            <div style="font-size:11px;color:var(--text-faint);line-height:1.5;">Aucun email n'est envoyé automatiquement pour l'instant : copiez ce lien et transmettez-le au client (email, WhatsApp, SMS). Il est personnel, utilisable une seule fois, et expire après 7 jours.</div>
           </div>
         </div>
 
         <!-- Historique -->
         <div class="card">
           <div class="card-head">
-            <span class="card-title">Invitations envoyees</span>
+            <span class="card-title">Invitations générées</span>
             <span class="badge b-muted" id="invitations-count">—</span>
           </div>
           <div id="invitations-historique">
@@ -1755,7 +1755,7 @@ async function loadInvitations() {
       .limit(20);
 
     if (error || !data || data.length === 0) {
-      container.innerHTML = '<div style="padding:16px;text-align:center;font-size:12px;color:var(--text-faint);">Aucune invitation envoyée</div>';
+      container.innerHTML = '<div style="padding:16px;text-align:center;font-size:12px;color:var(--text-faint);">Aucune invitation générée</div>';
       return;
     }
 
@@ -1778,7 +1778,7 @@ async function loadInvitations() {
         badge = '<span class="badge b-green">Inscription complete</span>';
       } else if (expired) {
         badge = '<span class="badge b-muted">Expire</span>';
-        extra = '<button style="font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 8px;color:var(--text-dim);cursor:pointer;font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-weight:700;margin-top:4px;" onclick="renvoyerInvitation(this,\''+inv.email+'\',\''+inv.prenom+'\',\''+(inv.langue||'fr')+'\')">Renvoyer</button>';
+        extra = '<button style="font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 8px;color:var(--text-dim);cursor:pointer;font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-weight:700;margin-top:4px;" onclick="renvoyerInvitation(this,\''+inv.email+'\',\''+inv.prenom+'\',\''+(inv.langue||'fr')+'\')" title="Crée un nouveau lien valable 7 jours et le copie">Nouveau lien</button>';
       } else {
         badge = '<span class="badge b-amber">En attente</span>';
         extra = '<span style="font-size:10px;color:var(--text-faint);">Expire dans ' + joursRestants + ' jour' + (joursRestants > 1 ? 's' : '') + '</span>';
