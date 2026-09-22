@@ -47,7 +47,7 @@
     tarif_daycare_fidele: 60,  tarif_daycare_nouveau: 65,
     tarif_boarding_fidele: 75, tarif_boarding_nouveau: 80,
     reduction_2chien_fidele: 50, reduction_2chien_nouveau: 30,
-    supplement_hors_zone: 5,
+    supplement_hors_zone: 5,    // HT : 5 € HTVA par trajet (CGV) = 5,85 € TTC
     frais_deplacement_ht: 5     // seul montant HT de la grille : 5 € HT = 5,85 € TTC
   };
 
@@ -140,6 +140,8 @@
       mode: surMesure(client) ? 'sur_mesure' : suf
     };
     t.frais_deplacement_ttc = r2(t.frais_deplacement_ht * (1 + t.tva));
+    // Supplément hors zone : le paramètre est HT (CGV « 5 € HTVA par trajet »)
+    t.supplement_hors_zone_ttc = r2(t.supplement_hors_zone * (1 + t.tva));
     if (client) {
       if (client.tarif_walking  != null) t.walking  = num(client.tarif_walking,  t.walking);
       if (client.tarif_daycare  != null) t.daycare  = num(client.tarif_daycare,  t.daycare);
@@ -236,6 +238,14 @@
     if (!r || r.statut === 'annule') return false;
     if (!prevueLe(r, dateISO, options)) return false;
     return datesExclues(r).indexOf(jour(dateISO)) === -1;
+  }
+  // Prix unitaire TTC → PU HT et TVA unitaire (affichage des factures).
+  // La TVA totale de la facture reste calculée sur le total : la somme des
+  // TVA unitaires arrondies peut différer d'un centime.
+  function unitaires(prixTTC, tva) {
+    var t = tva == null ? TVA_DEFAUT : (tva > 1 ? tva / 100 : tva);
+    var ht = r2((+prixTTC || 0) / (1 + t));
+    return { ht: ht, tva: r2((+prixTTC || 0) - ht), ttc: r2(prixTTC), taux: Math.round(t * 100) };
   }
   function seancesDuJour(rows, dateISO, options) {
     return (rows || []).filter(function (r) { return aSeanceLe(r, dateISO, options); });
@@ -405,10 +415,11 @@
       });
     }
     if (joursHZ) {
-      var sup = tarifsPour(client, fin).supplement_hors_zone;
+      var tHZ = tarifsPour(client, fin);
       lignes.push({
-        type: 'supplement', label: 'Supplément hors zone', sousLabel: joursHZ + ' déplacement' + (joursHZ > 1 ? 's' : ''),
-        qte: joursHZ, prixUnit: r2(sup), total: r2(joursHZ * sup)
+        type: 'supplement', service: 'frais_deplacement', label: 'Supplément hors zone',
+        sousLabel: joursHZ + ' trajet' + (joursHZ > 1 ? 's' : '') + ' · ' + eur(tHZ.supplement_hors_zone) + ' HT par trajet (CGV)',
+        qte: joursHZ, prixUnit: tHZ.supplement_hors_zone_ttc, total: r2(joursHZ * tHZ.supplement_hors_zone_ttc)
       });
     }
 
@@ -597,6 +608,7 @@
     prevueLe: prevueLe,
     aSeanceLe: aSeanceLe,
     seancesDuJour: seancesDuJour,
+    unitaires: unitaires,
     calculer: calculer,
     chargerDonnees: chargerDonnees,
     calculerClient: calculerClient,
