@@ -377,6 +377,7 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
   }
   </script>
   <script src="fr-calendrier.js"></script>
+  <script src="fr-facturation.js"></script>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#ff5f1f">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -393,7 +394,7 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
     <div class="topbar">
       <div class="page-title" id="page-title">Paramètres avancés</div>
       <div class="topbar-right">
-        <button id="topbar-add-van" class="btn btn-accent" onclick="openModal('modal-add-van')">
+        <button id="topbar-add-van" class="btn btn-accent" onclick="openAddVan()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Ajouter camionnette
         </button>
@@ -416,308 +417,43 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
 
       <!-- ══ CAMIONNETTES ══ -->
       <div class="tab-pane active" id="tab-camionnettes">
-        <!-- Van 1 (Camionnette A) -->
-        <div class="van-card">
-          <div class="van-header">
-            <div class="van-icon">
-              <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 4v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-            </div>
-            <div style="flex:1;">
-              <div class="van-name">Camionnette A</div>
-              <div class="van-plate">LU · AB 1234</div>
-            </div>
-            <div style="display:flex;gap:6px;align-items:center;">
-              <span class="badge b-green">Active</span>
-              <div class="icon-btn" onclick="openEditVan(this,'Camionnette A')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              </div>
-            </div>
-          </div>
-
-          <!-- Ranger par défaut -->
-          <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;">
-            <div style="font-size:12px;color:var(--text-dim);">
-              <span style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);display:block;margin-bottom:4px;">Ranger par défaut</span>
-              <select style="background:var(--surface3);border:1px solid var(--border2);border-radius:7px;padding:6px 10px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:12.5px;outline:none;">
-                <option>Gabriel Quiaios</option>
-                <option selected>Sophie Müller</option>
-              </select>
-            </div>
-            <div style="font-size:11px;color:var(--text-faint);text-align:right;line-height:1.5;">Assigné automatiquement<br>chaque jour par défaut</div>
-          </div>
-
-          <div class="cap-grid">
-            <div class="cap-item">
-              <div class="cap-val total">10</div>
-              <div class="cap-label">Chiens max / tournée</div>
-            </div>
-            <div class="cap-item">
-              <div class="cap-val large">3</div>
-              <div class="cap-label">Grands chiens (35 kg+)</div>
-            </div>
-            <div class="cap-item">
-              <div class="cap-val bonus">+1</div>
-              <div class="cap-label">Place bonus derrière sièges</div>
-            </div>
-          </div>
-
-          <!-- Attribution par créneau -->
-          <div class="slot-grid">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-              <div class="slot-title" style="margin-bottom:0;">Attribution — Lundi 9 juin</div>
-              <button class="btn btn-outline" style="font-size:10px;padding:5px 10px;" onclick="openModal('modal-absence')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                Absence aujourd'hui
-              </button>
-            </div>
-
-            <div class="slot-row">
-              <div class="slot-time">Matin · 09:00</div>
-              <div class="slot-ranger">
-                <select onchange="checkConflict(this,'A','matin')">
-                  <option value="">Non assignée</option>
-                  <option value="gabriel" selected>Gabriel</option>
-                  <option value="sophie">Sophie M.</option>
-                </select>
-              </div>
-              <div class="slot-status">
-                <span class="slot-cap">7 / 10 chiens</span>
-                <span class="badge b-accent">3 grands</span>
-              </div>
-            </div>
-
-            <div class="slot-row">
-              <div class="slot-time">Midi · 12:00</div>
-              <div class="slot-ranger">
-                <select onchange="checkConflict(this,'A','midi')">
-                  <option value="">Non assignée</option>
-                  <option value="gabriel">Gabriel</option>
-                  <option value="sophie" selected>Sophie M.</option>
-                </select>
-              </div>
-              <div class="slot-status">
-                <span class="slot-cap">3 / 10 chiens</span>
-                <span class="badge b-muted">0 grand</span>
-              </div>
-            </div>
-
-            <div class="slot-row">
-              <div class="slot-time">Après-midi · 14:30</div>
-              <div class="slot-ranger">
-                <select onchange="checkConflict(this,'A','apm')">
-                  <option value="">Non assignée</option>
-                  <option value="gabriel" selected>Gabriel</option>
-                  <option value="sophie">Sophie M.</option>
-                </select>
-              </div>
-              <div class="slot-status">
-                <span class="slot-cap">2 / 10 chiens</span>
-                <span class="badge b-muted">0 grand</span>
-              </div>
-            </div>
-
-            <div id="conflict-A" class="conflict-warn" style="display:none;">
-              <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              Conflit détecté — deux rangers assignés au même créneau sur cette camionnette.
-            </div>
-          </div>
-
-          <!-- Place bonus toggle -->
-          <div class="bonus-row">
-            <div>
-              <div class="bonus-label">Place bonus derrière les sièges</div>
-              <div class="bonus-sub">Disponible aujourd'hui pour un 4e grand chien sans cage</div>
-            </div>
-            <div class="toggle on" onclick="toggleSwitch(this)"><div class="toggle-knob"></div></div>
-          </div>
-        </div>
-
-        <!-- Van 2 -->
-        <div class="van-card">
-          <div class="van-header">
-            <div class="van-icon">
-              <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 4v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-            </div>
-            <div style="flex:1;">
-              <div class="van-name">Camionnette B</div>
-              <div class="van-plate">LU · CD 5678</div>
-            </div>
-            <div style="display:flex;gap:6px;align-items:center;">
-              <span class="badge b-green">Active</span>
-              <div class="icon-btn" onclick="openEditVan(this,'Camionnette B')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              </div>
-            </div>
-          </div>
-
-          <!-- Ranger par défaut -->
-          <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;">
-            <div style="font-size:12px;color:var(--text-dim);">
-              <span style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);display:block;margin-bottom:4px;">Ranger par défaut</span>
-              <select style="background:var(--surface3);border:1px solid var(--border2);border-radius:7px;padding:6px 10px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:12.5px;outline:none;">
-                <option selected>Gabriel Quiaios</option>
-                <option>Sophie Müller</option>
-              </select>
-            </div>
-            <div style="font-size:11px;color:var(--text-faint);text-align:right;line-height:1.5;">Assigné automatiquement<br>chaque jour par défaut</div>
-          </div>
-
-          <div class="cap-grid">
-            <div class="cap-item">
-              <div class="cap-val total">8</div>
-              <div class="cap-label">Chiens max / tournée</div>
-            </div>
-            <div class="cap-item">
-              <div class="cap-val large">3</div>
-              <div class="cap-label">Grands chiens (35 kg+)</div>
-            </div>
-            <div class="cap-item">
-              <div class="cap-val bonus" style="color:var(--text-faint);">—</div>
-              <div class="cap-label">Place bonus</div>
-            </div>
-          </div>
-
-          <div class="slot-grid">
-            <div class="slot-title">Attribution par créneau — Lundi 9 juin</div>
-            <div class="slot-row">
-              <div class="slot-time">Matin · 09:00</div>
-              <div class="slot-ranger">
-                <select>
-                  <option value="">Non assignée</option>
-                  <option value="gabriel">Gabriel</option>
-                  <option value="sophie" selected>Sophie M.</option>
-                </select>
-              </div>
-              <div class="slot-status">
-                <span class="slot-cap">3 / 8 chiens</span>
-                <span class="badge b-muted">0 grand</span>
-              </div>
-            </div>
-            <div class="slot-row">
-              <div class="slot-time">Midi · 12:00</div>
-              <div class="slot-ranger">
-                <select>
-                  <option value="" selected>Non assignée</option>
-                  <option value="gabriel">Gabriel</option>
-                  <option value="sophie">Sophie M.</option>
-                </select>
-              </div>
-              <div class="slot-status">
-                <span class="slot-cap">0 / 8 chiens</span>
-              </div>
-            </div>
-            <div class="slot-row">
-              <div class="slot-time">Après-midi · 14:30</div>
-              <div class="slot-ranger">
-                <select>
-                  <option value="">Non assignée</option>
-                  <option value="gabriel">Gabriel</option>
-                  <option value="sophie" selected>Sophie M.</option>
-                </select>
-              </div>
-              <div class="slot-status">
-                <span class="slot-cap">2 / 8 chiens</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="bonus-row">
-            <div>
-              <div class="bonus-label">Place bonus derrière les sièges</div>
-              <div class="bonus-sub">Non disponible sur cette camionnette</div>
-            </div>
-            <div class="toggle" style="opacity:0.4;cursor:not-allowed;"><div class="toggle-knob"></div></div>
-          </div>
+        <!-- Rendu par renderCamionnettes() depuis la table camionnettes (migration v33) -->
+        <div id="camionnettes-list">
+          <div class="card"><div style="padding:16px;font-size:12.5px;color:var(--text-faint);">Chargement des camionnettes…</div></div>
         </div>
 
         <div style="padding:4px 0 8px;">
           <div class="info-box amber">
             <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            <div><strong>Règle grands chiens :</strong> max 3 chiens de 35 kg+ par camionnette et par tournée. Pour un 4e grand chien, activez manuellement la place bonus si disponible. La capacité repart à zéro à chaque créneau.</div>
+            <div><strong>Règle grands chiens :</strong> nombre de chiens de 35 kg+ limité par camionnette et par tournée (3 par défaut, réglable dans la fiche). Pour un grand chien de plus, activez la place bonus du créneau dans l’attribution quotidienne, si la camionnette en a une. La capacité repart à zéro à chaque créneau.</div>
           </div>
         </div>
       </div>
 
       <!-- ══ ATTRIBUTION QUOTIDIENNE ══ -->
+      <!-- Enregistree dans attributions_camionnettes (migration v33).
+           Sans ligne enregistree, le ranger par defaut de la camionnette s'applique. -->
       <div class="tab-pane" id="tab-attribution">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
           <div>
             <div id="attrib-date" style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:15px;font-weight:800;">Vue d'ensemble</div>
-            <div style="font-size:12px;color:var(--text-faint);margin-top:2px;">Camionnettes et rangers par créneau</div>
+            <div style="font-size:12px;color:var(--text-faint);margin-top:2px;">Camionnettes et rangers par créneau · enregistré à chaque changement</div>
           </div>
-          <div style="display:flex;gap:8px;">
-            <button class="btn btn-outline" onclick="changeDay(-1)">← Hier</button>
-            <button class="btn btn-outline" onclick="changeDay(1)">Demain →</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-outline" onclick="changeDay(-1)">← Veille</button>
+            <button class="btn btn-outline" onclick="changeDay(0)">Aujourd'hui</button>
+            <button class="btn btn-outline" onclick="changeDay(1)">Lendemain →</button>
           </div>
         </div>
 
-        <!-- Vue matricielle -->
         <div class="card">
           <div class="card-head"><span class="card-title">Récapitulatif du jour</span></div>
-          <div style="overflow-x:auto;">
-            <table style="width:100%;border-collapse:collapse;min-width:500px;">
-              <thead>
-                <tr>
-                  <th style="padding:10px 16px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;border-bottom:1px solid var(--border);">Créneau</th>
-                  <th style="padding:10px 16px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;border-bottom:1px solid var(--border);">Camionnette A (10 places)</th>
-                  <th style="padding:10px 16px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;border-bottom:1px solid var(--border);">Camionnette B (8 places)</th>
-                  <th style="padding:10px 16px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;border-bottom:1px solid var(--border);">Total chiens</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr style="border-top:1px solid var(--border);">
-                  <td style="padding:12px 16px;font-weight:600;font-size:12.5px;">Matin · 09:00</td>
-                  <td style="padding:12px 16px;">
-                    <div style="font-size:12.5px;font-weight:600;">Gabriel</div>
-                    <div style="font-size:11px;color:var(--accent);">7 chiens · 3 grands</div>
-                  </td>
-                  <td style="padding:12px 16px;">
-                    <div style="font-size:12.5px;font-weight:600;">Sophie M.</div>
-                    <div style="font-size:11px;color:var(--text-faint);">3 chiens · 0 grand</div>
-                  </td>
-                  <td style="padding:12px 16px;">
-                    <span style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:16px;font-weight:800;color:var(--accent);">10</span>
-                    <span style="font-size:11px;color:var(--text-faint);margin-left:4px;">chiens</span>
-                  </td>
-                </tr>
-                <tr style="border-top:1px solid var(--border);background:rgba(255,255,255,0.02);">
-                  <td style="padding:12px 16px;font-weight:600;font-size:12.5px;">Midi · 12:00</td>
-                  <td style="padding:12px 16px;">
-                    <div style="font-size:12.5px;font-weight:600;">Sophie M.</div>
-                    <div style="font-size:11px;color:var(--text-faint);">3 chiens · 0 grand</div>
-                  </td>
-                  <td style="padding:12px 16px;">
-                    <div style="font-size:12px;color:var(--text-faint);font-style:italic;">Non assignée</div>
-                  </td>
-                  <td style="padding:12px 16px;">
-                    <span style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:16px;font-weight:800;color:var(--text-dim);">3</span>
-                    <span style="font-size:11px;color:var(--text-faint);margin-left:4px;">chiens</span>
-                  </td>
-                </tr>
-                <tr style="border-top:1px solid var(--border);">
-                  <td style="padding:12px 16px;font-weight:600;font-size:12.5px;">Après-midi · 14:30</td>
-                  <td style="padding:12px 16px;">
-                    <div style="font-size:12.5px;font-weight:600;">Gabriel</div>
-                    <div style="font-size:11px;color:var(--text-faint);">2 chiens · 0 grand</div>
-                  </td>
-                  <td style="padding:12px 16px;">
-                    <div style="font-size:12.5px;font-weight:600;">Sophie M.</div>
-                    <div style="font-size:11px;color:var(--text-faint);">2 chiens · 0 grand</div>
-                  </td>
-                  <td style="padding:12px 16px;">
-                    <span style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:16px;font-weight:800;color:var(--text-dim);">4</span>
-                    <span style="font-size:11px;color:var(--text-faint);margin-left:4px;">chiens</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div style="overflow-x:auto;" id="attrib-table">
+            <div style="padding:16px;font-size:12.5px;color:var(--text-faint);">Chargement…</div>
           </div>
         </div>
 
-        <div class="info-box green">
-          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-          <div><strong>Aucun conflit détecté</strong> — chaque camionnette est assignée à un seul ranger par créneau. La même camionnette peut être utilisée par deux rangers différents sur des créneaux différents.</div>
-        </div>
+        <div id="attrib-etat"></div>
       </div>
 
       <!-- ══ STAFF ══ -->
@@ -1029,7 +765,7 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
               <div><label class="form-label">Réduct. fidèle 2e chien</label><div style="display:flex;align-items:center;gap:4px;"><input type="number" class="form-input" id="reduction-fidele" value="50" style="text-align:center;"><span style="color:var(--text-faint);font-size:12px;">%</span></div></div>
               <div><label class="form-label">Réduct. nouveau 2e chien</label><div style="display:flex;align-items:center;gap:4px;"><input type="number" class="form-input" id="reduction-nouveau" value="30" style="text-align:center;"><span style="color:var(--text-faint);font-size:12px;">%</span></div></div>
-              <div><label class="form-label">Supplément hors zone</label><div style="display:flex;align-items:center;gap:4px;"><input type="number" class="form-input" id="supplement-hors-zone" value="5" style="text-align:center;"><span style="color:var(--text-faint);font-size:12px;">€</span></div></div>
+              <div><label class="form-label">Supplément hors zone (HTVA / trajet)</label><div style="display:flex;align-items:center;gap:4px;"><input type="number" class="form-input" id="supplement-hors-zone" value="5" style="text-align:center;"><span style="color:var(--text-faint);font-size:12px;">€</span></div></div>
             </div>
 
             <!-- Entrée en vigueur -->
@@ -1198,103 +934,59 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
   </div>
 </div>
 
-<!-- Modal : Ajouter camionnette -->
-<div class="modal-overlay" id="modal-add-van">
+<!-- Modal : Ajouter / modifier camionnette (table camionnettes, migration v33) -->
+<div class="modal-overlay" id="modal-van">
   <div class="modal">
-    <div class="modal-title">Ajouter une camionnette</div>
+    <div class="modal-title" id="van-modal-title">Ajouter une camionnette</div>
     <div class="form-row-2">
       <div class="form-group">
         <label class="form-label">Nom</label>
-        <input type="text" class="form-input" placeholder="Ex : Camionnette C">
+        <input type="text" class="form-input" id="van-nom" placeholder="Ex : Camionnette C">
       </div>
       <div class="form-group">
         <label class="form-label">Immatriculation</label>
-        <input type="text" class="form-input" placeholder="LU · EF 9012">
+        <input type="text" class="form-input" id="van-immat" placeholder="LU · EF 9012">
       </div>
     </div>
     <div class="form-row-3">
       <div class="form-group">
-        <label class="form-label">Capacité totale</label>
-        <select class="form-input">
-          <option>6 chiens</option>
-          <option>8 chiens</option>
-          <option selected>10 chiens</option>
-          <option>12 chiens</option>
-        </select>
+        <label class="form-label">Capacité (chiens)</label>
+        <input type="number" class="form-input" id="van-cap" min="1" max="20" value="10">
       </div>
       <div class="form-group">
         <label class="form-label">Grands chiens max</label>
-        <select class="form-input">
-          <option>1</option>
-          <option>2</option>
-          <option selected>3</option>
-          <option>4</option>
-        </select>
+        <input type="number" class="form-input" id="van-grands" min="0" max="10" value="3">
       </div>
       <div class="form-group">
         <label class="form-label">Place bonus</label>
-        <select class="form-input">
-          <option>Oui</option>
-          <option selected>Non</option>
+        <select class="form-input" id="van-bonus">
+          <option value="non">Non</option>
+          <option value="oui">Oui</option>
         </select>
+      </div>
+    </div>
+    <div class="form-row-2">
+      <div class="form-group">
+        <label class="form-label">Kilométrage actuel</label>
+        <input type="number" class="form-input" id="van-km" min="0" placeholder="—">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ranger par défaut</label>
+        <select class="form-input" id="van-defaut"></select>
       </div>
     </div>
     <div class="form-group">
       <label class="form-label">Notes</label>
-      <input type="text" class="form-input" placeholder="Informations particulières...">
+      <input type="text" class="form-input" id="van-notes" placeholder="Informations particulières...">
     </div>
     <div class="modal-foot">
-      <button class="btn btn-outline" onclick="closeModal('modal-add-van')">Annuler</button>
-      <button class="btn btn-accent" onclick="closeModal('modal-add-van')">Ajouter</button>
+      <button class="btn btn-red" id="van-btn-actif" style="margin-right:auto;" onclick="basculerActifVan()">Désactiver</button>
+      <button class="btn btn-outline" id="van-btn-suppr" onclick="deleteVan()" style="border-color:rgba(224,90,90,0.5);color:var(--red);">Supprimer</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-van')">Annuler</button>
+      <button class="btn btn-accent" onclick="enregistrerVan()">Enregistrer</button>
     </div>
   </div>
 </div>
-
-<!-- Modal : Modifier camionnette -->
-<div class="modal-overlay" id="modal-edit-van">
-  <div class="modal">
-    <div class="modal-title">Modifier — <span id="edit-van-name">Camionnette A</span></div>
-    <div class="form-row-2">
-      <div class="form-group">
-        <label class="form-label">Nom</label>
-        <input type="text" class="form-input" value="Camionnette A">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Immatriculation</label>
-        <input type="text" class="form-input" value="LU · AB 1234">
-      </div>
-    </div>
-    <div class="form-row-3">
-      <div class="form-group">
-        <label class="form-label">Capacité totale</label>
-        <select class="form-input">
-          <option>8 chiens</option>
-          <option selected>10 chiens</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Grands chiens max</label>
-        <select class="form-input">
-          <option>2</option>
-          <option selected>3</option>
-          <option>4</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Place bonus</label>
-        <select class="form-input">
-          <option selected>Oui</option>
-          <option>Non</option>
-        </select>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-red" style="margin-right:auto;" onclick="deactivateVan()">Désactiver</button>
-      <button class="btn btn-outline" onclick="deleteVan()" style="border-color:rgba(224,90,90,0.5);color:var(--red);">Supprimer</button>
-      <button class="btn btn-outline" onclick="closeModal('modal-edit-van')">Annuler</button>
-      <button class="btn btn-accent" onclick="closeModal('modal-edit-van')">Enregistrer</button>
-    </div>
-  </div>
 </div>
 
 
@@ -1413,56 +1105,484 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
   m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
 });
 
-// ── CAMIONNETTES : modifier / désactiver / supprimer ──
-var currentVanCard = null;
-var currentVanName = '';
-
-function openEditVan(btn, name) {
-  currentVanCard = btn.closest('.van-card');
-  currentVanName = name;
-  var titleEl = document.getElementById('edit-van-name');
-  if (titleEl) titleEl.textContent = name;
-  openModal('modal-edit-van');
-}
-
-// Désactiver = la camionnette reste enregistrée mais n'est plus assignable (badge "Inactive", grisée)
-function deactivateVan() {
-  if (!currentVanCard) { closeModal('modal-edit-van'); return; }
-  if (!confirm('Désactiver « ' + currentVanName + ' » ?\n\nElle reste enregistrée mais ne pourra plus être assignée à un ranger tant qu\'elle est inactive. Vous pourrez la réactiver à tout moment.')) return;
-  var badge = currentVanCard.querySelector('.badge');
-  if (badge) { badge.textContent = 'Inactive'; badge.className = 'badge b-muted'; }
-  currentVanCard.style.opacity = '0.55';
-  currentVanCard.dataset.inactive = 'true';
-  showToast('Camionnette désactivée', 'amber');
-  closeModal('modal-edit-van');
-}
-
-// Supprimer = retrait définitif de la camionnette
-function deleteVan() {
-  if (!currentVanCard) { closeModal('modal-edit-van'); return; }
-  if (!confirm('Supprimer définitivement « ' + currentVanName + ' » ?\n\nCette action est irréversible. Préférez « Désactiver » si vous souhaitez seulement la mettre de côté.')) return;
-  currentVanCard.remove();
-  currentVanCard = null;
-  showToast('Camionnette supprimée', 'red');
-  closeModal('modal-edit-van');
-}
-
-// ── ATTRIBUTION QUOTIDIENNE : date dynamique ──
-var attribDate = new Date();
+// ══════════════════════════════════════════════════════════════
+//  CAMIONNETTES ET ATTRIBUTION QUOTIDIENNE (migration v33)
+//  · camionnettes : fiche, ranger par défaut, actif / inactif
+//  · attributions_camionnettes : une ligne par jour, créneau et
+//    camionnette. Sans ligne, le ranger par défaut s'applique ;
+//    staff_id null = « Non assignée » choisi volontairement.
+//  Chaque changement est enregistré immédiatement.
+// ══════════════════════════════════════════════════════════════
+var CAMS = [];            // camionnettes (actives et inactives)
+var STAFF_ATTR = [];      // staff actif, pour les listes
+var ATTR = {};            // 'creneau|camionnette_id' -> ligne enregistrée
+var ATTR_V33 = true;      // false si la migration v33 n'est pas passée (table attributions absente)
+var CAM_ORDRE = false;    // colonne camionnettes.ordre présente (v33)
+var CRENEAUX_ATTR = [
+  { k: 'matin',  label: 'Matin · 09:00' },
+  { k: 'midi',   label: 'Midi · 12:00' },
+  { k: 'apmidi', label: 'Après-midi · 14:30' }
+];
 var JOURS_FR = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
 var MOIS_FR  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+var attribDate = new Date();
+var vanEnEdition = null;  // id de la camionnette ouverte dans la fenêtre (null = ajout)
 
+function escH(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+function isoJour(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function camById(id)   { return CAMS.find(function(c) { return String(c.id) === String(id); }); }
+function staffById(id) { return STAFF_ATTR.find(function(s) { return String(s.id) === String(id); }); }
+function staffNom(id) {
+  var s = staffById(id);
+  if (!s) return '';
+  return (s.prenom || '') + (s.nom ? ' ' + s.nom.charAt(0) + '.' : '');
+}
+function camsActives() { return CAMS.filter(function(c) { return c.active !== false; }); }
+function optionsStaff(selected, avecVide) {
+  var h = avecVide ? '<option value="">' + avecVide + '</option>' : '';
+  STAFF_ATTR.forEach(function(s) {
+    h += '<option value="' + escH(s.id) + '"' + (String(selected) === String(s.id) ? ' selected' : '') + '>'
+       + escH((s.prenom || '') + ' ' + (s.nom || '')) + '</option>';
+  });
+  return h;
+}
+function erreurV33(e) {
+  var m = (e && (e.message || e.details)) || '';
+  return /attributions_camionnettes|ranger_defaut_id|max_grands_chiens|place_bonus|schema cache|does not exist/i.test(m);
+}
+
+async function initCamionnettes() {
+  try {
+    var st = await db.from('staff').select('id,prenom,nom,type_contrat,actif').eq('actif', true).order('prenom');
+    STAFF_ATTR = st.data || [];
+  } catch(e) { STAFF_ATTR = []; }
+  // Attribution quotidienne : table créée par la v33
+  try {
+    var t33 = await db.from('attributions_camionnettes').select('date_jour').limit(1);
+    ATTR_V33 = !t33.error;
+  } catch(e) { ATTR_V33 = false; }
+  await loadCamionnettes();
+  renderAttribDate();
+  await loadAttributions();
+}
+
+// ── CAMIONNETTES ──
+async function loadCamionnettes() {
+  var r = await db.from('camionnettes').select('*').order('nom');
+  if (r.error) {
+    console.log('Erreur camionnettes:', r.error);
+    CAMS = [];
+  } else {
+    CAMS = (r.data || []).slice().sort(function(a, b) {
+      var oa = a.ordre == null ? 999 : a.ordre, ob = b.ordre == null ? 999 : b.ordre;
+      return oa - ob || String(a.nom).localeCompare(String(b.nom));
+    });
+    CAM_ORDRE = !!CAMS.length && ('ordre' in CAMS[0]);
+  }
+  renderCamionnettes();
+}
+
+function renderCamionnettes() {
+  var box = document.getElementById('camionnettes-list');
+  if (!box) return;
+  var h = '';
+  if (!ATTR_V33) {
+    h += '<div class="info-box amber" style="margin-bottom:14px;"><div><strong>Migration v33 à exécuter</strong> — '
+       + 'sans elle, l’attribution quotidienne ne peut pas être enregistrée '
+       + '(Supabase → SQL Editor → sql/fr_migration_v33_camionnettes.sql).</div></div>';
+  }
+  if (!CAMS.length) {
+    h += '<div class="card"><div style="padding:16px;font-size:12.5px;color:var(--text-faint);">Aucune camionnette. Utilisez « Ajouter camionnette ».</div></div>';
+  }
+  CAMS.forEach(function(c) {
+    var inactive = c.active === false;
+    h += '<div class="van-card"' + (inactive ? ' style="opacity:0.55;"' : '') + '>'
+      + '<div class="van-header">'
+      +   '<div class="van-icon"><svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 4v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>'
+      +   '<div style="flex:1;"><div class="van-name">' + escH(c.nom) + '</div>'
+      +   '<div class="van-plate">' + escH(c.immatriculation || 'Immatriculation non renseignée') + '</div></div>'
+      +   '<div style="display:flex;gap:6px;align-items:center;">'
+      +     (inactive ? '<span class="badge b-muted">Inactive</span>' : '<span class="badge b-green">Active</span>')
+      +     '<div class="icon-btn" title="Modifier" onclick="openEditVan(\'' + escH(c.id) + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>'
+      +   '</div>'
+      + '</div>'
+      + '<div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
+      +   '<div style="font-size:12px;color:var(--text-dim);">'
+      +     '<span style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);display:block;margin-bottom:4px;">Ranger par defaut</span>'
+      +     '<select onchange="saveDefautVan(\'' + escH(c.id) + '\', this)"'
+      +       ' style="background:var(--surface3);border:1px solid var(--border2);border-radius:7px;padding:6px 10px;color:var(--text);font-family:\'Instrument Sans\',sans-serif;font-size:12.5px;outline:none;">'
+      +       optionsStaff(c.ranger_defaut_id, 'Aucun')
+      +     '</select>'
+      +   '</div>'
+      +   '<div style="font-size:11px;color:var(--text-faint);text-align:right;line-height:1.5;">Repris chaque jour<br>sauf changement dans l’attribution</div>'
+      + '</div>'
+      + '<div class="cap-grid" style="border-bottom:none;">'
+      +   '<div class="cap-item"><div class="cap-val total">' + (c.capacite_totale || '—') + '</div><div class="cap-label">Chiens max / tournée</div></div>'
+      +   '<div class="cap-item"><div class="cap-val large">' + (c.max_grands_chiens != null ? c.max_grands_chiens : 3) + '</div><div class="cap-label">Grands chiens (35 kg+)</div></div>'
+      +   '<div class="cap-item"><div class="cap-val bonus"' + (c.place_bonus ? '' : ' style="color:var(--text-faint);"') + '>' + (c.place_bonus ? '+1' : '—') + '</div><div class="cap-label">Place bonus</div></div>'
+      + '</div>'
+      + '<div style="padding:0 16px 12px;font-size:11.5px;color:var(--text-faint);">'
+      +   'Kilométrage : <strong style="color:var(--text-dim);">' + (c.km_actuel != null ? Number(c.km_actuel).toLocaleString('fr-LU') + ' km' : '—') + '</strong>'
+      +   (c.notes ? ' · ' + escH(c.notes) : '')
+      + '</div>'
+      + '</div>';
+  });
+  box.innerHTML = h;
+  normalizeNorwester();
+}
+
+async function saveDefautVan(id, sel) {
+  var c = camById(id);
+  var avant = c ? c.ranger_defaut_id : null;
+  var val = sel.value || null;
+  var r = await db.from('camionnettes').update({ ranger_defaut_id: val }).eq('id', id).select('id');
+  if (r.error || !r.data || !r.data.length) {
+    sel.value = avant || '';
+    showToast(erreurV33(r.error) ? 'Migration v33 à exécuter' : 'Non enregistré — droits admin requis', 'red');
+    console.log('saveDefautVan:', r.error);
+    return;
+  }
+  if (c) c.ranger_defaut_id = val;
+  showToast('✓ Ranger par défaut enregistré', 'green');
+  renderAttribution();
+}
+
+function openAddVan() {
+  vanEnEdition = null;
+  document.getElementById('van-modal-title').textContent = 'Ajouter une camionnette';
+  document.getElementById('van-nom').value = '';
+  document.getElementById('van-immat').value = '';
+  document.getElementById('van-cap').value = 10;
+  document.getElementById('van-grands').value = 3;
+  document.getElementById('van-bonus').value = 'non';
+  document.getElementById('van-km').value = '';
+  document.getElementById('van-notes').value = '';
+  document.getElementById('van-defaut').innerHTML = optionsStaff('', 'Aucun');
+  document.getElementById('van-btn-actif').style.display = 'none';
+  document.getElementById('van-btn-suppr').style.display = 'none';
+  openModal('modal-van');
+}
+
+function openEditVan(id) {
+  var c = camById(id);
+  if (!c) return;
+  vanEnEdition = c.id;
+  document.getElementById('van-modal-title').textContent = 'Modifier — ' + c.nom;
+  document.getElementById('van-nom').value = c.nom || '';
+  document.getElementById('van-immat').value = c.immatriculation || '';
+  document.getElementById('van-cap').value = c.capacite_totale || '';
+  document.getElementById('van-grands').value = c.max_grands_chiens != null ? c.max_grands_chiens : 3;
+  document.getElementById('van-bonus').value = c.place_bonus ? 'oui' : 'non';
+  document.getElementById('van-km').value = c.km_actuel != null ? c.km_actuel : '';
+  document.getElementById('van-notes').value = c.notes || '';
+  document.getElementById('van-defaut').innerHTML = optionsStaff(c.ranger_defaut_id, 'Aucun');
+  var b = document.getElementById('van-btn-actif');
+  b.style.display = '';
+  b.textContent = c.active === false ? 'Réactiver' : 'Désactiver';
+  document.getElementById('van-btn-suppr').style.display = '';
+  openModal('modal-van');
+}
+
+async function enregistrerVan() {
+  var nom = document.getElementById('van-nom').value.trim();
+  if (!nom) { showToast('Nom obligatoire', 'red'); return; }
+  var num = function(id) { var v = document.getElementById(id).value; return v === '' ? null : parseInt(v, 10); };
+  var ligne = {
+    nom: nom,
+    immatriculation: document.getElementById('van-immat').value.trim() || null,
+    capacite_totale: num('van-cap'),
+    km_actuel: num('van-km')
+  };
+  {
+    ligne.max_grands_chiens = num('van-grands') == null ? 3 : num('van-grands');
+    ligne.place_bonus = document.getElementById('van-bonus').value === 'oui';
+    ligne.notes = document.getElementById('van-notes').value.trim() || null;
+    ligne.ranger_defaut_id = document.getElementById('van-defaut').value || null;
+  }
+  var r;
+  if (vanEnEdition) {
+    r = await db.from('camionnettes').update(ligne).eq('id', vanEnEdition).select('id');
+  } else {
+    if (CAM_ORDRE) ligne.ordre = CAMS.length + 1;
+    r = await db.from('camionnettes').insert(ligne).select('id');
+  }
+  if (r.error || !r.data || !r.data.length) {
+    console.log('enregistrerVan:', r.error);
+    showToast(/immatriculation_key/.test((r.error && r.error.message) || '') ? 'Cette immatriculation existe déjà'
+            : erreurV33(r.error) ? 'Migration v33 à exécuter' : 'Non enregistré — droits admin requis', 'red');
+    return;
+  }
+  closeModal('modal-van');
+  showToast(vanEnEdition ? '✓ Camionnette mise à jour' : '✓ Camionnette ajoutée', 'green');
+  await loadCamionnettes();
+  renderAttribution();
+}
+
+// Désactiver = la camionnette reste enregistrée mais disparaît de l'attribution
+async function basculerActifVan() {
+  var c = camById(vanEnEdition);
+  if (!c) return;
+  var activer = c.active === false;
+  if (!activer && !confirm('Désactiver « ' + c.nom + ' » ?\n\nElle reste enregistrée mais n’apparaît plus dans l’attribution quotidienne. Vous pourrez la réactiver à tout moment.')) return;
+  var r = await db.from('camionnettes').update({ active: activer }).eq('id', c.id).select('id');
+  if (r.error || !r.data || !r.data.length) {
+    showToast(erreurV33(r.error) ? 'Migration v33 à exécuter' : 'Non enregistré', 'red');
+    return;
+  }
+  closeModal('modal-van');
+  showToast(activer ? '✓ Camionnette réactivée' : 'Camionnette désactivée', activer ? 'green' : 'amber');
+  await loadCamionnettes();
+  renderAttribution();
+}
+
+// Supprimer = retrait définitif, attributions de la camionnette comprises
+async function deleteVan() {
+  var c = camById(vanEnEdition);
+  if (!c) return;
+  if (!confirm('Supprimer définitivement « ' + c.nom + ' » ?\n\nSes attributions enregistrées sont supprimées aussi. Préférez « Désactiver » pour la mettre de côté.')) return;
+  var r = await db.from('camionnettes').delete().eq('id', c.id).select('id');
+  if (r.error || !r.data || !r.data.length) {
+    console.log('deleteVan:', r.error);
+    showToast('Suppression refusée', 'red');
+    return;
+  }
+  closeModal('modal-van');
+  showToast('Camionnette supprimée', 'red');
+  await loadCamionnettes();
+  await loadAttributions();
+}
+
+// ── ATTRIBUTION QUOTIDIENNE ──
 function renderAttribDate() {
   var el = document.getElementById('attrib-date');
   if (!el) return;
   var label = JOURS_FR[attribDate.getDay()] + ' ' + attribDate.getDate() + ' ' + MOIS_FR[attribDate.getMonth()];
-  el.textContent = "Vue d'ensemble — " + label;
+  var auj = isoJour(new Date()) === isoJour(attribDate);
+  el.textContent = "Vue d'ensemble — " + label + (auj ? " (aujourd'hui)" : '');
   normalizeNorwester();
 }
 
 function changeDay(delta) {
-  attribDate.setDate(attribDate.getDate() + delta);
+  if (delta === 0) attribDate = new Date();
+  else attribDate.setDate(attribDate.getDate() + delta);
   renderAttribDate();
+  loadAttributions();
+}
+
+// Ranger effectif : ligne enregistrée, sinon ranger par défaut
+function rangerEffectif(cren, camId) {
+  var a = ATTR[cren + '|' + camId];
+  if (a) return { id: a.staff_id || '', source: 'saisie', bonus: !!a.bonus };
+  var c = camById(camId);
+  return { id: (c && c.ranger_defaut_id) || '', source: 'defaut', bonus: false };
+}
+
+var CHIENS_JOUR = {};     // creneau -> { n, grands }
+
+async function loadAttributions() {
+  var jour = isoJour(attribDate);
+  ATTR = {};
+  if (ATTR_V33) {
+    var r = await db.from('attributions_camionnettes').select('*').eq('date_jour', jour);
+    if (r.error) {
+      console.log('attributions:', r.error);
+      if (erreurV33(r.error)) ATTR_V33 = false;
+    } else {
+      (r.data || []).forEach(function(a) { ATTR[a.creneau + '|' + a.camionnette_id] = a; });
+    }
+  }
+  CHIENS_JOUR = await compterChiensDuJour(jour);
+  renderAttribution();
+}
+
+// Nombre de chiens par créneau (promenades du jour, même filtre que le planning)
+async function compterChiensDuJour(jour) {
+  var out = {};
+  try {
+    if (window.FR_CAL && !FR_CAL.estCharge()) { try { await FR_CAL.charger(db); } catch(e) {} }
+    var r = await db.from('reservations')
+      .select('id,service,creneau,statut,date_debut,date_fin,jours_recurrence,date_fin_recurrence,dates_exclues,client_id,chien_id')
+      .eq('service', 'walking')
+      .lte('date_debut', jour)
+      .gte('date_fin', jour)
+      .neq('statut', 'annule');
+    var rows = r.data || [];
+    if (window.FR_FACT && FR_FACT.seancesDuJour) rows = FR_FACT.seancesDuJour(rows, jour);
+    if (!rows.length) return out;
+    // Chiens : chien_id précis, ou tous les chiens actifs du client si chien_id vide
+    var clients = rows.map(function(x) { return x.client_id; }).filter(Boolean);
+    var ch = await db.from('chiens').select('id,client_id,poids_kg,grand_chien,actif')
+      .in('client_id', Array.from(new Set(clients)));
+    var chiens = ch.data || [];
+    var grand = function(c) { return !!c.grand_chien || (parseFloat(c.poids_kg) || 0) >= 35; };
+    var vus = {};
+    rows.forEach(function(x) {
+      var cr = x.creneau || 'matin';
+      if (!out[cr]) out[cr] = { n: 0, grands: 0 };
+      var liste = x.chien_id
+        ? chiens.filter(function(c) { return String(c.id) === String(x.chien_id); })
+        : chiens.filter(function(c) { return String(c.client_id) === String(x.client_id) && c.actif !== false; });
+      if (x.chien_id && !liste.length) liste = [{ id: 'r' + x.id }];
+      liste.forEach(function(c) {
+        var cle = cr + '|' + c.id;
+        if (vus[cle]) return;
+        vus[cle] = true;
+        out[cr].n++;
+        if (grand(c)) out[cr].grands++;
+      });
+    });
+  } catch(e) { console.log('comptage chiens:', e); }
+  return out;
+}
+
+function renderAttribution() {
+  var box = document.getElementById('attrib-table');
+  if (!box) return;
+  var cams = camsActives();
+  var th = 'padding:10px 16px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;border-bottom:1px solid var(--border);';
+  var sel = 'background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-family:\'Instrument Sans\',sans-serif;font-size:12.5px;outline:none;width:100%;max-width:190px;';
+  if (!cams.length) {
+    box.innerHTML = '<div style="padding:16px;font-size:12.5px;color:var(--text-faint);">Aucune camionnette active.</div>';
+    renderAttribEtat([]);
+    return;
+  }
+  var h = '<table style="width:100%;border-collapse:collapse;min-width:' + (220 + cams.length * 200) + 'px;"><thead><tr>'
+        + '<th style="' + th + '">Créneau</th>';
+  cams.forEach(function(c) {
+    h += '<th style="' + th + '">' + escH(c.nom) + (c.capacite_totale ? ' (' + c.capacite_totale + ' places)' : '') + '</th>';
+  });
+  h += '<th style="' + th + '">Chiens du créneau</th></tr></thead><tbody>';
+
+  var problemes = [];
+  CRENEAUX_ATTR.forEach(function(cr, i) {
+    h += '<tr style="border-top:1px solid var(--border);' + (i % 2 ? 'background:rgba(255,255,255,0.02);' : '') + '">'
+       + '<td style="padding:12px 16px;font-weight:600;font-size:12.5px;white-space:nowrap;">' + cr.label + '</td>';
+    var capTot = 0, grandsTot = 0, assignees = 0;
+    cams.forEach(function(c) {
+      var eff = rangerEffectif(cr.k, c.id);
+      if (eff.id) { assignees++; capTot += (c.capacite_totale || 0); grandsTot += (c.max_grands_chiens != null ? c.max_grands_chiens : 3) + (eff.bonus ? 1 : 0); }
+      h += '<td style="padding:10px 16px;vertical-align:top;">'
+         + '<select style="' + sel + '"' + (ATTR_V33 ? '' : ' disabled')
+         + ' onchange="saveAttribution(\'' + cr.k + '\',\'' + escH(c.id) + '\',this)">'
+         + optionsStaff(eff.id, 'Non assignée') + '</select>'
+         + '<div style="font-size:10.5px;color:var(--text-faint);margin-top:4px;">'
+         + (eff.source === 'defaut' ? (eff.id ? 'par défaut' : 'aucun ranger par défaut') : 'enregistré')
+         + '</div>';
+      if (c.place_bonus && eff.id) {
+        h += '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim);margin-top:6px;cursor:pointer;">'
+           + '<input type="checkbox"' + (eff.bonus ? ' checked' : '') + (ATTR_V33 ? '' : ' disabled')
+           + ' onchange="saveBonus(\'' + cr.k + '\',\'' + escH(c.id) + '\',this)"> Place bonus</label>';
+      }
+      h += '</td>';
+    });
+    var ids = cams.map(function(c) { return rangerEffectif(cr.k, c.id).id; }).filter(Boolean);
+    ids.forEach(function(id, j) {
+      if (ids.indexOf(id) !== j) problemes.push(cr.label + ' : ' + staffNom(id) + ' est sur deux camionnettes');
+    });
+    var cj = CHIENS_JOUR[cr.k] || { n: 0, grands: 0 };
+    var trop = cj.n > capTot || cj.grands > grandsTot;
+    if (cj.n && !assignees) problemes.push(cr.label + ' : ' + cj.n + ' chien(s) et aucune camionnette assignée');
+    else if (cj.n > capTot) problemes.push(cr.label + ' : ' + cj.n + ' chiens pour ' + capTot + ' places');
+    else if (cj.grands > grandsTot) problemes.push(cr.label + ' : ' + cj.grands + ' grands chiens pour ' + grandsTot + ' places grand gabarit');
+    h += '<td style="padding:12px 16px;white-space:nowrap;">'
+       + '<span style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:16px;font-weight:800;color:' + (trop ? 'var(--red)' : (cj.n ? 'var(--accent)' : 'var(--text-dim)')) + ';">' + cj.n + '</span>'
+       + '<span style="font-size:11px;color:var(--text-faint);margin-left:4px;">/ ' + capTot + ' places</span>'
+       + (cj.grands ? '<div style="font-size:11px;color:var(--amber);">' + cj.grands + ' grand' + (cj.grands > 1 ? 's' : '') + '</div>' : '')
+       + '</td></tr>';
+  });
+  h += '</tbody></table>';
+  box.innerHTML = h;
+  renderAttribEtat(problemes);
+}
+
+function renderAttribEtat(problemes) {
+  var el = document.getElementById('attrib-etat');
+  if (!el) return;
+  if (!ATTR_V33) {
+    el.innerHTML = '<div class="info-box amber"><div><strong>Migration v33 à exécuter</strong> — l’attribution ne peut pas être enregistrée tant que sql/fr_migration_v33_camionnettes.sql n’est pas passé dans Supabase.</div></div>';
+    return;
+  }
+  if (problemes.length) {
+    el.innerHTML = '<div class="info-box amber"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+      + '<div><strong>À vérifier</strong> — ' + problemes.map(escH).join(' · ') + '</div></div>';
+    return;
+  }
+  el.innerHTML = '<div class="info-box green"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>'
+    + '<div><strong>Aucun conflit</strong> — un ranger ne conduit qu’une camionnette par créneau ; la même camionnette peut passer d’un ranger à l’autre selon le créneau.</div></div>';
+}
+
+// Écrit une ligne (upsert sur jour + créneau + camionnette)
+async function ecrireAttribution(cren, camId, staffId, bonus) {
+  var ligne = {
+    date_jour: isoJour(attribDate), creneau: cren, camionnette_id: camId,
+    staff_id: staffId || null, bonus: !!bonus, updated_at: new Date().toISOString()
+  };
+  var r = await db.from('attributions_camionnettes')
+    .upsert(ligne, { onConflict: 'date_jour,creneau,camionnette_id' }).select();
+  if (r.error || !r.data || !r.data.length) throw (r.error || new Error('refus'));
+  ATTR[cren + '|' + camId] = r.data[0];
+}
+
+async function saveAttribution(cren, camId, sel) {
+  var nouveau = sel.value || '';
+  var ancien = rangerEffectif(cren, camId);
+  var bonus = nouveau ? ancien.bonus : false;
+  // Le ranger choisi conduit déjà une autre camionnette sur ce créneau :
+  // on échange (l'autre camionnette reprend le ranger d'ici).
+  var autre = nouveau ? camsActives().find(function(c) {
+    return String(c.id) !== String(camId) && rangerEffectif(cren, c.id).id === nouveau;
+  }) : null;
+  try {
+    if (autre) {
+      var autreBonus = rangerEffectif(cren, autre.id).bonus;
+      await ecrireAttribution(cren, autre.id, null, false);           // libère d'abord
+      await ecrireAttribution(cren, camId, nouveau, bonus);
+      await ecrireAttribution(cren, autre.id, ancien.id, ancien.id ? autreBonus : false);
+    } else {
+      // Fige aussi les autres camionnettes du créneau encore « par défaut » :
+      // le ranger par défaut ne peut ainsi jamais doubler une saisie.
+      var aFiger = camsActives().filter(function(c) {
+        return String(c.id) !== String(camId) && !ATTR[cren + '|' + c.id];
+      });
+      await ecrireAttribution(cren, camId, nouveau, bonus);
+      for (var i = 0; i < aFiger.length; i++) {
+        var eff = rangerEffectif(cren, aFiger[i].id);
+        var pris = camsActives().some(function(c) {
+          var a = ATTR[cren + '|' + c.id];
+          return a && a.staff_id && String(a.staff_id) === String(eff.id);
+        });
+        await ecrireAttribution(cren, aFiger[i].id, pris ? null : eff.id, false);
+      }
+    }
+    showToast('✓ ' + (nouveau ? staffNom(nouveau) : 'Non assignée') + (autre ? ' — échange avec ' + autre.nom : ''), 'green');
+  } catch(e) {
+    console.log('saveAttribution:', e);
+    var m = (e && e.message) || '';
+    showToast(/duplicate|unique/i.test(m) ? 'Ce ranger a déjà une camionnette sur ce créneau'
+            : erreurV33(e) ? 'Migration v33 à exécuter' : 'Non enregistré — droits admin requis', 'red');
+    await loadAttributions();
+    return;
+  }
+  renderAttribution();
+}
+
+async function saveBonus(cren, camId, box) {
+  var eff = rangerEffectif(cren, camId);
+  try {
+    await ecrireAttribution(cren, camId, eff.id, box.checked);
+    showToast(box.checked ? '✓ Place bonus activée' : 'Place bonus retirée', box.checked ? 'green' : 'amber');
+  } catch(e) {
+    console.log('saveBonus:', e);
+    box.checked = !box.checked;
+    showToast('Non enregistré', 'red');
+  }
+  renderAttribution();
 }
 
 // ── POLICE NORWESTER ──
@@ -1796,7 +1916,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Charger depuis Supabase
   loadParametres();
   loadStaff();
-  loadCamionnettes();
+  initCamionnettes();
   loadZones();
   loadPeriodes();
   renderFeries();
@@ -1806,8 +1926,6 @@ document.addEventListener('DOMContentLoaded', function() {
   var dEffet = document.getElementById('tarifs-date-effet');
   if (dEffet) { dEffet.value = dansUnMois(); dEffet.min = new Date().toISOString().slice(0,10); }
 
-  // Date du jour pour l'attribution quotidienne
-  renderAttribDate();
   // Le bouton "Ajouter camionnette" n'apparaît que sur l'onglet Camionnettes (actif par défaut)
   appliquerVue();
 
@@ -2083,43 +2201,7 @@ function editStaff(id) {
   showToast('Modification — bientôt disponible', 'amber');
 }
 
-// ── CAMIONNETTES ──
-async function loadCamionnettes() {
-  try {
-    var { data } = await db.from('camionnettes').select('*').order('nom');
-    if (!data) return;
-    renderCamionnettes(data);
-  } catch(e) { console.log('Erreur camionnettes:', e); }
-}
-
-function renderCamionnettes(cams) {
-  var container = document.getElementById('camionnettes-list');
-  if (!container) return;
-  container.innerHTML = cams.map(function(c) {
-    return '<div style="padding:14px 16px;border-bottom:1px solid var(--border);">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
-      + '<div style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:14px;font-weight:800;color:var(--text);">' + c.nom + '</div>'
-      + '<span class="badge b-green">Active</span></div>'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px;color:var(--text-dim);">'
-      + '<div>Immat : <strong style="color:var(--text);">' + (c.immatriculation || '—') + '</strong></div>'
-      + '<div>Capacité : <strong style="color:var(--text);">' + (c.capacite_totale || '—') + ' chiens</strong></div>'
-      + '<div>KM : <strong style="color:var(--text);">' + (c.km_actuel ? c.km_actuel.toLocaleString() : '—') + '</strong></div>'
-      + '</div>'
-      + '<div style="display:flex;justify-content:flex-end;margin-top:8px;">'
-      + '<button onclick="editCamionnette(\'' + c.id + '\',' + (c.km_actuel||0) + ')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;color:var(--text-dim);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:10px;font-weight:800;cursor:pointer;">Modifier km</button>'
-      + '</div></div>';
-  }).join('');
-}
-
-async function editCamionnette(id, kmActuel) {
-  var newKm = prompt('Kilométrage actuel (actuel : ' + kmActuel.toLocaleString() + ' km) :');
-  if (!newKm || isNaN(newKm)) return;
-  try {
-    await db.from('camionnettes').update({ km_actuel: parseInt(newKm) }).eq('id', id);
-    showToast('✓ Kilométrage mis à jour', 'green');
-    loadCamionnettes();
-  } catch(e) { showToast('Erreur mise à jour', 'red'); }
-}
+// ── CAMIONNETTES ET ATTRIBUTION : voir fr-camionnettes (bloc plus bas) ──
 
 // ── ZONES ──
 // Les secteurs sont edites ici (table zones, migration v28) : nom, communes
@@ -2233,28 +2315,13 @@ function showToast(msg, type) {
   var colors = { green: '#5ec97a', red: '#e05a5a', amber: '#f0b429' };
   var toast = document.createElement('div');
   toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:' + (colors[type]||colors.green) + ';color:white;padding:10px 20px;border-radius:10px;font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-size:13px;font-weight:800;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.3);white-space:nowrap;';
-  toast.textContent = msg;
+  toast.textContent = stripAccents(String(msg));
   document.body.appendChild(toast);
   setTimeout(function() { toast.remove(); }, 2500);
 }
 
 function toggleSwitch(el) {
   el.classList.toggle('on');
-}
-
-// Conflict detection
-const vanAssignments = { A: {}, B: {} };
-
-function checkConflict(select, van, slot) {
-  vanAssignments[van][slot] = select.value;
-  // Check if same ranger on same van same slot — already prevented by being single select
-  // Check if same van assigned to 2 rangers same slot
-  const warn = document.getElementById('conflict-' + van);
-  if (!warn) return;
-  // For demo: show conflict if matin and midi have same ranger on same van
-  const slots = Object.values(vanAssignments[van]).filter(v => v !== '');
-  const hasDuplicate = slots.length !== new Set(slots).size;
-  warn.style.display = hasDuplicate ? 'flex' : 'none';
 }
 
 // Congé actions
