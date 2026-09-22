@@ -3762,6 +3762,9 @@ async function loadFactures(id) {
     if (situationCompte && clientData && situationCompte.reservations_suspendues != null) {
       clientData.reservations_suspendues = situationCompte.reservations_suspendues;
     }
+    // Séances annulées après facturation : avoir déduit de la prochaine facture (régularisation)
+    regulClient = [];
+    try { if (window.FR_FACT && FR_FACT.aRegulariser) regulClient = await FR_FACT.aRegulariser(db, { clientIds: [id] }) || []; } catch (e) { console.log('régularisations :', e); }
     renderSituationCompte();
     renderFactures();
     renderAvoirsClient();
@@ -3771,18 +3774,27 @@ async function loadFactures(id) {
 }
 
 // ── Avoirs (v2.32) : montant payé en trop + notes de crédit ──
+var regulClient = [];
+function creditRegulClient() { return (regulClient || []).reduce(function(t, x) { return t + (x.reste < 0 ? -x.reste : 0); }, 0); }
 function renderAvoirsClient() {
   var el = document.getElementById('factures-avoirs');
   if (!el) return;
   var avoir = situationCompte ? frNum(situationCompte.avoir) : 0;
   var ncs = (facturesData || []).filter(function(f) { return f.statut === 'avoir'; });
-  // L'avoir disponible (trop-payé) est déjà affiché dans « Situation de votre compte »
-  if (!ncs.length) { el.innerHTML = ''; return; }
+  var credits = (regulClient || []).filter(function(x) { return x.reste < 0; });
+  // L'avoir disponible total est aussi affiché dans « Situation de votre compte »
+  if (!ncs.length && !credits.length) { el.innerHTML = ''; return; }
   var parId = {};
   (facturesData || []).forEach(function(f) { parId[String(f.id)] = f; });
-  var html = '<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;margin:0 0 8px;">Avoirs — notes de crédit</div>'
+  var html = '<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;margin:0 0 8px;">' + (credits.length ? 'Avoirs' : 'Avoirs — notes de crédit') + '</div>'
     + '<div style="border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;">';
-  html += ncs.map(function(n, i) {
+  html += credits.map(function(x, i) {
+    return '<div style="padding:13px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;' + (i ? 'border-top:1px solid var(--border);' : '') + '">'
+      + '<div style="min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--text);">Avoir — séance' + '(s) annulée(s) après facturation</div>'
+      + '<div style="font-size:11px;color:var(--text-dim);margin-top:2px;">Facture ' + esc(x.numero || '') + ' · ' + esc(x.label || '') + ' · déduit automatiquement de votre prochaine facture</div></div>'
+      + '<div style="font-size:14px;font-weight:700;color:var(--green);white-space:nowrap;">' + eur(-x.reste) + '</div></div>';
+  }).join('');
+  html += ncs.map(function(n, i) { i += credits.length;
     var o = parId[String(n.facture_origine_id)] || null;
     return '<div onclick="openFactureDetail(\'' + esc(n.id) + '\')" style="padding:13px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;' + (i ? 'border-top:1px solid var(--border);' : '') + '">'
       + '<div style="min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--text);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;">Note de crédit ' + esc(n.numero || '') + '</div>'
@@ -3801,7 +3813,7 @@ function renderSituationCompte() {
   var ouvertes = facturesData.filter(function(f) { return soldeFacture(f) > 0.004; })
     .sort(function(a, b) { return String(a.date_emission || a.created_at || '').localeCompare(String(b.date_emission || b.created_at || '')); });
   var solde = ouvertes.reduce(function(a, f) { return a + soldeFacture(f); }, 0);
-  var avoir = situationCompte ? frNum(situationCompte.avoir) : 0;
+  var avoir = (situationCompte ? frNum(situationCompte.avoir) : 0) + creditRegulClient();
   var suspendu = !!(clientData && clientData.reservations_suspendues);
 
   if (solde <= 0.004 && avoir <= 0.004 && !suspendu) {
@@ -3836,7 +3848,7 @@ function renderSituationCompte() {
       +   'IBAN <strong style="letter-spacing:0.03em;">' + FR_IBAN + '</strong> · BIC ' + FR_BIC + '<br>'
       +   'Communication : <strong>' + esc(numeros.join(', ') || 'votre numéro de facture') + '</strong>'
       + '</div>'
-      + '<div style="font-size:10.5px;color:var(--text-faint);margin-top:8px;line-height:1.5;">Un virement est imputé à la facture la plus ancienne. Le statut est mis à jour dès que Gabriel a pointé le virement sur le compte.</div>';
+      + '<div style="font-size:10.5px;color:var(--text-faint);margin-top:8px;line-height:1.5;">Un virement est imputé à la facture dont le numéro figure en communication, sinon à la plus ancienne. Le statut est mis à jour dès que Gabriel a pointé le virement sur le compte.</div>';
   }
 
   if (avoir > 0.004) {

@@ -549,8 +549,8 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
           <span class="badge b-amber" id="conges-nb-attente" style="margin-left:8px;vertical-align:middle;display:none;"></span>
         </div>
         <div id="conges-attente"><div style="font-size:12.5px;color:var(--text-faint);padding:4px 0 10px;">Chargement…</div></div>
-        <div class="card" style="margin:14px 0;">
-          <div class="card-head"><span class="card-title">Ajouter un congé ou une absence</span></div>
+        <div class="card" style="margin:14px 0;" id="ca-carte">
+          <div class="card-head"><span class="card-title" id="ca-titre">Ajouter un congé ou une absence</span></div>
           <div class="card-body">
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
               <div class="form-group"><label class="form-label">Ranger</label><select class="form-input" id="ca-ranger"></select></div>
@@ -560,7 +560,8 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
               <div class="form-group"><label class="form-label">Au</label><input type="date" class="form-input" id="ca-au"></div>
             </div>
             <div class="form-group"><label class="form-label">Motif / note</label><input class="form-input" id="ca-motif" placeholder="Facultatif"></div>
-            <button class="btn btn-accent" onclick="ajouterAbsence()">Enregistrer (confirmé)</button>
+            <button class="btn btn-accent" id="ca-btn" onclick="ajouterAbsence()">Enregistrer (confirmé)</button>
+            <button class="btn btn-outline" id="ca-annuler" style="display:none;" onclick="annulerModifConge()">Annuler la modification</button>
           </div>
         </div>
         <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:13px;font-weight:800;margin:20px 0 14px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;">
@@ -2419,20 +2420,57 @@ async function dmAnnuler(id) {
 }
 
 // ── Saisie d'un congé / d'une absence par Gabriel (confirmé d'office) — v44 ──
+var CONGES_LISTE = [], CONGE_EDIT = null;
+function modifierConge(id) {
+  var c = CONGES_LISTE.find(function(x) { return String(x.id) === String(id); }); if (!c) return;
+  CONGE_EDIT = c.id;
+  document.getElementById('ca-ranger').value = c.staff_id;
+  document.getElementById('ca-type').value = c.type || 'conge';
+  document.getElementById('ca-du').value = c.date_debut; document.getElementById('ca-au').value = c.date_fin;
+  document.getElementById('ca-motif').value = c.motif || '';
+  document.getElementById('ca-titre').textContent = 'Modifier le congé ou l\'absence';
+  document.getElementById('ca-btn').textContent = 'Enregistrer la modification';
+  document.getElementById('ca-annuler').style.display = '';
+  document.getElementById('ca-carte').scrollIntoView({ behavior: 'smooth' });
+}
+function annulerModifConge() {
+  CONGE_EDIT = null;
+  ['ca-du', 'ca-au', 'ca-motif'].forEach(function(id) { document.getElementById(id).value = ''; });
+  document.getElementById('ca-titre').textContent = 'Ajouter un congé ou une absence';
+  document.getElementById('ca-btn').textContent = 'Enregistrer (confirmé)';
+  document.getElementById('ca-annuler').style.display = 'none';
+}
+async function supprimerConge(id) {
+  var c = CONGES_LISTE.find(function(x) { return String(x.id) === String(id); });
+  if (!confirm('Supprimer définitivement ' + (c ? ((c.type && c.type !== 'conge') ? 'cette absence' : 'ce congé') + ' (' + periodeConge(c) + ')' : 'cette ligne') + ' ?')) return;
+  var r = await db.from('conges').delete().eq('id', id).select('id');
+  if (r.error || !r.data || !r.data.length) { showToast('Suppression impossible : ' + ((r.error && r.error.message) || 'droits administrateur ?'), 'red'); return; }
+  if (CONGE_EDIT === id) annulerModifConge();
+  showToast('Supprimé', 'amber');
+  loadConges();
+}
 async function ajouterAbsence() {
   var ligne = { staff_id: document.getElementById('ca-ranger').value, type: document.getElementById('ca-type').value,
     date_debut: document.getElementById('ca-du').value, date_fin: document.getElementById('ca-au').value || document.getElementById('ca-du').value,
     motif: (document.getElementById('ca-motif').value || '').trim() || null, statut: 'approuve' };
   if (!ligne.staff_id || !ligne.date_debut) { showToast('Ranger et date obligatoires', 'red'); return; }
   if (ligne.date_fin < ligne.date_debut) { showToast('La fin est avant le début', 'red'); return; }
-  var r = await db.from('conges').insert(ligne).select('id');
-  if (r.error && /type/.test(r.error.message || '')) {
-    if (ligne.type !== 'conge') { showToast('Migration v44 à exécuter pour saisir maladie / absence', 'red'); return; }
-    delete ligne.type; r = await db.from('conges').insert(ligne).select('id');
+  var r;
+  if (CONGE_EDIT) {
+    delete ligne.statut;
+    r = await db.from('conges').update(ligne).eq('id', CONGE_EDIT).select('id');
+    if (!r.error && (!r.data || !r.data.length)) r = { error: { message: 'aucune ligne modifiée (droits administrateur ?)' } };
+  } else {
+    r = await db.from('conges').insert(ligne).select('id');
+    if (r.error && /type/.test(r.error.message || '')) {
+      if (ligne.type !== 'conge') { showToast('Migration v44 à exécuter pour saisir maladie / absence', 'red'); return; }
+      delete ligne.type; r = await db.from('conges').insert(ligne).select('id');
+    }
   }
   if (r.error) { showToast('Erreur : ' + r.error.message, 'red'); return; }
-  ['ca-du', 'ca-au', 'ca-motif'].forEach(function(id) { document.getElementById(id).value = ''; });
-  showToast('✓ Enregistré', 'green');
+  var modif = !!CONGE_EDIT;
+  annulerModifConge();
+  showToast(modif ? '✓ Modifié' : '✓ Enregistré', 'green');
   loadConges();
 }
 
@@ -2645,6 +2683,7 @@ async function loadConges() {
     var auj = new Date().toISOString().slice(0, 10);
     var attente = (r.data || []).filter(function(c) { return (c.statut || 'en_attente') === 'en_attente'; });
     var approuves = (r.data || []).filter(function(c) { return c.statut === 'approuve' && c.date_fin >= moisPasse(); });
+    CONGES_LISTE = r.data || [];
     // Impact : réservations déjà assignées à ce ranger sur la période
     for (var i = 0; i < attente.length; i++) {
       var c = attente[i], s = noms[c.staff_id];
@@ -2695,7 +2734,10 @@ function congeHtml(c, enAttente, auj) {
           +   '<button class="btn btn-green" onclick="deciderConge(\'' + c.id + '\',\'approuve\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Approuver</button>'
           +   '<button class="btn btn-red" onclick="deciderConge(\'' + c.id + '\',\'refuse\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Refuser</button>'
           + '</div>'
-        : '')
+        : '<div class="conge-actions">'
+          +   '<button class="btn btn-outline" style="padding:4px 10px;font-size:11px;" onclick="modifierConge(\'' + c.id + '\')">Modifier</button>'
+          +   '<button class="btn btn-red" style="padding:4px 10px;font-size:11px;" onclick="supprimerConge(\'' + c.id + '\')">Supprimer</button>'
+          + '</div>')
     + '</div>';
 }
 async function deciderConge(id, statut) {
