@@ -121,11 +121,26 @@
     };
   }
 
+  // ── Note de crédit (annulation complète d'une facture, v38) ──
+  function noteCredit(o) {
+    // o = { prenom, numero, facture, periode, montant }
+    return {
+      objet: 'Note de crédit ' + (o.numero || '') + ' — Forest Rangers',
+      texte: 'Bonjour ' + (o.prenom || '') + ',\n\n'
+        + 'Veuillez trouver en pièce jointe la note de crédit ' + (o.numero || '') + ', qui annule entièrement la facture '
+        + (o.facture || '') + (o.periode ? ' (' + o.periode + ')' : '') + ', d\'un montant de ' + (o.montant || '') + '.\n\n'
+        + 'Cette facture ne doit donc pas être réglée. Si vous l\'avez déjà payée, le montant est automatiquement déduit de votre prochaine facture.\n\n'
+        + 'Une facture corrigée vous parviendra séparément si nécessaire. Tous vos documents restent disponibles dans votre espace client.\n\n'
+        + 'Merci pour votre compréhension,\nGabriel — Forest Rangers',
+      bouton: { label: 'Voir mon espace client', url: origine() + '/forestrangers-client.html' }
+    };
+  }
+
   window.FR_MAIL = {
     envoyer: envoyer,
     ouvrirMessagerie: ouvrirMessagerie,
     pdfBase64: pdfBase64,
-    modeles: { invitation: invitation, facture: facture },
+    modeles: { invitation: invitation, facture: facture, noteCredit: noteCredit },
     IBAN: IBAN, BIC: BIC
   };
 })();

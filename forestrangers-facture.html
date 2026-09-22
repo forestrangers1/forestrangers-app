@@ -465,6 +465,9 @@ html.light .actions-bar  { background: #f6f7f2; border-top-color: rgba(0,0,0,0.0
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
           <span class="btn-label-long">Envoyer</span>
         </button>
+        <button class="btn btn-outline" onclick="annulerParNoteCredit()" id="btn-nc" style="display:none;border-color:rgba(224,90,90,0.5);color:var(--red);" title="Annule entièrement cette facture par une note de crédit NC-…">
+          <span class="btn-label-long">Annuler (note de crédit)</span>
+        </button>
         <button class="btn btn-green" onclick="marquerPayeeFacture()" id="btn-mark-paid" style="display:none;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           <span class="btn-label-long">Marquer payée</span>
@@ -511,6 +514,8 @@ html.light .actions-bar  { background: #f6f7f2; border-top-color: rgba(0,0,0,0.0
                 <select class="form-input" id="facture-statut-input" onchange="updatePreview()">
                   <option value="impayee">Impayée</option>
                   <option value="payee">Payée</option>
+                  <option value="annulee">Annulée (note de crédit)</option>
+                  <option value="avoir">Note de crédit</option>
                 </select>
               </div>
             </div>
@@ -927,8 +932,8 @@ function applyStoredTotals() {
   var f = currentFacture;
   var totalHt = parseFloat(f.total_ht) || 0;
   var totalTtc = (f.total_ttc != null ? parseFloat(f.total_ttc) : totalHt) || 0;
-  var tva = Math.max(0, totalTtc - totalHt);
-  var rate = totalHt > 0 ? Math.round((tva / totalHt) * 100) : TVA_RATES.default;
+  var tva = totalTtc < 0 ? totalTtc - totalHt : Math.max(0, totalTtc - totalHt);   // note de crédit : négatif
+  var rate = totalHt !== 0 ? Math.round((tva / totalHt) * 100) : TVA_RATES.default;
 
   document.getElementById('subtotal').textContent = eur(totalHt);
   document.getElementById('inv-subtotal').textContent = eur(totalHt);
@@ -1390,7 +1395,8 @@ async function initFactureExistante(id) {
   // Vue lecture : pas de modification des lignes pour une facture déjà enregistrée
   document.getElementById('btn-depuis-planning').style.display = 'none';
   document.getElementById('btn-add-line').style.display = 'none';
-  document.getElementById('btn-mark-paid').style.display = (f.statut !== 'payee') ? '' : 'none';
+  document.getElementById('btn-mark-paid').style.display = (['payee', 'annulee', 'avoir'].indexOf(f.statut) === -1) ? '' : 'none';
+  afficherEtatNoteCredit(f);
 
   updatePreview();
 }
@@ -1403,7 +1409,13 @@ function updateStatusPill() {
   var pill = document.getElementById('inv-status-pill');
   var echeance = document.getElementById('facture-echeance-input').value;
   var today = new Date(); today.setHours(0, 0, 0, 0);
-  if (statut === 'payee') {
+  if (statut === 'avoir') {
+    pill.className = 'inv-status-pill paid';
+    pill.innerHTML = '<div class="inv-status-dot"></div>Note de crédit — rien à payer';
+  } else if (statut === 'annulee') {
+    pill.className = 'inv-status-pill pending';
+    pill.innerHTML = '<div class="inv-status-dot"></div>Annulée — rien à payer';
+  } else if (statut === 'payee') {
     pill.className = 'inv-status-pill paid';
     pill.innerHTML = '<div class="inv-status-dot"></div>Payée';
   } else if (echeance && new Date(echeance + 'T00:00:00') < today) {
@@ -1540,11 +1552,25 @@ async function envoyerFacture() {
   var periode = document.getElementById('facture-periode-input').value;
   var total   = document.getElementById('total-ttc').textContent;
   var echIso  = document.getElementById('facture-echeance-input').value;
-  var m = FR_MAIL.modeles.facture({
-    prenom: currentClient.prenom, numero: numero,
-    periode: periode ? periodeLabel(periode).toLowerCase() : '',
-    montant: total, echeance: echIso ? formatDateLongFR(echIso) : ''
-  });
+  var estNC = currentFacture.statut === 'avoir' || /^NC-/.test(numero);
+  var m;
+  if (estNC) {
+    var orig = null;
+    try { if (currentFacture.facture_origine_id) orig = (await db.from('factures').select('numero').eq('id', currentFacture.facture_origine_id).maybeSingle()).data; } catch (e) {}
+    m = FR_MAIL.modeles.noteCredit({
+      prenom: currentClient.prenom, numero: numero, facture: orig ? orig.numero : numero.replace(/^NC-/, ''),
+      periode: periode ? periodeLabel(periode).toLowerCase() : '', montant: total.replace('-', '')
+    });
+  } else if (currentFacture.statut === 'annulee') {
+    alert('Cette facture est annulée : envoyez plutôt sa note de crédit.');
+    return;
+  } else {
+    m = FR_MAIL.modeles.facture({
+      prenom: currentClient.prenom, numero: numero,
+      periode: periode ? periodeLabel(periode).toLowerCase() : '',
+      montant: total, echeance: echIso ? formatDateLongFR(echIso) : ''
+    });
+  }
 
   // Déjà envoyée ? (journal v32, s'il existe)
   var deja = '';
@@ -1554,7 +1580,7 @@ async function envoyerFacture() {
     if (!j.error && j.data && j.data.length) deja = '\n\nATTENTION : déjà envoyée le ' + new Date(j.data[0].created_at).toLocaleDateString('fr-LU') + ' à ' + j.data[0].destinataire + '.';
   } catch (_) {}
 
-  if (!confirm('Envoyer la facture ' + numero + ' (' + total + ') à ' + currentClient.email + ' ?\n\nLe PDF est joint à l\'email, envoyé depuis info@forestrangers.lu.' + deja)) return;
+  if (!confirm('Envoyer ' + (estNC ? 'la note de crédit ' : 'la facture ') + numero + ' (' + total + ') à ' + currentClient.email + ' ?\n\nLe PDF est joint à l\'email, envoyé depuis info@forestrangers.lu.' + deja)) return;
 
   _envoiEnCours = true;
   var btns = [document.getElementById('btn-send'), document.getElementById('btn-send-invoice')];
@@ -1573,7 +1599,7 @@ async function envoyerFacture() {
       client_id: currentClient.id, facture_id: String(currentFacture.id), attachments: pieces
     });
     if (r.ok) {
-      toastFacture('✓ Facture envoyée à ' + (r.destinataire || currentClient.email) + (r.redirige_depuis ? ' (compte test)' : ''));
+      toastFacture('✓ ' + (estNC ? 'Note de crédit' : 'Facture') + ' envoyée à ' + (r.destinataire || currentClient.email) + (r.redirige_depuis ? ' (compte test)' : ''));
     } else if (r.indisponible) {
       if (confirm('L\'envoi automatique ne répond pas (' + (r.erreur || '') + ').\n\nOuvrir votre messagerie à la place ? Pensez à joindre le PDF (bouton Télécharger PDF).')) {
         FR_MAIL.ouvrirMessagerie(currentClient.email, m.objet, m.texte);
@@ -1585,6 +1611,51 @@ async function envoyerFacture() {
     _envoiEnCours = false;
     btns.forEach(function(b, k) { if (b) { b.disabled = false; b.innerHTML = anciens[k]; } });
   }
+}
+
+// ── NOTE DE CRÉDIT (v38) : annulation complète d'une facture ──
+async function afficherEtatNoteCredit(f) {
+  var btn = document.getElementById('btn-nc');
+  var note = document.getElementById('inv-note');
+  var estNC = f.statut === 'avoir' || /^NC-/.test(f.numero || '');
+  if (btn) btn.style.display = (f.id && !estNC && f.statut !== 'annulee') ? '' : 'none';
+  if (!note) return;
+  var txt = '';
+  try {
+    if (estNC && f.facture_origine_id) {
+      var o = await db.from('factures').select('numero,date_emission').eq('id', f.facture_origine_id).maybeSingle();
+      txt = 'Note de crédit — annule entièrement la facture ' + ((o.data && o.data.numero) || '')
+        + (o.data && o.data.date_emission ? ' du ' + formatDateLongFR(o.data.date_emission) : '')
+        + '. Aucun paiement n\'est dû ; un montant déjà réglé est déduit des prochaines factures.';
+    } else if (f.statut === 'annulee') {
+      var n = await db.from('factures').select('id,numero').eq('facture_origine_id', f.id).maybeSingle();
+      txt = 'Facture annulée' + (n.data ? ' par la note de crédit ' + n.data.numero : '') + (f.annulation_motif ? ' — ' + f.annulation_motif : '') + '. Rien à payer.';
+    }
+  } catch (e) {}
+  if (txt) { note.textContent = txt; note.style.display = ''; }
+}
+
+async function annulerParNoteCredit() {
+  if (!currentFacture || !currentFacture.id) return;
+  var num = currentFacture.numero || '';
+  var motif = prompt('Annuler entièrement la facture ' + num + ' par la note de crédit NC-' + num + ' ?\n\n'
+    + '· La facture ne sera plus due ; un montant déjà payé sera déduit des prochaines factures.\n'
+    + '· Son mois redevient facturable (Depuis planning, ou Facturation du 1er).\n\n'
+    + 'Motif (facultatif, visible dans l\'admin) :', '');
+  if (motif === null) return;
+  var r = await db.rpc('fr_facture_annuler', { p_facture: currentFacture.id, p_motif: motif || null });
+  if (r.error) {
+    var m = r.error.message || '';
+    alert(/deja_annulee/.test(m) ? 'Cette facture est déjà annulée.'
+        : /est_une_nc/.test(m) ? 'Une note de crédit ne s\'annule pas.'
+        : /interdit/.test(m) ? 'Réservé à l\'administrateur.'
+        : /fr_facture_annuler|does not exist|schema cache/.test(m) ? 'Migration v38 à exécuter dans Supabase (sql/fr_migration_v38_note_credit.sql).'
+        : 'Annulation impossible : ' + m);
+    return;
+  }
+  var d = r.data || {};
+  var suite = confirm('✓ Note de crédit ' + d.numero + ' créée.\n\nL\'ouvrir et l\'envoyer au client maintenant ?');
+  window.location.href = window.location.pathname + '?id=' + encodeURIComponent(d.nc_id) + (suite ? '&envoyer=1' : '');
 }
 
 async function marquerPayeeFacture() {

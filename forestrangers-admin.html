@@ -2504,6 +2504,8 @@ function renderStatsFactures() {
 }
 
 function rcBadge(f) {
+  if (f.statut === 'avoir') return '<span class="badge b-green">Note de crédit</span>';
+  if (f.statut === 'annulee') return '<span class="badge b-muted">Annulée (note de crédit)</span>';
   if (parseFloat(f.solde) <= 0) return '<span class="badge b-green">Payée' + (f.date_paiement ? ' le ' + rcDate(f.date_paiement) : '') + '</span>';
   var j = f.jours_retard || 0;
   var etape = f.etape && f.etape !== 'aucune' ? ' · ' + (RC_ETAPES[f.etape] || f.etape).replace(' (+ frais)', '') : '';
