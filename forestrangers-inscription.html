@@ -1348,13 +1348,13 @@ input[type=range]::-webkit-slider-runnable-track {
         <div class="form-row solo">
           <div class="field">
             <label class="field-label">Code / Instructions d'accès</label>
-            <input class="field-input" type="text" placeholder="Ex : boîte à clé code 4521, portail gauche...">
+            <input class="field-input" type="text" id="acces-code" placeholder="Ex : boîte à clé code 4521, portail gauche...">
           </div>
         </div>
         <div class="form-row solo">
           <div class="field">
             <label class="field-label">Particularités du domicile</label>
-            <textarea class="field-input" placeholder="Ex : serviettes dans le garage, ne pas laisser entrer le chat..."></textarea>
+            <textarea class="field-input" id="acces-particularites" placeholder="Ex : serviettes dans le garage, ne pas laisser entrer le chat..."></textarea>
           </div>
         </div>
       </div>
@@ -1691,6 +1691,7 @@ input[type=range]::-webkit-slider-runnable-track {
           <div style="display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);"><div style="flex:0 0 33%;font-weight:700;font-size:12.5px;color:var(--text);">Facturation et paiement</div><div style="flex:1;font-size:12.5px;color:var(--text-dim);line-height:1.55;">Une facture détaillée est émise le dernier jour du mois pour les prestations réalisées, payable sous 14 jours par virement. TVA 17 % incluse. Envoi postal : +2 €.</div></div>
           <div style="display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);"><div style="flex:0 0 33%;font-weight:700;font-size:12.5px;color:var(--text);">Retard de paiement</div><div style="flex:1;font-size:12.5px;color:var(--text-dim);line-height:1.55;">Un retard entraîne les intérêts légaux et une indemnité de 25 € par rappel. Sans régularisation sous 30 jours, le contrat peut être résilié.</div></div>
           <div style="display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);"><div style="flex:0 0 33%;font-weight:700;font-size:12.5px;color:var(--text);">Déplacement hors secteur</div><div style="flex:1;font-size:12.5px;color:var(--text-dim);line-height:1.55;">Une adresse située hors du secteur habituel entraîne un supplément de 5 € HTVA par trajet et par adresse.</div></div>
+          <div style="display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);"><div style="flex:0 0 33%;font-weight:700;font-size:12.5px;color:var(--text);">Transport crèche du jour</div><div style="flex:1;font-size:12.5px;color:var(--text-dim);line-height:1.55;">Facultatif : dépose le matin et/ou retour le soir, 5 € HTVA (5,85 € TTC) par trajet. Hors secteur, le transport est assuré après confirmation. La pension n'a pas de transport : vous déposez et reprenez votre chien.</div></div>
           <div style="display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);"><div style="flex:0 0 33%;font-weight:700;font-size:12.5px;color:var(--text);">Horaires, jours fériés et météo</div><div style="flex:1;font-size:12.5px;color:var(--text-dim);line-height:1.55;">Du lundi au vendredi, de 8h00 à 18h00, hors jours fériés légaux luxembourgeois. Les promenades ont lieu par tous les temps, avec les adaptations nécessaires à la sécurité des chiens et de l'équipe.</div></div>
           <div style="display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);"><div style="flex:0 0 33%;font-weight:700;font-size:12.5px;color:var(--text);">Résiliation</div><div style="flex:1;font-size:12.5px;color:var(--text-dim);line-height:1.55;">Le contrat se résilie par écrit, par lettre recommandée. En cas de décès ou de maladie grave du chien, la résiliation est immédiate et sans préavis.</div></div>
           <div style="font-size:11.5px;color:var(--text-faint);margin-top:10px;line-height:1.5;">Résumé sans valeur juridique, fourni pour faciliter la lecture. Seul le texte officiel en français ci-dessous fait foi.</div>
@@ -1748,7 +1749,11 @@ input[type=range]::-webkit-slider-runnable-track {
           <p>6.3. En cas d&#x27;annulation ou d&#x27;impossibilité de prise en charge lorsque le personnel est déjà sur place, la prestation sera facturée intégralement. Des frais de déplacement de 5 € HTVA pourront être appliqués.</p>
           <p>6.4. Secteur opérationnel. Le secteur desservi par FOREST RANGERS évolue en fonction de l&#x27;organisation des tournées. Lorsqu&#x27;une prestation nécessite un déplacement en dehors du secteur habituel, un supplément de déplacement de 5 € HTVA est appliqué par trajet et par adresse desservie, quel que soit le nombre de chiens pris en charge à cette adresse.</p>
           <p>Ce supplément est communiqué au Client par écrit dans les conditions particulières, avant la première intervention. Il ne peut être appliqué rétroactivement à un contrat en cours. Les secteurs desservis et les suppléments applicables sont consultables sur www.forestrangers.lu.</p>
+          <p>Pour une promenade, la prise en charge du chien à son domicile et son retour constituent un seul trajet.</p>
           <p>6.5. Période estivale. Du 1er juin au 31 août inclus, toute annulation de prestation est facturée à 100 %, quel que soit le délai de prévenance et pour l&#x27;ensemble des services. Cette mesure est rendue nécessaire par l&#x27;arrêté anticipé des plannings estivaux et par le nombre limité de places disponibles sur cette période. Les Clients en sont informés avant l&#x27;ouverture de la période. Les réservations comme les annulations relatives à la période estivale doivent être communiquées avant la date de clôture annoncée par FOREST RANGERS.</p>
+          <p>6.6. Transport pour la crèche du jour. Le dépôt et la récupération du chien incombent au Client. À sa demande, FOREST RANGERS peut assurer la dépose du chien le matin et/ou son retour le soir, dans la limite des places disponibles sur la tournée. Chaque trajet est facturé 5 € HTVA, soit 5,85 € TVA comprise, quel que soit le nombre de chiens pris en charge à la même adresse. Le choix du transport est effectué lors de la réservation et figure sur la facture du mois.</p>
+          <p>Pour un Client situé hors du secteur habituel, le transport est assuré sous réserve de confirmation écrite de FOREST RANGERS ; il n&#x27;est facturé qu&#x27;une fois confirmé. Le supplément de déplacement prévu à l&#x27;article 6.4 ne s&#x27;ajoute pas au prix du transport de la crèche du jour.</p>
+          <p>L&#x27;annulation d&#x27;une journée de crèche emporte annulation du transport correspondant et suit les mêmes règles d&#x27;annulation. Aucun transport n&#x27;est assuré pour la pension.</p>
           <h4>7. CONDITIONS DE PAIEMENT</h4>
           <p>7.1. Sauf convention contraire, le prix indiqué est net, TVA incluse au taux en vigueur à la date de la facture. Le taux de TVA applicable est de 17 %.</p>
           <p>7.2. Le prix des prestations est indiqué dans l&#x27;offre ou la confirmation de commande. À défaut, les tarifs de FOREST RANGERS en vigueur au moment de la conclusion du contrat s&#x27;appliquent, sous réserve de leur communication préalable au Client. Les tarifs sont disponibles en toute transparence sur le site www.forestrangers.lu.</p>
@@ -1756,7 +1761,7 @@ input[type=range]::-webkit-slider-runnable-track {
           <p>7.4. Les factures sont payables dans un délai de quatorze (14) jours calendaires à compter de leur émission, par virement bancaire sur le compte de FOREST RANGERS : BANQUE : Spuerkeess IBAN : LU80 0019 7355 9489 5000 BIC : BCEELULL</p>
           <p>7.5. Tout retard de paiement entraîne de plein droit, sans mise en demeure préalable, l&#x27;application d&#x27;un intérêt de retard au taux d&#x27;intérêt légal en vigueur, calculé à compter du lendemain de la date d&#x27;échéance de la facture, ainsi qu&#x27;une indemnité forfaitaire de 25 EUR par rappel émis.</p>
           <p>7.6. Chiens supplémentaires. Lorsque plusieurs chiens du même foyer sont pris en charge à la même adresse, une remise est appliquée sur chaque chien supplémentaire. Le taux de cette remise est indiqué dans la grille tarifaire en vigueur, consultable sur www.forestrangers.lu, et figure dans les conditions particulières du Client. Cette remise s&#x27;applique aux promenades, à la crèche du jour et à la pension.</p>
-          <p>7.7. Imputation des paiements. Tout paiement reçu est imputé en priorité sur la facture ouverte la plus ancienne. Un montant versé au-delà des sommes dues constitue un avoir, déduit automatiquement de la facture suivante.</p>
+          <p>7.7. Imputation des paiements. Le paiement dont la communication reprend le numéro d&#x27;une facture ouverte est imputé à cette facture. À défaut, ou pour le solde restant, le paiement est imputé sur la facture ouverte la plus ancienne. Un montant versé au-delà des sommes dues constitue un avoir, déduit automatiquement de la facture suivante.</p>
           <h4>8. RÉSILIATION</h4>
           <p>8.1. Le présent Contrat peut être résilié par écrit, par lettre recommandée avec accusé de réception, à l&#x27;initiative de l&#x27;une ou l&#x27;autre des Parties :</p>
           <ul>
@@ -1865,7 +1870,7 @@ input[type=range]::-webkit-slider-runnable-track {
           <p>D) Le carnet de santé du chien doit être en règle avant la nuitée de test.</p>
           <p>E) La prestation est disponible pour une durée minimale de deux jours.</p>
           <p>F) Aucune cage n&#x27;est utilisée pour l&#x27;hébergement des chiens.</p>
-          <p>G) La récupération et le dépôt de l&#x27;animal ne sont pas compris. Ces services supplémentaires peuvent être facturés sur demande.</p>
+          <p>G) Le dépôt et la récupération du chien incombent au Client. Aucun transport n&#x27;est assuré pour la pension.</p>
           <p>H) Les demandes spécifiques et services additionnels sont facturés séparément.</p>
           <p>I) Toute annulation de réservation de pension doit être effectuée au minimum trente (30) jours avant la date prévue du séjour pour les nouveaux clients, et quatorze (14) jours pour les clients réguliers. En cas d&#x27;annulation hors délai : entre 30 et 14 jours avant le séjour, 50 % du montant total ; moins de 14 jours avant le séjour, 100 % du montant total. Ces conditions sont justifiées par le nombre limité de places disponibles. L&#x27;article 6.5 s&#x27;applique durant la période estivale.</p>
           <p>J) Le nombre de places disponibles est limité à cinq chiens par nuit.</p>
@@ -1877,7 +1882,7 @@ input[type=range]::-webkit-slider-runnable-track {
           <p>B) Le Client s&#x27;engage à respecter les horaires d&#x27;ouverture afin de ne pas perturber l&#x27;organisation.</p>
           <p>C) Une journée de test est requise avant l&#x27;acceptation d&#x27;un chien, afin d&#x27;assurer sa compatibilité.</p>
           <p>D) Aucune réservation ne peut être effectuée sans présentation d&#x27;un carnet médical à jour.</p>
-          <p>E) La récupération et le dépôt de l&#x27;animal ne sont pas compris. Ces services supplémentaires peuvent être facturés sur demande.</p>
+          <p>E) Le dépôt et la récupération du chien incombent au Client. Sur demande et sous réserve de disponibilité, FOREST RANGERS peut assurer la dépose le matin et/ou le retour le soir, facturés conformément à l&#x27;article 6.6.</p>
           <p>F) Les demandes spécifiques et services additionnels sont facturés séparément.</p>
           <p>G) Les locaux sont placés sous surveillance par caméra.</p>
           <p>H) Toute annulation doit être communiquée au plus tard la veille avant 9h00. Toute annulation effectuée après ce délai est facturée intégralement. L&#x27;article 6.5 s&#x27;applique durant la période estivale.</p>
@@ -3190,7 +3195,12 @@ async function sauvegarderInscription(motDePasse) {
         commune: commune || null,
         langue: langue,
         hors_zone: horsZone,
-        personnes_autorisees: personnes
+        personnes_autorisees: personnes,
+        // Accès au domicile (v39 : enregistrés ; sans v39, ignorés sans erreur)
+        acces_cle: !!(document.getElementById('toggle-keys') && document.getElementById('toggle-keys').classList.contains('on')),
+        acces_alarme: !!(document.getElementById('toggle-alarm') && document.getElementById('toggle-alarm').classList.contains('on')),
+        acces_code: ((document.getElementById('acces-code') || {}).value || '').trim() || null,
+        acces_particularites: ((document.getElementById('acces-particularites') || {}).value || '').trim() || null
       },
       p_chiens: chiens,
       p_cgv_version: cgAccepted ? CGV_VERSION : null

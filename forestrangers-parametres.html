@@ -408,7 +408,7 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
       <div class="tab" data-vue="staff" onclick="switchTab('staff',this)">Staff & Rangers</div>
       <div class="tab" data-vue="staff" onclick="switchTab('conges',this)">
         Congés
-        <span class="tab-badge amber">2</span>
+        <span class="tab-badge amber" id="tab-badge-conges" style="display:none;"></span>
       </div>
       <div class="tab" data-vue="params" onclick="switchTab('regles',this)">Règles & Saisons</div>
     </div>
@@ -467,62 +467,7 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
             </button>
           </div>
           <div id="staff-list">
-          <div>
-            <div class="staff-row">
-              <div class="staff-avatar" style="background:linear-gradient(135deg,var(--accent),#c44010);color:white;">GQ</div>
-              <div>
-                <div class="staff-name">Gabriel Quiaios</div>
-                <div class="staff-role">Fondateur · Admin · Walker + Care</div>
-              </div>
-              <div style="display:flex;gap:6px;align-items:center;margin-left:auto;">
-                <span class="badge b-accent">Admin</span>
-                <span class="badge b-green">Actif</span>
-                <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
-              </div>
-            </div>
-            <div class="staff-row" style="cursor:default;flex-wrap:wrap;gap:10px;">
-              <div class="staff-avatar" style="background:linear-gradient(135deg,var(--surface3),#6b7450);color:var(--text);">SM</div>
-              <div style="flex:1;min-width:160px;">
-                <div class="staff-name">Sophie Müller</div>
-                <div class="staff-role">Ranger · Type A — Walker uniquement</div>
-              </div>
-              <div style="display:flex;gap:6px;align-items:center;">
-                <span class="badge b-blue">Walker</span>
-                <span class="badge b-green">Actif</span>
-                <div class="icon-btn" onclick="openModal('modal-edit-staff')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
-              </div>
-              <!-- Planning habituel -->
-              <div style="width:100%;padding:10px 12px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);margin-top:2px;">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                  <span style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-faint);">Planning contractuel</span>
-                  <span style="font-size:11px;color:var(--text-faint);">20h / semaine</span>
-                </div>
-                <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;">
-                  <span style="padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-mid);">Lun</span>
-                  <span style="padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;background:var(--surface3);color:var(--text-faint);border:1px solid var(--border);">Mar</span>
-                  <span style="padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-mid);">Mer</span>
-                  <span style="padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;background:var(--surface3);color:var(--text-faint);border:1px solid var(--border);">Jeu</span>
-                  <span style="padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-mid);">Ven</span>
-                </div>
-                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
-                  <span class="badge b-accent" style="font-size:9px;">Matin</span>
-                  <span class="badge b-muted" style="font-size:9px;">Midi : si demandé</span>
-                  <span class="badge b-muted" style="font-size:9px;">Après-midi : si demandé</span>
-                </div>
-                <div style="display:flex;align-items:center;justify-content:space-between;">
-                  <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-dim);">
-                    <span>Flexible pour heures sup.</span>
-                    <div class="toggle on" onclick="toggleSwitch(this)" style="width:32px;height:18px;"><div class="toggle-knob" style="width:12px;height:12px;top:3px;left:3px;"></div></div>
-                  </div>
-                  <button class="btn btn-outline" style="font-size:10px;padding:5px 10px;" onclick="openModal('modal-add-shift')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    Ajouter un créneau
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div id="staff-extra"></div>
+          <div id="staff-extra"><div style="padding:16px;font-size:12.5px;color:var(--text-faint);">Chargement de l'équipe…</div></div>
         </div>
 
         <div class="card">
@@ -545,101 +490,17 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
       </div>
       </div>
 
-      <!-- ══ CONGÉS ══ -->
+      <!-- ══ CONGÉS ══ (table conges : demandes des rangers, décision de Gabriel) -->
       <div class="tab-pane" id="tab-conges">
-
         <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:13px;font-weight:800;margin-bottom:14px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;">
           Demandes en attente
-          <span class="badge b-amber" style="margin-left:8px;vertical-align:middle;">2</span>
+          <span class="badge b-amber" id="conges-nb-attente" style="margin-left:8px;vertical-align:middle;display:none;"></span>
         </div>
-
-        <!-- Congé 1 -->
-        <div class="conge-item">
-          <div class="conge-header">
-            <div>
-              <div class="conge-ranger">Sophie Müller</div>
-              <div class="conge-dates">
-                <svg viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-                Du 14 au 18 juillet 2026 · 5 jours ouvrables
-              </div>
-              <div class="conge-reason">Vacances d'été en famille</div>
-            </div>
-            <span class="badge b-amber">En attente</span>
-          </div>
-
-          <div class="conge-impact">
-            <strong style="color:#1c1f14;">Impact planning :</strong> 12 réservations concernées sur cette période.
-            Si approuvé, ces créneaux seront automatiquement réassignés à Gabriel ou restent non couverts si capacité insuffisante.
-          </div>
-
-          <div class="conge-actions">
-            <button class="btn btn-green" onclick="approveConge(this)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              Approuver
-            </button>
-            <button class="btn btn-red" onclick="rejectConge(this)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              Refuser
-            </button>
-            <button class="btn btn-outline" style="margin-left:auto;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-              Voir planning
-            </button>
-          </div>
-        </div>
-
-        <!-- Congé 2 -->
-        <div class="conge-item">
-          <div class="conge-header">
-            <div>
-              <div class="conge-ranger">Sophie Müller</div>
-              <div class="conge-dates">
-                <svg viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-                Mercredi 24 juin 2026 · 1 jour
-              </div>
-              <div class="conge-reason">Rendez-vous médical</div>
-            </div>
-            <span class="badge b-amber">En attente</span>
-          </div>
-
-          <div class="conge-impact">
-            <strong style="color:#1c1f14;">Impact planning :</strong> 2 créneaux concernés (matin + après-midi).
-            Gabriel peut couvrir si disponible.
-          </div>
-
-          <div class="conge-actions">
-            <button class="btn btn-green" onclick="approveConge(this)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              Approuver
-            </button>
-            <button class="btn btn-red" onclick="rejectConge(this)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              Refuser
-            </button>
-            <button class="btn btn-outline" style="margin-left:auto;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-              Voir planning
-            </button>
-          </div>
-        </div>
-
+        <div id="conges-attente"><div style="font-size:12.5px;color:var(--text-faint);padding:4px 0 10px;">Chargement…</div></div>
         <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:13px;font-weight:800;margin:20px 0 14px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;">
           Congés approuvés
         </div>
-
-        <div class="conge-item" style="opacity:0.6;">
-          <div class="conge-header">
-            <div>
-              <div class="conge-ranger">Sophie Müller</div>
-              <div class="conge-dates">
-                <svg viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-                Du 2 au 3 juin 2026 · Passé
-              </div>
-            </div>
-            <span class="badge b-green">Approuvé</span>
-          </div>
-        </div>
-
+        <div id="conges-approuves"></div>
       </div>
 
 
@@ -656,7 +517,7 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
                 <div class="toggle-wrap" onclick="toggleCloture()" id="cloture-toggle" style="width:40px;height:22px;border-radius:11px;background:var(--surface3);position:relative;cursor:pointer;transition:background 0.2s;flex-shrink:0;">
                   <div id="cloture-thumb" style="width:18px;height:18px;border-radius:50%;background:white;position:absolute;top:2px;left:2px;transition:left 0.2s;"></div>
                 </div>
-                <span style="font-size:12px;color:var(--text-dim);" id="cloture-toggle-label">Activé pour 2026</span>
+                <span style="font-size:12px;color:var(--text-dim);" id="cloture-toggle-label"></span>
               </label>
             </div>
           </div>
@@ -1617,6 +1478,20 @@ function normalizeNorwester(root) {
 // ── CLÔTURE ESTIVALE ──
 var clotureActive = true;
 
+// Badge et libellé de la clôture, d'après l'état et l'année des dates saisies
+function afficherEtatCloture() {
+  var badge = document.getElementById('cloture-status-badge');
+  var label = document.getElementById('cloture-toggle-label');
+  var d = (document.getElementById('cloture-debut') || {}).value || '';
+  var an = d ? d.slice(0, 4) : String(new Date().getFullYear());
+  if (label) label.textContent = clotureActive ? 'Activé pour ' + an : 'Désactivé';
+  if (badge) {
+    badge.className = clotureActive ? 'badge b-amber' : 'badge b-muted';
+    badge.textContent = clotureActive ? 'Actif ' + an : 'Inactif';
+  }
+  if (clotureActive) updateCloturePreview();
+}
+
 function toggleCloture() {
   clotureActive = !clotureActive;
   var toggle = document.getElementById('cloture-toggle');
@@ -1626,16 +1501,11 @@ function toggleCloture() {
   if (clotureActive) {
     toggle.style.background = 'var(--accent)';
     thumb.style.left = '20px';
-    badge.className = 'badge b-amber';
-    badge.textContent = 'Actif 2026';
-    label.textContent = 'Activé pour 2026';
   } else {
     toggle.style.background = 'var(--surface3)';
     thumb.style.left = '2px';
-    badge.className = 'badge b-muted';
-    badge.textContent = 'Inactif';
-    label.textContent = 'Désactivé';
   }
+  afficherEtatCloture();
   saveCloture();
 }
 
@@ -1912,10 +1782,12 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch(e) {}
   }
   updateCloturePreview();
+  afficherEtatCloture();
 
   // Charger depuis Supabase
   loadParametres();
   loadStaff();
+  loadConges();
   initCamionnettes();
   loadZones();
   loadPeriodes();
@@ -2133,37 +2005,85 @@ async function loadStaff() {
   } catch(e) { console.log('Erreur loadStaff:', e); }
 }
 
-function rangerRowHTML(prenom, nom, email, tel, jours) {
-  var initials = ((prenom[0]||'') + (nom[0]||'')).toUpperCase();
-  return '<div class="staff-row">'
-    + '<div class="staff-avatar" style="background:linear-gradient(135deg,var(--surface3),#6b7450);color:var(--text);">' + initials + '</div>'
+var STAFF_CACHE = [];
+var JOURS_STAFF = [['lun','Lun'],['mar','Mar'],['mer','Mer'],['jeu','Jeu'],['ven','Ven'],['sam','Sam'],['dim','Dim']];
+var CRENEAUX_STAFF = { matin: 'Matin', midi: 'Midi', apmidi: 'Après-midi', daycare: 'Day Care / pension' };
+function listeTexte(v) { return String(v || '').split(',').map(function(x) { return x.trim(); }).filter(Boolean); }
+
+function rangerRowHTML(s) {
+  var prenom = s.prenom || '', nom = s.nom || '';
+  var initials = ((prenom[0] || '') + (nom[0] || '')).toUpperCase();
+  var admin = s.role === 'admin';
+  var type = s.type_ranger === 'B' ? 'Care' : 'Walker';
+  var jours = listeTexte(s.jours_habituels), cr = listeTexte(s.creneaux_habituels);
+  var planning = '<div style="width:100%;padding:10px 12px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);margin-top:2px;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+    +   '<span style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-faint);">Planning contractuel</span>'
+    +   '<span style="font-size:11px;color:var(--text-faint);">' + (s.heures_semaine ? s.heures_semaine + 'h / semaine' : 'heures non renseignées') + (s.type_contrat ? ' · ' + echapper(s.type_contrat) : '') + '</span>'
+    + '</div>'
+    + '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;">'
+    + JOURS_STAFF.map(function(j) {
+        var on = jours.indexOf(j[0]) !== -1;
+        return '<span style="padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;' + (on ? 'background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-mid);' : 'background:var(--surface3);color:var(--text-faint);border:1px solid var(--border);') + '">' + j[1] + '</span>';
+      }).join('')
+    + '</div>'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
+    + (cr.length ? cr.map(function(c) { return '<span class="badge b-accent" style="font-size:9px;">' + (CRENEAUX_STAFF[c] || echapper(c)) + '</span>'; }).join('') : '<span style="font-size:11px;color:var(--text-faint);">Créneaux non renseignés</span>')
+    + (s.flexible ? '<span class="badge b-green" style="font-size:9px;">Heures sup. possibles</span>' : '')
+    + '</div></div>';
+  return '<div class="staff-row" style="cursor:default;flex-wrap:wrap;gap:10px;">'
+    + '<div class="staff-avatar" style="background:' + (admin ? 'linear-gradient(135deg,var(--accent),#c44010);color:white;' : 'linear-gradient(135deg,var(--surface3),#6b7450);color:var(--text);') + '">' + initials + '</div>'
     + '<div style="flex:1;min-width:160px;">'
-    + '<div class="staff-name">' + prenom + ' ' + nom + '</div>'
-    + '<div class="staff-role">' + (email || '—') + (tel ? ' · ' + tel : '') + '</div>'
+    +   '<div class="staff-name">' + echapper(prenom + ' ' + nom) + '</div>'
+    +   '<div class="staff-role">' + echapper(s.email || '—') + (s.telephone ? ' · ' + echapper(s.telephone) : '') + '</div>'
     + '</div>'
     + '<div style="display:flex;gap:6px;align-items:center;">'
-    + '<span class="badge b-blue">Ranger</span><span class="badge b-green">Actif</span>'
-    + '</div></div>';
-}
-
-// Rangers connus affichés en statique (Gabriel, Sophie) — on ne les duplique pas.
-function isKnownRanger(s) {
-  var p = (s.prenom || '').toLowerCase();
-  var e = (s.email || '').toLowerCase();
-  return p === 'gabriel' || p === 'sophie'
-      || e === 'forestrangerslux@gmail.com';
+    +   (admin ? '<span class="badge b-accent">Admin</span>' : '') + '<span class="badge b-blue">' + type + '</span><span class="badge b-green">Actif</span>'
+    +   '<div class="icon-btn" title="Planning contractuel" onclick="ouvrirStaff(\'' + s.id + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>'
+    + '</div>'
+    + planning
+    + '</div>';
 }
 
 function renderStaffList(staff) {
+  STAFF_CACHE = staff || [];
   var extra = document.getElementById('staff-extra');
   if (!extra) return;
-  if (!staff || staff.length === 0) { extra.innerHTML = ''; return; }
-  var rows = staff.filter(function(s) { return !isKnownRanger(s); });
-  extra.innerHTML = rows.map(function(s) {
-    var jours = s.jours_habituels ? s.jours_habituels.join(', ') : '—';
-    return rangerRowHTML(s.prenom || '', s.nom || '', s.email, s.telephone, jours);
-  }).join('');
+  extra.innerHTML = STAFF_CACHE.length ? STAFF_CACHE.map(rangerRowHTML).join('')
+    : '<div style="padding:16px;font-size:12.5px;color:var(--text-faint);">Aucun membre actif. Utilisez « Ajouter ».</div>';
   normalizeNorwester();
+}
+
+function ouvrirStaff(id) {
+  var s = STAFF_CACHE.filter(function(x) { return x.id === id; })[0];
+  if (!s) return;
+  document.getElementById('edit-staff-titre').textContent = 'Planning contractuel — ' + (s.prenom || '') + ' ' + (s.nom || '');
+  document.getElementById('edit-staff-id').value = s.id;
+  document.getElementById('edit-staff-heures').value = s.heures_semaine != null ? s.heures_semaine : '';
+  var jours = listeTexte(s.jours_habituels), cr = listeTexte(s.creneaux_habituels);
+  document.querySelectorAll('#edit-staff-jours .day-btn').forEach(function(b) { b.classList.toggle('on', jours.indexOf(b.getAttribute('data-j')) !== -1); });
+  document.querySelectorAll('#edit-staff-creneaux input').forEach(function(c) { c.checked = cr.indexOf(c.value) !== -1; });
+  document.getElementById('edit-staff-flexible').checked = !!s.flexible;
+  openModal('modal-edit-staff');
+}
+
+async function enregistrerStaff() {
+  var id = document.getElementById('edit-staff-id').value;
+  if (!id) return;
+  var jours = [], cr = [];
+  document.querySelectorAll('#edit-staff-jours .day-btn.on').forEach(function(b) { jours.push(b.getAttribute('data-j')); });
+  document.querySelectorAll('#edit-staff-creneaux input:checked').forEach(function(c) { cr.push(c.value); });
+  var h = parseInt(document.getElementById('edit-staff-heures').value, 10);
+  var maj = { heures_semaine: isNaN(h) ? null : h, jours_habituels: jours.join(',') || null,
+              creneaux_habituels: cr.join(',') || null, flexible: document.getElementById('edit-staff-flexible').checked };
+  try {
+    var r = await db.from('staff').update(maj).eq('id', id).select('id');
+    if (r.error) throw r.error;
+    if (!r.data || !r.data.length) throw new Error('aucune ligne modifiée (droits administrateur ?)');
+    closeModal('modal-edit-staff');
+    showToast('✓ Planning enregistré', 'green');
+    loadStaff();
+  } catch (e) { showToast('Erreur : ' + ((e && e.message) || e), 'red'); }
 }
 
 async function saveNewRanger() {
@@ -2178,9 +2098,6 @@ async function saveNewRanger() {
   }
 
   // Affichage immédiat (optimiste) — le ranger apparaît tout de suite
-  var extra = document.getElementById('staff-extra');
-  if (extra) extra.insertAdjacentHTML('beforeend', rangerRowHTML(prenom, nom, email, tel, '—'));
-  normalizeNorwester();
   document.getElementById('new-ranger-prenom').value = '';
   document.getElementById('new-ranger-nom').value    = '';
   document.getElementById('new-ranger-email').value  = '';
@@ -2190,16 +2107,15 @@ async function saveNewRanger() {
 
   // Persistance en base (sans bloquer l'affichage)
   try {
-    await db.from('staff').insert({
+    var ins = await db.from('staff').insert({
       prenom: prenom, nom: nom, email: email,
       telephone: tel || null, role: 'ranger', actif: true
     });
-  } catch(e) { console.log('Erreur ajout ranger (base):', e); }
+    if (ins.error) throw ins.error;
+  } catch(e) { console.log('Erreur ajout ranger (base):', e); showToast('Erreur : ' + ((e && e.message) || e), 'red'); }
+  loadStaff();
 }
 
-function editStaff(id) {
-  showToast('Modification — bientôt disponible', 'amber');
-}
 
 // ── CAMIONNETTES ET ATTRIBUTION : voir fr-camionnettes (bloc plus bas) ──
 
@@ -2324,30 +2240,85 @@ function toggleSwitch(el) {
   el.classList.toggle('on');
 }
 
-// Congé actions
-function approveConge(btn) {
-  const card = btn.closest('.conge-item');
-  card.querySelector('.badge').className = 'badge b-green';
-  card.querySelector('.badge').textContent = 'Approuvé';
-  btn.closest('.conge-actions').innerHTML = '<span style="font-size:12px;color:var(--green);">✓ Approuvé — planning mis à jour automatiquement</span>';
-  updateCongeCount();
-}
-
-function rejectConge(btn) {
-  const card = btn.closest('.conge-item');
-  card.querySelector('.badge').className = 'badge b-red';
-  card.querySelector('.badge').textContent = 'Refusé';
-  btn.closest('.conge-actions').innerHTML = '<span style="font-size:12px;color:var(--red);">✕ Refusé — le ranger a été notifié</span>';
-  updateCongeCount();
-}
-
-function updateCongeCount() {
-  const pending = document.querySelectorAll('#tab-conges .badge.b-amber').length;
-  const tabBadge = document.querySelector('.tab-badge.amber');
-  if (tabBadge) {
-    tabBadge.textContent = pending;
-    if (pending === 0) tabBadge.style.display = 'none';
+// ── CONGÉS (table conges) ──
+async function loadConges() {
+  var att = document.getElementById('conges-attente'), app = document.getElementById('conges-approuves');
+  if (!att || !app) return;
+  try {
+    var r = await db.from('conges').select('*').order('date_debut', { ascending: true });
+    if (r.error) throw r.error;
+    var st = await db.from('staff').select('id,prenom,nom');
+    var noms = {}; (st.data || []).forEach(function(x) { noms[x.id] = x; });
+    var auj = new Date().toISOString().slice(0, 10);
+    var attente = (r.data || []).filter(function(c) { return (c.statut || 'en_attente') === 'en_attente'; });
+    var approuves = (r.data || []).filter(function(c) { return c.statut === 'approuve' && c.date_fin >= moisPasse(); });
+    // Impact : réservations déjà assignées à ce ranger sur la période
+    for (var i = 0; i < attente.length; i++) {
+      var c = attente[i], s = noms[c.staff_id];
+      c._nom = s ? (s.prenom + ' ' + (s.nom || '')) : 'Ranger';
+      c._impact = null;
+      if (s) {
+        try {
+          var q = await db.from('reservations').select('id', { count: 'exact', head: true })
+            .eq('ranger_nom', s.prenom).neq('statut', 'annule').lte('date_debut', c.date_fin).gte('date_fin', c.date_debut);
+          c._impact = q.count;
+        } catch (e) {}
+      }
+    }
+    approuves.forEach(function(c) { var s = noms[c.staff_id]; c._nom = s ? (s.prenom + ' ' + (s.nom || '')) : 'Ranger'; });
+    att.innerHTML = attente.length ? attente.map(function(c) { return congeHtml(c, true, auj); }).join('')
+      : '<div style="font-size:12.5px;color:var(--text-faint);padding:4px 0 10px;">Aucune demande en attente.</div>';
+    app.innerHTML = approuves.length ? approuves.map(function(c) { return congeHtml(c, false, auj); }).join('')
+      : '<div style="font-size:12.5px;color:var(--text-faint);padding:4px 0 10px;">Aucun congé approuvé récent.</div>';
+    majCompteurConges(attente.length);
+  } catch (e) {
+    att.innerHTML = '<div style="font-size:12.5px;color:var(--text-faint);">Congés indisponibles : ' + echapper((e && e.message) || e) + '</div>';
   }
+}
+function moisPasse() { var d = new Date(); d.setDate(d.getDate() - 31); return d.toISOString().slice(0, 10); }
+function periodeConge(c) {
+  var f = function(x) { return new Date(x + 'T00:00:00').toLocaleDateString('fr-LU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); };
+  if (c.date_debut === c.date_fin) return f(c.date_debut) + ' · 1 jour';
+  var n = Math.round((new Date(c.date_fin) - new Date(c.date_debut)) / 86400000) + 1;
+  return 'Du ' + f(c.date_debut) + ' au ' + f(c.date_fin) + ' · ' + n + ' jours';
+}
+function congeHtml(c, enAttente, auj) {
+  var passe = c.date_fin < auj;
+  return '<div class="conge-item"' + (enAttente ? '' : ' style="opacity:' + (passe ? '0.6' : '1') + ';"') + '>'
+    + '<div class="conge-header"><div>'
+    +   '<div class="conge-ranger">' + echapper(c._nom) + '</div>'
+    +   '<div class="conge-dates"><svg viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>' + periodeConge(c) + (passe ? ' · Passé' : '') + '</div>'
+    +   (c.motif ? '<div class="conge-reason">' + echapper(c.motif) + '</div>' : '')
+    + '</div>'
+    + (enAttente ? '<span class="badge b-amber">En attente</span>' : '<span class="badge b-green">Approuvé</span>')
+    + '</div>'
+    + (enAttente
+        ? (c._impact != null ? '<div class="conge-impact"><strong>Impact planning :</strong> ' + (c._impact ? c._impact + ' réservation' + (c._impact > 1 ? 's' : '') + ' assignée' + (c._impact > 1 ? 's' : '') + ' à ce ranger sur la période, à réassigner.' : 'aucune réservation assignée à ce ranger sur la période.') + '</div>' : '')
+          + '<div class="conge-actions">'
+          +   '<button class="btn btn-green" onclick="deciderConge(\'' + c.id + '\',\'approuve\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Approuver</button>'
+          +   '<button class="btn btn-red" onclick="deciderConge(\'' + c.id + '\',\'refuse\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Refuser</button>'
+          + '</div>'
+        : '')
+    + '</div>';
+}
+async function deciderConge(id, statut) {
+  var note = statut === 'refuse' ? prompt('Motif du refus (facultatif, visible par le ranger) :', '') : '';
+  if (note === null) return;
+  try {
+    var maj = { statut: statut };
+    if (note) maj.notes_gabriel = note;
+    var r = await db.from('conges').update(maj).eq('id', id).select('id');
+    if (r.error) throw r.error;
+    if (!r.data || !r.data.length) throw new Error('aucune ligne modifiée (droits administrateur ?)');
+    showToast(statut === 'approuve' ? '✓ Congé approuvé' : 'Congé refusé', statut === 'approuve' ? 'green' : 'amber');
+    loadConges();
+  } catch (e) { showToast('Erreur : ' + ((e && e.message) || e), 'red'); }
+}
+function majCompteurConges(n) {
+  ['tab-badge-conges', 'conges-nb-attente'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) { el.textContent = n; el.style.display = n ? '' : 'none'; }
+  });
 }
 </script>
 
@@ -2357,144 +2328,44 @@ function updateCongeCount() {
 .day-btn.on { background: var(--accent); border-color: var(--accent); color: white; }
 </style>
 
-<!-- Modal : Absence aujourd'hui -->
-<div class="modal-overlay" id="modal-absence">
-  <div class="modal">
-    <div class="modal-title">Signaler une absence</div>
-    <div class="form-group">
-      <label class="form-label">Ranger absent</label>
-      <select class="form-input">
-        <option>Sophie Müller</option>
-        <option>Gabriel Quiaios</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Date(s)</label>
-      <input type="date" class="form-input" value="2026-06-09">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Raison</label>
-      <select class="form-input">
-        <option>Maladie</option>
-        <option>Urgence personnelle</option>
-        <option>Autre</option>
-      </select>
-    </div>
-    <div style="background:rgba(240,180,41,0.12);border:1.5px solid rgba(230,162,0,0.3);border-radius:10px;padding:11px 13px;font-size:12px;color:#1c1f14;margin-bottom:12px;line-height:1.6;">
-      <strong style="color:#1c1f14;">Impact :</strong> les créneaux de Sophie ce jour seront proposés à Gabriel. Si Gabriel est aussi indisponible, vous serez alerté pour chaque créneau non couvert.
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-outline" onclick="closeModal('modal-absence')">Annuler</button>
-      <button class="btn btn-accent" onclick="closeModal('modal-absence')">Confirmer l'absence</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal : Ajouter créneau ponctuel -->
-<div class="modal-overlay" id="modal-add-shift">
-  <div class="modal">
-    <div class="modal-title">Ajouter un créneau — Sophie Müller</div>
-    <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;line-height:1.6;">
-      Ajoutez un créneau en dehors du planning habituel de Sophie. Elle recevra une notification pour confirmer sa disponibilité.
-    </div>
-    <div class="form-row-2">
-      <div class="form-group">
-        <label class="form-label">Date</label>
-        <input type="date" class="form-input">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Créneau(x)</label>
-        <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
-          <label style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;cursor:pointer;">
-            <div style="display:flex;align-items:center;gap:8px;">
-              <input type="checkbox" style="accent-color:var(--accent);width:15px;height:15px;" checked>
-              <span style="font-size:13px;">Matin</span>
-            </div>
-            <span style="font-size:12px;color:var(--accent);font-weight:600;">09:00 → ~11:30 · ~2h30</span>
-          </label>
-          <label style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;cursor:pointer;">
-            <div style="display:flex;align-items:center;gap:8px;">
-              <input type="checkbox" style="accent-color:var(--accent);width:15px;height:15px;">
-              <span style="font-size:13px;">Midi</span>
-            </div>
-            <span style="font-size:12px;color:var(--text-faint);font-weight:600;">12:00 → ~14:30 · ~2h30</span>
-          </label>
-          <label style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;cursor:pointer;">
-            <div style="display:flex;align-items:center;gap:8px;">
-              <input type="checkbox" style="accent-color:var(--accent);width:15px;height:15px;">
-              <span style="font-size:13px;">Après-midi</span>
-            </div>
-            <span style="font-size:12px;color:var(--text-faint);font-weight:600;">14:30 → ~17:00 · ~2h30</span>
-          </label>
-        </div>
-        <div style="margin-top:8px;font-size:11px;color:var(--text-faint);">Durée standard par créneau : ~2h30 (récupération + promenade + dépôt)</div>
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Camionnette</label>
-      <select class="form-input">
-        <option>Camionnette A (défaut Sophie)</option>
-        <option>Camionnette B (défaut Gabriel)</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Note pour Sophie (optionnel)</label>
-      <input type="text" class="form-input" placeholder="Ex : remplacement maladie Gabriel...">
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-outline" onclick="closeModal('modal-add-shift')">Annuler</button>
-      <button class="btn btn-accent" onclick="closeModal('modal-add-shift')">Envoyer la demande</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal : Modifier planning staff -->
+<!-- Modal : planning contractuel d'un membre de l'équipe (table staff) -->
 <div class="modal-overlay" id="modal-edit-staff">
   <div class="modal">
-    <div class="modal-title">Planning contractuel — Sophie Müller</div>
+    <div class="modal-title" id="edit-staff-titre">Planning contractuel</div>
+    <input type="hidden" id="edit-staff-id">
     <div class="form-group">
       <label class="form-label">Heures contractuelles / semaine</label>
-      <select class="form-input">
-        <option>10h</option>
-        <option>15h</option>
-        <option selected>20h</option>
-        <option>25h</option>
-        <option>Temps plein</option>
-      </select>
+      <input type="number" class="form-input" id="edit-staff-heures" min="0" max="60" step="1">
     </div>
     <div class="form-group">
       <label class="form-label">Jours habituels de travail</label>
-      <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
-        <div class="day-btn on" onclick="this.classList.toggle('on')">Lun</div>
-        <div class="day-btn" onclick="this.classList.toggle('on')">Mar</div>
-        <div class="day-btn on" onclick="this.classList.toggle('on')">Mer</div>
-        <div class="day-btn" onclick="this.classList.toggle('on')">Jeu</div>
-        <div class="day-btn on" onclick="this.classList.toggle('on')">Ven</div>
+      <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;" id="edit-staff-jours">
+        <div class="day-btn" data-j="lun" onclick="this.classList.toggle('on')">Lun</div>
+        <div class="day-btn" data-j="mar" onclick="this.classList.toggle('on')">Mar</div>
+        <div class="day-btn" data-j="mer" onclick="this.classList.toggle('on')">Mer</div>
+        <div class="day-btn" data-j="jeu" onclick="this.classList.toggle('on')">Jeu</div>
+        <div class="day-btn" data-j="ven" onclick="this.classList.toggle('on')">Ven</div>
+        <div class="day-btn" data-j="sam" onclick="this.classList.toggle('on')">Sam</div>
+        <div class="day-btn" data-j="dim" onclick="this.classList.toggle('on')">Dim</div>
       </div>
     </div>
     <div class="form-group">
       <label class="form-label">Créneaux habituels</label>
-      <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
-          <input type="checkbox" checked style="accent-color:var(--accent);width:15px;height:15px;"> Matin (09:00)
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
-          <input type="checkbox" style="accent-color:var(--accent);width:15px;height:15px;"> Midi (12:00) — si demandé
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
-          <input type="checkbox" style="accent-color:var(--accent);width:15px;height:15px;"> Après-midi (14:30) — si demandé
-        </label>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;" id="edit-staff-creneaux">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="matin" style="accent-color:var(--accent);width:15px;height:15px;"> Matin (09:00)</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="midi" style="accent-color:var(--accent);width:15px;height:15px;"> Midi (12:00)</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="apmidi" style="accent-color:var(--accent);width:15px;height:15px;"> Après-midi (14:30)</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="daycare" style="accent-color:var(--accent);width:15px;height:15px;"> Day Care / pension</label>
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
-        <span>Disponible pour heures supplémentaires</span>
-        <div class="toggle on" onclick="toggleSwitch(this)" style="width:32px;height:18px;"><div class="toggle-knob" style="width:12px;height:12px;top:3px;left:3px;"></div></div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+        <input type="checkbox" id="edit-staff-flexible" style="accent-color:var(--accent);width:15px;height:15px;"> Disponible pour heures supplémentaires
       </label>
     </div>
     <div class="modal-foot">
       <button class="btn btn-outline" onclick="closeModal('modal-edit-staff')">Annuler</button>
-      <button class="btn btn-accent" onclick="closeModal('modal-edit-staff')">Enregistrer</button>
+      <button class="btn btn-accent" onclick="enregistrerStaff()">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -2506,6 +2377,17 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js');
   });
 }
+</script>
+
+<script>
+// Thème envoyé par l'admin (page affichée en cadre) — v40
+window.addEventListener('message', function(ev) {
+  if (!ev || !ev.data || ev.data.fr !== 'theme') return;
+  document.documentElement.classList.toggle('light', !!ev.data.clair);
+  try { localStorage.setItem('fr-theme', ev.data.clair ? 'light' : 'dark'); } catch (e) {}
+  if (typeof majBoutonTheme === 'function') { try { majBoutonTheme(); } catch (e) {} }
+  if (typeof initTheme === 'function') { try { initTheme(); } catch (e) {} }
+});
 </script>
 </body>
 </html>

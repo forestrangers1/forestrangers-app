@@ -615,6 +615,8 @@ html, body {
 .cal-cell.today { border-color: var(--accent); }
 .cal-cell.sel { background: var(--accent-dim); border-color: var(--accent); }
 .cal-cell.annul { background: var(--red-dim); border-color: rgba(224,90,90,0.35); color: var(--text-dim); }
+.cal-cell.ferme { background: repeating-linear-gradient(45deg, var(--surface2) 0 4px, transparent 4px 8px); color: var(--text-faint); }
+.cal-cell .cal-ferme { display:block; font-style:normal; font-size:8.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--text-faint); margin-top:2px; }
 .cal-dots { display: flex; gap: 2px; height: 5px; align-items: center; }
 .cal-dots i { width: 5px; height: 5px; border-radius: 50%; display: block; }
 .cal-legend { display: flex; gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 10px; color: var(--text-faint); flex-wrap: wrap; }
@@ -882,6 +884,7 @@ html, body {
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="fr-calendrier.js"></script>
   <script src="fr-facturation.js"></script>
+  <script src="fr-session.js"></script>
 <!-- Repli CDN : si jsDelivr n'a pas repondu, on tente unpkg avant d'abandonner. -->
 <script>if (!window.supabase) { document.write('<scr' + 'ipt src="https://unpkg.com/@supabase/supabase-js@2"><\/scr' + 'ipt>'); }</script>
   <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
@@ -1896,6 +1899,8 @@ document.addEventListener('DOMContentLoaded', async function() {
   setInterval(majDateHeure, 30000);
   loadRaces();
   await loadClientProfile();
+  // Session : jeton rafraîchi au retour sur l'onglet, profil rechargé (v40)
+  if (window.FR_SESSION) FR_SESSION.init(db, { recharger: loadClientProfile, onPerdue: frDemandeReconnexion });
 });
 
 // Date et heure réelles — indépendantes du chargement du profil
@@ -2357,17 +2362,26 @@ function renderAlertesAccueil() {
       + '</div>';
   }
 
-  // Factures à régler : solde réel (paiements partiels et frais de dossier compris)
+  // Factures : ton neutre tant que l'échéance n'est pas dépassée (Gabriel, 22/09/2026),
+  // rouge seulement en retard. Le solde tient compte des paiements partiels et des frais.
   var impayees = (facturesData || []).filter(function(f) { return soldeFacture(f) > 0.004; });
   if (impayees.length) {
     var total = impayees.reduce(function(a, f) { return a + soldeFacture(f); }, 0);
     var maxRetard = impayees.reduce(function(a, f) { return Math.max(a, retardFacture(f)); }, 0);
-    var sousTitre = eur(total) + ' en attente de paiement'
-      + (maxRetard > 0 ? ' · ' + maxRetard + ' jour' + (maxRetard > 1 ? 's' : '') + ' de retard' : '');
-    html += '<div onclick="goTab(\'screen-invoices\',\'tab-invoices\')" style="background:var(--red-dim);border:1px solid rgba(224,90,90,0.3);border-radius:var(--radius);padding:13px 15px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:11px;">'
-      + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
-      + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--red);">'
-      +   (impayees.length > 1 ? impayees.length + ' factures à régler' : 'Facture à régler') + '</div>'
+    var enRetard = maxRetard > 0;
+    var echeances = impayees.map(echeanceFacture).filter(Boolean).sort();
+    var titre = enRetard
+      ? (impayees.length > 1 ? impayees.length + ' factures en retard' : 'Facture en retard')
+      : (impayees.length > 1 ? impayees.length + ' factures disponibles' : 'Facture disponible');
+    var sousTitre = eur(total) + (enRetard
+      ? ' · ' + maxRetard + ' jour' + (maxRetard > 1 ? 's' : '') + ' de retard'
+      : (echeances.length ? ' · à régler avant le ' + dateCourte(echeances[0]) : ''));
+    var coul = enRetard ? 'var(--red)' : 'var(--text)';
+    html += '<div onclick="goTab(\'screen-invoices\',\'tab-invoices\')" style="background:' + (enRetard ? 'var(--red-dim)' : 'var(--surface2)') + ';border:1px solid ' + (enRetard ? 'rgba(224,90,90,0.3)' : 'var(--border)') + ';border-radius:var(--radius);padding:13px 15px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:11px;">'
+      + (enRetard
+          ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+          : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" stroke-width="2" style="flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>')
+      + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:' + coul + ';">' + titre + '</div>'
       + '<div style="font-size:11.5px;color:var(--text-dim);">' + sousTitre + '</div></div>'
       + '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5" style="flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>'
       + '</div>';
@@ -2576,6 +2590,14 @@ function datesExclues(r) {
 // Règle métier : Dog Walking et Day Care ne sortent QUE du lundi au vendredi.
 // Une récurrence n'occupe que les jours cochés ; le boarding couvre toute la plage.
 var MAX_OCCURRENCES = 500;
+// Férié ou période de fermeture (fr-calendrier.js), même règle que l'admin
+// et la facturation. Renvoie le verdict, ou null si la journée est ouverte.
+function jourFermeClient(iso, service) {
+  if (!window.FR_CAL || !FR_CAL.estCharge || !FR_CAL.estCharge()) return null;
+  var v = FR_CAL.verdict(iso, service);
+  return (v && v.bloque) ? v : null;
+}
+
 function occurrences(r) {
   var out = [];
   if (!r || !r.date_debut) return out;
@@ -2601,6 +2623,7 @@ function occurrences(r) {
     if (jrs.length && jrs.indexOf(wd) === -1) continue;
     var iso = isoDate(d);
     if (exclues.indexOf(iso) !== -1) continue;        // séance annulée à l'unité
+    if (jourFermeClient(iso, r.service)) continue;     // férié ou fermeture : pas de séance
     out.push(iso);
   }
   if (!out.length) out.push(isoDate(d0));             // date unique tombant un week-end
@@ -2738,6 +2761,8 @@ async function loadReservations(id) {
     }
 
     resasData = resas || [];
+    // Jours fériés et fermetures (fr-calendrier.js) : une séance n'y a jamais lieu
+    if (window.FR_CAL && !FR_CAL.estCharge()) { try { await FR_CAL.charger(db); } catch (e) {} }
     await loadAnnulations(resasData);
     renderReservations();
     if (vueResa === 'calendrier') renderCalendrier();
@@ -2903,6 +2928,12 @@ function ligneResa(r, dateOcc) {
       + ' · ' + esc(futures.slice(-2).map(dateCourte).join(', ')) + '</div>';
   }
   var barre = annulee ? 'text-decoration:line-through;' : '';
+  // Transport Day Care (v39)
+  if (r.service === 'daycare' && (r.transport_aller || r.transport_retour) && r.transport_statut) {
+    var sensTr = r.transport_aller && r.transport_retour ? 'aller et retour' : r.transport_aller ? 'aller le matin' : 'retour le soir';
+    ligneAnnul += '<div style="font-size:11.5px;color:' + (r.transport_statut === 'refuse' ? 'var(--red)' : 'var(--text-dim)') + ';margin-top:3px;">Transport : ' + sensTr
+      + (r.transport_statut === 'a_confirmer' ? ' · en attente de confirmation' : r.transport_statut === 'refuse' ? ' · non disponible' : '') + '</div>';
+  }
 
   return '<div onclick="openResaDetail(' + arg + ')" style="padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:12px;' + (annulee ? 'opacity:0.5;' : '') + '">'
     + '<div style="width:4px;align-self:stretch;border-radius:3px;background:' + (annulee ? 'var(--red)' : couleur) + ';flex-shrink:0;"></div>'
@@ -3013,6 +3044,9 @@ function renderCalendrier() {
     if (!nbTenues && nbAnnul) classes += ' annul';
     if (iso === todayISO) classes += ' today';
     if (iso === calJourSel) classes += ' sel';
+    var fermeJ = (window.FR_CAL && FR_CAL.estCharge && FR_CAL.estCharge()) ? FR_CAL.verdict(iso, 'daycare') : null;
+    var libFerme = fermeJ && fermeJ.bloque ? (fermeJ.type === 'ferie' ? 'Férié' : 'Fermé') : '';
+    if (libFerme && !seances.length) classes += ' ferme';
 
     // Une pastille par séance : pleine = tenue, creuse rouge = annulée,
     // pleine cerclée de rouge = partiellement annulée (un chien sur deux).
@@ -3025,8 +3059,10 @@ function renderCalendrier() {
     });
     if (seances.length > 4) dots += '<i style="background:transparent;border:0;width:auto;font-size:8px;color:var(--text-faint);">+' + (seances.length - 4) + '</i>';
 
-    cells += '<div class="' + classes + '"' + (seances.length ? ' onclick="calSelect(\'' + iso + '\')"' : '') + '>'
+    cells += '<div class="' + classes + '"' + (seances.length ? ' onclick="calSelect(\'' + iso + '\')"' : '')
+      + (libFerme ? ' title="' + esc(fermeJ.nom || libFerme) + '"' : '') + '>'
       + '<span>' + j + '</span>'
+      + (libFerme && !seances.length ? '<em class="cal-ferme">' + libFerme + '</em>' : '')
       + '<div class="cal-dots">' + dots + '</div>'
       + '</div>';
   }
@@ -3047,6 +3083,7 @@ function renderCalendrier() {
     +   '<span><i style="background:' + SVC_COLORS.boarding + '"></i> Boarding</span>'
     +   '<span><i style="background:transparent;border:1.5px solid var(--red);"></i> Séance annulée</span>'
     +   '<span><i style="background:' + SVC_COLORS.walking + ';box-shadow:0 0 0 1.5px var(--red);"></i> Un chien annulé</span>'
+    +   '<span><i style="background:repeating-linear-gradient(45deg,var(--border2) 0 2px,transparent 2px 4px);border:1px solid var(--border2);"></i> Férié / fermé</span>'
     + '</div>'
     + '</div>';
 }

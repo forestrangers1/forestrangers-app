@@ -171,6 +171,12 @@ html, body { min-height: 100vh; font-family: 'Instrument Sans', sans-serif; back
 </style>
 </head>
 <body>
+<!-- Mode intégré : affichée dans l'admin (menu Statistiques), la page ne
+     montre pas son propre bouton « Admin ». -->
+<script>
+  try { if (window.self !== window.top) document.documentElement.classList.add('embed'); } catch (e) { document.documentElement.classList.add('embed'); }
+</script>
+<style>html.embed .header .back-btn { display: none !important; } html.embed .header { position: static; }</style>
 
 <!-- HEADER -->
 <div class="header">
@@ -179,7 +185,7 @@ html, body { min-height: 100vh; font-family: 'Instrument Sans', sans-serif; back
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
       Admin
     </a>
-    <div class="page-title">📊 Statistiques</div>
+    <div class="page-title">Statistiques</div>
   </div>
   <div style="font-size:11px;color:var(--text-faint);" id="last-update">Chargement...</div>
 </div>
@@ -640,6 +646,17 @@ function resetFilters() {
 document.addEventListener('DOMContentLoaded', function() {
   loadAllData();
   setInterval(loadAllData, 5 * 60 * 1000);
+});
+</script>
+
+<script>
+// Thème envoyé par l'admin (page affichée en cadre) — v40
+window.addEventListener('message', function(ev) {
+  if (!ev || !ev.data || ev.data.fr !== 'theme') return;
+  document.documentElement.classList.toggle('light', !!ev.data.clair);
+  try { localStorage.setItem('fr-theme', ev.data.clair ? 'light' : 'dark'); } catch (e) {}
+  if (typeof majBoutonTheme === 'function') { try { majBoutonTheme(); } catch (e) {} }
+  if (typeof initTheme === 'function') { try { initTheme(); } catch (e) {} }
 });
 </script>
 </body>

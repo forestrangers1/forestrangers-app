@@ -21,6 +21,12 @@
   font-style: normal;
   font-display: swap;
 }
+
+/* Planning — vue du jour et filtres lisibles */
+.planning-jour-cols { display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start; }
+@media (max-width: 760px) { .planning-jour-cols { grid-template-columns:1fr; } }
+#filtre-service option, #filtre-ranger option { background:var(--surface); color:var(--text); }
+#filtre-client::placeholder { color:var(--text-faint); }
 </style>
   <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
 <style>
@@ -702,6 +708,26 @@ textarea.form-control { resize: vertical; }
   background:var(--accent); border-radius:2px;
 }
 .modal-foot { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
+/* Fenêtres (modal-sheet) : même carte que le reste de l'admin */
+.modal-sheet {
+  background: var(--surface); border: 1px solid var(--border2); border-radius: 16px;
+  padding: 22px 24px 20px; width: 94vw; box-shadow: 0 24px 70px rgba(0,0,0,0.45);
+  animation: fadeUp 0.2s ease; color: var(--text);
+}
+.modal-sheet > div:first-child { padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 14px !important; }
+.modal-sheet > div:first-child .modal-title { margin-bottom: 0; }
+.modal-sheet > div:first-child > button:not(.btn) {
+  width: 32px; height: 32px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--surface2) !important; border: 1px solid var(--border) !important; font-size: 14px !important;
+  color: var(--text-dim) !important; flex-shrink: 0;
+}
+.modal-sheet > div:first-child > button:not(.btn):hover { color: var(--text) !important; border-color: var(--border2) !important; }
+.modal-sheet .form-group { margin-bottom: 12px; }
+.modal-sheet table td, .modal-sheet table th { padding: 9px 8px !important; }
+.modal-sheet table tr:hover td { background: var(--surface2); }
+.stat-detail-total { display:flex; justify-content:space-between; align-items:baseline; padding:10px 12px; margin-bottom:10px;
+  background: var(--surface2); border-radius: 10px; font-size: 12px; color: var(--text-dim); }
+.stat-detail-total strong { font-family:Norwester,Oswald,Arial Narrow,sans-serif; font-size:18px; font-weight:800; }
 
 /* ─── PARAMS TABLE ─── */
 .params-table { width: 100%; border-collapse: collapse; }
@@ -776,6 +802,7 @@ textarea.form-control { resize: vertical; }
   <script src="fr-calendrier.js"></script>
   <script src="fr-facturation.js"></script>
   <script src="fr-email.js"></script>
+  <script src="fr-session.js"></script>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#ff5f1f">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -833,7 +860,7 @@ textarea.form-control { resize: vertical; }
       Factures
       <span class="nav-count" id="nav-count-factures" style="display:none;" title="Factures impayées depuis plus de 30 jours">0</span>
     </div>
-    <div class="nav-item" onclick="window.location.href='forestrangers-stats.html'">
+    <div class="nav-item" onclick="nav('stats',this)">
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       Statistiques
     </div>
@@ -857,9 +884,9 @@ textarea.form-control { resize: vertical; }
   </div>
 
   <div class="sidebar-footer">
-    <div class="avatar">GQ</div>
+    <div class="avatar" id="sb-avatar"></div>
     <div style="flex:1;">
-      <div class="avatar-name">Gabriel Q.</div>
+      <div class="avatar-name" id="sb-nom"></div>
       <div class="avatar-role">Administrateur</div>
     </div>
     <button onclick="frLogout()" title="Se déconnecter" style="background:transparent;border:1px solid var(--border,rgba(255,255,255,0.12));border-radius:8px;color:var(--text-faint,#9aa08c);padding:6px 10px;font-size:11px;cursor:pointer;">Quitter</button>
@@ -871,7 +898,7 @@ textarea.form-control { resize: vertical; }
   <div class="topbar">
     <div class="topbar-left">
       <div class="page-title" id="pageTitle">Tableau de bord</div>
-      <div class="page-sub" id="pageSub">Lundi 9 juin 2026</div>
+      <div class="page-sub" id="pageSub"></div>
     </div>
     <div class="topbar-right">
       <div class="theme-toggle" onclick="toggleTheme()" title="Basculer jour / nuit">
@@ -998,16 +1025,16 @@ textarea.form-control { resize: vertical; }
 
         <!-- Filtres -->
         <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;">
-          <select id="filtre-service" onchange="loadPlanning()" style="background:#ffffff;border:1px solid var(--border);border-radius:8px;padding:6px 8px;color:var(--text-dim);font-family:'Instrument Sans',sans-serif;font-size:12px;outline:none;">
+          <select id="filtre-service" onchange="loadPlanning()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 8px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:12px;outline:none;">
             <option value="">Tous services</option>
             <option value="walking">Dog Walking</option>
             <option value="daycare">Day Care</option>
             <option value="boarding">Boarding</option>
           </select>
-          <select id="filtre-ranger" onchange="loadPlanning()" style="background:#ffffff;border:1px solid var(--border);border-radius:8px;padding:6px 8px;color:var(--text-dim);font-family:'Instrument Sans',sans-serif;font-size:12px;outline:none;">
+          <select id="filtre-ranger" onchange="loadPlanning()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 8px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:12px;outline:none;">
             <option value="">Tous rangers</option>
           </select>
-          <input type="text" id="filtre-client" placeholder="Client / Chien..." oninput="loadPlanning()" style="background:#ffffff;border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text-dim);font-family:'Instrument Sans',sans-serif;font-size:12px;outline:none;width:140px;">
+          <input type="text" id="filtre-client" placeholder="Client / Chien..." oninput="loadPlanning()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:12px;outline:none;width:140px;">
           <button class="btn btn-accent" style="padding:6px 12px;font-size:11px;" onclick="ouvrirNouvelleReservationAdmin()">+ Reservation</button>
         </div>
       </div>
@@ -1129,6 +1156,16 @@ textarea.form-control { resize: vertical; }
 
     <!-- ══════ FACTURES ══════ -->
     <div class="page" id="page-factures">
+      <!-- Vue facture : l'éditeur s'affiche ici, sans quitter l'admin -->
+      <div id="factures-vue-facture" style="display:none;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <button class="btn btn-outline" style="padding:6px 12px;" onclick="fermerFactureAdmin()">&larr; Retour aux factures</button>
+          <a id="facture-lien" href="#" target="_blank" rel="noopener" style="margin-left:auto;font-size:11px;color:var(--text-faint);text-decoration:none;">Ouvrir dans un onglet &#8599;</a>
+        </div>
+        <iframe id="facture-frame" title="Facture"
+          style="width:100%;height:calc(100vh - 190px);min-height:640px;border:0;border-radius:12px;background:var(--surface);display:block;"></iframe>
+      </div>
+      <div id="factures-vue-liste">
       <div class="stats-row" id="factures-stats" style="margin-bottom:14px;">
         <div class="stat-card c-green"><div class="stat-accent-bar"></div><div class="stat-label">Payées ce mois</div><div class="stat-val">—</div></div>
         <div class="stat-card c-red"><div class="stat-accent-bar"></div><div class="stat-label">Impayées</div><div class="stat-val">—</div></div>
@@ -1195,6 +1232,15 @@ textarea.form-control { resize: vertical; }
           <div id="paiements-list"></div>
         </div>
       </div>
+      <!-- Régularisations (option b, 22/09/2026) : planning modifié après la facture du mois -->
+      <div class="card" id="regul-card" style="margin-top:14px;display:none;">
+        <div class="card-head" style="gap:8px;flex-wrap:wrap;">
+          <span class="card-title">Régularisations à reporter</span>
+          <span style="font-size:11px;color:var(--text-faint);">Ajoutées automatiquement à la prochaine facture du mois du client</span>
+        </div>
+        <div id="regul-list"></div>
+      </div>
+      </div><!-- /factures-vue-liste -->
     </div>
 
     <!-- ══════ STATS ══════ -->
@@ -1431,11 +1477,21 @@ textarea.form-control { resize: vertical; }
             <button class="btn btn-outline" style="padding:9px 16px;" onclick="chargerDestinatairesAlerte()">Actualiser la liste</button>
             <button class="btn btn-outline" style="padding:9px 16px;" onclick="copierSmsAlerte()">Copier le SMS</button>
             <button class="btn btn-outline" style="padding:9px 16px;" onclick="copierTelephonesAlerte()">Copier les numeros</button>
+            <button class="btn btn-outline" id="alerte-btn-annuler" style="padding:9px 16px;display:none;color:var(--red);border-color:rgba(224,90,90,0.45);background:var(--red-dim);" onclick="annulerPromenadesJour()">Annuler les promenades du jour</button>
+          </div>
+          <div id="alerte-annulation-note" style="display:none;font-size:11.5px;color:var(--text-faint);margin-top:8px;">
+            Les promenades seules sont annulées, à 0 % facturé (force majeure). Day Care et Boarding sont conservés : les chiens sont gardés.
           </div>
 
         </div>
       </div>
 
+    </div>
+
+    <!-- ══════ STATISTIQUES (page intégrée) ══════ -->
+    <div class="page" id="page-stats">
+      <iframe id="stats-frame" title="Statistiques"
+        style="width:100%;height:calc(100vh - 150px);min-height:620px;border:0;border-radius:12px;background:var(--surface);display:block;"></iframe>
     </div>
 
     <!-- ══════ PARAMETRES (éditeur intégré) ══════ -->
@@ -1456,6 +1512,16 @@ function toggleTheme() {
   document.getElementById('icon-moon').style.display = isLight ? 'none' : 'block';
   document.getElementById('icon-sun').style.display  = isLight ? 'block' : 'none';
   localStorage.setItem('fr-theme', isLight ? 'light' : 'dark');
+  propagerTheme(isLight);
+}
+
+// Les pages affichées en cadre (paramètres, statistiques, fiche client, facture)
+// lisaient le thème au chargement seulement : un basculement les laissait dans
+// l'ancien thème (clair et sombre mélangés à l'écran).
+function propagerTheme(isLight) {
+  document.querySelectorAll('iframe').forEach(function(f) {
+    try { f.contentWindow.postMessage({ fr: 'theme', clair: !!isLight }, '*'); } catch (e) {}
+  });
 }
 // Restore saved preference — clair par defaut
 if (localStorage.getItem('fr-theme') !== 'dark') {
@@ -1468,13 +1534,13 @@ if (localStorage.getItem('fr-theme') !== 'dark') {
 
 const titles = {
   dashboard:    ['Tableau de bord', 'Vue générale · Lundi 9 juin 2026'],
-  planning:     ['Planning',         'Semaine du 9 au 15 juin 2026'],
+  planning:     ['Planning',         ''],
   reservations: ['Reservations',     'Demandes et historique'],
-  clients:      ['Clients',          '24 clients actifs'],
+  clients:      ['Clients',          'Clients actifs'],
   chiens:       ['Chiens',           'Fiches individuelles'],
   staff:        ['Staff & Rangers',  'Équipe terrain'],
   factures:     ['Factures',         'Suivi des paiements'],
-  stats:        ['Statistiques',     'Performances 2026'],
+  stats:        ['Statistiques',     'Performances ' + new Date().getFullYear()],
   messages:     ['Messages',         'Communication clients'],
   invitation:   ['Invitations',       'Liens d\'inscription clients'],
   parametres:   ['Parametres',       'Tarifs & règles'],
@@ -1673,6 +1739,23 @@ async function majStatutBooking(g, statut){
 async function validerResaAdmin(i){ var g=(window._resaPending||[])[i]; if(g) majStatutBooking(g,'confirme'); }
 async function refuserResaAdmin(i){ var g=(window._resaPending||[])[i]; if(!g) return; if(confirm('Refuser cette réservation ?')) majStatutBooking(g,'annule'); }
 
+// Recharge les données de l'écran affiché (retour d'onglet, session reprise)
+function rechargerPageActive() {
+  var actif = document.querySelector('.page.active');
+  var id = actif ? actif.id.replace('page-', '') : 'dashboard';
+  try {
+    if (id === 'dashboard')         { loadDashboardStats(); }
+    else if (id === 'planning')     { loadPlanning(); }
+    else if (id === 'reservations') { loadReservationsAdmin(); }
+    else if (id === 'clients')      { loadClients(); }
+    else if (id === 'chiens')       { loadChiens(); }
+    else if (id === 'staff')        { loadStaff(); }
+    else if (id === 'factures')     { loadFacturesAdmin(); }
+    else if (id === 'messages')     { chargerMessages(true); }
+    else if (id === 'parametres')   { loadParametres(); }
+  } catch (e) { console.log('rechargement:', e); }
+}
+
 function nav(id, el) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -1695,6 +1778,14 @@ function nav(id, el) {
   if (id === 'staff')        { loadStaff(); loadStaffOrga(); }
   if (id === 'factures')     loadFacturesAdmin();
   if (id === 'parametres')   loadParametres();
+  if (id === 'stats') {
+    var sf = document.getElementById('stats-frame');
+    if (sf && (!sf.src || sf.src === 'about:blank' || sf.src.indexOf('stats') === -1)) sf.src = 'forestrangers-stats.html?embed=1';
+  }
+  if (id === 'factures') {
+    var vf = document.getElementById('factures-vue-facture');
+    if (vf && vf.style.display !== 'none' && !window._garderFacture) { /* reste sur la facture ouverte */ }
+  }
 }
 
 function copyLien() {
@@ -2017,7 +2108,7 @@ async function loadDashboardStats() {
   try {
     // 5. Charger planning du jour dans le tableau
     var planRes = await db.from('reservations')
-      .select('id,service,creneau,statut,date_debut,date_fin,jours_recurrence,date_fin_recurrence,dates_exclues,client_id,chien_id, ranger_nom, clients(prenom, nom, numero_client, is_test)')
+      .select('*, clients(prenom, nom, numero_client, is_test)')
       .lte('date_debut', today)
       .gte('date_fin', today)
       .neq('statut', 'annule')
@@ -2055,9 +2146,14 @@ function loadPlanningToday(reservations, today) {
       ranger: r.ranger_nom || '',
       client: r.clients ? (r.clients.prenom + ' ' + r.clients.nom) : '—',
       test: !!(r.clients && r.clients.is_test),
-      dogs: 0
+      dogs: 0, aller: false, retour: false, trStatut: null
     };
     groups[key].dogs++;
+    if (r.service === 'daycare' && r.transport_statut && r.transport_statut !== 'refuse') {
+      groups[key].aller = groups[key].aller || !!r.transport_aller;
+      groups[key].retour = groups[key].retour || !!r.transport_retour;
+      groups[key].trStatut = r.transport_statut;
+    }
   });
   var list = Object.keys(groups).map(function(k) { return groups[k]; });
 
@@ -2079,6 +2175,8 @@ function loadPlanningToday(reservations, today) {
     var b = BADGE[g.statut] || ['b-muted', g.statut || ''];
     var dogTxt = g.dogs > 1 ? (g.dogs + ' chiens') : (g.dogs + ' chien');
     var meta = (g.ranger ? g.ranger + ' · ' : '') + dogTxt;
+    if (g.aller || g.retour) meta += ' · Transport : ' + (g.aller && g.retour ? 'aller + retour' : g.aller ? 'aller (matin)' : 'retour (soir)')
+      + (g.trStatut === 'a_confirmer' ? ' — à confirmer' : '');
     html += '<div class="slot">'
       + '<div class="slot-time">' + c[1] + '</div>'
       + '<div class="slot-info">'
@@ -2354,15 +2452,34 @@ function renderEstimationAdmin(ouvert) {
 
 // Ouvre « Nouvelle facture » en mode automatique, client et mois déjà choisis
 async function facturerDepuisEstimation(clientId, periode) {
-  ouvrirNouvelleFacture();
-  if (typeof setFactureType === 'function') setFactureType('auto');
-  var sel = document.getElementById('facture-client-id');
-  for (var i = 0; i < 30 && sel && !sel.querySelector('option[value="' + clientId + '"]'); i++) {
-    await new Promise(function (r) { setTimeout(r, 100); });
+  ouvrirFactureAdmin('client_id=' + encodeURIComponent(clientId) + '&periode=' + encodeURIComponent(periode) + '&planning=1');
+}
+
+// ── ÉDITEUR DE FACTURE DANS L'ADMIN ──
+// Un seul outil pour toutes les factures : l'éditeur (forestrangers-facture.html),
+// affiché ici avec le menu de l'admin, comme la fiche client.
+function ouvrirNouvelleFacture() { ouvrirFactureAdmin(''); }
+function ouvrirFactureAdmin(params) {
+  if (!document.getElementById('page-factures').classList.contains('active')) {
+    var n = document.querySelector('.nav-item[onclick*="nav(\'factures\'"]');
+    nav('factures', n);
   }
-  if (sel) sel.value = clientId;
-  var m = document.getElementById('facture-mois');
-  if (m) m.value = periode;
+  var url = 'forestrangers-facture.html?embed=1' + (params ? '&' + params : '');
+  document.getElementById('factures-vue-liste').style.display = 'none';
+  document.getElementById('factures-vue-facture').style.display = '';
+  document.getElementById('facture-frame').src = url;
+  var lien = document.getElementById('facture-lien'); if (lien) lien.href = url.replace('embed=1&', '').replace('embed=1', '');
+  window.scrollTo(0, 0);
+}
+// L'éditeur (dans l'iframe) demande le retour à la liste
+window.addEventListener('message', function(ev) {
+  if (ev && ev.data && ev.data.fr === 'fermer-facture') fermerFactureAdmin();
+});
+function fermerFactureAdmin() {
+  document.getElementById('factures-vue-facture').style.display = 'none';
+  document.getElementById('factures-vue-liste').style.display = '';
+  document.getElementById('facture-frame').src = 'about:blank';
+  loadFacturesAdmin();
 }
 
 // ── FACTURES (réel) ──
@@ -2396,6 +2513,8 @@ function fmInit() {
   if (p) p.textContent = 'Automatique le 1er de chaque mois, vers 7h · prochain passage : '
     + n.toLocaleDateString('fr-LU', { day: 'numeric', month: 'long', year: 'numeric' }).replace(/^1 /, '1er ');
 }
+// Montant en euros (global : le détail d'une réservation l'utilisait sans qu'il existe hors de deux fonctions)
+function euros(n) { return (parseFloat(n) || 0).toLocaleString('fr-LU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; }
 function fmEur(x) { return (Math.round((+x || 0) * 100) / 100).toLocaleString('fr-LU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; }
 function fmEsc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function(c) { return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]; }); }
 async function facturationMensuelle(mode) {
@@ -2423,7 +2542,8 @@ async function facturationMensuelle(mode) {
         return '<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid var(--border);">'
           + '<span>' + fmEsc(x.client) + (x.test ? ' <span class="badge b-muted" style="font-size:9px;">test</span>' : '')
           + (x.renvoi ? ' <span class="badge b-amber" style="font-size:9px;">email à renvoyer · ' + fmEsc(x.numero) + '</span>' : '')
-          + (!x.renvoi && !x.email ? ' <span class="badge b-red" style="font-size:9px;">pas d\'email</span>' : '') + '</span>'
+          + (!x.renvoi && !x.email ? ' <span class="badge b-red" style="font-size:9px;">pas d\'email</span>' : '')
+          + (x.regularisation ? ' <span class="badge b-blue" style="font-size:9px;">dont régularisation ' + fmEur(x.regularisation) + '</span>' : '') + '</span>'
           + '<span style="font-weight:600;color:var(--text);">' + fmEur(x.total_ttc) + '</span></div>';
       }).join('');
     } else {
@@ -2445,6 +2565,7 @@ async function facturationMensuelle(mode) {
 async function loadFacturesAdmin() {
   try { fmInit(); } catch (e) {}
   chargerEstimationAdmin();   // en parallèle : ne retarde pas la liste
+  chargerRegularisations();   // en parallèle aussi
   var list = document.getElementById('factures-list');
   if (list) list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-faint);font-size:12px;">Chargement…</div>';
   try {
@@ -2521,7 +2642,7 @@ function rcLigneFacture(f, avecSuggestion) {
   if (parseFloat(f.montant_paye) > 0 && reste > 0) detail.push('payé ' + rcEur(f.montant_paye));
   if (RC.envois) detail.push(RC.envois[f.id] ? 'envoyée le ' + rcDate(RC.envois[f.id]) : 'pas encore envoyée par email');
   var actions = '';
-  if (RC.envois && !RC.envois[f.id]) actions += '<button class="rc-btn" title="Ouvre la facture et l\'envoie au client avec le PDF" onclick="window.location.href=\'forestrangers-facture.html?id=' + encodeURIComponent(f.id) + '&envoyer=1\'">✉ Envoyer</button>';
+  if (RC.envois && !RC.envois[f.id]) actions += '<button class="rc-btn" title="Ouvre la facture et l\'envoie au client avec le PDF" onclick="ouvrirFactureAdmin(\'id=' + encodeURIComponent(f.id) + '&envoyer=1\')">✉ Envoyer</button>';
   if (reste > 0) {
     actions += '<button class="rc-btn pay" onclick="ouvrirPaiement({ clientId: \'' + f.client_id + '\', montant: ' + reste + ', reference: \'' + rcEsc(f.numero || '') + '\' })">Paiement reçu</button>';
     var sug = f.etape_suggeree;
@@ -2531,13 +2652,15 @@ function rcLigneFacture(f, avecSuggestion) {
       if (prochaine && (f.jours_retard || 0) > 0) actions += '<button class="rc-btn" onclick="ouvrirEtape(\'' + f.id + '\',\'' + prochaine + '\')">' + RC_ETAPES[prochaine] + '</button>';
     }
   }
+  if (f.statut !== 'annulee' && f.statut !== 'avoir' && !/^NC-/.test(f.numero || ''))
+    actions += '<button class="rc-btn red" title="Annule entièrement cette facture par une note de crédit NC-' + rcEsc(f.numero || '') + '" onclick="ouvrirFactureAdmin(\'id=' + encodeURIComponent(f.id) + '&nc=1\')">NC</button>';
   return '<div class="rc-row">'
-    + '<span class="inv-num">' + rcEsc(f.numero || '—') + '</span>'
+    + '<span class="inv-num" style="cursor:pointer;text-decoration:underline;text-underline-offset:3px;" title="Ouvrir la facture" onclick="ouvrirFactureAdmin(\'id=' + encodeURIComponent(f.id) + '\')">' + rcEsc(f.numero || '—') + '</span>'
     + '<div class="rc-main"><div class="inv-client">' + rcEsc(rcNomClient(f.client_id)) + '</div><div class="rc-meta">' + rcEsc(detail.slice(1).join(' · ')) + '</div></div>'
     + rcBadge(f)
     + '<div class="rc-montant" style="color:' + (reste > 0 ? 'var(--red)' : 'var(--green)') + ';">' + rcEur(reste > 0 ? reste : f.total_a_payer)
     +   (reste > 0 && reste < parseFloat(f.total_a_payer) ? '<div style="font-size:10px;color:var(--text-faint);font-family:inherit;font-weight:400;">sur ' + rcEur(f.total_a_payer) + '</div>' : '') + '</div>'
-    + '<div class="inv-actions">' + actions + '</div>'
+    + '<div class="inv-actions">' + actions + '<button class="rc-btn" onclick="ouvrirFactureAdmin(\'id=' + encodeURIComponent(f.id) + '\')">Ouvrir</button></div>'
     + '</div>';
 }
 
@@ -2566,6 +2689,46 @@ function renderFacturesSuivi() {
   });
   el.innerHTML = liste.length ? liste.map(function(f) { return rcLigneFacture(f, false); }).join('')
     : '<div style="padding:20px;text-align:center;color:var(--text-faint);font-size:12.5px;">' + (RC.factures.length ? 'Aucune facture dans ce filtre.' : 'Aucune facture pour le moment.') + '</div>';
+}
+
+// ── Régularisations : mois facturés dont le planning a changé depuis ──
+async function chargerRegularisations() {
+  var card = document.getElementById('regul-card'), el = document.getElementById('regul-list');
+  if (!card || !el || !window.FR_FACT || !FR_FACT.aRegulariser) return;
+  try {
+    var liste = await FR_FACT.aRegulariser(db, {});
+    liste = liste.filter(function(x) { return !(x.client && x.client.is_test); });
+    window._regul = liste;
+    card.style.display = liste.length ? '' : 'none';
+    el.innerHTML = liste.map(function(x, i) {
+      var nom = x.client ? ((x.client.prenom || '') + ' ' + (x.client.nom || '')).trim() : '—';
+      var meta = [x.label, 'facturé ' + rcEur(x.facture), 'planning actuel ' + rcEur(x.recalcule)];
+      if (x.deja) meta.push('déjà reporté ' + rcEur(x.deja));
+      if (x.ignore) meta.push('écarté ' + rcEur(x.ignore));
+      var credit = x.reste < 0;
+      return '<div class="rc-row">'
+        + '<span class="inv-num" style="cursor:pointer;text-decoration:underline;text-underline-offset:3px;" title="Ouvrir la facture" onclick="ouvrirFactureAdmin(\'id=' + encodeURIComponent(x.facture_id) + '\')">' + rcEsc(x.numero || '—') + '</span>'
+        + '<div class="rc-main"><div class="inv-client">' + rcEsc(nom) + '</div><div class="rc-meta">' + rcEsc(meta.join(' · ')) + '</div></div>'
+        + '<span class="badge ' + (credit ? 'b-green' : 'b-amber') + '">' + (credit ? 'À déduire' : 'À ajouter') + '</span>'
+        + '<div class="rc-montant" style="color:' + (credit ? 'var(--green)' : 'var(--amber)') + ';">' + (credit ? '− ' : '+ ') + rcEur(Math.abs(x.reste)) + '</div>'
+        + '<div class="inv-actions"><button class="rc-btn" title="Ne pas reporter cet écart (il ne réapparaît que si le planning change encore)" onclick="ignorerRegularisation(' + i + ')">Ignorer</button></div>'
+        + '</div>';
+    }).join('');
+  } catch (e) {
+    console.log('Régularisations :', e && e.message);
+    card.style.display = 'none';
+  }
+}
+
+async function ignorerRegularisation(i) {
+  var x = (window._regul || [])[i];
+  if (!x) return;
+  if (!confirm('Ne pas reporter l\'écart de ' + rcEur(x.reste) + ' sur la facture ' + (x.numero || '') + ' ?')) return;
+  try {
+    await FR_FACT.ignorerRegularisation(db, x.facture_id, x.reste);
+    showToastAdmin('Écart ignoré', 'green');
+    chargerRegularisations();
+  } catch (e) { showToastAdmin('Erreur : ' + (e && e.message), 'red'); }
 }
 
 function renderSituationClients() {
@@ -3662,6 +3825,10 @@ async function loadClients() {
       return;
     }
     data = data || [];
+    // Sous-titre : nombre réel de clients actifs (hors comptes test), plus « 24 » écrit en dur
+    var nbReels = data.filter(function(c) { return !c.is_test; }).length;
+    titles.clients[1] = nbReels + ' client' + (nbReels > 1 ? 's' : '') + ' actif' + (nbReels > 1 ? 's' : '');
+    if (document.getElementById('page-clients').classList.contains('active')) document.getElementById('pageSub').textContent = titles.clients[1];
 
     // Charger les chiens séparément (évite de dépendre d'une relation FK déclarée pour l'embedding)
     var chiensMap = {};
@@ -3765,8 +3932,11 @@ function fermerFicheClient() {
   var liste = document.getElementById('clients-vue-liste');
   if (fiche) fiche.style.display = 'none';
   if (liste) liste.style.display = 'block';
+  // Sous-titre des clients seulement si l'on reste sur Clients (sinon « 24 clients
+  // actifs » s'affichait sur la page Factures, ouverte depuis une fiche client)
   var sub = document.getElementById('pageSub');
-  if (sub && titles.clients) sub.textContent = titles.clients[1];
+  var pc = document.getElementById('page-clients');
+  if (sub && titles.clients && pc && pc.classList.contains('active')) sub.textContent = titles.clients[1];
   loadClients();   // les tarifs ou le nom ont pu changer dans la fiche
 }
 
@@ -3798,7 +3968,6 @@ var CRENEAUX   = { matin:'09h00', midi:'12h00', apmidi:'14h30' };
 
 // ─── Détail réservation ───
 var SVC_LABELS_FULL = { walking:'Dog Walking', daycare:'Day Care', boarding:'Boarding' };
-var SVC_TARIFS  = { walking:'28€', daycare:'55€', boarding:'68€' };
 var CRENEAU_FULL = { matin:'Matin — 09h00', midi:'Midi — 12h00', apmidi:'Après-midi — 14h30' };
 var JOUR_LABELS = { lun:'Lun', mar:'Mar', mer:'Mer', jeu:'Jeu', ven:'Ven', sam:'Sam' };
 var currentResaDetail = null;
@@ -3907,6 +4076,7 @@ function slotHtml(rows, clientsMap, chiensMap, clientDogsMap, dateStr) {
     +'</div>';
 }
 
+var PLANNING_COLS = 'id,service,creneau,statut,date_debut,date_fin,jours_recurrence,date_fin_recurrence,dates_exclues,client_id,chien_id';
 async function loadPlanning() {
   var grid = document.getElementById('planning-grid');
   if (!grid) return;
@@ -3944,17 +4114,20 @@ async function loadPlanning() {
   var filtRanger = (document.getElementById('filtre-ranger') ||{}).value||'';
   var filtClient = ((document.getElementById('filtre-client')||{}).value||'').toLowerCase().trim();
   try {
-    var query = db.from('reservations').select('id,service,creneau,statut,date_debut,date_fin,jours_recurrence,date_fin_recurrence,dates_exclues,client_id,chien_id').lte('date_debut',fin).gte('date_fin',debut).order('creneau',{ascending:true});
+    var query = db.from('reservations').select(PLANNING_COLS+(window._planningSansTransport?'':',transport_aller,transport_retour,transport_statut')).lte('date_debut',fin).gte('date_fin',debut).order('creneau',{ascending:true});
     if (filtSvc)    query = query.eq('service',filtSvc);
     // filtRanger : ranger non stocké en base pour l'instant (assignation à coder)
     var {data:resas,error} = await query;
+    if (error && /transport_/.test(error.message||'') && !window._planningSansTransport) {
+      window._planningSansTransport = true; return loadPlanning(); // v39 pas encore passée
+    }
     var clientsMap = {};
     var chiensMap = {};
     var clientDogsMap = {};
     if (resas&&resas.length>0) {
       var ids=[...new Set(resas.filter(function(r){return r.client_id;}).map(function(r){return r.client_id;}))];
       if (ids.length>0) {
-        var {data:cls} = await db.from('clients').select('id,prenom,nom,is_test').in('id',ids);
+        var {data:cls} = await db.from('clients').select('id,prenom,nom,is_test,commune,hors_zone').in('id',ids);
         if (cls) cls.forEach(function(c){clientsMap[c.id]=c;});
         // Tous les chiens des clients de la fenêtre : permet d'afficher les noms,
         // y compris pour les réservations chien_id = null (= tous les chiens du client).
@@ -4018,8 +4191,8 @@ function renderPlanningSemaine(resas, clientsMap, chiensMap, clientDogsMap, debu
     var dr=filterResasForDay(resas,ds);
     var bookings=groupBookings(dr);
     var dayOffset=daysBetween(day,todayMid);
-    html+='<div class="week-col" onclick="if(event.target===this||event.target.classList.contains(\'week-col\')){vuePlanning=\'jour\';planningOffset='+dayOffset+';loadPlanning();}" style="cursor:pointer;">';
-    html+='<div class="'+hc+'"><div class="week-day">'+JOURS_FR[day.getDay()]+'</div><div class="week-num">'+day.getDate()+'</div></div>';
+    html+='<div class="week-col" onclick="if(event.target===this){ouvrirJourPlanning('+dayOffset+');}" style="cursor:pointer;">';
+    html+='<div class="'+hc+'" title="Voir la journée" style="cursor:pointer;" onclick="event.stopPropagation();ouvrirJourPlanning('+dayOffset+');"><div class="week-day">'+JOURS_FR[day.getDay()]+'</div><div class="week-num">'+day.getDate()+'</div></div>';
     html+=bandeauCalendrier(ds, false);
     if (!bookings.length) html+='<div style="padding:8px 4px;text-align:center;font-size:10px;color:var(--text-faint);">—</div>';
     else bookings.forEach(function(rows){html+=slotHtml(rows,clientsMap,chiensMap,clientDogsMap,ds);});
@@ -4028,40 +4201,113 @@ function renderPlanningSemaine(resas, clientsMap, chiensMap, clientDogsMap, debu
   grid.innerHTML=html;
 }
 
-function renderPlanningJour(resas, clientsMap, chiensMap, clientDogsMap, dateStr, today) {
-  var grid=document.getElementById('planning-grid');
-  grid.style.gridTemplateColumns='1fr';
-  var day=new Date(dateStr+'T00:00:00');
-  var dr=filterResasForDay(resas,dateStr);
-  var bookings=groupBookings(dr);
-  var isT=dateStr===today;
-  var isWE=day.getDay()===0||day.getDay()===6;
-  var hc=isT?'week-head today':isWE?'week-head weekend':'week-head other';
-  var html='<div style="width:100%;">';
-  html+='<div class="'+hc+'" style="border-radius:10px 10px 0 0;padding:12px 16px;margin-bottom:8px;">';
-  html+='<div class="week-day">'+JOURS_FR[day.getDay()]+'</div><div class="week-num" style="font-size:28px;">'+day.getDate()+' '+MOIS_FR[day.getMonth()]+'</div></div>';
-  html+=bandeauCalendrier(dateStr, false);
-  if (!bookings.length) html+='<div style="text-align:center;padding:32px;color:var(--text-faint);font-size:13px;">Aucune reservation ce jour</div>';
-  else bookings.forEach(function(rows) {
-    var r=rows[0];
-    var color=SVC_COLORS[r.service]||'#ff5f1f';
-    var svc=SVC_NAMES[r.service]||r.service;
-    var cr=r.creneau?(CRENEAUX[r.creneau]||r.creneau):(r.service==='boarding'?'Pension':'—');
-    var c=r.client_id?clientsMap[r.client_id]:null;
-    var client=c?c.prenom+' '+c.nom:'—';
-    var dogs=dogNamesForRows(rows,chiensMap,clientDogsMap);
-    var dogsTxt=dogs.length?dogs.join(' + '):'Tous les chiens';
-    var dogsCount=dogs.length>1?' <span style="font-weight:400;color:var(--text-faint);font-size:12px;">· '+dogs.length+' chiens</span>':'';
-    html+='<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid '+color+';border-radius:10px;padding:14px 16px;margin-bottom:8px;cursor:pointer;" onclick="openResaDetail(\''+r.id+'\',\''+dateStr+'\')">';
-    html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">';
-    html+='<div style="font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-size:13px;color:'+color+';">'+cr+' · '+svc+'</div>';
-    html+='<span style="font-size:10px;background:'+(r.statut==='confirme'?'rgba(94,201,122,0.12)':r.statut==='en_attente'?'rgba(240,180,41,0.12)':'rgba(224,90,90,0.12)')+';color:'+(r.statut==='confirme'?'#5ec97a':r.statut==='en_attente'?'#f0b429':'#e05a5a')+';padding:3px 8px;border-radius:10px;font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-weight:800;">'+(r.statut==='confirme'?'Confirme':r.statut==='en_attente'?'En attente':'Annule')+'</span>';
-    html+='</div>';
-    html+='<div style="font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-size:16px;font-weight:800;color:var(--text);">🐕 '+dogsTxt+dogsCount+'</div>';
-    html+='<div style="font-size:12px;color:var(--text-faint);margin-top:3px;">'+client+' · 👤 '+(r.ranger_nom||'Gabriel')+'</div></div>';
+// Vue du jour (demande de Gabriel, 22/09/2026) : à gauche les promenades
+// par créneau (Matin, Midi, Après-midi), à droite Day Care puis Boarding.
+function ouvrirJourPlanning(offset) {
+  vuePlanning = 'jour'; planningOffset = offset;
+  ['jour','semaine','mois'].forEach(function(v) {
+    var btn = document.getElementById('vue-' + v + '-btn');
+    if (btn) { btn.style.background = v==='jour'?'var(--accent)':'transparent'; btn.style.color = v==='jour'?'white':'var(--text-dim)'; }
   });
-  html+='</div>';
-  grid.innerHTML=html;
+  loadPlanning();
+}
+
+// Séances annulées ce jour (réservation annulée ou date exclue) : affichées barrées
+function seancesAnnuleesDuJour(resas, dateStr) {
+  var actives = {}; filterResasForDay(resas, dateStr).forEach(function(r){ actives[r.id] = 1; });
+  var candidats = (resas || []).filter(function(r){ return !actives[r.id]; }).map(function(r) {
+    var x = Object.assign({}, r);
+    if (x.statut === 'annule') x.statut = 'confirme';
+    if (x.dates_exclues) x.dates_exclues = x.dates_exclues.split(',').map(function(t){ return t.trim(); })
+                                            .filter(function(t){ return t !== dateStr; }).join(',');
+    x._annulee = true; return x;
+  });
+  var ids = {}; filterResasForDay(candidats, dateStr).forEach(function(r){ ids[r.id] = 1; });
+  return (resas || []).filter(function(r){ return ids[r.id]; }).map(function(r){ return Object.assign({}, r, { _annulee: true }); });
+}
+
+function carteJourHtml(rows, clientsMap, chiensMap, clientDogsMap, dateStr) {
+  var r = rows[0];
+  var color = SVC_COLORS[r.service] || '#ff5f1f';
+  var annulee = !!r._annulee;
+  var c = r.client_id ? clientsMap[r.client_id] : null;
+  var client = c ? (c.prenom + ' ' + (c.nom || '')) : '—';
+  var dogs = dogNamesForRows(rows, chiensMap, clientDogsMap);
+  var dogsTxt = dogs.length ? dogs.join(' + ') : 'Tous les chiens';
+  var st = annulee ? ['rgba(224,90,90,0.12)', '#e05a5a', 'Annulée']
+         : r.statut === 'en_attente' ? ['rgba(240,180,41,0.14)', '#f0b429', 'À valider']
+         : ['rgba(94,201,122,0.12)', '#5ec97a', 'Confirmée'];
+  var meta = [client];
+  if (c && c.commune) meta.push(c.commune + (c.hors_zone ? ' (hors zone)' : ''));
+  if (r.service === 'boarding' && r.date_debut && r.date_fin) {
+    var dd = r.date_debut.slice(0, 10), df = r.date_fin.slice(0, 10);
+    meta.push(dd === dateStr ? 'Arrivée aujourd\'hui' : df === dateStr ? 'Départ aujourd\'hui' : 'Du ' + formatDateFR(dd) + ' au ' + formatDateFR(df));
+  }
+  var tr = '';
+  if (r.service === 'daycare') {
+    var al = false, re = false, ts = null;
+    rows.forEach(function(x){ if (x.transport_statut && x.transport_statut !== 'refuse') { al = al || !!x.transport_aller; re = re || !!x.transport_retour; ts = x.transport_statut; } });
+    if (al || re) tr = '<div style="font-size:11px;margin-top:5px;color:' + (ts === 'a_confirmer' ? '#f0b429' : 'var(--text-dim)') + ';">Transport : '
+      + (al && re ? 'dépose le matin + retour le soir' : al ? 'dépose le matin' : 'retour le soir')
+      + (ts === 'a_confirmer' ? ' — à confirmer' : '') + '</div>';
+  }
+  return '<div onclick="openResaDetail(\'' + r.id + '\',\'' + dateStr + '\')" style="background:var(--surface2);border:1px solid var(--border);border-left:3px solid ' + (annulee ? '#e05a5a' : color) + ';border-radius:10px;padding:10px 12px;margin-bottom:6px;cursor:pointer;' + (annulee ? 'opacity:0.75;' : '') + '">'
+    + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">'
+    +   '<div style="font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-size:15px;font-weight:800;color:' + (annulee ? '#e05a5a' : 'var(--text)') + ';' + (annulee ? 'text-decoration:line-through;' : '') + '">'
+    +     dogsTxt + (dogs.length > 1 ? ' <span style="font-weight:400;font-size:11px;color:var(--text-faint);">· ' + dogs.length + ' chiens</span>' : '')
+    +     (c && c.is_test ? ' <span class="badge b-muted" style="font-size:9px;vertical-align:middle;">Test</span>' : '') + '</div>'
+    +   '<span style="flex-shrink:0;font-size:10px;background:' + st[0] + ';color:' + st[1] + ';padding:3px 8px;border-radius:10px;font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-weight:800;">' + st[2] + '</span>'
+    + '</div>'
+    + '<div style="font-size:12px;color:var(--text-dim);margin-top:3px;' + (annulee ? 'text-decoration:line-through;' : '') + '">' + meta.join(' · ') + '</div>'
+    + tr + '</div>';
+}
+
+function renderPlanningJour(resas, clientsMap, chiensMap, clientDogsMap, dateStr, today) {
+  var grid = document.getElementById('planning-grid');
+  grid.style.gridTemplateColumns = '1fr';
+  var day = new Date(dateStr + 'T00:00:00');
+  var actives = filterResasForDay(resas, dateStr);
+  var annulees = seancesAnnuleesDuJour(resas, dateStr);
+  var tout = actives.concat(annulees);
+  function blocs(filtre) {
+    var rows = tout.filter(filtre);
+    var ok = groupBookings(rows.filter(function(r){ return !r._annulee; }));
+    var ko = groupBookings(rows.filter(function(r){ return r._annulee; }));
+    return { html: ok.concat(ko).map(function(g){ return carteJourHtml(g, clientsMap, chiensMap, clientDogsMap, dateStr); }).join(''),
+             n: ok.reduce(function(s, g){ return s + Math.max(1, dogNamesForRows(g, chiensMap, clientDogsMap).length); }, 0) };
+  }
+  function boite(titre, sous, couleur, b) {
+    return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;">'
+      + '<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;border-bottom:2px solid ' + couleur + ';padding-bottom:6px;">'
+      +   '<div style="font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-size:16px;font-weight:800;color:' + couleur + ';letter-spacing:0.03em;">' + titre
+      +     (sous ? ' <span style="font-size:12px;color:var(--text-faint);font-weight:400;">· ' + sous + '</span>' : '') + '</div>'
+      +   '<div style="font-size:11px;color:var(--text-dim);">' + (b.n ? b.n + ' chien' + (b.n > 1 ? 's' : '') : '') + '</div>'
+      + '</div>'
+      + (b.html || '<div style="text-align:center;padding:14px;color:var(--text-faint);font-size:12px;">—</div>')
+      + '</div>';
+  }
+  var W = SVC_COLORS.walking, D = SVC_COLORS.daycare, B = SVC_COLORS.boarding;
+  function walk(cr) { return function(r){ return r.service === 'walking' && r.creneau === cr; }; }
+  var sansCreneau = blocs(function(r){ return r.service === 'walking' && ['matin','midi','apmidi'].indexOf(r.creneau) === -1; });
+  var isT = dateStr === today, isWE = day.getDay() === 0 || day.getDay() === 6;
+  var hc = isT ? 'week-head today' : isWE ? 'week-head weekend' : 'week-head other';
+  var html = '<div style="width:100%;">'
+    + '<div class="' + hc + '" style="border-radius:10px;padding:12px 16px;margin-bottom:10px;">'
+    + '<div class="week-day">' + JOURS_FR[day.getDay()] + '</div><div class="week-num" style="font-size:28px;">' + day.getDate() + ' ' + MOIS_FR[day.getMonth()] + '</div></div>'
+    + bandeauCalendrier(dateStr, false)
+    + '<div class="planning-jour-cols">'
+    +   '<div>'
+    +     boite('Matin', '09h00', W, blocs(walk('matin')))
+    +     boite('Midi', '12h00', W, blocs(walk('midi')))
+    +     boite('Après-midi', '14h30', W, blocs(walk('apmidi')))
+    +     (sansCreneau.html ? boite('Promenade sans créneau', '', W, sansCreneau) : '')
+    +   '</div>'
+    +   '<div>'
+    +     boite('Day Care', '', D, blocs(function(r){ return r.service === 'daycare'; }))
+    +     boite('Boarding', '', B, blocs(function(r){ return r.service === 'boarding'; }))
+    +   '</div>'
+    + '</div></div>';
+  grid.innerHTML = html;
 }
 
 function renderPlanningMois(resas, clientsMap, debut, fin, today) {
@@ -4080,7 +4326,7 @@ function renderPlanningMois(resas, clientsMap, debut, fin, today) {
     var cols=[...new Set(dr.map(function(r){return SVC_COLORS[r.service]||'#ff5f1f';}))];
     var off=daysBetween(cur,todayMid);
     var hc = isT?'week-head month-cell today':isWE?'week-head month-cell weekend':'week-head month-cell other';
-    html+='<div class="'+hc+'" onclick="vuePlanning=\'jour\';planningOffset='+off+';loadPlanning();">';
+    html+='<div class="'+hc+'" onclick="ouvrirJourPlanning('+off+');">';
     html+='<div class="week-num">'+cur.getDate()+'</div>';
     html+=bandeauCalendrier(ds, true);
     if (nbR>0) {
@@ -4098,7 +4344,7 @@ function renderPlanningMois(resas, clientsMap, debut, fin, today) {
 async function openResaDetail(id, dateOccurrence) {
   try {
     var { data: r, error } = await db.from('reservations')
-      .select('id,service,creneau,statut,date_debut,date_fin,jours_recurrence,date_fin_recurrence,dates_exclues,notes,client_id,chien_id,annule_par,annulation_tardive,facture_pourcentage')
+      .select('*')
       .eq('id', id).single();
     if (error || !r) { showToastAdmin('Reservation introuvable', 'red'); console.error(error); return; }
     currentResaDetail = r;
@@ -4139,7 +4385,10 @@ async function openResaDetail(id, dateOccurrence) {
     document.getElementById('detail-chien-info').textContent = dogList.length
       ? dogList.join(', ')
       : 'Tous les chiens';
-    document.getElementById('detail-service-info').textContent = (SVC_LABELS_FULL[r.service]||r.service) + ' — ' + (SVC_TARIFS[r.service]||'');
+    document.getElementById('detail-service-info').textContent = (SVC_LABELS_FULL[r.service]||r.service) + (function(){
+      var tp = FR_PARAMS.tarifs && FR_PARAMS.tarifs[r.service];
+      return tp ? ' — ' + (currentResaDetail._client_fidele ? tp.fidele : tp.nouveau) + ' € (tarif de base)' : '';
+    })();
 
     var datesTxt = '';
     if (r.service === 'boarding') {
@@ -4186,6 +4435,19 @@ async function openResaDetail(id, dateOccurrence) {
 
     document.getElementById('detail-statut').value = r.statut;
     document.getElementById('detail-notes').value = r.notes || '';
+    // Transport Day Care (v39)
+    var trBloc = document.getElementById('detail-transport-bloc');
+    if (trBloc) {
+      var avecTr = r.service === 'daycare' && ('transport_aller' in r);
+      trBloc.style.display = avecTr ? '' : 'none';
+      if (avecTr) {
+        document.getElementById('detail-transport').value = r.transport_aller && r.transport_retour ? 'les_deux' : r.transport_aller ? 'aller' : r.transport_retour ? 'retour' : '';
+        document.getElementById('detail-transport-statut').value = r.transport_statut || 'confirme';
+        document.getElementById('detail-transport-note').textContent = r.transport_statut === 'a_confirmer'
+          ? 'Client hors zone : transport en attente de votre confirmation. Il n\'est facturé qu\'une fois confirmé (' + euros(5.85) + ' TTC par trajet).'
+          : euros(5.85) + ' TTC par trajet, facturé sur la facture du mois.';
+      }
+    }
 
     var exclues = (r.dates_exclues||'').split(',').map(function(x){return x.trim();}).filter(Boolean);
     var annInfo = document.getElementById('detail-annulation-info');
@@ -4230,7 +4492,15 @@ async function sauvegarderResaDetail() {
   var statut = document.getElementById('detail-statut').value;
   var notes  = document.getElementById('detail-notes').value;
   try {
-    var n = await majLignesReservation(currentResaDetail, { statut: statut, notes: notes || null });
+    var maj = { statut: statut, notes: notes || null };
+    var r0 = currentResaDetail;
+    if (r0.service === 'daycare' && ('transport_aller' in r0)) {
+      var tv = document.getElementById('detail-transport').value;
+      maj.transport_aller = tv === 'aller' || tv === 'les_deux';
+      maj.transport_retour = tv === 'retour' || tv === 'les_deux';
+      maj.transport_statut = tv ? document.getElementById('detail-transport-statut').value : null;
+    }
+    var n = await majLignesReservation(currentResaDetail, maj);
     showToastAdmin('✓ ' + n + ' ligne' + (n>1?'s':'') + ' mise' + (n>1?'s':'') + ' a jour', 'green');
     document.getElementById('modal-resa-detail').classList.remove('open');
     loadPlanning();
@@ -4957,6 +5227,12 @@ function appliquerModeleAlerte() {
   var sms = document.getElementById('alerte-sms');
   if (sms) sms.value = mod.sms || '';
 
+  // Le bouton d'annulation n'apparaît que pour une alerte rouge « annulation »
+  var btnA = document.getElementById('alerte-btn-annuler');
+  var noteA = document.getElementById('alerte-annulation-note');
+  if (btnA)  btnA.style.display  = mod.niveau === 'annulation' ? '' : 'none';
+  if (noteA) noteA.style.display = mod.niveau === 'annulation' ? '' : 'none';
+
   var note = document.getElementById('alerte-note');
   var inf = NIVEAU_INFO[mod.niveau] || NIVEAU_INFO.info;
   if (note) {
@@ -5076,6 +5352,72 @@ async function envoyerAlerte() {
   }
 }
 
+// ── Annulation des promenades du jour (alerte rouge, §19) ──
+// Décision de Gabriel, 22/09/2026 : jamais automatique. Seules les promenades
+// sont annulées ; Day Care et Boarding ont lieu (les chiens sont gardés).
+// Chaque séance est tracée à 0 % facturé (force majeure, CGV) et retirée de
+// la réservation : elle ne sera donc pas facturée.
+async function annulerPromenadesJour() {
+  var ds = (document.getElementById('alerte-date') || {}).value || formatDateISO(new Date());
+  var btn = document.getElementById('alerte-btn-annuler');
+  try {
+    await assurerCalendrier();
+    var rr = await db.from('reservations')
+      .select('id,service,creneau,statut,date_debut,date_fin,jours_recurrence,date_fin_recurrence,dates_exclues,client_id,chien_id')
+      .lte('date_debut', ds).gte('date_fin', ds);
+    if (rr.error) throw rr.error;
+    var duJour = filterResasForDay(rr.data || [], ds).filter(function(r) {
+      return r.service === 'walking' && r.statut !== 'annule';
+    });
+    if (!duJour.length) { showToastAdmin('Aucune promenade ce jour-là', 'amber'); return; }
+    var clients = [];
+    duJour.forEach(function(r) { if (r.client_id && clients.indexOf(r.client_id) === -1) clients.push(r.client_id); });
+    var jourFR = formatDateFR(ds);
+    if (!confirm('Annuler ' + duJour.length + ' promenade(s) du ' + jourFR + ' pour ' + clients.length + ' client(s) ?\n\n'
+      + '· 0 % facturé (force majeure)\n'
+      + '· Day Care et Boarding du jour sont conservés\n'
+      + '· Les clients concernés reçoivent un message')) return;
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Annulation…'; }
+    var faites = 0, erreurs = 0;
+    for (var i = 0; i < duJour.length; i++) {
+      var r = duJour[i];
+      try {
+        var ex = (r.dates_exclues || '').split(',').map(function(x) { return x.trim(); }).filter(Boolean);
+        if (ex.indexOf(ds) === -1) ex.push(ds);
+        var maj = await db.from('reservations').update({ dates_exclues: ex.join(',') }).eq('id', r.id).select('id');
+        if (maj.error) throw maj.error;
+        if (!maj.data || !maj.data.length) throw new Error('droits insuffisants (RLS)');
+        await db.from('annulations_occurrences').insert({
+          reservation_id: r.id, date_occurrence: ds, annule_par: 'gabriel',
+          annulation_tardive: false, facture_pourcentage: 0
+        });
+        faites++;
+      } catch (e) { erreurs++; console.error('annulation météo:', e); }
+    }
+    // Message aux clients concernés (même messagerie que l'espace client)
+    var texte = 'Votre promenade du ' + jourFR + ' est annulée en raison de l\'alerte météo rouge. '
+              + 'Conformément à nos conditions générales (force majeure), elle ne vous est pas facturée. '
+              + 'Le Day Care et la pension sont assurés normalement.';
+    try {
+      var rows = clients.map(function(id) { return { client_id: id, expediteur: 'admin', contenu: texte, lu: false }; });
+      for (var k = 0; k < rows.length; k += 50) {
+        var rm = await insererMessages(rows.slice(k, k + 50), 'notification');
+        if (rm.error) throw rm.error;
+      }
+    } catch (e) { showToastAdmin('Séances annulées, clients non prévenus : ' + (e.message || ''), 'amber'); }
+    showToastAdmin('✓ ' + faites + ' promenade(s) annulée(s)' + (erreurs ? ' · ' + erreurs + ' en échec' : ''), erreurs ? 'amber' : 'green');
+    loadPlanning();
+    loadDashboardStats();
+    chargerDestinatairesAlerte();
+  } catch (e) {
+    showToastAdmin('Erreur : ' + (e.message || ''), 'red');
+    console.error(e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Annuler les promenades du jour'; }
+  }
+}
+
 // ── Banniere espace client (table `alertes_meteo`, document maitre §19.2) ──
 async function publierBanniere() {
   var mod = alerteModeleCourant();
@@ -5166,6 +5508,15 @@ function navVers(pageId) {
   nav(pageId, el);
 }
 
+// Transport Day Care hors zone : décision de Gabriel (toutes les lignes de la réservation)
+async function decisionTransport(clientId, dateDebut, statut) {
+  var r = await db.from('reservations').update({ transport_statut: statut })
+    .eq('client_id', clientId).eq('date_debut', dateDebut).eq('service', 'daycare').eq('transport_statut', 'a_confirmer').select('id');
+  if (r.error || !r.data || !r.data.length) { showToastAdmin('Non enregistré' + (r.error ? ' : ' + r.error.message : ''), 'red'); return; }
+  showToastAdmin(statut === 'confirme' ? '✓ Transport confirmé' : 'Transport refusé', statut === 'confirme' ? 'green' : 'amber');
+  chargerAlertes();
+}
+
 async function chargerAlertes() {
   var body = document.getElementById('dash-alertes-body');
   if (!body) return;
@@ -5198,6 +5549,32 @@ async function chargerAlertes() {
         + '<div class="alert-time">Reservations en attente de confirmation</div>'
         + '</div></div>';
     }
+
+    // Transports Day Care à confirmer (clients hors zone, v39)
+    try {
+      var trA = await db.from('reservations').select('client_id,date_debut,date_fin_recurrence,date_fin,transport_aller,transport_retour, clients(prenom, nom, commune)')
+        .eq('transport_statut', 'a_confirmer').neq('statut', 'annule').limit(100);
+      if (!trA.error && trA.data && trA.data.length) {
+        var vusTr = {}, lignesTr = [];
+        trA.data.forEach(function(x) {
+          var k = x.client_id + '|' + x.date_debut; if (vusTr[k]) return; vusTr[k] = true;
+          lignesTr.push(x);
+        });
+        html += '<div class="alert alert-a"><div class="alert-dot"></div><div class="alert-body">'
+          + '<strong>' + lignesTr.length + ' transport' + (lignesTr.length > 1 ? 's' : '') + ' Day Care à confirmer</strong>'
+          + lignesTr.slice(0, 5).map(function(x) {
+              var nomC = x.clients ? x.clients.prenom + ' ' + x.clients.nom + (x.clients.commune ? ' (' + x.clients.commune + ')' : '') : '—';
+              var sens = x.transport_aller && x.transport_retour ? 'aller + retour' : x.transport_aller ? 'aller' : 'retour';
+              var fin = x.date_fin_recurrence || x.date_fin;
+              return '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--text-dim);margin-top:5px;">'
+                + msgEsc(nomC) + ' · ' + sens + ' · dès le ' + formatDateFR(x.date_debut) + (fin && fin !== x.date_debut ? ' → ' + formatDateFR(fin) : '')
+                + ' <button class="rc-btn pay" onclick="event.stopPropagation();decisionTransport(\'' + x.client_id + '\',\'' + x.date_debut + '\',\'confirme\')">Confirmer</button>'
+                + '<button class="rc-btn red" onclick="event.stopPropagation();decisionTransport(\'' + x.client_id + '\',\'' + x.date_debut + '\',\'refuse\')">Refuser</button></div>';
+            }).join('')
+          + '<div class="alert-time">Hors zone : 5,85 € TTC par trajet, facturé une fois confirmé</div>'
+          + '</div></div>';
+      }
+    } catch (eTr) { /* v39 absente */ }
 
     // Recouvrement (migration v31) : ce que l'horloge propose, à traiter après pointage
     var suivi = await db.from('v_factures_suivi').select('id,client_id,numero,solde,jours_retard,etape_suggeree').gt('solde', 0).limit(300);
@@ -5495,12 +5872,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Ouvrir directement "Nouvelle reservation" pour un client donne (?new_resa_client=...)
   var newResaClient = params.get('new_resa_client');
-  if (newResaClient) {
-    ouvrirNouvelleReservationAdmin().then(function() {
-      var c = resaClientsCache.find(function(x) { return x.id === newResaClient; });
-      if (c) selectResaClient(c.id, c.prenom + ' ' + c.nom, c.commune, c.client_fidele);
-    });
-  }
+  if (newResaClient) nouvelleResaPourClient(newResaClient);
+});
+
+// Nouvelle réservation, client déjà choisi (fiche client, planning…)
+function nouvelleResaPourClient(clientId) {
+  return ouvrirNouvelleReservationAdmin().then(function() {
+    var c = resaClientsCache.find(function(x) { return x.id === clientId; });
+    if (!c) return;
+    window._resaClientHZ = !!c.hors_zone;
+    selectResaClient(c.id, (c.prenom || '') + ' ' + (c.nom || ''), c.commune || '—', c.client_fidele);
+    majTransportResaInfo();
+  });
+}
+
+// La fiche client (dans l'admin) demande une action : on la fait ici, pas dans le cadre
+window.addEventListener('message', function(ev) {
+  var d = ev && ev.data;
+  if (!d || !d.fr || !d.client) return;
+  if (d.fr === 'nouvelle-resa') nouvelleResaPourClient(d.client);
+  if (d.fr === 'nouvelle-facture') ouvrirFactureAdmin('client_id=' + encodeURIComponent(d.client));
+  if (d.fr === 'ouvrir-facture' && d.facture) ouvrirFactureAdmin('id=' + encodeURIComponent(d.facture));
 });
 
 
@@ -5521,6 +5913,15 @@ async function ouvrirNouvelleReservationAdmin() {
   document.getElementById('resa-fin-recurrence-group').style.display = 'none';
   // Checkboxes
   document.querySelectorAll('#resa-jours-group input[type=checkbox]').forEach(function(cb){ cb.checked=false; });
+  document.getElementById('resa-transport').value = '';
+  window._resaClientHZ = false;
+  // Libellés des services avec les tarifs de base en vigueur (Paramètres)
+  var optS = document.getElementById('resa-service').options;
+  for (var k = 0; k < optS.length; k++) {
+    var tp = FR_PARAMS.tarifs && FR_PARAMS.tarifs[optS[k].value];
+    if (tp) optS[k].textContent = tp.label + ' — ' + tp.fidele + ' € / ' + tp.nouveau + ' € (fidèle / nouveau)';
+  }
+  await assurerCalendrier();
   updateResaFields();
   // Charger rangers
   var selR = document.getElementById('resa-ranger');
@@ -5532,7 +5933,7 @@ async function ouvrirNouvelleReservationAdmin() {
   }
   // Cache clients
   if (!resaClientsCache.length) {
-    var {data:cls, error:errCls} = await db.from('clients').select('id,prenom,nom,commune,client_fidele,is_test').eq('actif',true).order('nom');
+    var {data:cls, error:errCls} = await db.from('clients').select('id,prenom,nom,commune,client_fidele,is_test,hors_zone').eq('actif',true).order('nom');
     if (errCls) console.error('resaClientsCache error:', errCls);
     resaClientsCache = cls || [];
   }
@@ -5548,20 +5949,22 @@ async function searchResaClient(val) {
     return (c.prenom+' '+c.nom).toLowerCase().includes(q);
   });
   // Chercher dans chiens
-  var {data:chiens, error:errChiens} = await db.from('chiens').select('id,nom,race,client_id,clients(id,prenom,nom,commune,client_fidele)').ilike('nom','%'+val+'%').eq('actif',true);
+  var {data:chiens, error:errChiens} = await db.from('chiens').select('id,nom,race,client_id,clients(id,prenom,nom,commune,client_fidele,hors_zone)').ilike('nom','%'+val+'%').eq('actif',true);
   if (errChiens) console.error('searchResaClient chiens error:', errChiens);
   var chiensMatch = chiens || [];
   if (!clientsMatch.length && !chiensMatch.length) { results.style.display='none'; return; }
   var html = '';
+  window._resaChoix = [];
+  function choix(c, chienId) { window._resaChoix.push({ c: c, chienId: chienId || null }); return window._resaChoix.length - 1; }
   clientsMatch.slice(0,4).forEach(function(c) {
-    html += '<div onclick="selectResaClient(\''+c.id+'\',\''+c.prenom+' '+c.nom+'\',\''+c.commune+'\','+c.client_fidele+')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;" onmouseover="this.style.background=\'var(--surface3)\'" onmouseout="this.style.background=\'\'">';
+    html += '<div onclick="choisirResaClient('+choix(c)+')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;" onmouseover="this.style.background=\'var(--surface3)\'" onmouseout="this.style.background=\'\'">';
     html += '<div style="width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:10px;color:white;">'+(c.prenom[0]+c.nom[0]).toUpperCase()+'</div>';
-    html += '<div><div style="font-size:13px;font-weight:600;color:var(--text);">'+c.prenom+' '+c.nom+'</div><div style="font-size:11px;color:var(--text-faint);">'+c.commune+' · '+(c.client_fidele?'Fidele':'Nouveau')+'</div></div></div>';
+    html += '<div><div style="font-size:13px;font-weight:600;color:var(--text);">'+c.prenom+' '+c.nom+'</div><div style="font-size:11px;color:var(--text-faint);">'+(c.commune||'—')+' · '+(c.client_fidele?'Fidèle':'Nouveau')+(c.hors_zone?' · hors zone':'')+'</div></div></div>';
   });
   chiensMatch.slice(0,4).forEach(function(ch) {
     if (!ch.clients) return;
     var c = ch.clients;
-    html += '<div onclick="selectResaClient(\''+c.id+'\',\''+c.prenom+' '+c.nom+'\',\''+c.commune+'\','+c.client_fidele+',\''+ch.id+'\')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;" onmouseover="this.style.background=\'var(--surface3)\'" onmouseout="this.style.background=\'\'">';
+    html += '<div onclick="choisirResaClient('+choix(c, ch.id)+')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;" onmouseover="this.style.background=\'var(--surface3)\'" onmouseout="this.style.background=\'\'">';
     html += '<div style="width:28px;height:28px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:14px;">🐾</div>';
     html += '<div><div style="font-size:13px;font-weight:600;color:var(--text);">'+ch.nom+'<span style="font-size:11px;color:var(--text-faint);margin-left:8px;">'+ch.race+'</span></div><div style="font-size:11px;color:var(--text-faint);">Propriétaire : '+c.prenom+' '+c.nom+'</div></div></div>';
   });
@@ -5569,12 +5972,20 @@ async function searchResaClient(val) {
   results.style.display = 'block';
 }
 
+function choisirResaClient(i) {
+  var x = (window._resaChoix || [])[i];
+  if (!x) return;
+  window._resaClientHZ = !!x.c.hors_zone;
+  selectResaClient(x.c.id, (x.c.prenom || '') + ' ' + (x.c.nom || ''), x.c.commune || '—', x.c.client_fidele, x.chienId);
+  majTransportResaInfo();
+}
+
 async function selectResaClient(id, nom, commune, fidele, chienId) {
   resaClientId = id;
   document.getElementById('resa-search-results').style.display = 'none';
   document.getElementById('resa-client-selected').style.display = 'block';
   document.getElementById('resa-client-nom').textContent = nom;
-  document.getElementById('resa-client-info').textContent = commune + ' · ' + (fidele ? '⭐ Fidèle' : 'Nouveau client');
+  document.getElementById('resa-client-info').textContent = commune + ' · ' + (fidele ? '⭐ Fidèle' : 'Nouveau client') + (window._resaClientHZ ? ' · hors zone' : '');
   // Charger chiens du client
   var {data:chiens} = await db.from('chiens').select('id,nom,race').eq('client_id',id).eq('actif',true);
   var sel = document.getElementById('resa-chien-id');
@@ -5601,11 +6012,58 @@ function updateResaFields() {
   document.getElementById('resa-creneau-group').style.display = isWalking  ? 'block' : 'none';
   document.getElementById('resa-jours-group').style.display   = isBoarding ? 'none'  : 'block';
   document.getElementById('resa-debut-label').textContent     = isBoarding ? 'Date d\'arrivée' : 'Date';
+  document.getElementById('resa-transport-group').style.display = svc === 'daycare' ? 'block' : 'none';
+  majTransportResaInfo();
+  verifierCalendrierResa();
   if (isBoarding) {
     document.getElementById('resa-fin-recurrence-group').style.display = 'none';
   } else {
     updateRecurrenceField();
   }
+}
+
+function majTransportResaInfo() {
+  var el = document.getElementById('resa-transport-info');
+  if (!el) return;
+  var ht = parseFloat((FR_PARAMS && FR_PARAMS.transport_daycare_ht) || 5) || 5;
+  el.textContent = eur2(ht) + ' HT (' + eur2(Math.round(ht * (1 + (FR_PARAMS.tva || 0.17)) * 100) / 100) + ' TTC) par trajet'
+    + (window._resaClientHZ ? ' · client hors zone : créé par vous, le transport est confirmé d\'office' : '');
+  function eur2(x) { return x.toFixed(2).replace('.', ',') + ' €'; }
+}
+
+// Dates de la réservation qui tombent un jour férié ou pendant une fermeture
+function datesResaAdmin() {
+  var svc = document.getElementById('resa-service').value;
+  var debut = document.getElementById('resa-date-debut').value;
+  if (!debut) return [];
+  var jours = [];
+  document.querySelectorAll('#resa-jours-group input[type=checkbox]:checked').forEach(function(cb){ jours.push(cb.value); });
+  var fin = svc === 'boarding' ? document.getElementById('resa-date-fin').value
+          : (jours.length ? document.getElementById('resa-date-fin-recurrence').value : debut);
+  if (!fin || fin < debut) fin = debut;
+  var map = { dim:0, lun:1, mar:2, mer:3, jeu:4, ven:5, sam:6 }, want = jours.map(function(j){ return map[j]; });
+  var out = [], d = new Date(debut + 'T00:00:00'), f = new Date(fin + 'T00:00:00'), n = 0;
+  while (d <= f && n++ < 800) {
+    if (svc === 'boarding' || !want.length || want.indexOf(d.getDay()) !== -1) out.push(formatDateISO(d));
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
+}
+function joursFermesResaAdmin() {
+  if (!window.FR_CAL) return [];
+  var svc = document.getElementById('resa-service').value;
+  return datesResaAdmin().map(function(ds) { var v = FR_CAL.verdict(ds); return v ? { date: ds, v: v } : null; })
+    .filter(function(x) { return x && !(svc === 'boarding' && x.v.type === 'ferie'); });
+}
+function verifierCalendrierResa() {
+  var el = document.getElementById('resa-cal-alerte');
+  if (!el) return;
+  var f = joursFermesResaAdmin();
+  if (!f.length) { el.style.display = 'none'; return; }
+  el.innerHTML = '⚠ ' + f.length + ' date' + (f.length > 1 ? 's' : '') + ' fermée' + (f.length > 1 ? 's' : '') + ' : '
+    + f.slice(0, 6).map(function(x) { return formatDateFR(x.date) + ' (' + x.v.nom + ')'; }).join(', ') + (f.length > 6 ? '…' : '')
+    + '<br><span style="color:var(--text-faint);">Pas de séance ces jours-là, rien n\'est facturé.</span>';
+  el.style.display = 'block';
 }
 
 function updateRecurrenceField() {
@@ -5633,8 +6091,12 @@ async function sauvegarderResaAdmin() {
     if (!finRecurrence) { showToastAdmin('Indiquez la date de fin de recurrence', 'amber'); return; }
     fin = finRecurrence;
   }
-  try {
-    var { error } = await db.from('reservations').insert({
+  var fermes = joursFermesResaAdmin();
+  var nbDates = datesResaAdmin().length;
+  if (fermes.length && fermes.length >= nbDates) { showToastAdmin('Toutes les dates tombent sur un jour fermé ou férié', 'amber'); return; }
+  if (fermes.length && !confirm(fermes.length + ' date(s) tombent sur un jour fermé ou férié : pas de séance ces jours-là. Créer quand même la réservation ?')) return;
+  var tv = svc === 'daycare' ? document.getElementById('resa-transport').value : '';
+  var ligne = {
       client_id:  resaClientId,
       chien_id:   chienId,
       service:    svc,
@@ -5645,10 +6107,21 @@ async function sauvegarderResaAdmin() {
       creneau:    cr,
       jours_recurrence: jours.length ? jours.join(',') : null,
       recurrente: jours.length > 0,
-      statut:     svc==='boarding' ? 'en_attente' : 'confirme',
+      statut:     'confirme',          // créée par l'admin : confirmée, boarding compris
+      ranger_nom: ranger || null,
       notes:      notes || null,
       created_at: new Date().toISOString()
-    });
+  };
+  if (tv) {
+    ligne.transport_aller  = tv === 'aller'  || tv === 'les_deux';
+    ligne.transport_retour = tv === 'retour' || tv === 'les_deux';
+    ligne.transport_statut = 'confirme';
+  }
+  try {
+    var { error } = await db.from('reservations').insert(ligne);
+    if (error && tv && /transport_/.test(error.message || '')) {
+      throw new Error('Migration v39 à exécuter pour enregistrer le transport (sql/fr_migration_v39_acces_transport.sql)');
+    }
     if (error) throw error;
     document.getElementById('modal-nouvelle-resa-admin').classList.remove('open');
     showToastAdmin('✓ Reservation creee', 'green');
@@ -5700,7 +6173,7 @@ if ('serviceWorker' in navigator) {
     <div onclick="nav('factures',this);toggleMobileMenu()" style="padding:12px;background:var(--k700);border-radius:10px;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text);">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>Factures
     </div>
-    <div onclick="window.location.href='forestrangers-stats.html'" style="padding:12px;background:var(--k700);border-radius:10px;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text);">
+    <div onclick="nav('stats',document.querySelector('.nav-item[onclick*=&quot;nav(\'stats\'&quot;]'));toggleMobileMenu()" style="padding:12px;background:var(--k700);border-radius:10px;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text);">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Stats
     </div>
     <div onclick="nav('invitation',this);toggleMobileMenu()" style="padding:12px;background:var(--k700);border-radius:10px;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text);">
@@ -5931,77 +6404,6 @@ if ('serviceWorker' in navigator) {
   </div>
 </div>
 
-<div class="modal-overlay" id="modal-nouvelle-facture" onclick="if(event.target===this)this.classList.remove('open')">
-  <div class="modal-sheet" style="max-width:500px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-      <div class="modal-title">Nouvelle facture</div>
-      <button onclick="document.getElementById('modal-nouvelle-facture').classList.remove('open')" style="background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:20px;">✕</button>
-    </div>
-
-    <!-- Type -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-      <div onclick="setFactureType('auto')" id="ftype-auto" style="padding:10px;border-radius:10px;border:1.5px solid var(--accent);background:var(--accent-dim);cursor:pointer;text-align:center;">
-        <div style="font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-size:12px;font-weight:800;color:var(--accent);">🔄 Automatique</div>
-        <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">Depuis les réservations du mois</div>
-      </div>
-      <div onclick="setFactureType('manuelle')" id="ftype-manuelle" style="padding:10px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;text-align:center;">
-        <div style="font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-size:12px;font-weight:800;color:var(--text-dim);">✏️ Manuelle</div>
-        <div style="font-size:11px;color:var(--text-faint);margin-top:2px;">Prestation ponctuelle</div>
-      </div>
-    </div>
-
-    <!-- Champs communs -->
-    <div class="form-group" style="margin-bottom:10px;">
-      <label class="form-label">Client</label>
-      <select class="form-control" id="facture-client-id" style="width:100%;">
-        <option value="">Sélectionner un client...</option>
-      </select>
-    </div>
-
-    <!-- Section auto -->
-    <div id="section-auto">
-      <div class="form-group" style="margin-bottom:10px;">
-        <label class="form-label">Mois de facturation</label>
-        <input type="month" class="form-control" id="facture-mois" style="width:100%;">
-      </div>
-      <div id="facture-auto-preview" style="background:var(--surface2);border-radius:10px;padding:12px;font-size:12px;color:var(--text-dim);margin-bottom:10px;min-height:60px;">
-        Sélectionnez un client et un mois pour voir le récapitulatif.
-      </div>
-    </div>
-
-    <!-- Section manuelle -->
-    <div id="section-manuelle" style="display:none;">
-      <div class="form-group" style="margin-bottom:10px;">
-        <label class="form-label">Description</label>
-        <input type="text" class="form-control" id="facture-desc" placeholder="Ex: Promenade supplémentaire 15 juin" style="width:100%;">
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-        <div class="form-group">
-          <label class="form-label">Service</label>
-          <select class="form-control" id="facture-service" style="width:100%;">
-            <option value="walking">Dog Walking</option>
-            <option value="daycare">Day Care</option>
-            <option value="boarding">Boarding</option>
-            <option value="autre">Autre</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Montant TTC (€)</label>
-          <input type="number" class="form-control" id="facture-montant" placeholder="0.00" step="0.01" style="width:100%;">
-        </div>
-      </div>
-    </div>
-
-    <div style="display:flex;gap:8px;margin-top:6px;">
-      <button class="btn btn-outline" style="flex:1;" onclick="document.getElementById('modal-nouvelle-facture').classList.remove('open')">Annuler</button>
-      <button class="btn btn-accent" style="flex:2;" onclick="creerFacture()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" style="width:14px;height:14px;"><polyline points="20 6 9 17 4 12"/></svg>
-        Créer la facture
-      </button>
-    </div>
-  </div>
-</div>
-
 <script>
 function setMobileNav(el) {
   document.querySelectorAll('.mobile-nav-item').forEach(function(t) { t.classList.remove('active'); });
@@ -6019,7 +6421,7 @@ async function openStatDetail(type) {
   var mois  = new Date().toISOString().slice(0, 7);
   try {
     if (type === 'promenades') {
-      title.textContent = '🐾 Réservations du jour';
+      title.textContent = 'Réservations du jour';
       await assurerCalendrier();
       var { data } = await db.from('reservations').select('id,service,creneau,statut,date_debut,date_fin,jours_recurrence,date_fin_recurrence,dates_exclues,client_id,chien_id, clients(prenom, nom, is_test)').lte('date_debut', today).gte('date_fin', today).neq('statut', 'annule').order('creneau');
       data = filterResasForDay(data || [], today);
@@ -6029,134 +6431,29 @@ async function openStatDetail(type) {
       content.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:1px solid var(--border);"><th style="padding:8px;text-align:left;color:var(--text-faint);font-size:10px;">Client</th><th style="padding:8px;text-align:left;color:var(--text-faint);font-size:10px;">Service</th><th style="padding:8px;text-align:left;color:var(--text-faint);font-size:10px;">Creneau</th><th style="padding:8px;text-align:left;color:var(--text-faint);font-size:10px;">Ranger</th></tr></thead><tbody>'
         + data.map(function(r) { var cl = r.clients ? r.clients.prenom + ' ' + r.clients.nom : '—'; return '<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;color:var(--text);">' + cl + '</td><td style="padding:8px;color:var(--text-dim);">' + (svc[r.service]||r.service) + '</td><td style="padding:8px;color:var(--accent);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;">' + (cr[r.creneau]||r.creneau||'—') + '</td><td style="padding:8px;color:var(--text-dim);">' + (r.ranger_nom||'—') + '</td></tr>'; }).join('') + '</tbody></table>';
     } else if (type === 'revenus') {
-      title.textContent = '💶 Factures payees — ' + mois;
+      title.textContent = 'Factures payées — ' + mois.split('-').reverse().join('/');
       var { data } = await db.from('factures').select('numero, total_ttc, created_at, clients!inner(prenom, nom, is_test)').ilike('periode', mois + '%').eq('statut', 'payee').eq('clients.is_test', false).order('created_at', { ascending: false });
       if (!data || !data.length) { content.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-faint);">Aucune facture payée ce mois</div>'; return; }
       var total = data.reduce(function(s,f) { return s + (parseFloat(f.total_ttc)||0); }, 0);
-      content.innerHTML = '<div style="margin-bottom:12px;font-size:14px;color:var(--green);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-weight:800;">Total : ' + total.toLocaleString('fr-LU',{minimumFractionDigits:2}) + ' €</div>'
+      content.innerHTML = '<div class="stat-detail-total"><span>' + data.length + ' facture' + (data.length > 1 ? 's' : '') + ' payée' + (data.length > 1 ? 's' : '') + '</span><strong style="color:var(--green);">' + total.toLocaleString('fr-LU',{minimumFractionDigits:2}) + ' €</strong></div>'
         + '<table style="width:100%;border-collapse:collapse;font-size:13px;">' + data.map(function(f) { var cl = f.clients ? f.clients.prenom + ' ' + f.clients.nom : '—'; var mt = parseFloat(f.total_ttc||0).toLocaleString('fr-LU',{minimumFractionDigits:2}); return '<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;color:var(--accent);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;">' + (f.numero||'—') + '</td><td style="padding:8px;color:var(--text);">' + cl + '</td><td style="padding:8px;color:var(--green);font-weight:700;">' + mt + ' €</td></tr>'; }).join('') + '</table>';
     } else if (type === 'clients') {
-      title.textContent = '👥 Clients actifs';
+      title.textContent = 'Clients actifs';
       var { data } = await db.from('clients').select('id, prenom, nom, commune, client_fidele, numero_client').eq('actif', true).eq('is_test', false).order('nom');
       if (!data || !data.length) { content.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-faint);">Aucun client</div>'; return; }
       content.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px;">' + data.map(function(c) { var badge = c.client_fidele ? '<span style="font-size:9px;background:var(--accent-dim);color:var(--accent);padding:2px 6px;border-radius:10px;">Fidele</span>' : '<span style="font-size:9px;background:var(--blue-dim);color:var(--blue);padding:2px 6px;border-radius:10px;">Nouveau</span>'; return '<tr style="border-bottom:1px solid var(--border);cursor:pointer;" onclick="document.getElementById(\'modal-stat-detail\').classList.remove(\'open\');window.location.href=\'forestrangers-client-detail.html?id=' + c.id + '&from=dashboard\'"><td style="padding:8px;color:var(--accent);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:11px;">#' + c.numero_client + '</td><td style="padding:8px;color:var(--text);">' + c.prenom + ' ' + c.nom + '</td><td style="padding:8px;color:var(--text-dim);">' + (c.commune||'—') + '</td><td style="padding:8px;">' + badge + '</td></tr>'; }).join('') + '</table>';
     } else if (type === 'impayes') {
-      title.textContent = '⚠️ Factures impayées';
+      title.textContent = 'Factures impayées';
       var { data } = await db.from('factures').select('id, numero, total_ttc, created_at, periode, clients!inner(id, prenom, nom, email, is_test)').eq('statut', 'impayee').eq('clients.is_test', false).order('created_at', { ascending: true });
       if (!data || !data.length) { content.innerHTML = '<div style="padding:20px;text-align:center;color:var(--green);">✓ Aucun impayé !</div>'; return; }
       var total = data.reduce(function(s,f) { return s + (parseFloat(f.total_ttc)||0); }, 0);
-      content.innerHTML = '<div style="margin-bottom:12px;font-size:14px;color:var(--red);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-weight:800;">Total impaye : ' + total.toLocaleString('fr-LU',{minimumFractionDigits:2}) + ' €</div>'
+      content.innerHTML = '<div class="stat-detail-total"><span>' + data.length + ' facture' + (data.length > 1 ? 's' : '') + ' impayée' + (data.length > 1 ? 's' : '') + '</span><strong style="color:var(--red);">' + total.toLocaleString('fr-LU',{minimumFractionDigits:2}) + ' €</strong></div>'
         + data.map(function(f) { var cl = f.clients ? f.clients.prenom + ' ' + f.clients.nom : '—'; var email = f.clients ? f.clients.email : ''; var mt = parseFloat(f.total_ttc||0).toLocaleString('fr-LU',{minimumFractionDigits:2}); var emis = f.created_at ? new Date(f.created_at).toLocaleDateString('fr-LU',{day:'2-digit',month:'short',year:'numeric'}) : '—'; return '<div style="padding:12px;border-bottom:1px solid var(--border);"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div><span style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;color:var(--accent);font-size:11px;">' + (f.numero||'—') + '</span> · <strong style="color:var(--text);">' + cl + '</strong></div><span style="color:var(--red);font-weight:700;">' + mt + ' €</span></div><div style="font-size:11px;color:var(--text-faint);">' + (f.periode||'') + ' · Emise le ' + emis + '</div><div style="display:flex;gap:6px;margin-top:8px;"><button onclick="marquerPayee(\'' + f.id + '\')" style="font-size:11px;background:var(--green-dim);border:1px solid rgba(94,201,122,0.3);border-radius:6px;padding:5px 10px;color:var(--green);cursor:pointer;font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-weight:700;">✓ Payee</button>' + (email ? '<a href="mailto:' + email + '?subject=Rappel%20facture&body=Bonjour%2C%0AVotre%20facture%20' + (f.numero||'') + '%20de%20' + mt + '%20%E2%82%AC%20est%20en%20attente." style="font-size:11px;background:var(--accent-dim);border:1px solid var(--accent-mid);border-radius:6px;padding:5px 10px;color:var(--accent);cursor:pointer;font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-weight:700;text-decoration:none;">✉ Rappel</a>' : '') + '</div></div>'; }).join('');
     }
   } catch(e) { content.innerHTML = '<div style="padding:20px;text-align:center;color:var(--red);">Erreur : ' + (e.message||e) + '</div>'; }
 }
 
 // marquerPayee() : voir « FACTURES & RECOUVREMENT » — passe désormais par un paiement daté.
-
-// ── NOUVELLE FACTURE ──
-var factureType = 'auto';
-function ouvrirNouvelleFacture() {
-  var sel = document.getElementById('facture-client-id');
-  if (sel && sel.options.length <= 1) {
-    db.from('clients').select('id, prenom, nom, numero_client').eq('actif', true).eq('is_test', false).order('nom').then(function(res) {
-      if (res.data) res.data.forEach(function(c) { var opt = document.createElement('option'); opt.value = c.id; opt.textContent = c.prenom + ' ' + c.nom + ' #' + c.numero_client; sel.appendChild(opt); });
-    });
-  }
-  var moisEl = document.getElementById('facture-mois');
-  // Facture du mois M émise le 1er du mois M+1 : jusqu'au 10, on propose le mois précédent
-  var nf = new Date(); nf = new Date(nf.getFullYear(), nf.getMonth() - (nf.getDate() <= 10 ? 1 : 0), 1);
-  if (moisEl) moisEl.value = nf.getFullYear() + '-' + String(nf.getMonth() + 1).padStart(2, '0');
-  document.getElementById('modal-nouvelle-facture').classList.add('open');
-}
-function setFactureType(type) {
-  factureType = type;
-  ['auto','manuelle'].forEach(function(t) {
-    document.getElementById('ftype-' + t).style.borderColor = t === type ? 'var(--accent)' : 'var(--border)';
-    document.getElementById('ftype-' + t).style.background  = t === type ? 'var(--accent-dim)' : 'var(--surface2)';
-  });
-  document.getElementById('section-auto').style.display     = type === 'auto'     ? 'block' : 'none';
-  document.getElementById('section-manuelle').style.display = type === 'manuelle' ? 'block' : 'none';
-}
-async function creerFacture() {
-  var clientId = document.getElementById('facture-client-id').value;
-  if (!clientId) { showToastAdmin('Sélectionnez un client', 'amber'); return; }
-  try {
-    await chargerParametresLive();
-    var now = new Date(); var annee = now.getFullYear(); var moisNum = String(now.getMonth()+1).padStart(2,'0');
-
-    var periode;
-    if (factureType === 'auto') {
-      periode = document.getElementById('facture-mois').value || (annee + '-' + moisNum);
-    } else {
-      periode = annee + '-' + moisNum;
-    }
-
-    // Numérotation : numero_client-AA-N (N = séquence par client pour l'année de la période)
-    var { data: clientRow } = await db.from('clients')
-      .select('numero_client,client_fidele,tarif_walking,tarif_daycare,tarif_boarding')
-      .eq('id', clientId).single();
-    var annee2 = periode.split('-')[0].slice(-2);
-    var numClient = (clientRow && clientRow.numero_client) ? clientRow.numero_client : '0000';
-    var prefix = numClient + '-' + annee2 + '-';
-    var { data: existants } = await db.from('factures').select('numero').eq('client_id', clientId).ilike('numero', prefix + '%');
-    var maxN = 0;
-    (existants||[]).forEach(function(f) {
-      var parts = (f.numero||'').split('-');
-      var n = parseInt(parts[parts.length-1], 10);
-      if (!isNaN(n) && n > maxN) maxN = n;
-    });
-    var numero = prefix + (maxN + 1);
-
-    var payload = { client_id: clientId, numero: numero, statut: 'impayee', created_at: now.toISOString(), periode: periode };
-    var total_ht;
-    // v35 : colonnes lignes (détail figé) et mensuelle (une facture du mois par client)
-    var v35 = !(await db.from('factures').select('mensuelle').limit(1)).error;
-    if (factureType === 'auto') {
-      var dq = db.from('factures').select('numero,date_emission,created_at,notes').eq('client_id', clientId).eq('periode', periode);
-      if (v35) dq = dq.eq('mensuelle', true);
-      var dj = ((await dq).data || []).filter(function(f) { return v35 || /^Auto/.test(f.notes || ''); });
-      if (dj.length) {
-        showToastAdmin('Déjà facturé : ' + (dj[0].numero || '') + ' du ' + String(dj[0].date_emission || dj[0].created_at || '').slice(0, 10).split('-').reverse().join('/'), 'amber');
-        return;
-      }
-      // Calcul unique (fr-facturation.js) : chaque séance réelle du mois, au tarif
-      // en vigueur le jour de la séance, remise multi-chiens et annulations
-      // comprises — le même montant que l'estimation vue par le client.
-      var bornes = FR_FACT.periodeMois(periode);
-      var calc = await FR_FACT.calculerClient(db, clientId, bornes.debut, bornes.fin, { label: bornes.label });
-      if (!calc.lignes.length) { showToastAdmin('Aucune prestation à facturer sur ' + bornes.label, 'amber'); return; }
-      total_ht = calc.total_ht;
-      var total_ttc = calc.total_ttc;
-      payload.notes = 'Auto — ' + calc.nb_seances + ' séance(s)' + (calc.nb_annulees ? ', ' + calc.nb_annulees + ' annulée(s)' : '');
-      if (v35) {
-        payload.mensuelle = true;
-        payload.lignes = calc.lignes.map(function(l) {
-          return { label: l.label, sousLabel: l.sousLabel || null, discountNote: l.discountNote || null,
-                   qte: l.qte, prixUnit: l.prixUnit, total: l.total, type: l.type || null, tvaRate: 17 };
-        });
-      }
-    } else {
-      var desc = document.getElementById('facture-desc').value;
-      // Montant saisi TTC, comme tous les prix de Forest Rangers : la TVA en est extraite
-      var total_ttc = parseFloat(document.getElementById('facture-montant').value) || 0;
-      if (!desc || !total_ttc) { showToastAdmin('Description et montant obligatoires', 'amber'); return; }
-      total_ht = Math.round(total_ttc / (1 + FR_PARAMS.tva) * 100) / 100;
-      payload.notes = desc;
-      if (v35) payload.lignes = [{ label: desc, sousLabel: null, qte: 1, prixUnit: Math.round(total_ttc * 100) / 100, total: Math.round(total_ttc * 100) / 100, type: 'ponctuel', tvaRate: 17 }];
-    }
-    // Prix TTC : la TVA est comprise, jamais ajoutée par-dessus
-    payload.total_ht = total_ht;
-    payload.total_ttc = Math.round(total_ttc * 100) / 100;
-
-    var { error: errFact } = await db.from('factures').insert(payload);
-    if (errFact && /factures_mensuelle_uniq/.test(errFact.message || '')) { showToastAdmin('Ce mois est déjà facturé à ce client', 'amber'); return; }
-    if (errFact) throw errFact;
-    document.getElementById('modal-nouvelle-facture').classList.remove('open');
-    showToastAdmin('✓ Facture ' + numero + ' creee', 'green');
-    loadDashboardStats();
-    if (document.getElementById('page-factures').classList.contains('active')) loadFacturesAdmin();
-  } catch(e) { showToastAdmin('Erreur creation facture : '+e.message, 'red'); console.error(e); }
-}
 
 function toggleMobileMenu() {
   var m = document.getElementById('mobile-more-menu');
@@ -6211,9 +6508,9 @@ document.addEventListener('click', function(e) {
       <div class="form-group">
         <label class="form-label">Service</label>
         <select class="form-control" id="resa-service" style="width:100%;" onchange="updateResaFields()">
-          <option value="walking">Dog Walking — 28€</option>
-          <option value="daycare">Day Care — 55€</option>
-          <option value="boarding">Boarding — 68€</option>
+          <option value="walking">Dog Walking</option>
+          <option value="daycare">Day Care</option>
+          <option value="boarding">Boarding</option>
         </select>
       </div>
       <div class="form-group">
@@ -6228,11 +6525,11 @@ document.addEventListener('click', function(e) {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
       <div class="form-group">
         <label class="form-label" id="resa-debut-label">Date</label>
-        <input type="date" class="form-control" id="resa-date-debut" style="width:100%;">
+        <input type="date" class="form-control" id="resa-date-debut" style="width:100%;" onchange="verifierCalendrierResa()">
       </div>
       <div class="form-group" id="resa-fin-group" style="display:none;">
         <label class="form-label">Date de fin</label>
-        <input type="date" class="form-control" id="resa-date-fin" style="width:100%;">
+        <input type="date" class="form-control" id="resa-date-fin" style="width:100%;" onchange="verifierCalendrierResa()">
       </div>
       <div class="form-group" id="resa-creneau-group">
         <label class="form-label">Creneau</label>
@@ -6248,19 +6545,34 @@ document.addEventListener('click', function(e) {
     <div id="resa-jours-group" style="margin-bottom:10px;">
       <label class="form-label" style="margin-bottom:6px;display:block;">Jours habituels (recurrence)</label>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;"><input type="checkbox" value="lun" onchange="updateRecurrenceField()"> Lun</label>
-        <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;"><input type="checkbox" value="mar" onchange="updateRecurrenceField()"> Mar</label>
-        <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;"><input type="checkbox" value="mer" onchange="updateRecurrenceField()"> Mer</label>
-        <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;"><input type="checkbox" value="jeu" onchange="updateRecurrenceField()"> Jeu</label>
-        <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;"><input type="checkbox" value="ven" onchange="updateRecurrenceField()"> Ven</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;"><input type="checkbox" value="lun" onchange="updateRecurrenceField();verifierCalendrierResa()"> Lun</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;"><input type="checkbox" value="mar" onchange="updateRecurrenceField();verifierCalendrierResa()"> Mar</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;"><input type="checkbox" value="mer" onchange="updateRecurrenceField();verifierCalendrierResa()"> Mer</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;"><input type="checkbox" value="jeu" onchange="updateRecurrenceField();verifierCalendrierResa()"> Jeu</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;"><input type="checkbox" value="ven" onchange="updateRecurrenceField();verifierCalendrierResa()"> Ven</label>
       </div>
     </div>
 
     <!-- Date de fin de récurrence (apparaît si au moins un jour coché) -->
     <div class="form-group" id="resa-fin-recurrence-group" style="margin-bottom:10px;display:none;">
       <label class="form-label">Jusqu'a quelle date ? (recurrence)</label>
-      <input type="date" class="form-control" id="resa-date-fin-recurrence" style="width:100%;">
+      <input type="date" class="form-control" id="resa-date-fin-recurrence" style="width:100%;" onchange="verifierCalendrierResa()">
     </div>
+
+    <!-- Transport Day Care (v39) : 5 € HT par trajet, zone ou hors zone -->
+    <div class="form-group" id="resa-transport-group" style="margin-bottom:10px;display:none;">
+      <label class="form-label">Transport par Forest Rangers</label>
+      <select class="form-control" id="resa-transport" style="width:100%;">
+        <option value="">Aucun — le client amène et reprend son chien</option>
+        <option value="aller">Dépose le matin</option>
+        <option value="retour">Retour le soir</option>
+        <option value="les_deux">Dépose le matin + retour le soir</option>
+      </select>
+      <div id="resa-transport-info" style="font-size:11px;color:var(--text-faint);margin-top:4px;"></div>
+    </div>
+
+    <!-- Jours fériés / fermetures touchés par la réservation -->
+    <div id="resa-cal-alerte" style="display:none;font-size:12px;color:var(--amber);background:var(--amber-dim);border-radius:8px;padding:8px 10px;margin-bottom:10px;"></div>
 
     <!-- Notes -->
     <div class="form-group" style="margin-bottom:14px;">
@@ -6306,6 +6618,30 @@ document.addEventListener('click', function(e) {
         <option value="termine">Termine</option>
         <option value="annule">Annulé</option>
       </select>
+    </div>
+
+    <!-- Transport Day Care (v39) -->
+    <div id="detail-transport-bloc" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="form-group">
+          <label class="form-label">Transport Day Care</label>
+          <select class="form-control" id="detail-transport" style="width:100%;">
+            <option value="">Aucun (le client dépose)</option>
+            <option value="aller">Aller (le matin)</option>
+            <option value="retour">Retour (le soir)</option>
+            <option value="les_deux">Aller et retour</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Statut du transport</label>
+          <select class="form-control" id="detail-transport-statut" style="width:100%;">
+            <option value="confirme">Confirmé (facturé)</option>
+            <option value="a_confirmer">À confirmer</option>
+            <option value="refuse">Refusé</option>
+          </select>
+        </div>
+      </div>
+      <div id="detail-transport-note" style="font-size:11px;color:var(--text-faint);margin:-4px 0 12px;"></div>
     </div>
 
     <div class="form-group" style="margin-bottom:14px;">
@@ -6395,6 +6731,22 @@ document.addEventListener('click', function(e) {
 async function frShowApp() {
   var ov = document.getElementById('fr-login');
   if (ov) ov.style.display = 'none';
+  // Session : jeton rafraîchi au retour sur l'onglet, données rechargées (v40)
+  if (window.FR_SESSION && !window._frSessionPrete) {
+    window._frSessionPrete = true;
+    FR_SESSION.init(db, { recharger: rechargerPageActive, onPerdue: function () { FR_SESSION.bandeau(); } });
+  }
+  // Pied de la barre latérale : la personne connectée (fiche staff, sinon email)
+  try {
+    var u = (await db.auth.getUser()).data.user;
+    if (!u) return;
+    var st = await db.from('staff').select('prenom,nom').eq('auth_id', u.id).maybeSingle();
+    var p = (st.data && st.data.prenom) || '', n = (st.data && st.data.nom) || '';
+    var nom = p ? (p + (n ? ' ' + n.charAt(0) + '.' : '')) : (u.email || '');
+    var ini = p ? (p.charAt(0) + (n ? n.charAt(0) : '')) : (u.email || '?').charAt(0);
+    document.getElementById('sb-nom').textContent = nom;
+    document.getElementById('sb-avatar').textContent = ini.toUpperCase();
+  } catch (e) {}
 }
 function frShowLogin() {
   var ov = document.getElementById('fr-login');

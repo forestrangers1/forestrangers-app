@@ -48,6 +48,7 @@
     tarif_boarding_fidele: 75, tarif_boarding_nouveau: 80,
     reduction_2chien_fidele: 50, reduction_2chien_nouveau: 30,
     supplement_hors_zone: 5,    // HT : 5 € HTVA par trajet (CGV) = 5,85 € TTC
+    transport_daycare_ht: 5,    // HT : Day Care, dépose ou reprise par Forest Rangers, par trajet = 5,85 € TTC
     frais_deplacement_ht: 5     // seul montant HT de la grille : 5 € HT = 5,85 € TTC
   };
 
@@ -135,6 +136,7 @@
       boarding: num(g['tarif_boarding_' + suf], DEFAUTS['tarif_boarding_' + suf]),
       reduction: num(g['reduction_2chien_' + suf], DEFAUTS['reduction_2chien_' + suf]),
       supplement_hors_zone: num(g.supplement_hors_zone, DEFAUTS.supplement_hors_zone),
+      transport_daycare_ht: num(g.transport_daycare_ht, DEFAUTS.transport_daycare_ht),
       frais_deplacement_ht: num(g.frais_deplacement_ht, DEFAUTS.frais_deplacement_ht),
       tva: num(g.tva, TVA_DEFAUT) > 1 ? num(g.tva, 17) / 100 : num(g.tva, TVA_DEFAUT),
       mode: surMesure(client) ? 'sur_mesure' : suf
@@ -142,6 +144,7 @@
     t.frais_deplacement_ttc = r2(t.frais_deplacement_ht * (1 + t.tva));
     // Supplément hors zone : le paramètre est HT (CGV « 5 € HTVA par trajet »)
     t.supplement_hors_zone_ttc = r2(t.supplement_hors_zone * (1 + t.tva));
+    t.transport_daycare_ttc = r2(t.transport_daycare_ht * (1 + t.tva));
     if (client) {
       if (client.tarif_walking  != null) t.walking  = num(client.tarif_walking,  t.walking);
       if (client.tarif_daycare  != null) t.daycare  = num(client.tarif_daycare,  t.daycare);
@@ -276,6 +279,7 @@
 
     // ── 1. Chaque (service, date, créneau) : chiens prévus, présents, annulés ──
     var sorties = {};
+    var transports = {};   // date -> { aller, retour } : trajets Day Care (un trajet par sens et par jour)
     function sortie(service, date, creneau) {
       var k = service + '|' + date + '|' + (service === 'boarding' ? '' : (creneau || ''));
       if (!sorties[k]) sorties[k] = { service: service, date: date, creneau: service === 'boarding' ? null : (creneau || null),
@@ -311,8 +315,16 @@
       }
 
       var exclues = datesExclues(r);
+      // Transport Day Care (v39) : dépose / reprise par Forest Rangers, confirmé
+      var trAller = r.service === 'daycare' && !!r.transport_aller && r.transport_statut === 'confirme';
+      var trRetour = r.service === 'daycare' && !!r.transport_retour && r.transport_statut === 'confirme';
       dates.forEach(function (d) {
         var s = sortie(r.service, d, r.creneau);
+        if (exclues.indexOf(d) === -1 && (trAller || trRetour)) {
+          if (!transports[d]) transports[d] = { aller: false, retour: false };
+          transports[d].aller = transports[d].aller || trAller;
+          transports[d].retour = transports[d].retour || trRetour;
+        }
         if (exclues.indexOf(d) !== -1) {
           var a = annul[r.id + '|' + d] || {};
           var p = parseInt(a.facture_pourcentage, 10) || 0;
@@ -405,10 +417,12 @@
       });
     });
 
-    // Supplément hors zone : une fois par jour et par service de journée
+    // Supplément hors zone : une fois par jour de promenade (Gabriel, 22/09/2026 :
+    // en Day Care, le client dépose son chien ; si Forest Rangers se déplace,
+    // c'est le transport Day Care qui est facturé, par trajet, sans supplément).
     var joursHZ = 0;
     if (client.hors_zone) {
-      ['walking', 'daycare'].forEach(function (svc) {
+      ['walking'].forEach(function (svc) {
         var vus = {};
         seances.forEach(function (s) { if (s.service === svc && s.presents.length) vus[s.date] = true; });
         joursHZ += Object.keys(vus).length;
@@ -420,6 +434,24 @@
         type: 'supplement', service: 'frais_deplacement', label: 'Supplément hors zone',
         sousLabel: joursHZ + ' trajet' + (joursHZ > 1 ? 's' : '') + ' · ' + eur(tHZ.supplement_hors_zone) + ' HT par trajet (CGV)',
         qte: joursHZ, prixUnit: tHZ.supplement_hors_zone_ttc, total: r2(joursHZ * tHZ.supplement_hors_zone_ttc)
+      });
+    }
+
+    // Transport Day Care : un trajet par sens et par jour où le chien est venu
+    var nbTrajets = 0, nbAller = 0, nbRetour = 0;
+    seances.forEach(function (s) {
+      if (s.service !== 'daycare' || !s.presents.length || !transports[s.date]) return;
+      if (transports[s.date]._compte) return;
+      transports[s.date]._compte = true;
+      if (transports[s.date].aller) { nbAller++; nbTrajets++; }
+      if (transports[s.date].retour) { nbRetour++; nbTrajets++; }
+    });
+    if (nbTrajets) {
+      var tTr = tarifsPour(client, fin);
+      lignes.push({
+        type: 'transport', service: 'frais_deplacement', label: 'Transport Day Care',
+        sousLabel: nbTrajets + ' trajet' + (nbTrajets > 1 ? 's' : '') + ' (' + nbAller + ' aller' + (nbAller > 1 ? 's' : '') + ', ' + nbRetour + ' retour' + (nbRetour > 1 ? 's' : '') + ') · ' + eur(tTr.transport_daycare_ht) + ' HT par trajet',
+        qte: nbTrajets, prixUnit: tTr.transport_daycare_ttc, total: r2(nbTrajets * tTr.transport_daycare_ttc)
       });
     }
 
@@ -498,7 +530,10 @@
   // Tous les clients actifs (hors comptes de test) sur une période
   async function calculerTous(db, debut, fin, options) {
     await prerequis(db);
-    var cl = await db.from('clients').select('*').eq('actif', true);
+    // options.clientIds : ces clients-là, actifs ou non (régularisations)
+    var cl = (options && options.clientIds)
+      ? await db.from('clients').select('*').in('id', options.clientIds.length ? options.clientIds : ['00000000-0000-0000-0000-000000000000'])
+      : await db.from('clients').select('*').eq('actif', true);
     if (cl.error) throw cl.error;
     var clients = (cl.data || []).filter(function (c) { return !(options && options.avecTests) ? !c.is_test : true; });
     var ids = clients.map(function (c) { return c.id; });
@@ -598,6 +633,125 @@
     return n;
   }
 
+  // ══════════════════════════════════════════════════════════════
+  //  RÉGULARISATIONS (décision de Gabriel, 22/09/2026, option b)
+  //  Une facture du mois est figée. Si le planning de ce mois change
+  //  ensuite (séance annulée après la facture, séance ajoutée), l'écart
+  //  est reporté sur la prochaine facture du mois, en ligne
+  //  « Régularisation ». On compare les seules lignes issues du planning
+  //  (prestation, annulation, supplément, transport) : les lignes
+  //  ajoutées à la main ne sont pas concernées.
+  //  Déjà reporté = somme des lignes « regularisation » (ref_facture_id)
+  //  des factures non annulées. Écarts écartés par Gabriel : paramètre
+  //  regularisations_ignorees ({ id_facture: montant }).
+  // ══════════════════════════════════════════════════════════════
+  var TYPES_PLANNING = { prestation: 1, annulation: 1, supplement: 1, transport: 1 };
+  function moisAvant(periode, n) {
+    var a = +periode.slice(0, 4), m = +periode.slice(5, 7) - n;
+    while (m < 1) { m += 12; a--; }
+    return a + '-' + pad(m);
+  }
+  function moisCourant() { var d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1); }
+
+  async function lireIgnorees(db) {
+    try {
+      var p = await db.from('parametres').select('valeur').eq('cle', 'regularisations_ignorees').maybeSingle();
+      return (p.data && p.data.valeur) ? (JSON.parse(p.data.valeur) || {}) : {};
+    } catch (e) { return {}; }
+  }
+
+  // opts : { periodeCible: 'AAAA-MM' (factures des mois antérieurs seulement),
+  //          clientIds: [...], exclureFactureId, moisMax (défaut 6) }
+  async function aRegulariser(db, opts) {
+    opts = opts || {};
+    await prerequis(db);
+    var ref = opts.periodeCible || moisCourant();
+    var min = moisAvant(ref, opts.moisMax || 6);
+    var q = db.from('factures').select('id,numero,client_id,periode,statut,lignes,date_emission')
+      .eq('mensuelle', true).gte('periode', min);
+    if (opts.clientIds) q = q.in('client_id', opts.clientIds);
+    var fx = await q;
+    if (fx.error) throw fx.error;
+    var cands = (fx.data || []).filter(function (f) {
+      if (f.statut === 'annulee' || f.statut === 'avoir') return false;
+      if (!Array.isArray(f.lignes) || !f.lignes.length) return false;       // factures d'avant la v35
+      if (opts.periodeCible && !(f.periode < opts.periodeCible)) return false;
+      return true;
+    });
+    if (!cands.length) return [];
+    var ids = cands.map(function (f) { return f.client_id; }).filter(function (x, i, a) { return a.indexOf(x) === i; });
+
+    // Montants déjà reportés sur d'autres factures
+    var deja = {};
+    var tt = await db.from('factures').select('id,statut,lignes').in('client_id', ids);
+    (tt.data || []).forEach(function (f) {
+      if (f.statut === 'annulee' || f.statut === 'avoir') return;
+      if (opts.exclureFactureId && String(f.id) === String(opts.exclureFactureId)) return;
+      (Array.isArray(f.lignes) ? f.lignes : []).forEach(function (l) {
+        if (l && l.type === 'regularisation' && l.ref_facture_id) deja[l.ref_facture_id] = r2((deja[l.ref_facture_id] || 0) + (+l.total || 0));
+      });
+    });
+    var ignorees = await lireIgnorees(db);
+
+    // Recalcul du planning, un passage par mois concerné
+    var parPeriode = {};
+    cands.forEach(function (f) { (parPeriode[f.periode] = parPeriode[f.periode] || []).push(f); });
+    var out = [];
+    var periodes = Object.keys(parPeriode).sort();
+    for (var i = 0; i < periodes.length; i++) {
+      var per = periodes[i], b = periodeMois(per);
+      if (!b) continue;
+      var liste = parPeriode[per];
+      var tous = await calculerTous(db, b.debut, b.fin, { label: b.label, avecTests: true,
+        clientIds: liste.map(function (f) { return f.client_id; }) });
+      var parClient = {};
+      tous.clients.forEach(function (r) { parClient[r.client.id] = r; });
+      liste.forEach(function (f) {
+        var r = parClient[f.client_id];
+        var facture = r2(f.lignes.reduce(function (s, l) { return s + (l && TYPES_PLANNING[l.type] ? (+l.total || 0) : 0); }, 0));
+        var recalcule = r ? r.total_ttc : 0;
+        var ecart = r2(recalcule - facture);
+        var reste = r2(ecart - (deja[f.id] || 0) - (+ignorees[f.id] || 0));
+        if (Math.abs(reste) < 0.01) return;
+        out.push({ facture_id: f.id, numero: f.numero, client_id: f.client_id, periode: per, label: b.label,
+                   date_emission: f.date_emission, statut: f.statut,
+                   facture: facture, recalcule: recalcule, ecart: ecart, deja: deja[f.id] || 0,
+                   ignore: +ignorees[f.id] || 0, reste: reste, client: r ? r.client : null });
+      });
+    }
+    return out;
+  }
+
+  // Lignes « Régularisation » à ajouter à une facture de total totalTTC.
+  // Les crédits ne font jamais passer la facture sous zéro : le solde reste
+  // à reporter sur la suivante.
+  function lignesRegularisation(liste, totalTTC) {
+    var dispo = r2(totalTTC + (liste || []).reduce(function (s, x) { return s + (x.reste > 0 ? x.reste : 0); }, 0));
+    var out = [];
+    (liste || []).slice().sort(function (a, b) { return b.reste - a.reste; }).forEach(function (x) {
+      var m = x.reste;
+      if (m < 0) { m = -Math.min(-m, dispo); dispo = r2(dispo + m); }
+      if (Math.abs(m) < 0.01) return;
+      out.push({
+        type: 'regularisation', service: null, ref_facture_id: x.facture_id, color: m < 0 ? 'red' : null,
+        label: 'Régularisation · facture ' + (x.numero || '') + ' (' + x.label + ')',
+        sousLabel: m < 0 ? 'Séances annulées ou retirées après l\'émission de la facture' : 'Séances ajoutées après l\'émission de la facture',
+        qte: 1, prixUnit: r2(m), total: r2(m)
+      });
+    });
+    return out;
+  }
+
+  async function ignorerRegularisation(db, factureId, montant) {
+    var ign = await lireIgnorees(db);
+    ign[factureId] = r2((+ign[factureId] || 0) + (+montant || 0));
+    var ex = await db.from('parametres').select('cle').eq('cle', 'regularisations_ignorees').maybeSingle();
+    var w = ex.data
+      ? await db.from('parametres').update({ valeur: JSON.stringify(ign) }).eq('cle', 'regularisations_ignorees')
+      : await db.from('parametres').insert({ cle: 'regularisations_ignorees', valeur: JSON.stringify(ign) });
+    if (w.error) throw w.error;
+  }
+
   global.FR_FACT = {
     TVA_DEFAUT: TVA_DEFAUT,
     periodeMois: periodeMois,
@@ -617,6 +771,9 @@
     planArretSerie: planArretSerie,
     lignesDeReservation: lignesDeReservation,
     arreterSerie: arreterSerie,
+    aRegulariser: aRegulariser,
+    lignesRegularisation: lignesRegularisation,
+    ignorerRegularisation: ignorerRegularisation,
     _grilleA: grilleA,
     _reinitialiser: function () { _versions = []; _parametres = {}; _tarifsCharges = false; }
   };

@@ -374,43 +374,40 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
   <!-- SIDEBAR CLIENT -->
   <aside class="client-sidebar">
-    <div class="client-avatar" id="sidebar-avatar">MD</div>
+    <div class="client-avatar" id="sidebar-avatar">…</div>
     <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:4px;">
-      <div class="client-name" id="sidebar-name" style="margin-bottom:0;">Marie Dupont</div>
+      <div class="client-name" id="sidebar-name" style="margin-bottom:0;">Chargement…</div>
       <button class="icon-btn icon-btn-accent" id="btn-message-client" onclick="openMessageModal()" title="Envoyer un message">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
       </button>
     </div>
-    <div class="client-num" id="sidebar-num">#1001</div>
+    <div class="client-num" id="sidebar-num"></div>
 
     <div class="client-tags" id="sidebar-tags">
-      <span class="tag tag-green">Fidèle</span>
-      <span class="tag tag-accent">2 chiens</span>
-      <span class="tag tag-blue">Zone libre</span>
     </div>
 
     <div class="sidebar-section">
       <div class="sidebar-label">Contact</div>
-      <div class="sidebar-row"><span class="sidebar-key">Email</span><span class="sidebar-val" id="s-email">marie.dupont@email.lu</span></div>
-      <div class="sidebar-row"><span class="sidebar-key">Téléphone</span><span class="sidebar-val" id="s-tel">+352 621 000 111</span></div>
-      <div class="sidebar-row"><span class="sidebar-key">Commune</span><span class="sidebar-val" id="s-commune">Strassen</span></div>
+      <div class="sidebar-row"><span class="sidebar-key">Email</span><span class="sidebar-val" id="s-email">—</span></div>
+      <div class="sidebar-row"><span class="sidebar-key">Téléphone</span><span class="sidebar-val" id="s-tel">—</span></div>
+      <div class="sidebar-row"><span class="sidebar-key">Commune</span><span class="sidebar-val" id="s-commune">—</span></div>
     </div>
 
     <div class="sidebar-section">
       <div class="sidebar-label">Compte</div>
-      <div class="sidebar-row"><span class="sidebar-key">Client depuis</span><span class="sidebar-val" id="s-since">Jan 2025</span></div>
-      <div class="sidebar-row"><span class="sidebar-key">Type</span><span class="sidebar-val" id="s-type" style="color:var(--green);">Fidèle</span></div>
-      <div class="sidebar-row"><span class="sidebar-key">Zone</span><span class="sidebar-val" id="s-zone">Sans frais</span></div>
-      <div class="sidebar-row"><span class="sidebar-key">Statut</span><span class="sidebar-val" style="color:var(--green);">Actif</span></div>
+      <div class="sidebar-row"><span class="sidebar-key">Client depuis</span><span class="sidebar-val" id="s-since">—</span></div>
+      <div class="sidebar-row"><span class="sidebar-key">Type</span><span class="sidebar-val" id="s-type">—</span></div>
+      <div class="sidebar-row"><span class="sidebar-key">Zone</span><span class="sidebar-val" id="s-zone">—</span></div>
+      <div class="sidebar-row"><span class="sidebar-key">Statut</span><span class="sidebar-val" id="s-statut">—</span></div>
     </div>
 
     <div class="sidebar-section">
       <div class="sidebar-label">Actions</div>
-      <button class="btn btn-accent" onclick="window.location.href='forestrangers-facture.html?client_id='+clientId">
+      <button class="btn btn-accent" onclick="nouvelleFactureFiche()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         Nouvelle facture
       </button>
-      <button class="btn btn-outline" onclick="window.location.href='forestrangers-admin.html?section=clients&new_resa_client='+clientId">
+      <button class="btn btn-outline" onclick="nouvelleResaFiche()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
         Nouvelle réservation
       </button>
@@ -469,27 +466,14 @@ tr:hover td { background: rgba(255,255,255,0.02); }
           </div>
         </div>
         <div class="info-grid">
-          <div class="info-item"><div class="info-label">Prénom</div><div class="info-value">Marie</div></div>
-          <div class="info-item"><div class="info-label">Nom</div><div class="info-value">Dupont</div></div>
-          <div class="info-item"><div class="info-label">Email</div><div class="info-value">marie.dupont@email.lu</div></div>
-          <div class="info-item"><div class="info-label">Téléphone</div><div class="info-value">+352 621 000 111</div></div>
-          <div class="info-item"><div class="info-label">Adresse</div><div class="info-value">14 rue des Marronniers</div></div>
-          <div class="info-item"><div class="info-label">Commune</div><div class="info-value">Strassen · L-8030</div></div>
-          <div class="info-item"><div class="info-label">N° client</div><div class="info-value" style="color:var(--accent);font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;">#1001</div></div>
-          <div class="info-item"><div class="info-label">Date inscription</div><div class="info-value">15 janvier 2025</div></div>
-          <div class="info-item"><div class="info-label">Client depuis le</div><div class="info-value">15 janvier 2025</div></div>
+          <div class="info-item"><div class="info-value" style="color:var(--td);">Chargement…</div></div>
         </div>
       </div>
 
       <div class="card">
         <div class="card-head"><div class="card-title">Tarification</div></div>
         <div class="info-grid">
-          <div class="info-item"><div class="info-label">Type</div><div class="info-value" style="color:var(--green);">Client fidèle</div></div>
-          <div class="info-item"><div class="info-label">Zone</div><div class="info-value">Strassen · Sans frais</div></div>
-          <div class="info-item"><div class="info-label">Dog Walking</div><div class="info-value">28 € / séance</div></div>
-          <div class="info-item"><div class="info-label">Day Care</div><div class="info-value">55 € / journée</div></div>
-          <div class="info-item"><div class="info-label">Boarding</div><div class="info-value">68 € / nuit</div></div>
-          <div class="info-item"><div class="info-label">Réduction 2e chien</div><div class="info-value" style="color:var(--green);">−50%</div></div>
+          <div class="info-item"><div class="info-value" style="color:var(--td);">Chargement…</div></div>
         </div>
       </div>
 
@@ -498,8 +482,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
           <button class="btn btn-outline" id="btn-add-personne" style="width:auto;display:none;" onclick="addPersonneRow()">+ Ajouter</button>
         </div>
         <div class="info-grid" id="personnes-autorisees-content">
-          <div class="info-item"><div class="info-label">Conjoint(e)</div><div class="info-value">Thomas Dupont · +352 621 000 222</div></div>
-          <div class="info-item"><div class="info-label">Vétérinaire</div><div class="info-value">Dr. Fischer · Strassen · +352 26 000 333</div></div>
+          <div class="info-item"><div class="info-value" style="color:var(--td);">Chargement…</div></div>
         </div>
       </div>
     </div>
@@ -514,7 +497,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <div class="card">
         <div class="card-head">
           <div class="card-title">Réservations actives</div>
-          <button class="btn btn-accent" style="width:auto;" onclick="window.location.href='forestrangers-admin.html?section=clients&new_resa_client='+clientId">+ Nouvelle</button>
+          <button class="btn btn-accent" style="width:auto;" onclick="nouvelleResaFiche()">+ Nouvelle</button>
         </div>
         <div class="table-wrap">
           <table>
@@ -568,7 +551,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <div class="card">
         <div class="card-head">
           <div class="card-title">Factures</div>
-          <button class="btn btn-accent" style="width:auto;" onclick="window.location.href='forestrangers-facture.html?client_id='+clientId">
+          <button class="btn btn-accent" style="width:auto;" onclick="nouvelleFactureFiche()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
             Générer facture
           </button>
@@ -610,46 +593,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
       <div class="card" id="card-dernieres-infos">
         <div class="card-head"><div class="card-title">Dernières infos</div></div>
-        <div class="timeline-item">
-          <div class="timeline-dot"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg></div>
-          <div>
-            <div class="timeline-date">Lundi 9 juin 2026 · Matin</div>
-            <div class="timeline-title">Dog Walking · Max + Luna · Bambësch</div>
-            <div class="timeline-sub">Sophie Müller · 3,4 km · 48 min · ✓ Présents</div>
-          </div>
-        </div>
-        <div class="timeline-item">
-          <div class="timeline-dot"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg></div>
-          <div>
-            <div class="timeline-date">Mercredi 7 juin 2026 · Matin</div>
-            <div class="timeline-title">Dog Walking · Max + Luna · Forêt de Merl</div>
-            <div class="timeline-sub">Sophie Müller · 4,1 km · 55 min · ✓ Présents</div>
-          </div>
-        </div>
-        <div class="timeline-item">
-          <div class="timeline-dot" style="background:var(--rd);"><svg viewBox="0 0 24 24" style="stroke:var(--red);"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
-          <div>
-            <div class="timeline-date">Lundi 5 juin 2026 · Matin</div>
-            <div class="timeline-title">Dog Walking · Max + Luna</div>
-            <div class="timeline-sub" style="color:var(--red);">Annulation tardive · 100% facturé</div>
-          </div>
-        </div>
-        <div class="timeline-item">
-          <div class="timeline-dot"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg></div>
-          <div>
-            <div class="timeline-date">Vendredi 3 juin 2026 · Matin</div>
-            <div class="timeline-title">Dog Walking · Max + Luna · Bambësch</div>
-            <div class="timeline-sub">Gabriel · 3,8 km · 51 min · ✓ Présents</div>
-          </div>
-        </div>
-        <div class="timeline-item">
-          <div class="timeline-dot" style="background:var(--bld);"><svg viewBox="0 0 24 24" style="stroke:var(--blue);"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg></div>
-          <div>
-            <div class="timeline-date">15–22 avril 2026</div>
-            <div class="timeline-title">Boarding · Max + Luna · 7 nuits</div>
-            <div class="timeline-sub">2 sorties/jour · RAS</div>
-          </div>
-        </div>
+        <div style="padding:14px 16px;font-size:12px;color:var(--td);">Chargement…</div>
       </div>
     </div>
 
@@ -660,7 +604,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
           <div class="card-title">Notes internes</div>
           <span style="font-size:11px;color:var(--tf);">Visible uniquement par Gabriel</span>
         </div>
-        <textarea class="notes-area" id="notes-content" placeholder="Ajouter une note sur ce client...">Client très régulier depuis janvier 2025. Toujours ponctuel dans ses paiements. Max peut être dominant avec les autres mâles — à surveiller en groupe. Luna très sociable, aucun problème. Clés remises le 15/01/2025.</textarea>
+        <textarea class="notes-area" id="notes-content" placeholder="Ajouter une note sur ce client..."></textarea>
         <div style="display:flex;justify-content:flex-end;margin-top:10px;">
           <button class="btn btn-accent" style="width:auto;" onclick="saveNotes()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -669,25 +613,6 @@ tr:hover td { background: rgba(255,255,255,0.02); }
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-head"><div class="card-title">Historique des notes</div></div>
-        <div class="timeline-item">
-          <div class="timeline-dot" style="background:var(--acc-dim);"><svg viewBox="0 0 24 24" style="stroke:var(--accent);"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
-          <div>
-            <div class="timeline-date">15 janvier 2025 · Gabriel</div>
-            <div class="timeline-title">Inscription complétée</div>
-            <div class="timeline-sub">Rendez-vous de bienvenue effectué. Clés remises.</div>
-          </div>
-        </div>
-        <div class="timeline-item">
-          <div class="timeline-dot" style="background:var(--acc-dim);"><svg viewBox="0 0 24 24" style="stroke:var(--accent);"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/></svg></div>
-          <div>
-            <div class="timeline-date">3 mars 2025 · Gabriel</div>
-            <div class="timeline-title">Ajout de Luna</div>
-            <div class="timeline-sub">2e chien ajouté. Réduction 50% activée.</div>
-          </div>
-        </div>
-      </div>
     </div>
 
   </main>
@@ -968,6 +893,22 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+// Dans l'admin (cadre) : l'admin ouvre la réservation / la facture, sans
+// charger une seconde admin dans la fiche. Seule : navigation classique.
+function dansAdmin() { try { return window.parent && window.parent !== window; } catch (e) { return false; } }
+function nouvelleResaFiche() {
+  if (dansAdmin()) window.parent.postMessage({ fr: 'nouvelle-resa', client: clientId }, '*');
+  else window.location.href = 'forestrangers-admin.html?section=planning&new_resa_client=' + clientId;
+}
+function voirFactureFiche(id) {
+  if (dansAdmin()) window.parent.postMessage({ fr: 'ouvrir-facture', client: clientId, facture: id }, '*');
+  else window.location.href = 'forestrangers-facture.html?id=' + id;
+}
+function nouvelleFactureFiche() {
+  if (dansAdmin()) window.parent.postMessage({ fr: 'nouvelle-facture', client: clientId }, '*');
+  else window.location.href = 'forestrangers-facture.html?client_id=' + clientId;
+}
+
 async function loadClient(id) {
   try {
     // 1. Infos client
@@ -975,7 +916,10 @@ async function loadClient(id) {
       .select('*')
       .eq('id', id)
       .single();
-    if (error || !c) return;
+    if (error || !c) {
+      document.getElementById('sidebar-name').textContent = 'Client introuvable';
+      return;
+    }
 
     // Sidebar
     var initials = (c.prenom[0] + c.nom[0]).toUpperCase();
@@ -987,6 +931,11 @@ async function loadClient(id) {
     document.getElementById('s-commune').textContent = c.commune || '—';
     var since = (c.client_depuis || c.created_at) ? new Date(c.client_depuis || c.created_at).toLocaleDateString('fr-LU', { month: 'short', year: 'numeric' }) : '—';
     document.getElementById('s-since').textContent = since;
+    var stEl = document.getElementById('s-statut');
+    if (stEl) {
+      stEl.textContent = c.reservations_suspendues ? 'Réservations suspendues' : (c.actif === false ? 'Inactif' : 'Actif');
+      stEl.style.color = c.reservations_suspendues ? 'var(--red)' : (c.actif === false ? 'var(--tf)' : 'var(--green)');
+    }
     var typeLabel = c.client_fidele ? 'Fidèle' : 'Nouveau';
     var typeColor = c.client_fidele ? 'var(--green)' : 'var(--amber)';
     document.getElementById('s-type').textContent = typeLabel;
@@ -1042,8 +991,8 @@ async function loadClient(id) {
     document.getElementById('stat-total-label').textContent = 'Total ' + annee;
 
     // 6. Notes
+    document.getElementById('notes-content').value = c.notes_internes || '';
     if (c.notes_internes) {
-      document.getElementById('notes-content').value = c.notes_internes;
     }
 
     // 7. Historique (promenades)
@@ -1155,7 +1104,8 @@ function renderInfosDisplay(c) {
     '<div class="info-item"><div class="info-label">Commune</div><div class="info-value">' + (c.commune || '—') + '</div></div>' +
     '<div class="info-item"><div class="info-label">N° client</div><div class="info-value" style="color:var(--accent);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;">#' + c.numero_client + '</div></div>' +
     '<div class="info-item"><div class="info-label">Date inscription</div><div class="info-value">' + (c.created_at ? new Date(c.created_at).toLocaleDateString('fr-LU', { day: '2-digit', month: 'long', year: 'numeric' }) : '—') + '</div></div>' +
-    '<div class="info-item"><div class="info-label">Client depuis le</div><div class="info-value">' + (depuis ? new Date(depuis).toLocaleDateString('fr-LU', { day: '2-digit', month: 'long', year: 'numeric' }) : '—') + '</div></div>';
+    '<div class="info-item"><div class="info-label">Client depuis le</div><div class="info-value">' + (depuis ? new Date(depuis).toLocaleDateString('fr-LU', { day: '2-digit', month: 'long', year: 'numeric' }) : '—') + '</div></div>'
+    + accesDisplayHtml(c);
 
   // Tarification
   var tarifGrid = document.querySelectorAll('#panel-infos .info-grid')[1];
@@ -1175,6 +1125,30 @@ function renderInfosDisplay(c) {
   }
 
   renderPersonnesDisplay(c.personnes_autorisees);
+}
+
+// ── ACCÈS AU DOMICILE (v39) : saisi à l'inscription, visible et modifiable ici ──
+function escA(x) { return String(x == null ? '' : x).replace(/[&<>"]/g, function(ch) { return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[ch]; }); }
+function accesDisplayHtml(c) {
+  window._accesV39 = !!c && ('acces_cle' in c);
+  var titre = '<div class="info-item" style="grid-column:1/-1;border-top:1px solid var(--bd);padding-top:12px;margin-top:4px;"><div class="info-label">Accès au domicile</div>';
+  if (!window._accesV39) return titre + '<div class="info-value" style="color:var(--tf);font-size:12px;">Migration v39 à exécuter pour enregistrer les accès.</div></div>';
+  var oui = function(b) { return b ? '<span style="color:var(--green);">Oui</span>' : 'Non'; };
+  return titre + '</div>'
+    + '<div class="info-item"><div class="info-label">Clés chez Forest Rangers</div><div class="info-value">' + oui(c.acces_cle) + '</div></div>'
+    + '<div class="info-item"><div class="info-label">Alarme</div><div class="info-value">' + oui(c.acces_alarme) + '</div></div>'
+    + '<div class="info-item" style="grid-column:1/-1;"><div class="info-label">Code / instructions d\'accès</div><div class="info-value">' + (c.acces_code ? escA(c.acces_code) : '—') + '</div></div>'
+    + '<div class="info-item" style="grid-column:1/-1;"><div class="info-label">Particularités du domicile</div><div class="info-value" style="white-space:pre-line;">' + (c.acces_particularites ? escA(c.acces_particularites) : '—') + '</div></div>';
+}
+function accesEditHtml(c) {
+  window._accesV39 = !!c && ('acces_cle' in c);
+  if (!window._accesV39) return '';
+  var sel = function(id, v) { return '<select class="edit-select" id="' + id + '"><option value="false"' + (!v ? ' selected' : '') + '>Non</option><option value="true"' + (v ? ' selected' : '') + '>Oui</option></select>'; };
+  return '<div class="info-item" style="grid-column:1/-1;border-top:1px solid var(--bd);padding-top:12px;margin-top:4px;"><div class="info-label">Accès au domicile</div></div>'
+    + '<div class="info-item"><div class="info-label">Clés chez Forest Rangers</div>' + sel('edit-acces-cle', c.acces_cle) + '</div>'
+    + '<div class="info-item"><div class="info-label">Alarme</div>' + sel('edit-acces-alarme', c.acces_alarme) + '</div>'
+    + '<div class="info-item" style="grid-column:1/-1;"><div class="info-label">Code / instructions d\'accès</div><input class="edit-input" id="edit-acces-code" value="' + escA(c.acces_code || '') + '" placeholder="Ex : boîte à clé code 4521, portail gauche…"></div>'
+    + '<div class="info-item" style="grid-column:1/-1;"><div class="info-label">Particularités du domicile</div><textarea class="edit-input" id="edit-acces-part" rows="3" placeholder="Ex : serviettes dans le garage…">' + escA(c.acces_particularites || '') + '</textarea></div>';
 }
 
 function renderPersonnesDisplay(personnes) {
@@ -1213,7 +1187,8 @@ function renderInfosEdit(c) {
     fieldHtml('Commune', 'edit-commune', c.commune) +
     '<div class="info-item"><div class="info-label">N° client</div><div class="info-value" style="color:var(--accent);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;">#' + c.numero_client + '</div></div>' +
     '<div class="info-item"><div class="info-label">Date inscription</div><div class="info-value">' + (c.created_at ? new Date(c.created_at).toLocaleDateString('fr-LU', { day: '2-digit', month: 'long', year: 'numeric' }) : '—') + '</div></div>' +
-    '<div class="info-item"><div class="info-label">Client depuis le</div><input class="edit-input" type="date" id="edit-client-depuis" value="' + depuisVal + '"></div>';
+    '<div class="info-item"><div class="info-label">Client depuis le</div><input class="edit-input" type="date" id="edit-client-depuis" value="' + depuisVal + '"></div>'
+    + accesEditHtml(c);
 
   var tarifGrid = document.querySelectorAll('#panel-infos .info-grid')[1];
   if (tarifGrid) {
@@ -1362,6 +1337,13 @@ async function saveInfos() {
       tarif_reduction: parseFloat(document.getElementById('edit-tarif-reduction').value),
       personnes_autorisees: collectPersonnesRows()
     };
+    // Accès au domicile (v39)
+    if (window._accesV39 && document.getElementById('edit-acces-code')) {
+      update.acces_cle = document.getElementById('edit-acces-cle').value === 'true';
+      update.acces_alarme = document.getElementById('edit-acces-alarme').value === 'true';
+      update.acces_code = document.getElementById('edit-acces-code').value.trim() || null;
+      update.acces_particularites = document.getElementById('edit-acces-part').value.trim() || null;
+    }
     // En mode standard, on ne fige RIEN sur la fiche : les colonnes tarif_*
     // repassent a null, donc le client suit la grille de Parametres avances.
     var modeChoisi = document.getElementById('edit-tarif-mode').value;
@@ -1447,6 +1429,15 @@ function joursRecurrenceTxt(r) {
   return r.jours_recurrence.split(',').map(function(j) { return JOUR_LABELS[j.trim()] || j; }).join(', ');
 }
 
+// Séances annulées une à une (dates exclues) : barrées en rouge sous la réservation
+function datesAnnuleesHtml(r) {
+  var ex = (r.dates_exclues || '').split(',').map(function(x) { return x.trim(); }).filter(Boolean).sort();
+  if (!ex.length) return '';
+  return '<div style="font-size:11px;color:var(--red);margin-top:3px;">'
+    + ex.map(function(d) { return '<s>' + new Date(d + 'T00:00:00').toLocaleDateString('fr-LU', { day: '2-digit', month: 'short' }) + '</s>'; }).join(' · ')
+    + ' <span style="opacity:.8;">annulée' + (ex.length > 1 ? 's' : '') + '</span></div>';
+}
+
 function loadReservations(resas) {
   var actives  = resas.filter(function(r) { return r.statut !== 'termine' && r.statut !== 'annule'; });
   var passees  = resas.filter(function(r) { return r.statut === 'termine' || r.statut === 'annule'; });
@@ -1477,7 +1468,7 @@ function loadReservations(resas) {
       + '<td class="td-main">' + svc + '</td>'
       + '<td>' + chien + '</td>'
       + '<td>' + creneauTxt + '</td>'
-      + '<td>' + recTxt + '</td>'
+      + '<td>' + recTxt + datesAnnuleesHtml(r) + '</td>'
       + '<td><span class="badge ' + badge + '">' + label + '</span></td>'
       + '<td><button class="btn btn-accent-outline" style="width:auto;padding:4px 10px;font-size:10px;" onclick="openResaDetail(\'' + r.id + '\')">Voir</button></td>'
       + '</tr>';
@@ -1502,11 +1493,12 @@ function loadReservations(resas) {
       seances = '1 séance';
     }
 
+    var barre = r.statut === 'annule' ? ' style="color:var(--red);text-decoration:line-through;"' : '';
     return '<tr>'
-      + '<td class="td-main">' + svc + '</td>'
-      + '<td>' + chien + '</td>'
-      + '<td>' + periode + '</td>'
-      + '<td>' + seances + '</td>'
+      + '<td class="td-main"' + barre + '>' + svc + '</td>'
+      + '<td' + barre + '>' + chien + '</td>'
+      + '<td' + barre + '>' + periode + '</td>'
+      + '<td><span' + barre + '>' + seances + '</span>' + datesAnnuleesHtml(r) + '</td>'
       + '<td><span class="badge ' + badge + '">' + label + '</span></td>'
       + '<td><button class="btn btn-accent-outline" style="width:auto;padding:4px 10px;font-size:10px;" onclick="openResaDetail(\'' + r.id + '\')">Voir</button></td>'
       + '</tr>';
@@ -1594,7 +1586,7 @@ function loadFactures(factures) {
       var mIdx = parseInt(pp[1], 10) - 1;
       periode = (moisFR[mIdx] ? (moisFR[mIdx].charAt(0).toUpperCase() + moisFR[mIdx].slice(1)) : f.periode) + ' ' + pp[0];
     }
-    return '<tr><td class="td-main" style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;color:var(--accent);">' + (f.numero || '—') + '</td><td>' + periode + '</td><td class="td-main">' + montant + '</td><td>' + emise + '</td><td>—</td><td><span class="badge ' + badge + '">' + label + '</span></td><td><button class="btn btn-accent-outline" style="width:auto;padding:4px 10px;font-size:10px;" onclick="window.location.href=\'forestrangers-facture.html?id=' + f.id + '\'">Voir</button></td></tr>';
+    return '<tr><td class="td-main" style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;color:var(--accent);">' + (f.numero || '—') + '</td><td>' + periode + '</td><td class="td-main">' + montant + '</td><td>' + emise + '</td><td>—</td><td><span class="badge ' + badge + '">' + label + '</span></td><td><button class="btn btn-accent-outline" style="width:auto;padding:4px 10px;font-size:10px;" onclick="voirFactureFiche(\'' + f.id + '\')">Voir</button></td></tr>';
   }).join('');
 }
 
@@ -1899,11 +1891,18 @@ async function openResaDetail(id, dateOccurrence) {
   var debut = r.date_debut ? new Date(r.date_debut + 'T00:00:00') : null;
   var future = debut && debut >= today;
   var modifiable = future && (r.statut === 'en_attente' || r.statut === 'confirme');
+  // Une série commencée reste annulable (une date, ou la série à partir de la prochaine séance)
+  var auj = isoDateFR(new Date());
+  var annulable = (r.statut === 'en_attente' || r.statut === 'confirme')
+    && occurrencesResa(r).some(function(d) { return d >= auj; });
 
   var html = '';
   if (modifiable) {
     html += '<button class="btn btn-outline" style="width:auto;" id="btn-resa-modifier" onclick="toggleResaEdit()">Modifier</button>';
-    html += '<button class="btn btn-outline" style="width:auto;color:var(--red);border-color:rgba(224,90,90,0.4);background:var(--rd);" onclick="openAnnulationResa()">Annuler la réservation</button>';
+  }
+  if (annulable) {
+    html += '<button class="btn btn-outline" style="width:auto;color:var(--red);border-color:rgba(224,90,90,0.4);background:var(--rd);" onclick="openAnnulationResa()">'
+      + (future ? 'Annuler la réservation' : 'Annuler une séance ou la suite') + '</button>';
   }
   html += '<div style="flex:1;"></div>';
   html += '<button class="btn btn-outline" style="width:auto;" onclick="document.getElementById(\'modal-resa-detail\').classList.remove(\'open\')">Fermer</button>';
@@ -2171,10 +2170,13 @@ async function confirmerAnnulationResa() {
     }
     document.getElementById('modal-annulation').classList.remove('open');
     document.getElementById('modal-resa-detail').classList.remove('open');
+    // Relecture en base : l'arrêt d'une série modifie des lignes hors de la liste locale
+    try {
+      var rr = await db.from('reservations').select('*').eq('client_id', r.client_id).order('date_debut', { ascending: false });
+      if (!rr.error && rr.data) currentReservationsList = rr.data;
+    } catch (_) {}
     loadReservations(currentReservationsList);
     loadAnnulationDetails(currentReservationsList);
-    var nbAnnulations = currentReservationsList.filter(function(x) { return x.statut === 'annule'; }).length;
-    document.getElementById('stat-annulations').textContent = nbAnnulations;
   } catch(e) {
     console.error('Erreur annulation réservation:', e);
     alert("Erreur lors de l'annulation : " + (e.message || ''));
@@ -2287,6 +2289,17 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js');
   });
 }
+</script>
+
+<script>
+// Thème envoyé par l'admin (page affichée en cadre) — v40
+window.addEventListener('message', function(ev) {
+  if (!ev || !ev.data || ev.data.fr !== 'theme') return;
+  document.documentElement.classList.toggle('light', !!ev.data.clair);
+  try { localStorage.setItem('fr-theme', ev.data.clair ? 'light' : 'dark'); } catch (e) {}
+  if (typeof majBoutonTheme === 'function') { try { majBoutonTheme(); } catch (e) {} }
+  if (typeof initTheme === 'function') { try { initTheme(); } catch (e) {} }
+});
 </script>
 </body>
 </html>

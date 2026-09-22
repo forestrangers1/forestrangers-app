@@ -842,22 +842,23 @@ html.dark .tbl th, html.dark .tbl td { border-color: rgba(255,255,255,0.08) !imp
           <div class="section-title">Service de recuperation / depose (optionnel)</div>
         </div>
         <div class="section-body">
-          <div class="toggle-option" onclick="toggleOpt(this,'pickup-dc')" id="pickup-dc-none">
+          <div class="toggle-option selected" onclick="toggleOpt(this,'pickup-dc')" id="pickup-dc-none">
             <div class="toggle-option-check"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-            <div><div class="toggle-option-title">Aucun service supplémentaire</div><div class="toggle-option-desc">Je dépose et récupère moi-même mon chien à Kopstal.</div></div>
+            <div><div class="toggle-option-title">Aucun transport</div><div class="toggle-option-desc">Je dépose et récupère moi-même mon chien à Kopstal.</div></div>
           </div>
-          <div class="toggle-option selected" onclick="toggleOpt(this,'pickup-dc')" id="pickup-dc-pickup">
+          <div class="toggle-option" onclick="toggleOpt(this,'pickup-dc')" id="pickup-dc-pickup">
             <div class="toggle-option-check"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-            <div><div class="toggle-option-title">Récupération à domicile par Forest Rangers</div><div class="toggle-option-desc">Demande soumise à Gabriel — il confirmera selon sa tournée du jour. Des frais supplémentaires peuvent s'appliquer.</div></div>
+            <div><div class="toggle-option-title">Forest Rangers vient chercher mon chien le matin</div><div class="toggle-option-desc">1 trajet par jour · <span class="tr-prix">5,85 €</span> TTC (5 € HT).</div></div>
           </div>
           <div class="toggle-option" onclick="toggleOpt(this,'pickup-dc')" id="pickup-dc-drop">
             <div class="toggle-option-check"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-            <div><div class="toggle-option-title">Dépose à domicile par Forest Rangers</div><div class="toggle-option-desc">Demande soumise à Gabriel — il confirmera selon sa tournée de fin de journée. Des frais supplémentaires peuvent s'appliquer.</div></div>
+            <div><div class="toggle-option-title">Forest Rangers ramène mon chien le soir</div><div class="toggle-option-desc">1 trajet par jour · <span class="tr-prix">5,85 €</span> TTC (5 € HT).</div></div>
           </div>
           <div class="toggle-option" onclick="toggleOpt(this,'pickup-dc')" id="pickup-dc-both">
             <div class="toggle-option-check"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-            <div><div class="toggle-option-title">Récupération + dépose à domicile</div><div class="toggle-option-desc">Les deux trajets sont soumis à confirmation de Gabriel. Des frais supplémentaires peuvent s'appliquer.</div></div>
+            <div><div class="toggle-option-title">Aller et retour par Forest Rangers</div><div class="toggle-option-desc">2 trajets par jour · <span class="tr-prix2">11,70 €</span> TTC (2 × 5 € HT).</div></div>
           </div>
+          <div id="transport-hz-note" style="display:none;font-size:12px;color:var(--text-dim);margin-top:8px;line-height:1.5;">Votre adresse est hors du secteur habituel : le transport est confirmé par Gabriel avant d'être facturé.</div>
         </div>
       </div>
 
@@ -1239,6 +1240,8 @@ let currentService = null;
 // sur mesure, en vigueur aujourd'hui (fr-facturation.js). Les tarifs de
 // Paramètres sont TTC. Valeurs de secours tant que la grille n'est pas lue.
 let prices = { walking: 35, daycare: 65, boarding: 80 };
+let TRANSPORT_TTC = 5.85;   // Day Care : prix TTC d'un trajet (5 € HT, paramètre transport_daycare_ht)
+let CLIENT_HZ = false;      // client hors zone : transport à confirmer par Gabriel
 let REDUCTION_2E = 30;   // remise sur chaque chien supplémentaire, en %
 
 async function chargerPrixClient(clientRow) {
@@ -1248,6 +1251,9 @@ async function chargerPrixClient(clientRow) {
     const t = FR_FACT.tarifsPour(clientRow, new Date().toISOString().slice(0, 10));
     prices = { walking: t.walking, daycare: t.daycare, boarding: t.boarding };
     REDUCTION_2E = t.reduction;
+    if (t.transport_daycare_ttc) TRANSPORT_TTC = t.transport_daycare_ttc;
+    CLIENT_HZ = !!(clientRow && clientRow.hors_zone);
+    majRecapTransport();
   } catch (e) { console.log('Grille tarifaire indisponible :', e); }
 }
 
@@ -1434,6 +1440,7 @@ function selectService(type, el) {
   document.querySelectorAll('.service-card').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
   currentService = type;
+  try { majRecapTransport(); } catch (e) {}
   document.getElementById('btn-next-1').disabled = false;
 }
 
@@ -1683,9 +1690,32 @@ function showServiceForm() {
 }
 
 // ── TOGGLE OPTIONS (radio-style) ──
+// ── Transport Day Care (v39) : dépose le matin / retour le soir par Forest Rangers ──
+function transportChoisi() {
+  var sel = document.querySelector('[id^="pickup-dc"].selected');
+  var id = sel ? sel.id : 'pickup-dc-none';
+  return { aller: id === 'pickup-dc-pickup' || id === 'pickup-dc-both', retour: id === 'pickup-dc-drop' || id === 'pickup-dc-both' };
+}
+function majRecapTransport() {
+  var f = function(n) { return n.toFixed(2).replace('.', ',') + ' €'; };
+  document.querySelectorAll('.tr-prix').forEach(function(e) { e.textContent = f(TRANSPORT_TTC); });
+  document.querySelectorAll('.tr-prix2').forEach(function(e) { e.textContent = f(2 * TRANSPORT_TTC); });
+  var note = document.getElementById('transport-hz-note');
+  if (note) note.style.display = CLIENT_HZ ? '' : 'none';
+  var el = document.getElementById('recap-pickup');
+  if (!el) return;
+  var row = el.closest('.recap-row');
+  if (row) row.style.display = (typeof currentService === 'undefined' || currentService === 'daycare') ? '' : 'none';
+  var t = transportChoisi(), n = (t.aller ? 1 : 0) + (t.retour ? 1 : 0);
+  el.textContent = !n ? 'Par le client'
+    : (t.aller && t.retour ? 'Aller et retour' : t.aller ? 'Aller (le matin)' : 'Retour (le soir)')
+      + ' · +' + f(n * TRANSPORT_TTC) + ' / jour' + (CLIENT_HZ ? ' · à confirmer par Gabriel' : '');
+}
+
 function toggleOpt(el, group) {
   document.querySelectorAll(`[id^="${group}"]`).forEach(o => o.classList.remove('selected'));
   el.classList.add('selected');
+  if (group === 'pickup-dc') majRecapTransport();
 
   // Récurrence walking
   if (group === 'recur-walk') {
@@ -2114,6 +2144,11 @@ async function saveReservation(svc, isBoarding) {
     statut: isBoarding ? 'en_attente' : 'confirme'
     // ranger_nom / ranger_id : assignés automatiquement par le trigger fr_assign_ranger (règles §4.4)
   };
+  // Transport Day Care (v39). Le statut (confirmé / à confirmer hors zone) est posé par la base.
+  if (svc === 'daycare') {
+    const tr = transportChoisi();
+    if (tr.aller || tr.retour) { base.transport_aller = tr.aller; base.transport_retour = tr.retour; }
+  }
   const recur = { jours_recurrence: jours_recurrence, date_fin_recurrence: date_fin_recurrence, recurrente: recurrente };
 
   // Construit les lignes à insérer. Le montant n'est porté QUE par la 1re ligne
@@ -2133,6 +2168,13 @@ async function saveReservation(svc, isBoarding) {
   try {
     let error = null;
     ({ error } = await db.from('reservations').insert(buildRows(true, true)));
+
+    // Repli 0 : migration v39 absente — la réservation passe, sans transport
+    if (error && /transport_(aller|retour|statut)/i.test(error.message || '')) {
+      console.log('Colonnes transport absentes — execute fr_migration_v39_acces_transport.sql.');
+      delete base.transport_aller; delete base.transport_retour;
+      ({ error } = await db.from('reservations').insert(buildRows(true, true)));
+    }
 
     // Repli 1 : colonnes de récurrence absentes de la table
     if (error && /jours_recurrence|date_fin_recurrence|recurrente/i.test(error.message || '')) {

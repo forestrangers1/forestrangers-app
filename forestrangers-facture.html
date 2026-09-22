@@ -522,7 +522,7 @@ html.light .actions-bar  { background: #f6f7f2; border-top-color: rgba(0,0,0,0.0
             <div class="form-row-2">
               <div class="form-group">
                 <label class="form-label">Date d'émission</label>
-                <input type="date" class="form-input" id="facture-emission-input" onchange="updatePreview()">
+                <input type="date" class="form-input" id="facture-emission-input" onchange="onEmissionChange()">
               </div>
               <div class="form-group">
                 <label class="form-label">Échéance</label>
@@ -1153,6 +1153,20 @@ async function chargerLignesPourPeriode(periodStart, periodEnd, annee, mois) {
     });
   });
 
+  // Régularisations : mois déjà facturés dont le planning a changé depuis
+  if (EDIT_V35 && FR_FACT.aRegulariser) {
+    try {
+      var totalCalc = items.reduce(function(a, it) { return a + (it.total || 0); }, 0);
+      var regs = await FR_FACT.aRegulariser(db, { periodeCible: annee + '-' + String(mois).padStart(2, '0'),
+        clientIds: [currentClient.id], exclureFactureId: currentFacture && currentFacture.id });
+      FR_FACT.lignesRegularisation(regs, totalCalc).forEach(function(l) {
+        items.push({ label: l.label, sousLabel: l.sousLabel, qte: 1, prixUnit: l.prixUnit, total: l.total,
+                     type: 'regularisation', ref_facture_id: l.ref_facture_id, color: l.total < 0 ? 'red' : null,
+                     tvaRate: TVA_RATES.default });
+      });
+    } catch (e) { console.log('Régularisations :', e && e.message); }
+  }
+
   useStoredTotals = false;
   lineItemsData = items;
   lignesDuPlanning = true;
@@ -1263,6 +1277,16 @@ async function onClientChange() {
   updatePreview();
 }
 
+// Échéance = émission + 14 jours (CGV art. 7.4), recalculée quand on change l'émission
+function onEmissionChange() {
+  var e = document.getElementById('facture-emission-input').value;
+  if (e) {
+    var d = new Date(e + 'T12:00:00'); d.setDate(d.getDate() + 14);
+    document.getElementById('facture-echeance-input').value = formatDateISO(d);
+  }
+  updatePreview();
+}
+
 function onPeriodeChange() {
   lineItemsData = [];
   lignesDuPlanning = false;
@@ -1324,8 +1348,12 @@ async function initNouvelleFacture(clientId) {
   await loadClientsList(clientId);
   await chargerClient(clientId);
   resetNouvelleFactureDefaults();
+  // Arrivée depuis l'estimation de l'admin : mois imposé, prestations chargées
+  var pUrl = params.get('periode');
+  if (pUrl && /^\d{4}-\d{2}$/.test(pUrl)) document.getElementById('facture-periode-input').value = pUrl;
   document.getElementById('facture-numero-input').value = await genererNumeroFacture();
   updatePreview();
+  if (params.get('planning') === '1') { try { await chargerDepuisPlanning(); } catch (e) {} }
 }
 
 async function initFactureExistante(id) {
@@ -1376,8 +1404,8 @@ async function initFactureExistante(id) {
     // v35 : détail figé à l'émission
     lineItemsData = f.lignes.map(function(l) {
       return { label: l.label, sousLabel: l.sousLabel, discountNote: l.discountNote, qte: l.qte,
-               prixUnit: l.prixUnit, total: l.total, type: l.type, readOnly: true,
-               color: l.type === 'annulation' ? 'red' : null,
+               prixUnit: l.prixUnit, total: l.total, type: l.type, readOnly: true, ref_facture_id: l.ref_facture_id || null,
+               color: (l.type === 'annulation' || (l.type === 'regularisation' && l.total < 0)) ? 'red' : null,
                tvaRate: l.tvaRate != null ? l.tvaRate : TVA_RATES.default };
     });
   } else {
@@ -1465,12 +1493,18 @@ async function enregistrerFacture() {
     total_ttc: Math.round(totals.totalTtc * 100) / 100,
     notes: notes
   };
+  // Dates affichées sur la facture = dates enregistrées (sinon le PDF et la base divergent)
+  var dEm = document.getElementById('facture-emission-input').value;
+  var dEc = document.getElementById('facture-echeance-input').value;
+  if (EDIT_V31 && dEm) payload.date_emission = dEm;
+  if (EDIT_V31 && dEc) payload.date_echeance = dEc;
   if (EDIT_V35 && !useStoredTotals) {
     // v35 : détail figé, tel qu'émis (le client verra exactement ces lignes)
     payload.lignes = lineItemsData.map(function(it) {
       return { label: it.label, sousLabel: it.sousLabel || null, discountNote: it.discountNote || null,
                qte: it.qte, prixUnit: it.prixUnit, total: it.total,
                type: it.type || (it.color === 'red' ? 'annulation' : null),
+               ref_facture_id: it.ref_facture_id || undefined,
                tvaRate: it.tvaRate != null ? it.tvaRate : TVA_RATES.default };
     });
     if (!(currentFacture && currentFacture.id)) payload.mensuelle = lignesDuPlanning;
@@ -1655,7 +1689,8 @@ async function annulerParNoteCredit() {
   }
   var d = r.data || {};
   var suite = confirm('✓ Note de crédit ' + d.numero + ' créée.\n\nL\'ouvrir et l\'envoyer au client maintenant ?');
-  window.location.href = window.location.pathname + '?id=' + encodeURIComponent(d.nc_id) + (suite ? '&envoyer=1' : '');
+  var emb = new URLSearchParams(window.location.search).get('embed') === '1' ? '&embed=1' : '';
+  window.location.href = window.location.pathname + '?id=' + encodeURIComponent(d.nc_id) + emb + (suite ? '&envoyer=1' : '');
 }
 
 async function marquerPayeeFacture() {
@@ -1722,6 +1757,10 @@ function telechargerPDF() {
 }
 
 function retourFiche() {
+  // Ouverte depuis Admin → Factures : retour à la liste, dans l'admin
+  if (params.get('embed') === '1' && window.parent && window.parent !== window) {
+    try { window.parent.postMessage({ fr: 'fermer-facture' }, '*'); return; } catch (e) {}
+  }
   if (currentClient && currentClient.id) {
     window.location.href = 'forestrangers-client-detail.html?id=' + currentClient.id + '&from=clients';
   } else {
@@ -1809,6 +1848,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       await initFactureExistante(factureId);
       // Arrivée depuis Admin → Factures → « ✉ Envoyer »
       if (params.get('envoyer') === '1' && currentFacture) setTimeout(envoyerFacture, 700);
+      // Arrivée depuis Admin → Factures → « NC »
+      if (params.get('nc') === '1' && currentFacture) setTimeout(annulerParNoteCredit, 600);
     } else if (urlClientId) {
       await initNouvelleFacture(urlClientId);
     } else {
@@ -1829,6 +1870,17 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js');
   });
 }
+</script>
+
+<script>
+// Thème envoyé par l'admin (page affichée en cadre) — v40
+window.addEventListener('message', function(ev) {
+  if (!ev || !ev.data || ev.data.fr !== 'theme') return;
+  document.documentElement.classList.toggle('light', !!ev.data.clair);
+  try { localStorage.setItem('fr-theme', ev.data.clair ? 'light' : 'dark'); } catch (e) {}
+  if (typeof majBoutonTheme === 'function') { try { majBoutonTheme(); } catch (e) {} }
+  if (typeof initTheme === 'function') { try { initTheme(); } catch (e) {} }
+});
 </script>
 </body>
 </html>
