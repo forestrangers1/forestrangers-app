@@ -378,6 +378,8 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
   </script>
   <script src="fr-calendrier.js"></script>
   <script src="fr-facturation.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#ff5f1f">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -409,6 +411,11 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
       <div class="tab" data-vue="staff" onclick="switchTab('conges',this)">
         Congés
         <span class="tab-badge amber" id="tab-badge-conges" style="display:none;"></span>
+      </div>
+      <div class="tab" data-vue="staff" onclick="switchTab('rapport',this);rmCharger()">Rapport mensuel</div>
+      <div class="tab" data-vue="staff" id="tab-nav-demandes" onclick="switchTab('demandes',this);chargerDemandesMission()">
+        Demandes de mission
+        <span class="tab-badge amber" id="tab-badge-demandes" style="display:none;"></span>
       </div>
       <div class="tab" data-vue="params" onclick="switchTab('regles',this)">Règles & Saisons</div>
     </div>
@@ -490,6 +497,51 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
       </div>
       </div>
 
+      <!-- ══ RAPPORT MENSUEL ══ (v44 : heures, sorties, missions, congés — export comptable) -->
+      <div class="tab-pane" id="tab-rapport">
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-head" style="flex-wrap:wrap;gap:10px;">
+            <span class="card-title">Rapport mensuel de l'équipe</span>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <input type="month" class="form-input" id="rm-mois" style="width:auto;padding:6px 10px;" onchange="rmCharger()">
+              <button class="btn btn-outline" onclick="rmExcel()">Excel</button>
+              <button class="btn btn-accent" onclick="rmPdf()">PDF</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="rm-info" style="font-size:11.5px;color:var(--text-faint);line-height:1.5;margin-bottom:10px;">Heures travaillées = de « Démarrer la journée » à « Terminer la journée » dans l'app ranger. Heures prévues = contrat (heures par semaine ÷ 5) × jours ouvrés du mois, jours fériés exclus. Congés, maladie et formation comptent comme heures justifiées.</div>
+            <div id="rm-equipe" style="overflow-x:auto;"><div style="font-size:12.5px;color:var(--text-faint);">Chargement…</div></div>
+          </div>
+        </div>
+        <div class="card" id="rm-detail-card" style="display:none;">
+          <div class="card-head"><span class="card-title" id="rm-detail-titre">Détail</span></div>
+          <div class="card-body" id="rm-detail" style="overflow-x:auto;"></div>
+        </div>
+      </div>
+
+      <!-- ══ DEMANDES DE MISSION ══ (v43 : Gabriel propose une sortie à un ranger, qui accepte ou refuse dans son app) -->
+      <div class="tab-pane" id="tab-demandes">
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-head"><span class="card-title">Nouvelle demande</span></div>
+          <div class="card-body">
+            <div id="dm-migration" style="display:none;" class="info-box amber"><div><strong>Migration v43 à exécuter</strong> — les demandes de mission arrivent avec le lot staff (sql/fr_migration_v43_demandes_missions.sql).</div></div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;">
+              <div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="dm-date" onchange="dmChargerSorties()"></div>
+              <div class="form-group"><label class="form-label">Ranger</label><select class="form-input" id="dm-ranger" onchange="dmChargerSorties()"></select></div>
+              <div class="form-group"><label class="form-label">Sortie</label><select class="form-input" id="dm-sortie" onchange="dmAfficherChiens()"></select></div>
+            </div>
+            <div id="dm-chiens" style="margin:6px 0 10px;"></div>
+            <div class="form-group"><label class="form-label">Note pour le ranger</label><input class="form-input" id="dm-note" placeholder="Ex : remplacement, je suis indisponible ce matin"></div>
+            <button class="btn btn-accent" onclick="dmEnvoyer()">Envoyer la demande</button>
+            <div style="font-size:11.5px;color:var(--text-faint);margin-top:8px;line-height:1.5;">Acceptée, la sortie est confiée à ce ranger pour ce jour-là uniquement : la série reste attribuée à son ranger habituel.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="card-title">Demandes envoyées</span></div>
+          <div class="card-body" id="dm-liste"><div style="font-size:12.5px;color:var(--text-faint);">Chargement…</div></div>
+        </div>
+      </div>
+
       <!-- ══ CONGÉS ══ (table conges : demandes des rangers, décision de Gabriel) -->
       <div class="tab-pane" id="tab-conges">
         <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:13px;font-weight:800;margin-bottom:14px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;">
@@ -497,6 +549,20 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
           <span class="badge b-amber" id="conges-nb-attente" style="margin-left:8px;vertical-align:middle;display:none;"></span>
         </div>
         <div id="conges-attente"><div style="font-size:12.5px;color:var(--text-faint);padding:4px 0 10px;">Chargement…</div></div>
+        <div class="card" style="margin:14px 0;">
+          <div class="card-head"><span class="card-title">Ajouter un congé ou une absence</span></div>
+          <div class="card-body">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
+              <div class="form-group"><label class="form-label">Ranger</label><select class="form-input" id="ca-ranger"></select></div>
+              <div class="form-group"><label class="form-label">Type</label><select class="form-input" id="ca-type">
+                <option value="conge">Congé</option><option value="maladie">Maladie</option><option value="absence">Absence</option><option value="formation">Formation</option><option value="autre">Autre</option></select></div>
+              <div class="form-group"><label class="form-label">Du</label><input type="date" class="form-input" id="ca-du"></div>
+              <div class="form-group"><label class="form-label">Au</label><input type="date" class="form-input" id="ca-au"></div>
+            </div>
+            <div class="form-group"><label class="form-label">Motif / note</label><input class="form-input" id="ca-motif" placeholder="Facultatif"></div>
+            <button class="btn btn-accent" onclick="ajouterAbsence()">Enregistrer (confirmé)</button>
+          </div>
+        </div>
         <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:13px;font-weight:800;margin:20px 0 14px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;">
           Congés approuvés
         </div>
@@ -2240,6 +2306,333 @@ function toggleSwitch(el) {
   el.classList.toggle('on');
 }
 
+// ══════════════════════════════════════════════════════════════
+//  DEMANDES DE MISSION (v43) — Gabriel propose une sortie d'un jour
+//  à un ranger (remplacement, renfort). Le ranger répond dans son app
+//  (onglet Demandes). Acceptée : missions_affectations confie les
+//  réservations choisies à ce ranger pour ce jour-là.
+// ══════════════════════════════════════════════════════════════
+var DM_SORTIES = [], DM_STAFF = [];
+var DM_SVC = { walking: 'Promenade', daycare: 'Day Care', boarding: 'Pension' };
+var DM_CR = { matin: 'matin 09h00', midi: 'midi 12h00', apmidi: 'après-midi 14h30' };
+// L'onglet n'apparaît qu'une fois la migration v43 passée (lot staff)
+(function sonderDemandesMission() {
+  function masquer() { var t = document.getElementById('tab-nav-demandes'); if (t) t.style.display = 'none'; }
+  function tester() {
+    if (!window.db) { setTimeout(tester, 300); return; }
+    try {
+      db.from('demandes_missions').select('id,statut').limit(50).then(function(r) {
+        if (r.error) { masquer(); return; }
+        var nb = (r.data || []).filter(function(x) { return (x.statut || 'en_attente') === 'en_attente'; }).length;
+        var bd = document.getElementById('tab-badge-demandes'); if (bd) { bd.textContent = nb; bd.style.display = nb ? '' : 'none'; }
+      }, masquer);
+    } catch (e) { masquer(); }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function() { setTimeout(tester, 50); }); else setTimeout(tester, 50);
+})();
+async function chargerDemandesMission() {
+  var d = document.getElementById('dm-date');
+  if (d && !d.value) { var t = new Date(); t.setDate(t.getDate() + 1); d.value = t.toISOString().slice(0, 10); }
+  try {
+    var st = await db.from('staff').select('id,prenom,nom,actif,role').order('prenom');
+    DM_STAFF = (st.data || []).filter(function(x) { return x.actif !== false; });
+  } catch (e) { DM_STAFF = []; }
+  var sel = document.getElementById('dm-ranger');
+  if (sel && !sel.options.length) sel.innerHTML = DM_STAFF.map(function(x) { return '<option value="' + x.id + '">' + echapper(x.prenom + ' ' + (x.nom || '')) + '</option>'; }).join('');
+  await dmChargerSorties();
+  await dmListe();
+}
+async function dmChargerSorties() {
+  var date = document.getElementById('dm-date').value, ranger = document.getElementById('dm-ranger').value;
+  var sel = document.getElementById('dm-sortie'), box = document.getElementById('dm-chiens');
+  DM_SORTIES = [];
+  if (!date) { sel.innerHTML = ''; box.innerHTML = ''; return; }
+  try {
+    if (window.FR_CAL && FR_CAL.charger && !FR_CAL.estCharge()) { try { await FR_CAL.charger(db); } catch (e) {} }
+    var r = await db.from('reservations').select('*, clients(prenom,nom,commune,is_test)').lte('date_debut', date).neq('statut', 'annule');
+    var aff = {};
+    try { var a = await db.from('missions_affectations').select('reservation_id,staff_id').eq('date_mission', date); (a.data || []).forEach(function(x) { aff[x.reservation_id] = x.staff_id; }); } catch (e) {}
+    var ch = await db.from('chiens').select('id,nom,client_id,actif');
+    var chiensDe = {}; (ch.data || []).forEach(function(c) { (chiensDe[c.client_id] = chiensDe[c.client_id] || []).push(c); });
+    var groupes = {};
+    (r.data || []).forEach(function(x) {
+      if (window.FR_FACT && !FR_FACT.aSeanceLe(x, date, { depart: true })) return;
+      var qui = aff[x.id] || x.ranger_id || '';
+      if (String(qui) === String(ranger)) return;                 // déjà à ce ranger ce jour-là
+      var cle = x.service + '|' + (x.service === 'walking' ? (x.creneau || '') : '') + '|' + qui;
+      var g = groupes[cle] = groupes[cle] || { cle: cle, service: x.service, creneau: x.service === 'walking' ? x.creneau : null, qui: qui, resas: [] };
+      var chiens = x.chien_id ? (chiensDe[x.client_id] || []).filter(function(c) { return c.id === x.chien_id; }) : (chiensDe[x.client_id] || []).filter(function(c) { return c.actif !== false; });
+      g.resas.push({ id: x.id, client: x.clients || {}, chiens: chiens.map(function(c) { return c.nom; }) });
+    });
+    var nomStaff = function(id) { var s = DM_STAFF.find(function(x) { return String(x.id) === String(id); }); return s ? s.prenom : 'non attribué'; };
+    DM_SORTIES = Object.keys(groupes).map(function(k) { return groupes[k]; });
+    sel.innerHTML = DM_SORTIES.length ? DM_SORTIES.map(function(g, i) {
+      var n = g.resas.reduce(function(t, x) { return t + x.chiens.length; }, 0);
+      return '<option value="' + i + '">' + DM_SVC[g.service] + (g.creneau ? ' ' + DM_CR[g.creneau] : '') + ' — ' + echapper(nomStaff(g.qui)) + ' · ' + n + ' chien' + (n > 1 ? 's' : '') + '</option>';
+    }).join('') : '<option value="">Aucune sortie à confier ce jour-là</option>';
+    dmAfficherChiens();
+  } catch (e) { sel.innerHTML = ''; box.innerHTML = '<div style="font-size:12px;color:var(--red);">' + echapper(e.message || e) + '</div>'; }
+}
+function dmAfficherChiens() {
+  var g = DM_SORTIES[parseInt(document.getElementById('dm-sortie').value, 10)], box = document.getElementById('dm-chiens');
+  if (!g) { box.innerHTML = ''; return; }
+  box.innerHTML = g.resas.map(function(x) {
+    return '<label style="display:flex;gap:8px;align-items:center;font-size:12.5px;padding:4px 0;cursor:pointer;"><input type="checkbox" class="dm-resa" value="' + x.id + '" checked> '
+      + '<span><b>' + echapper(x.chiens.join(' + ') || 'Chien') + '</b> — ' + echapper((x.client.prenom || '') + ' ' + (x.client.nom || '')) + (x.client.commune ? ', ' + echapper(x.client.commune) : '') + '</span></label>';
+  }).join('');
+}
+async function dmEnvoyer() {
+  var g = DM_SORTIES[parseInt(document.getElementById('dm-sortie').value, 10)];
+  var ids = Array.prototype.map.call(document.querySelectorAll('.dm-resa:checked'), function(c) { return c.value; });
+  if (!g || !ids.length) { showToast('Choisissez une sortie et au moins un chien', 'red'); return; }
+  var ligne = { staff_id: document.getElementById('dm-ranger').value, date_mission: document.getElementById('dm-date').value,
+    service: g.service, creneau: g.creneau, reservation_ids: ids, note: (document.getElementById('dm-note').value || '').trim() || null };
+  var r = await db.from('demandes_missions').insert(ligne).select('id');
+  if (r.error) { showToast(/demandes_missions/.test(r.error.message || '') ? 'Migration v43 à exécuter' : 'Erreur : ' + r.error.message, 'red'); document.getElementById('dm-migration').style.display = ''; return; }
+  document.getElementById('dm-note').value = '';
+  showToast('✓ Demande envoyée', 'green');
+  dmListe();
+}
+async function dmListe() {
+  var box = document.getElementById('dm-liste');
+  var r = await db.from('demandes_missions').select('*').order('created_at', { ascending: false }).limit(40);
+  if (r.error) { document.getElementById('dm-migration').style.display = ''; box.innerHTML = '<div style="font-size:12.5px;color:var(--text-faint);">Disponible après la migration v43.</div>'; return; }
+  var l = r.data || [];
+  l.forEach(function(x) { x.statut = x.statut || 'en_attente'; });
+  var nb = l.filter(function(x) { return x.statut === 'en_attente'; }).length;
+  var bd = document.getElementById('tab-badge-demandes'); if (bd) { bd.textContent = nb; bd.style.display = nb ? '' : 'none'; }
+  var nomStaff = function(id) { var s = DM_STAFF.find(function(x) { return String(x.id) === String(id); }); return s ? s.prenom + ' ' + (s.nom || '') : 'Ranger'; };
+  box.innerHTML = l.length ? l.map(function(x) {
+    var b = { en_attente: '<span class="badge b-amber">En attente</span>', acceptee: '<span class="badge b-green">Acceptée</span>', refusee: '<span class="badge b-red">Refusée</span>', annulee: '<span class="badge b-muted">Annulée</span>' }[x.statut];
+    var d = new Date(x.date_mission + 'T12:00:00').toLocaleDateString('fr-LU', { weekday: 'long', day: 'numeric', month: 'long' });
+    return '<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">'
+      + '<div><div style="font-size:13px;font-weight:600;">' + echapper(nomStaff(x.staff_id)) + ' — ' + DM_SVC[x.service] + (x.creneau ? ' ' + DM_CR[x.creneau] : '') + '</div>'
+      + '<div style="font-size:11.5px;color:var(--text-faint);">' + d + ' · ' + (x.reservation_ids || []).length + ' réservation' + ((x.reservation_ids || []).length > 1 ? 's' : '') + (x.note ? ' · ' + echapper(x.note) : '') + (x.reponse_note ? ' · réponse : ' + echapper(x.reponse_note) : '') + '</div></div>'
+      + '<div style="display:flex;gap:8px;align-items:center;">' + b + (x.statut === 'en_attente' ? '<button class="btn btn-outline" style="padding:4px 10px;font-size:11px;" onclick="dmAnnuler(\'' + x.id + '\')">Annuler</button>' : '') + '</div></div>';
+  }).join('') : '<div style="font-size:12.5px;color:var(--text-faint);">Aucune demande envoyée.</div>';
+}
+async function dmAnnuler(id) {
+  if (!confirm('Annuler cette demande ?')) return;
+  var r = await db.from('demandes_missions').update({ statut: 'annulee' }).eq('id', id).eq('statut', 'en_attente').select('id');
+  if (r.error || !r.data || !r.data.length) { showToast('Annulation impossible (déjà répondue ?)', 'red'); } else showToast('Demande annulée', 'amber');
+  dmListe();
+}
+
+// ── Saisie d'un congé / d'une absence par Gabriel (confirmé d'office) — v44 ──
+async function ajouterAbsence() {
+  var ligne = { staff_id: document.getElementById('ca-ranger').value, type: document.getElementById('ca-type').value,
+    date_debut: document.getElementById('ca-du').value, date_fin: document.getElementById('ca-au').value || document.getElementById('ca-du').value,
+    motif: (document.getElementById('ca-motif').value || '').trim() || null, statut: 'approuve' };
+  if (!ligne.staff_id || !ligne.date_debut) { showToast('Ranger et date obligatoires', 'red'); return; }
+  if (ligne.date_fin < ligne.date_debut) { showToast('La fin est avant le début', 'red'); return; }
+  var r = await db.from('conges').insert(ligne).select('id');
+  if (r.error && /type/.test(r.error.message || '')) {
+    if (ligne.type !== 'conge') { showToast('Migration v44 à exécuter pour saisir maladie / absence', 'red'); return; }
+    delete ligne.type; r = await db.from('conges').insert(ligne).select('id');
+  }
+  if (r.error) { showToast('Erreur : ' + r.error.message, 'red'); return; }
+  ['ca-du', 'ca-au', 'ca-motif'].forEach(function(id) { document.getElementById(id).value = ''; });
+  showToast('✓ Enregistré', 'green');
+  loadConges();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  RAPPORT MENSUEL DE L'ÉQUIPE (v44) — pour Gabriel et le comptable
+//  Sources : kilometrage (début / fin de journée, camionnette, km),
+//  promenades (sorties, chiens, durées), attributions_camionnettes
+//  (planning prévu), demandes_missions (missions supplémentaires),
+//  conges (congés et absences approuvés), staff (contrat),
+//  fr-calendrier.js (fériés, fermetures).
+// ══════════════════════════════════════════════════════════════
+var RM = null;
+var RM_JOURS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
+var RM_TYPES = { conge: 'Congé', maladie: 'Maladie', absence: 'Absence', formation: 'Formation', autre: 'Autre' };
+var RM_CR = { matin: 'matin', midi: 'midi', apmidi: 'ap-midi' };
+function rmIso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function rmHm(min) { if (min == null || isNaN(min)) return '—'; var s = min < 0 ? '−' : ''; min = Math.abs(Math.round(min)); return s + Math.floor(min / 60) + 'h' + String(min % 60).padStart(2, '0'); }
+function rmHeure(t) { return t ? new Date(t).toLocaleTimeString('fr-LU', { hour: '2-digit', minute: '2-digit' }) : '—'; }
+async function rmLire(fab) { try { var r = await fab(); return r.error ? [] : (r.data || []); } catch (e) { return []; } }
+
+async function rmCharger() {
+  var inp = document.getElementById('rm-mois');
+  if (!inp.value) { var n = new Date(); n.setDate(1); if (new Date().getDate() <= 10) n.setMonth(n.getMonth() - 1); inp.value = n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0'); }
+  var an = +inp.value.slice(0, 4), mo = +inp.value.slice(5, 7) - 1;
+  var debut = rmIso(new Date(an, mo, 1)), fin = rmIso(new Date(an, mo + 1, 0));
+  document.getElementById('rm-equipe').innerHTML = '<div style="font-size:12.5px;color:var(--text-faint);">Calcul…</div>';
+  if (window.FR_CAL && FR_CAL.charger && !FR_CAL.estCharge()) { try { await FR_CAL.charger(db); } catch (e) {} }
+  var res = await Promise.all([
+    rmLire(function() { return db.from('staff').select('*').order('prenom'); }),
+    rmLire(function() { return db.from('kilometrage').select('*').gte('date', debut).lte('date', fin); }),
+    rmLire(function() { return db.from('promenades').select('id,ranger_id,sortie_id,date,creneau,heure_debut,heure_fin,duree_minutes,statut,chien_id,photo_url,notes,reservations(service)').gte('date', debut).lte('date', fin); }),
+    rmLire(function() { return db.from('attributions_camionnettes').select('*').gte('date_jour', debut).lte('date_jour', fin); }),
+    rmLire(function() { return db.from('demandes_missions').select('*').gte('date_mission', debut).lte('date_mission', fin); }),
+    rmLire(function() { return db.from('conges').select('*').lte('date_debut', fin).gte('date_fin', debut); }),
+    rmLire(function() { return db.from('camionnettes').select('id,nom'); })
+  ]);
+  var staff = res[0], km = res[1], prom = res[2], att = res[3], dem = res[4], cg = res[5], cams = {};
+  res[6].forEach(function(c) { cams[c.id] = c.nom; });
+  var jours = [];
+  for (var d = new Date(an, mo, 1); d.getMonth() === mo; d.setDate(d.getDate() + 1)) {
+    var s = rmIso(d), v = window.FR_CAL ? FR_CAL.verdict(s, 'daycare') : null;
+    jours.push({ date: s, wd: d.getDay(), ferie: v && v.type === 'ferie' ? v.nom : null, ferme: v && v.bloque && v.type !== 'ferie' ? v.nom : null });
+  }
+  var ouvres = jours.filter(function(j) { return j.wd !== 0 && j.wd !== 6 && !j.ferie; }).length;
+  var actifs = staff.filter(function(x) {
+    return x.actif !== false || km.some(function(k) { return k.staff_id === x.id; }) || prom.some(function(p) { return p.ranger_id === x.id; });
+  });
+  RM = { mois: inp.value, debut: debut, fin: fin, jours: jours, ouvres: ouvres, lignes: actifs.map(function(x) {
+    var hj = (+x.heures_semaine || 0) / 5;
+    var cgs = cg.filter(function(c) { return c.staff_id === x.id && c.statut === 'approuve'; });
+    var detail = jours.map(function(j) {
+      var ks = km.filter(function(k) { return k.staff_id === x.id && String(k.date).slice(0, 10) === j.date; });
+      var k = ks[0] || null;
+      var deb = k ? (k.heure_debut || k.created_at) : null, fn = k ? k.heure_fin : null;
+      var minutes = deb && fn ? Math.max(0, (new Date(fn) - new Date(deb)) / 60000) : 0;
+      var ps = prom.filter(function(p) { return p.ranger_id === x.id && p.date === j.date; });
+      var sorties = {};
+      ps.forEach(function(p) { var cle = p.sortie_id || p.id; var so = sorties[cle] = sorties[cle] || { chiens: 0, absents: 0, min: 0, service: (p.reservations || {}).service, creneau: p.creneau, photo: false, ecourtee: false }; if (p.statut === 'absent') so.absents++; else so.chiens++; so.min = Math.max(so.min, +p.duree_minutes || 0); so.photo = so.photo || !!p.photo_url; so.ecourtee = so.ecourtee || /\[Écourtée/.test(p.notes || ''); });
+      var liste = Object.keys(sorties).map(function(c) { return sorties[c]; }).filter(function(so) { return so.chiens; });
+      var c = cgs.find(function(c) { return c.date_debut <= j.date && c.date_fin >= j.date; });
+      var prevu = att.filter(function(a) { return a.staff_id === x.id && a.date_jour === j.date; }).map(function(a) { return (RM_CR[a.creneau] || a.creneau) + (cams[a.camionnette_id] ? ' (' + cams[a.camionnette_id] + ')' : ''); });
+      var missions = dem.filter(function(m) { return m.staff_id === x.id && m.date_mission === j.date && m.statut === 'acceptee'; }).length;
+      var statut = k ? 'Travaillé' : c ? (RM_TYPES[c.type || 'conge'] || 'Congé') : j.ferie ? 'Férié' : j.ferme ? 'Fermé' : (j.wd === 0 || j.wd === 6) ? 'Week-end' : prevu.length ? 'Prévu, non travaillé' : 'Repos';
+      return { j: j, statut: statut, conge: c ? (c.type || 'conge') : null, debut: deb, fin: fn, ouverte: !!(k && !fn), minutes: minutes,
+        cam: k && k.camionnette_id ? (cams[k.camionnette_id] || '') : '', km: k ? k.km_parcourus : null, sorties: liste, prevu: prevu, missions: missions };
+    });
+    var t = { jours: 0, minutes: 0, sorties: 0, chiens: 0, minSorties: 0, parNb: {}, ouvertes: 0, justifie: 0, cong: {}, missionsOk: 0, missionsNon: 0, ecourtees: 0, sansPhoto: 0, km: 0 };
+    detail.forEach(function(dj) {
+      if (dj.statut === 'Travaillé') t.jours++;
+      t.minutes += dj.minutes; if (dj.ouverte) t.ouvertes++;
+      t.km += +dj.km || 0;
+      dj.sorties.forEach(function(so) {
+        t.sorties++; t.chiens += so.chiens; t.minSorties += so.min;
+        var b = t.parNb[so.chiens] = t.parNb[so.chiens] || { n: 0, min: 0 }; b.n++; b.min += so.min;
+        if (so.ecourtee) t.ecourtees++; if (!so.photo) t.sansPhoto++;
+      });
+      if (dj.conge && dj.statut !== 'Travaillé' && dj.j.wd !== 0 && dj.j.wd !== 6 && !dj.j.ferie) {
+        t.cong[dj.conge] = (t.cong[dj.conge] || 0) + 1;
+        if (dj.conge !== 'absence') t.justifie += hj * 60;
+      }
+    });
+    t.missionsOk = dem.filter(function(m) { return m.staff_id === x.id && m.statut === 'acceptee'; }).length;
+    t.missionsNon = dem.filter(function(m) { return m.staff_id === x.id && m.statut === 'refusee'; }).length;
+    t.contrat = hj * ouvres * 60;
+    t.ecart = t.contrat ? t.minutes + t.justifie - t.contrat : null;
+    t.moy = t.sorties ? t.minSorties / t.sorties : null;
+    return { staff: x, detail: detail, t: t };
+  }) };
+  rmRendreEquipe();
+}
+
+function rmRendreEquipe() {
+  var th = 'style="text-align:left;padding:7px 8px;font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-faint);border-bottom:1px solid var(--border);white-space:nowrap;"';
+  var td = 'style="padding:8px;border-bottom:1px solid var(--border);font-size:12.5px;white-space:nowrap;"';
+  var h = '<table style="width:100%;border-collapse:collapse;"><thead><tr>'
+    + ['Ranger', 'Jours', 'Heures', 'Contrat', 'Écart', 'Sorties', 'Chiens', 'Moy. / sortie', 'Missions +', 'Congés / absences', 'À vérifier'].map(function(x) { return '<th ' + th + '>' + x + '</th>'; }).join('') + '</tr></thead><tbody>';
+  RM.lignes.forEach(function(l, i) {
+    var t = l.t;
+    var cong = Object.keys(t.cong).map(function(k) { return RM_TYPES[k] + ' ' + t.cong[k] + ' j'; }).join(', ') || '—';
+    var verif = [t.ouvertes ? t.ouvertes + ' journée' + (t.ouvertes > 1 ? 's' : '') + ' non clôturée' + (t.ouvertes > 1 ? 's' : '') : '', t.ecourtees ? t.ecourtees + ' écourtée' + (t.ecourtees > 1 ? 's' : '') : '', t.sansPhoto ? t.sansPhoto + ' sans photo' : ''].filter(Boolean).join(' · ') || '—';
+    h += '<tr style="cursor:pointer;" onclick="rmDetail(' + i + ')">'
+      + '<td ' + td + '><b>' + echapper(l.staff.prenom + ' ' + (l.staff.nom || '')) + '</b></td>'
+      + '<td ' + td + '>' + t.jours + '</td><td ' + td + '><b>' + rmHm(t.minutes) + '</b></td>'
+      + '<td ' + td + '>' + (t.contrat ? rmHm(t.contrat) : '—') + '</td>'
+      + '<td ' + td + '><span style="color:' + (t.ecart == null ? 'var(--text-faint)' : t.ecart >= 0 ? 'var(--green)' : 'var(--red)') + ';">' + (t.ecart == null ? '—' : (t.ecart > 0 ? '+' : '') + rmHm(t.ecart)) + '</span></td>'
+      + '<td ' + td + '>' + t.sorties + '</td><td ' + td + '>' + t.chiens + '</td>'
+      + '<td ' + td + '>' + (t.moy ? rmHm(t.moy) : '—') + '</td>'
+      + '<td ' + td + '>' + t.missionsOk + (t.missionsNon ? ' <span style="color:var(--text-faint);">(' + t.missionsNon + ' refusée' + (t.missionsNon > 1 ? 's' : '') + ')</span>' : '') + '</td>'
+      + '<td ' + td + '>' + cong + '</td>'
+      + '<td ' + td + '><span style="color:' + (verif === '—' ? 'var(--text-faint)' : 'var(--amber)') + ';">' + verif + '</span></td></tr>';
+  });
+  h += '</tbody></table><div style="font-size:11px;color:var(--text-faint);margin-top:8px;">' + RM.ouvres + ' jours ouvrés dans le mois (jours fériés exclus). Cliquez sur un ranger pour son planning jour par jour.</div>';
+  document.getElementById('rm-equipe').innerHTML = RM.lignes.length ? h : '<div style="font-size:12.5px;color:var(--text-faint);">Aucun membre de l\'équipe.</div>';
+  document.getElementById('rm-detail-card').style.display = 'none';
+}
+
+function rmDetailHtml(l, pourPdf) {
+  var th = 'style="text-align:left;padding:5px 6px;font-size:9.5px;text-transform:uppercase;letter-spacing:0.05em;color:' + (pourPdf ? '#666' : 'var(--text-faint)') + ';border-bottom:1px solid ' + (pourPdf ? '#ccc' : 'var(--border)') + ';"';
+  var td = 'style="padding:' + (pourPdf ? '2px 6px' : '5px 6px') + ';border-bottom:1px solid ' + (pourPdf ? '#e5e5e5' : 'var(--border)') + ';font-size:' + (pourPdf ? '9px' : '12px') + ';vertical-align:top;"';
+  var t = l.t;
+  var nb = Object.keys(t.parNb).sort(function(a, b) { return a - b; }).map(function(n) { var b = t.parNb[n]; return n + ' chien' + (n > 1 ? 's' : '') + ' : ' + rmHm(b.min / b.n) + ' (' + b.n + ')'; }).join(' · ');
+  var h = '<div style="font-size:' + (pourPdf ? '10.5px' : '12.5px') + ';margin-bottom:8px;line-height:1.6;">'
+    + '<b>Heures travaillées : ' + rmHm(t.minutes) + '</b> sur ' + t.jours + ' jour' + (t.jours > 1 ? 's' : '')
+    + (t.contrat ? ' · contrat ' + rmHm(t.contrat) + ' (' + (l.staff.heures_semaine || 0) + ' h / semaine)' : ' · heures de contrat non renseignées')
+    + (t.justifie ? ' · absences justifiées ' + rmHm(t.justifie) : '')
+    + (t.ecart != null ? ' · <b>écart ' + (t.ecart > 0 ? '+' : '') + rmHm(t.ecart) + '</b>' : '') + '<br>'
+    + 'Sorties : ' + t.sorties + ' · chiens : ' + t.chiens + ' · durée moyenne : ' + (t.moy ? rmHm(t.moy) : '—') + (nb ? ' · par nombre de chiens : ' + nb : '') + '<br>'
+    + 'Missions supplémentaires acceptées : ' + t.missionsOk + (t.missionsNon ? ' (refusées : ' + t.missionsNon + ')' : '')
+    + ' · congés / absences : ' + (Object.keys(t.cong).map(function(k) { return RM_TYPES[k] + ' ' + t.cong[k] + ' j'; }).join(', ') || 'aucun')
+    + (t.km ? ' · km camionnette : ' + Math.round(t.km).toLocaleString('fr-LU') : '') + '</div>';
+  h += '<table style="width:100%;border-collapse:collapse;"><thead><tr>' + ['Date', 'Statut', 'Début', 'Fin', 'Heures', 'Sorties', 'Prévu (attribution)', 'Camionnette'].map(function(x) { return '<th ' + th + '>' + x + '</th>'; }).join('') + '</tr></thead><tbody>';
+  l.detail.forEach(function(dj) {
+    var gris = dj.statut === 'Week-end' || dj.statut === 'Repos';
+    var coul = dj.statut === 'Travaillé' ? '' : dj.statut === 'Prévu, non travaillé' ? 'color:#c62828;' : gris ? 'color:#999;' : 'color:#b45000;';
+    var so = dj.sorties.map(function(x) { return ({ walking: 'Promenade', daycare: 'Day Care', boarding: 'Pension' }[x.service] || 'Sortie') + (x.creneau && x.service === 'walking' ? ' ' + (RM_CR[x.creneau] || x.creneau) : '') + ' · ' + x.chiens + ' ch. · ' + rmHm(x.min) + (x.ecourtee ? ' · écourtée' : '') + (x.photo ? '' : ' · sans photo'); }).join('<br>');
+    h += '<tr' + (gris && !pourPdf ? ' style="opacity:0.55;"' : '') + '>'
+      + '<td ' + td + '>' + RM_JOURS[dj.j.wd] + ' ' + dj.j.date.slice(8) + '/' + dj.j.date.slice(5, 7) + '</td>'
+      + '<td ' + td + '><span style="' + coul + '">' + dj.statut + (dj.statut === 'Travaillé' && dj.conge ? ' <span style="color:#c62828;">(' + RM_TYPES[dj.conge].toLowerCase() + ' déclaré' + (dj.conge === 'maladie' || dj.conge === 'absence' || dj.conge === 'formation' ? 'e' : '') + ')</span>' : '') + (dj.j.ferie && dj.statut !== 'Férié' ? ' (férié)' : '') + (dj.missions ? ' · +' + dj.missions + ' mission' : '') + (dj.ouverte ? ' · non clôturée' : '') + '</span></td>'
+      + '<td ' + td + '>' + (dj.debut ? rmHeure(dj.debut) : '') + '</td><td ' + td + '>' + (dj.fin ? rmHeure(dj.fin) : '') + '</td>'
+      + '<td ' + td + '>' + (dj.minutes ? rmHm(dj.minutes) : '') + '</td>'
+      + '<td ' + td + '>' + so + '</td><td ' + td + '>' + echapper(dj.prevu.join(', ')) + '</td><td ' + td + '>' + echapper(dj.cam) + (dj.km ? ' · ' + dj.km + ' km' : '') + '</td></tr>';
+  });
+  return h + '</tbody></table>';
+}
+function rmDetail(i) {
+  var l = RM.lignes[i]; if (!l) return;
+  document.getElementById('rm-detail-titre').textContent = 'Planning — ' + l.staff.prenom + ' ' + (l.staff.nom || '') + ' — ' + rmMoisLabel();
+  document.getElementById('rm-detail').innerHTML = rmDetailHtml(l, false);
+  var c = document.getElementById('rm-detail-card'); c.style.display = ''; c.scrollIntoView({ behavior: 'smooth' });
+}
+function rmMoisLabel() { var m = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre']; return m[+RM.mois.slice(5, 7) - 1] + ' ' + RM.mois.slice(0, 4); }
+
+// ── Export Excel : un fichier pour l'équipe (récapitulatif + une feuille par salarié) ──
+function rmExcel() {
+  if (!RM) return;
+  if (!window.XLSX) { showToast('Export Excel indisponible (bibliothèque non chargée)', 'red'); return; }
+  var wb = XLSX.utils.book_new();
+  var h2 = function(min) { return min == null ? '' : Math.round(min / 60 * 100) / 100; };
+  var rec = [['Rapport mensuel — ' + rmMoisLabel() + ' — ARCANIN S.à r.l. (Forest Rangers)'], [],
+    ['Salarié', 'Contrat (h/sem.)', 'Jours travaillés', 'Heures travaillées', 'Heures prévues (contrat)', 'Heures absences justifiées', 'Écart (h)', 'Sorties', 'Chiens', 'Durée moyenne / sortie (h)', 'Missions supplémentaires', 'Congé (j)', 'Maladie (j)', 'Absence (j)', 'Formation (j)', 'Journées non clôturées']];
+  RM.lignes.forEach(function(l) {
+    var t = l.t;
+    rec.push([l.staff.prenom + ' ' + (l.staff.nom || ''), +l.staff.heures_semaine || '', t.jours, h2(t.minutes), h2(t.contrat), h2(t.justifie), t.ecart == null ? '' : h2(t.ecart), t.sorties, t.chiens, t.moy ? h2(t.moy) : '', t.missionsOk, t.cong.conge || 0, t.cong.maladie || 0, t.cong.absence || 0, t.cong.formation || 0, t.ouvertes]);
+  });
+  rec.push([], ['Heures travaillées : de « Démarrer la journée » à « Terminer la journée » (app ranger). Heures prévues : heures par semaine ÷ 5 × ' + RM.ouvres + ' jours ouvrés (jours fériés exclus).']);
+  var ws = XLSX.utils.aoa_to_sheet(rec); ws['!cols'] = [{ wch: 24 }].concat(new Array(15).fill({ wch: 14 }));
+  XLSX.utils.book_append_sheet(wb, ws, 'Récapitulatif');
+  RM.lignes.forEach(function(l) {
+    var rows = [[l.staff.prenom + ' ' + (l.staff.nom || '') + ' — ' + rmMoisLabel()], [], ['Date', 'Jour', 'Statut', 'Début', 'Fin', 'Heures (h)', 'Sorties', 'Chiens', 'Durée sorties (h)', 'Missions supplémentaires', 'Prévu (attribution)', 'Camionnette', 'Km']];
+    l.detail.forEach(function(dj) {
+      rows.push([dj.j.date, RM_JOURS[dj.j.wd], dj.statut + (dj.ouverte ? ' (non clôturée)' : ''), dj.debut ? rmHeure(dj.debut) : '', dj.fin ? rmHeure(dj.fin) : '', dj.minutes ? h2(dj.minutes) : '',
+        dj.sorties.length || '', dj.sorties.reduce(function(a, x) { return a + x.chiens; }, 0) || '', dj.sorties.length ? h2(dj.sorties.reduce(function(a, x) { return a + x.min; }, 0)) : '', dj.missions || '', dj.prevu.join(', '), dj.cam, dj.km || '']);
+    });
+    rows.push([], ['Total', '', '', '', '', h2(l.t.minutes), l.t.sorties, l.t.chiens]);
+    var w = XLSX.utils.aoa_to_sheet(rows); w['!cols'] = [{ wch: 11 }, { wch: 6 }, { wch: 22 }, { wch: 7 }, { wch: 7 }, { wch: 9 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 26 }, { wch: 16 }, { wch: 7 }];
+    XLSX.utils.book_append_sheet(wb, w, (l.staff.prenom + ' ' + (l.staff.nom || '')).replace(/[\\\/\?\*\[\]:]/g, '').slice(0, 31));
+  });
+  XLSX.writeFile(wb, 'ForestRangers_Equipe_' + RM.mois + '.xlsx');
+}
+
+// ── Export PDF : un fichier pour l'équipe (récapitulatif + une page par salarié) ──
+function rmPdf() {
+  if (!RM) return;
+  if (typeof html2pdf === 'undefined') { showToast('Export PDF indisponible (bibliothèque non chargée)', 'red'); return; }
+  var entete = '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #ff5f1f;padding-bottom:8px;margin-bottom:12px;">'
+    + '<div><div style="font-size:16px;font-weight:800;">ARCANIN S.à r.l. — Forest Rangers</div><div style="font-size:9.5px;color:#555;">42, rue de Mersch · L-8181 Kopstal · RCS B 270245 · TVA LU34907315</div></div>'
+    + '<div style="text-align:right;font-size:11px;"><b>Rapport mensuel de l\'équipe</b><br>' + rmMoisLabel() + '</div></div>';
+  var th = 'style="text-align:left;padding:5px 6px;font-size:9px;text-transform:uppercase;color:#666;border-bottom:1px solid #ccc;"';
+  var td = 'style="padding:5px 6px;border-bottom:1px solid #e5e5e5;font-size:10px;"';
+  var rec = '<table style="width:100%;border-collapse:collapse;margin-bottom:10px;"><thead><tr>' + ['Salarié', 'Jours', 'Heures', 'Contrat', 'Justifiées', 'Écart', 'Sorties', 'Chiens', 'Moy./sortie', 'Missions +', 'Congés / absences'].map(function(x) { return '<th ' + th + '>' + x + '</th>'; }).join('') + '</tr></thead><tbody>'
+    + RM.lignes.map(function(l) { var t = l.t; return '<tr><td ' + td + '><b>' + echapper(l.staff.prenom + ' ' + (l.staff.nom || '')) + '</b></td><td ' + td + '>' + t.jours + '</td><td ' + td + '><b>' + rmHm(t.minutes) + '</b></td><td ' + td + '>' + (t.contrat ? rmHm(t.contrat) : '—') + '</td><td ' + td + '>' + (t.justifie ? rmHm(t.justifie) : '—') + '</td><td ' + td + '>' + (t.ecart == null ? '—' : (t.ecart > 0 ? '+' : '') + rmHm(t.ecart)) + '</td><td ' + td + '>' + t.sorties + '</td><td ' + td + '>' + t.chiens + '</td><td ' + td + '>' + (t.moy ? rmHm(t.moy) : '—') + '</td><td ' + td + '>' + t.missionsOk + '</td><td ' + td + '>' + (Object.keys(t.cong).map(function(k) { return RM_TYPES[k] + ' ' + t.cong[k] + ' j'; }).join(', ') || '—') + '</td></tr>'; }).join('')
+    + '</tbody></table><div style="font-size:9px;color:#666;">Heures travaillées : de « Démarrer la journée » à « Terminer la journée » (app ranger). Heures prévues : heures par semaine ÷ 5 × ' + RM.ouvres + ' jours ouvrés (jours fériés exclus). Congés, maladie et formation comptés en heures justifiées.</div>';
+  var sign = '<div style="display:flex;justify-content:space-between;margin-top:10px;font-size:10px;"><div>Signature du salarié :<br><br>__________________________</div><div>Pour ARCANIN S.à r.l. :<br><br>__________________________</div></div>';
+  var html = '<div style="font-family:Helvetica,Arial,sans-serif;color:#1c1f14;">' + '<div>' + entete + rec + '</div>'
+    + RM.lignes.map(function(l) { return '<div style="page-break-before:always;">' + entete + '<div style="font-size:13px;font-weight:700;margin-bottom:6px;">' + echapper(l.staff.prenom + ' ' + (l.staff.nom || '')) + (l.staff.type_contrat ? ' · ' + echapper(l.staff.type_contrat) : '') + '</div>' + rmDetailHtml(l, true) + sign + '</div>'; }).join('') + '</div>';
+  var el = document.createElement('div'); el.innerHTML = html; el.style.width = '1050px'; el.style.background = '#fff';
+  html2pdf().set({ margin: [8, 8, 8, 8], filename: 'ForestRangers_Equipe_' + RM.mois + '.pdf', image: { type: 'jpeg', quality: 0.95 },
+    html2canvas: { scale: 2, backgroundColor: '#ffffff' }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }, pagebreak: { mode: ['css'] } }).from(el).save();
+}
+
 // ── CONGÉS (table conges) ──
 async function loadConges() {
   var att = document.getElementById('conges-attente'), app = document.getElementById('conges-approuves');
@@ -2260,12 +2653,15 @@ async function loadConges() {
       if (s) {
         try {
           var q = await db.from('reservations').select('id', { count: 'exact', head: true })
-            .eq('ranger_nom', s.prenom).neq('statut', 'annule').lte('date_debut', c.date_fin).gte('date_fin', c.date_debut);
+            .eq('ranger_id', c.staff_id).neq('statut', 'annule').lte('date_debut', c.date_fin)
+            .or('date_fin_recurrence.gte.' + c.date_debut + ',date_fin.gte.' + c.date_debut);
           c._impact = q.count;
         } catch (e) {}
       }
     }
     approuves.forEach(function(c) { var s = noms[c.staff_id]; c._nom = s ? (s.prenom + ' ' + (s.nom || '')) : 'Ranger'; });
+    var selA = document.getElementById('ca-ranger');
+    if (selA && !selA.options.length) selA.innerHTML = (st.data || []).map(function(x) { return '<option value="' + x.id + '">' + echapper(x.prenom + ' ' + (x.nom || '')) + '</option>'; }).join('');
     att.innerHTML = attente.length ? attente.map(function(c) { return congeHtml(c, true, auj); }).join('')
       : '<div style="font-size:12.5px;color:var(--text-faint);padding:4px 0 10px;">Aucune demande en attente.</div>';
     app.innerHTML = approuves.length ? approuves.map(function(c) { return congeHtml(c, false, auj); }).join('')
@@ -2290,6 +2686,7 @@ function congeHtml(c, enAttente, auj) {
     +   '<div class="conge-dates"><svg viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>' + periodeConge(c) + (passe ? ' · Passé' : '') + '</div>'
     +   (c.motif ? '<div class="conge-reason">' + echapper(c.motif) + '</div>' : '')
     + '</div>'
+    + (c.type && c.type !== 'conge' ? '<span class="badge b-blue" style="margin-right:6px;">' + ({ maladie: 'Maladie', absence: 'Absence', formation: 'Formation', autre: 'Autre' }[c.type] || c.type) + '</span>' : '')
     + (enAttente ? '<span class="badge b-amber">En attente</span>' : '<span class="badge b-green">Approuvé</span>')
     + '</div>'
     + (enAttente
