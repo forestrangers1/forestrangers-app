@@ -1221,6 +1221,9 @@ html, body {
         <!-- Situation de compte : solde dû, avoir (rempli par renderSituationCompte) -->
         <div id="facture-situation"></div>
 
+        <!-- Avoirs : trop-payé et notes de crédit (v2.32) -->
+        <div id="factures-avoirs"></div>
+
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;margin-bottom:8px;">Factures émises</div>
 
         <div style="display:flex;gap:8px;margin-bottom:12px;">
@@ -1710,7 +1713,7 @@ function renderSettings() {
 
 // ── Conditions générales : version acceptée, PDF, acceptation ──
 var CGV_VERSION = '2026-10';
-var CGV_PDF     = 'cgv/Conditions_Generales_Forest_Rangers_2026-10.pdf';
+var CGV_PDF     = '/cgv/Conditions_Generales_Forest_Rangers_2026-10.pdf';   // absolu : fonctionne quelle que soit l'adresse de la page
 
 function blocCGV() {
   var acceptee = clientData && clientData.cgv_version === CGV_VERSION;
@@ -3745,13 +3748,14 @@ async function loadFactures(id) {
     facturesData = res.data || [];
     // v35 : détail figé (lignes) et facture du mois (mensuelle), absents de la vue
     try {
-      var fx = await db.from('factures').select('id,lignes,mensuelle').eq('client_id', id);
+      var fx = await db.from('factures').select('id,lignes,mensuelle,facture_origine_id').eq('client_id', id);
+      if (fx.error) fx = await db.from('factures').select('id,lignes,mensuelle').eq('client_id', id);
       if (!fx.error && fx.data) {
         var parId = {};
         fx.data.forEach(function(x) { parId[String(x.id)] = x; });
         facturesData.forEach(function(f) {
           var x = parId[String(f.id)];
-          if (x) { f.lignes = x.lignes; f.mensuelle = x.mensuelle; }
+          if (x) { f.lignes = x.lignes; f.mensuelle = x.mensuelle; if (x.facture_origine_id) f.facture_origine_id = x.facture_origine_id; }
         });
       }
     } catch(e) { /* sans v35 : détail recalculé comme avant */ }
@@ -3760,9 +3764,34 @@ async function loadFactures(id) {
     }
     renderSituationCompte();
     renderFactures();
+    renderAvoirsClient();
     renderAlertesAccueil();
 
   } catch(e) { console.log('Erreur factures:', e); }
+}
+
+// ── Avoirs (v2.32) : montant payé en trop + notes de crédit ──
+function renderAvoirsClient() {
+  var el = document.getElementById('factures-avoirs');
+  if (!el) return;
+  var avoir = situationCompte ? frNum(situationCompte.avoir) : 0;
+  var ncs = (facturesData || []).filter(function(f) { return f.statut === 'avoir'; });
+  // L'avoir disponible (trop-payé) est déjà affiché dans « Situation de votre compte »
+  if (!ncs.length) { el.innerHTML = ''; return; }
+  var parId = {};
+  (facturesData || []).forEach(function(f) { parId[String(f.id)] = f; });
+  var html = '<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;margin:0 0 8px;">Avoirs — notes de crédit</div>'
+    + '<div style="border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;">';
+  html += ncs.map(function(n, i) {
+    var o = parId[String(n.facture_origine_id)] || null;
+    return '<div onclick="openFactureDetail(\'' + esc(n.id) + '\')" style="padding:13px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;' + (i ? 'border-top:1px solid var(--border);' : '') + '">'
+      + '<div style="min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--text);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;">Note de crédit ' + esc(n.numero || '') + '</div>'
+      + '<div style="font-size:11px;color:var(--text-dim);margin-top:2px;">' + (o ? 'Annule la facture ' + esc(o.numero || '') + ' · ' : '') + esc(periodeLabel(n)) + (n.date_emission ? ' · ' + esc(dateCourte(n.date_emission)) : '') + '</div></div>'
+      + '<div style="text-align:right;"><div style="font-size:14px;font-weight:700;color:var(--green);margin-bottom:3px;">' + eur(Math.abs(frNum(n.total_ttc))) + '</div>'
+      + '<span class="badge b-green" style="white-space:nowrap;">Rien à payer</span></div></div>';
+  }).join('');
+  html += '</div><div style="height:18px;"></div>';
+  el.innerHTML = html;
 }
 
 // Carte « Situation de votre compte » : solde dû, virement à faire, avoir

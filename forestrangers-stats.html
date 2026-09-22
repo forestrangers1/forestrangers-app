@@ -826,7 +826,12 @@ function sectionCamionnettes(b, EV, ic) {
     var occMoy = occ.length ? Math.round(somme(occ, function(x) { return x; }) / occ.length / cap * 100) : null;
     var complets = occ.filter(function(n) { return n >= cap; }).length;
     var reste = (+v.km_prochaine_revision || 0) - (+v.km_actuel || 0);
-    var badge = function(s) { s = s || 'ok'; return '<span class="badge ' + (s === 'ok' ? 'b-green' : s === 'bas' ? 'b-amber' : 'b-red') + '">' + esc(s) + '</span>'; };
+    var badge = function(s) {
+      s = s || 'ok';
+      var cls = s === 'ok' ? 'b-green' : (s === 'surveiller' || s === 'bas') ? 'b-amber' : s === 'na' ? 'b-muted' : 'b-red';
+      var lib = { ok: 'OK', surveiller: 'À surveiller', faire: 'À faire', na: 'N/A', bas: 'Bas' }[s] || s;
+      return '<span class="badge ' + cls + '">' + esc(lib) + '</span>';
+    };
     h += '<div class="van"' + (v.active === false ? ' style="opacity:.55;"' : '') + '><div class="van-t">' + esc(v.nom) + '</div><div class="van-s">' + esc(v.immatriculation || 'Immatriculation non renseignée') + ' · ' + cap + ' places' + (v.active === false ? ' · inactive' : '') + '</div>'
       + '<div class="mini-list">'
       + '<div class="row"><span>Km sur la période</span><b>' + fmt(km) + ' km</b></div>'
