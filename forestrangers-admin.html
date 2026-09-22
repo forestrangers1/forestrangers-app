@@ -1243,51 +1243,6 @@ textarea.form-control { resize: vertical; }
       </div><!-- /factures-vue-liste -->
     </div>
 
-    <!-- ══════ STATS ══════ -->
-    <div class="page" id="page-stats">
-
-      <!-- Navigation mois -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-        <button onclick="changerMoisStats(-1)" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--text-dim);cursor:pointer;font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-size:12px;font-weight:800;">← Prec.</button>
-        <div id="stats-mois-label" style="font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-size:16px;font-weight:800;color:var(--text);">Juin 2026</div>
-        <button onclick="changerMoisStats(1)" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--text-dim);cursor:pointer;font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-size:12px;font-weight:800;">Suiv. →</button>
-      </div>
-
-      <!-- Stats KPI -->
-      <div class="stats-row" style="margin-bottom:14px;">
-        <div class="stat-card c-green"><div class="stat-accent-bar"></div><div class="stat-label">CA du mois</div><div class="stat-val" id="stats-ca-mois">—</div><div class="stat-sub" id="stats-ca-sub">Factures payees</div></div>
-        <div class="stat-card c-accent"><div class="stat-accent-bar"></div><div class="stat-label">Promenades</div><div class="stat-val" id="stats-promenades-mois">—</div><div class="stat-sub">Ce mois</div></div>
-        <div class="stat-card c-blue"><div class="stat-accent-bar"></div><div class="stat-label">Clients actifs</div><div class="stat-val" id="stats-clients-mois">—</div><div class="stat-sub">Hors testeurs</div></div>
-        <div class="stat-card c-red"><div class="stat-accent-bar"></div><div class="stat-label">Impayes</div><div class="stat-val" id="stats-impayes-mois">—</div><div class="stat-sub">A recouvrer</div></div>
-      </div>
-
-      <div class="g2">
-        <!-- Top clients du mois -->
-        <div class="card">
-          <div class="card-head"><span class="card-title" id="stats-top-title">Top clients</span></div>
-          <div id="stats-top-clients">
-            <div style="padding:20px;text-align:center;color:var(--text-faint);font-size:13px;">Chargement...</div>
-          </div>
-        </div>
-
-        <!-- Répartition services -->
-        <div class="card">
-          <div class="card-head"><span class="card-title">Repartition services</span></div>
-          <div id="stats-services" style="padding:14px 16px;">
-            <div style="text-align:center;color:var(--text-faint);font-size:13px;">Chargement...</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Annulations -->
-      <div class="card" style="margin-top:14px;">
-        <div class="card-head"><span class="card-title">Annulations · <span id="stats-annulations-mois-label"></span></span></div>
-        <div id="stats-annulations" style="padding:14px 16px;">
-          <div style="text-align:center;color:var(--text-faint);font-size:13px;">Chargement...</div>
-        </div>
-      </div>
-    </div>
-
     <!-- ══════ INVITATIONS ══════ -->
     <div class="page" id="page-invitation">
       <div style="max-width:600px;">
@@ -3183,146 +3138,10 @@ function loadParametres() {
   chargerParametresLive();
 }
 
-// ── STATS PAR MOIS ──
-var statsOffset = 0;
-var moisFrStats = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-
-function changerMoisStats(dir) {
-  statsOffset += dir;
-  loadStats();
-}
-
-async function loadStats() {
-  var now = new Date();
-  var target = new Date(now.getFullYear(), now.getMonth() + statsOffset, 1);
-  var annee = target.getFullYear();
-  var mois  = String(target.getMonth() + 1).padStart(2, '0');
-  var label = moisFrStats[target.getMonth()] + ' ' + annee;
-  var periodePrefix = annee + '-' + mois;
-
-  var labelEl = document.getElementById('stats-mois-label');
-  if (labelEl) labelEl.textContent = label;
-
-  var topTitle = document.getElementById('stats-top-title');
-  if (topTitle) topTitle.textContent = 'Top clients · ' + label;
-
-  try {
-    // CA du mois
-    var { data: factures } = await db.from('factures')
-      .select('total_ttc, client_id, clients!inner(is_test)')
-      .ilike('periode', periodePrefix + '%')
-      .eq('statut', 'payee')
-      .eq('clients.is_test', false);
-
-    var ca = factures ? factures.reduce(function(s, f) { return s + (parseFloat(f.total_ttc) || 0); }, 0) : 0;
-    var caEl = document.getElementById('stats-ca-mois');
-    if (caEl) caEl.textContent = ca.toLocaleString('fr-LU', { minimumFractionDigits: 0 }) + ' €';
-
-    // Impayes du mois
-    var { data: impayes } = await db.from('factures')
-      .select('total_ttc, clients!inner(is_test)')
-      .ilike('periode', periodePrefix + '%')
-      .eq('statut', 'impayee')
-      .eq('clients.is_test', false);
-    var nbImpayes = impayes ? impayes.length : 0;
-    var mtImpayes = impayes ? impayes.reduce(function(s, f) { return s + (parseFloat(f.total_ttc) || 0); }, 0) : 0;
-    var impayesEl = document.getElementById('stats-impayes-mois');
-    if (impayesEl) { impayesEl.textContent = nbImpayes; impayesEl.style.color = nbImpayes > 0 ? 'var(--red)' : 'var(--green)'; }
-
-    // Réservations du mois
-    var debutMois = periodePrefix + '-01';
-    var finMois   = formatDateISO(new Date(target.getFullYear(), target.getMonth()+1, 0));
-    // Séances réelles du mois (une par chien et par jour, pension en nuits)
-    await assurerCalendrier();
-    var { data: resasMois } = await db.from('reservations')
-      .select('id,service,creneau,statut,date_debut,date_fin,jours_recurrence,date_fin_recurrence,dates_exclues,client_id,chien_id')
-      .lte('date_debut', finMois)
-      .gte('date_fin', debutMois)
-      .neq('statut', 'annule');
-    var nbResas = 0;
-    for (var dm = new Date(debutMois + 'T00:00:00'); formatDateISO(dm) <= finMois; dm.setDate(dm.getDate() + 1)) {
-      nbResas += filterResasForDay(resasMois || [], formatDateISO(dm), { nuits: true }).length;
-    }
-    var promsEl = document.getElementById('stats-promenades-mois');
-    if (promsEl) promsEl.textContent = nbResas || 0;
-
-    // Clients actifs
-    var { count: nbClients } = await db.from('clients')
-      .select('*', { count: 'exact', head: true })
-      .eq('actif', true)
-      .eq('is_test', false);
-    var clientsEl = document.getElementById('stats-clients-mois');
-    if (clientsEl) clientsEl.textContent = nbClients || 0;
-
-    // Top clients
-    renderTopClients(factures || []);
-
-    // Répartition services
-    renderServicesRepartition(resas || []);
-
-    // Annulations du mois (série complète + occurrences uniques)
-    var annLabelEl = document.getElementById('stats-annulations-mois-label');
-    if (annLabelEl) annLabelEl.textContent = label;
-    var { data: annulationsSerie } = await db.from('reservations')
-      .select('annule_par, annulation_tardive, facture_pourcentage')
-      .gte('date_debut', debutMois)
-      .lte('date_debut', finMois)
-      .eq('statut', 'annule');
-    var { data: annulationsOcc } = await db.from('annulations_occurrences')
-      .select('annule_par, annulation_tardive, facture_pourcentage')
-      .gte('date_occurrence', debutMois)
-      .lte('date_occurrence', finMois);
-    renderAnnulationsStats((annulationsSerie || []).concat(annulationsOcc || []));
-
-  } catch(e) { console.log('Erreur stats:', e); }
-}
-
-function renderTopClients(factures) {
-  var container = document.getElementById('stats-top-clients');
-  if (!container) return;
-  if (!factures.length) {
-    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-faint);font-size:13px;">Aucune facture ce mois</div>';
-    return;
-  }
-  var map = {};
-  factures.forEach(function(f) {
-    var id = f.client_id;
-    if (!map[id]) map[id] = 0;
-    map[id] += parseFloat(f.total_ttc) || 0;
-  });
-  var sorted = Object.entries(map).sort(function(a,b) { return b[1]-a[1]; }).slice(0,5);
-  container.innerHTML = '<table class="tbl"><thead><tr><th>#</th><th>Client</th><th>Montant</th></tr></thead><tbody>'
-    + sorted.map(function(e, i) {
-      return '<tr><td style="color:var(--accent);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-weight:800;">' + String(i+1).padStart(2,'0') + '</td><td>' + e[0].substring(0,8) + '...</td><td style="color:var(--green);font-weight:700;">' + parseFloat(e[1]).toLocaleString('fr-LU',{minimumFractionDigits:0}) + ' €</td></tr>';
-    }).join('') + '</tbody></table>';
-}
-
-function renderAnnulationsStats(annulations) {
-  var container = document.getElementById('stats-annulations');
-  if (!container) return;
-  if (!annulations.length) {
-    container.innerHTML = '<div style="text-align:center;color:var(--text-faint);font-size:13px;">Aucune annulation ce mois</div>';
-    return;
-  }
-  var total = annulations.length;
-  var tardives = annulations.filter(function(a){ return a.annulation_tardive; }).length;
-  var parClient = annulations.filter(function(a){ return a.annule_par==='client'; }).length;
-  var parGabriel = annulations.filter(function(a){ return a.annule_par==='gabriel'; }).length;
-  var facturees = annulations.filter(function(a){ return (a.facture_pourcentage||0) > 0; }).length;
-
-  function stat(label, val, color) {
-    return '<div style="text-align:center;"><div style="font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-size:22px;font-weight:800;color:'+(color||'var(--text)')+';">'+val+'</div><div style="font-size:11px;color:var(--text-faint);margin-top:2px;">'+label+'</div></div>';
-  }
-  container.innerHTML = '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;">'
-    + stat('Total annulations', total)
-    + stat('Tardives (&lt; règle)', tardives, 'var(--red)')
-    + stat('Par le client', parClient)
-    + stat('Par Gabriel', parGabriel)
-    + '</div>'
-    + '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);text-align:center;font-size:12px;color:var(--text-dim);">'
-    + facturees + ' / ' + total + ' annulation(s) facturée(s) (totalement ou partiellement)'
-    + '</div>';
-}
+// ── STATS ──
+// La page Statistiques de l'admin affiche forestrangers-stats.html dans un
+// cadre (nav('stats')). L'ancien écran par mois, écrit dans cette page, a été
+// retiré : il faisait double emploi et masquait le cadre.
 
 function renderServicesRepartition(resas) {
   var container = document.getElementById('stats-services');
@@ -5843,7 +5662,6 @@ document.addEventListener('DOMContentLoaded', function() {
   loadClients();
   loadPlanning();
   loadChiens();
-  loadStats();
   chargerParametresLive();
   setInterval(loadDashboardStats, 5 * 60 * 1000);
 
