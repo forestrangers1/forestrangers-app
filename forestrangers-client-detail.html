@@ -40,6 +40,7 @@ try {
 <script src="fr-calendrier.js"></script>
 <script src="fr-facturation.js"></script>
 <script src="fr-email.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <!-- Repli CDN : si jsDelivr n'a pas repondu, on tente unpkg avant d'abandonner. -->
 <script>if (!window.supabase) { document.write('<scr' + 'ipt src="https://unpkg.com/@supabase/supabase-js@2"><\/scr' + 'ipt>'); }</script>
 <script>
@@ -447,6 +448,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <button class="tab" onclick="switchTab('chiens',this)">Chiens</button>
       <button class="tab" onclick="switchTab('reservations',this)">Réservations</button>
       <button class="tab" onclick="switchTab('factures',this)">Factures</button>
+      <button class="tab" onclick="switchTab('stats',this)">Stats</button>
       <button class="tab" onclick="switchTab('historique',this)">Historique</button>
       <button class="tab" onclick="switchTab('notes',this)">Notes</button>
     </div>
@@ -548,6 +550,8 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
     <!-- ── ONGLET FACTURES ── -->
     <div class="tab-panel" id="panel-factures">
+      <!-- Situation du compte (v31 : v_clients_recouvrement) — v2.32 -->
+      <div id="fact-situation"></div>
       <div class="card">
         <div class="card-head">
           <div class="card-title">Factures</div>
@@ -558,18 +562,46 @@ tr:hover td { background: rgba(255,255,255,0.02); }
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>N° Facture</th><th>Période</th><th>Montant TTC</th><th>Émise le</th><th>Échéance</th><th>Statut</th><th></th></tr></thead>
+            <thead><tr><th>N° Facture</th><th>Période</th><th>Montant TTC</th><th>Reste</th><th>Émise le</th><th>Échéance</th><th>Statut</th><th></th></tr></thead>
             <tbody>
-              <tr><td colspan="7" style="text-align:center;color:var(--td);padding:16px;">Chargement...</td></tr>
+              <tr><td colspan="8" style="text-align:center;color:var(--td);padding:16px;">Chargement...</td></tr>
             </tbody>
           </table>
         </div>
+      </div>
+
+      <!-- Avoirs : notes de crédit + trop-payé — v2.32 -->
+      <div class="card" id="avoirs-card">
+        <div class="card-head"><div class="card-title">Avoirs</div><span id="avoirs-total" style="font-size:12px;color:var(--td);"></span></div>
+        <div id="avoirs-list"><div style="padding:10px 0;font-size:12px;color:var(--tf);">Chargement…</div></div>
       </div>
 
       <!-- Journal des emails (migration v32) — masqué si la table n'existe pas -->
       <div class="card" id="emails-card" style="display:none;">
         <div class="card-head"><div class="card-title">Emails envoyés</div></div>
         <div id="emails-list"></div>
+      </div>
+    </div>
+
+    <!-- ── ONGLET STATS (v2.32) : prévisions puis historique ── -->
+    <div class="tab-panel" id="panel-stats">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">Prévisions — jusqu'à fin <span id="prev-annee"></span></div>
+          <span id="prev-avoir-info" style="font-size:11px;color:var(--td);"></span>
+        </div>
+        <div id="prev-body"><div style="padding:14px 0;font-size:12px;color:var(--tf);">Ouvrez l'onglet pour calculer…</div></div>
+        <div style="font-size:11px;color:var(--tf);line-height:1.5;margin-top:10px;">Estimation d'après les réservations enregistrées, au tarif en vigueur à chaque date. Les réservations ponctuelles pas encore prises n'y figurent pas : c'est un minimum. Un mois déjà facturé affiche la facture. L'avoir disponible est déduit du premier mois à facturer, puis du suivant s'il reste.</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Historique — 12 derniers mois</div><span id="hist-total" style="font-size:12px;color:var(--td);"></span></div>
+        <div style="position:relative;height:220px;"><canvas id="hist-ca"></canvas></div>
+        <div style="font-size:11px;color:var(--tf);margin-top:6px;">Barres : montant facturé (factures annulées exclues). Ligne : montant des séances réalisées selon le planning.</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Séances par service — 12 derniers mois</div></div>
+        <div style="position:relative;height:220px;"><canvas id="hist-svc"></canvas></div>
+        <div id="hist-resume" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:14px;"></div>
       </div>
     </div>
 
@@ -849,6 +881,7 @@ function switchTab(id, btn) {
   document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
   btn.classList.add('active');
   document.getElementById('panel-' + id).classList.add('active');
+  if (id === 'stats') chargerStatsClient();
 }
 
 // ── CONSTANTES ──
@@ -979,9 +1012,9 @@ async function loadClient(id) {
       .select('*')
       .eq('client_id', id)
       .order('created_at', { ascending: false });
-    loadFactures(factures || []);
+    await loadFactures(factures || []);
     loadJournalEmails();
-    var nbImpayes = factures ? factures.filter(function(f) { return f.statut === 'impayee'; }).length : 0;
+    var nbImpayes = factures ? factures.filter(function(f) { return f.statut !== 'brouillon' && resteFacture(f) > 0; }).length : 0;
     document.getElementById('stat-factures').textContent = nbImpayes;
     if (nbImpayes > 0) document.getElementById('stat-factures').style.color = 'var(--red)';
 
@@ -1565,29 +1598,367 @@ async function loadJournalEmails() {
   } catch (_) { card.style.display = 'none'; }
 }
 
-function loadFactures(factures) {
+// ══════════════════════════════════════════════════════════════
+//  FACTURES, AVOIRS, SITUATION (v2.32)
+//  Statuts : payee, impayee, brouillon, annulee (facture annulée par
+//  une note de crédit), avoir (la note de crédit elle-même).
+//  Reste à payer et échéances : v_factures_suivi. Avoir disponible
+//  (trop-payé) et dernier virement : v_clients_recouvrement.
+// ══════════════════════════════════════════════════════════════
+var FACTURES_CLIENT = null;
+var SUIVI_CLIENT = {};
+var SITUATION_CLIENT = null;
+var MOIS_CD = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+
+function eurC(x) {
+  var v = Math.round((+x || 0) * 100) / 100;
+  return v.toLocaleString('fr-LU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+}
+function eurC0(x) { return Math.round(+x || 0).toLocaleString('fr-LU') + ' €'; }
+function dateC(d) {
+  if (!d) return '—';
+  var x = new Date(String(d).length <= 10 ? d + 'T12:00:00' : d);
+  return isNaN(x) ? '—' : x.toLocaleDateString('fr-LU', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+function moisC(per, court) {
+  if (!per || !/^\d{4}-\d{2}/.test(per)) return per || '—';
+  var p = per.split('-'), m = MOIS_CD[parseInt(p[1], 10) - 1] || '';
+  if (court) return ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'][parseInt(p[1], 10) - 1] + ' ' + p[0].slice(2);
+  return m.charAt(0).toUpperCase() + m.slice(1) + ' ' + p[0];
+}
+function estFactureValide(f) { return f && f.statut !== 'annulee' && f.statut !== 'avoir'; }
+function resteFacture(f) {
+  if (!estFactureValide(f)) return 0;
+  var s = SUIVI_CLIENT[f.id];
+  if (s && s.solde != null) return +s.solde || 0;
+  if (f.statut === 'payee') return 0;
+  return Math.max(0, (+f.total_ttc || 0) + (+f.frais_dossier || 0) - (+f.montant_paye || 0));
+}
+
+async function loadFactures(factures) {
+  FACTURES_CLIENT = factures || [];
+  SUIVI_CLIENT = {};
+  try {
+    var v = await db.from('v_factures_suivi').select('id,solde,jours_retard,date_echeance,etape').eq('client_id', clientId);
+    if (!v.error) (v.data || []).forEach(function(x) { SUIVI_CLIENT[x.id] = x; });
+  } catch (e) {}
+  try {
+    var sc = await db.from('v_clients_recouvrement').select('*').eq('client_id', clientId).maybeSingle();
+    SITUATION_CLIENT = sc.error ? null : sc.data;
+  } catch (e) { SITUATION_CLIENT = null; }
+  renderSituationClient();
+  renderTableFactures();
+  renderAvoirsClient();
+}
+
+function renderSituationClient() {
+  var el = document.getElementById('fact-situation');
+  if (!el) return;
+  var S = SITUATION_CLIENT;
+  if (!S) { el.innerHTML = ''; return; }
+  var du = +S.solde_du || 0, av = +S.avoir || 0;
+  function tuile(label, val, couleur, sous) {
+    return '<div class="stat-card" style="text-align:left;">'
+      + '<div class="stat-label" style="margin:0 0 6px;">' + label + '</div>'
+      + '<div class="stat-val" style="font-size:20px;color:' + couleur + ';">' + val + '</div>'
+      + (sous ? '<div style="font-size:10.5px;color:var(--tf);margin-top:4px;">' + sous + '</div>' : '')
+      + '</div>';
+  }
+  el.innerHTML = '<div class="stats-row" style="margin-bottom:14px;">'
+    + tuile('Solde dû', eurC(du), du > 0 ? 'var(--red)' : 'var(--green)', du > 0 ? (S.nb_factures_ouvertes || 0) + ' facture' + ((S.nb_factures_ouvertes || 0) > 1 ? 's' : '') + ' ouverte' + ((S.nb_factures_ouvertes || 0) > 1 ? 's' : '') : 'À jour')
+    + tuile('Avoir disponible', eurC(av), av > 0 ? 'var(--green)' : 'var(--td)', av > 0 ? 'Déduit de la prochaine facture' : 'Aucun trop-payé')
+    + tuile('Dernier virement', dateC(S.dernier_virement), 'var(--tx)', '')
+    + tuile('Plus ancien retard', S.jours_plus_ancienne && du > 0 ? S.jours_plus_ancienne + ' j' : '—', S.jours_plus_ancienne > 30 && du > 0 ? 'var(--red)' : 'var(--tx)', S.reservations_suspendues ? '<span style="color:var(--red);">Réservations suspendues</span>' : (S.suspension_possible ? '<span style="color:var(--amber);">Suspension possible</span>' : ''))
+    + '</div>';
+}
+
+function renderTableFactures() {
   var tbody = document.querySelector('#panel-factures table tbody');
   if (!tbody) return;
-  if (factures.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--td);padding:16px;">Aucune facture</td></tr>';
+  var factures = FACTURES_CLIENT || [];
+  if (!factures.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--td);padding:16px;">Aucune facture</td></tr>';
     return;
   }
-  var badges = { payee: 'b-green', impayee: 'b-amber', en_attente: 'b-amber' };
-  var labels = { payee: 'Payée', impayee: 'Impayée', en_attente: 'En attente' };
-  var moisFR = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  var parId = {};
+  factures.forEach(function(f) { parId[f.id] = f; });
+  var ncDe = {};
+  factures.forEach(function(f) { if (f.facture_origine_id) ncDe[f.facture_origine_id] = f; });
   tbody.innerHTML = factures.map(function(f) {
-    var badge = badges[f.statut] || 'b-muted';
-    var label = labels[f.statut] || f.statut;
-    var montant = f.total_ttc ? parseFloat(f.total_ttc).toLocaleString('fr-LU', { minimumFractionDigits: 2 }) + ' €' : '—';
-    var emise = f.created_at ? new Date(f.created_at).toLocaleDateString('fr-LU', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-    var periode = '—';
-    if (f.periode) {
-      var pp = f.periode.split('-');
-      var mIdx = parseInt(pp[1], 10) - 1;
-      periode = (moisFR[mIdx] ? (moisFR[mIdx].charAt(0).toUpperCase() + moisFR[mIdx].slice(1)) : f.periode) + ' ' + pp[0];
+    var s = SUIVI_CLIENT[f.id] || {};
+    var reste = resteFacture(f);
+    var total = +f.total_ttc || 0;
+    var badge = 'b-muted', label = f.statut || '—', sous = '';
+    if (f.statut === 'avoir') {
+      badge = 'b-blue'; label = 'Note de crédit';
+      var o = parId[f.facture_origine_id];
+      sous = 'Annule la facture ' + (o ? (o.numero || o.numero_facture) : '');
+    } else if (f.statut === 'annulee') {
+      badge = 'b-muted'; label = 'Annulée';
+      var nc = ncDe[f.id];
+      sous = nc ? 'Par la note de crédit ' + (nc.numero || nc.numero_facture) : '';
+      if (f.annulation_motif) sous += (sous ? ' · ' : '') + escA(f.annulation_motif);
+    } else if (f.statut === 'brouillon') {
+      label = 'Brouillon';
+    } else if (f.statut === 'payee' || (reste <= 0 && total > 0)) {
+      badge = 'b-green'; label = 'Payée';
+      if (f.date_paiement) sous = 'le ' + dateC(f.date_paiement);
+    } else if ((+s.jours_retard || 0) > 0) {
+      badge = 'b-red'; label = 'En retard · ' + s.jours_retard + ' j';
+    } else if (reste > 0 && reste < total) {
+      badge = 'b-amber'; label = 'Partiellement payée';
+    } else {
+      badge = 'b-amber'; label = 'À payer';
     }
-    return '<tr><td class="td-main" style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;color:var(--accent);">' + (f.numero || '—') + '</td><td>' + periode + '</td><td class="td-main">' + montant + '</td><td>' + emise + '</td><td>—</td><td><span class="badge ' + badge + '">' + label + '</span></td><td><button class="btn btn-accent-outline" style="width:auto;padding:4px 10px;font-size:10px;" onclick="voirFactureFiche(\'' + f.id + '\')">Voir</button></td></tr>';
+    var barre = (f.statut === 'annulee') ? 'text-decoration:line-through;opacity:0.6;' : '';
+    var couleurMt = f.statut === 'avoir' ? 'var(--blue)' : 'var(--tx)';
+    var resteTxt = estFactureValide(f) && f.statut !== 'brouillon' ? (reste > 0 ? '<span style="color:var(--red);font-weight:700;">' + eurC(reste) + '</span>' : '<span style="color:var(--green);">0,00 €</span>') : '—';
+    return '<tr>'
+      + '<td class="td-main" style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;color:var(--accent);">' + escA(f.numero || f.numero_facture || '—') + '</td>'
+      + '<td>' + moisC(f.periode) + '</td>'
+      + '<td class="td-main" style="color:' + couleurMt + ';' + barre + '">' + eurC(total) + '</td>'
+      + '<td>' + resteTxt + '</td>'
+      + '<td>' + dateC(f.date_emission || f.created_at) + '</td>'
+      + '<td>' + (estFactureValide(f) ? dateC(f.date_echeance || s.date_echeance) : '—') + '</td>'
+      + '<td><span class="badge ' + badge + '">' + label + '</span>' + (sous ? '<div style="font-size:10.5px;color:var(--tf);margin-top:3px;">' + sous + '</div>' : '') + '</td>'
+      + '<td><button class="btn btn-accent-outline" style="width:auto;padding:4px 10px;font-size:10px;" onclick="voirFactureFiche(\'' + f.id + '\')">Voir</button></td>'
+      + '</tr>';
   }).join('');
+}
+
+function renderAvoirsClient() {
+  var box = document.getElementById('avoirs-list');
+  var tot = document.getElementById('avoirs-total');
+  if (!box) return;
+  var factures = FACTURES_CLIENT || [];
+  var parId = {};
+  factures.forEach(function(f) { parId[f.id] = f; });
+  var ncs = factures.filter(function(f) { return f.statut === 'avoir'; });
+  var av = SITUATION_CLIENT ? (+SITUATION_CLIENT.avoir || 0) : 0;
+  var h = '';
+  h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:8px;background:' + (av > 0 ? 'var(--gd)' : 'var(--s2)') + ';margin-bottom:10px;">'
+     + '<div><div style="font-size:12.5px;font-weight:700;color:var(--tx);">Avoir disponible (trop-payé)</div>'
+     + '<div style="font-size:11px;color:var(--td);">' + (av > 0 ? 'Déduit automatiquement de la prochaine facture' : 'Aucun montant payé en trop') + '</div></div>'
+     + '<div style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:18px;color:' + (av > 0 ? 'var(--green)' : 'var(--td)') + ';">' + eurC(av) + '</div></div>';
+  if (!ncs.length) {
+    h += '<div style="font-size:12px;color:var(--tf);padding:4px 2px;">Aucune note de crédit.</div>';
+  } else {
+    h += '<div class="table-wrap"><table><thead><tr><th>Note de crédit</th><th>Facture annulée</th><th>Période</th><th>Montant</th><th>Émise le</th><th>Motif</th><th></th></tr></thead><tbody>'
+      + ncs.map(function(n) {
+          var o = parId[n.facture_origine_id] || {};
+          return '<tr><td class="td-main" style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;color:var(--blue);">' + escA(n.numero || n.numero_facture || '—') + '</td>'
+            + '<td>' + escA(o.numero || o.numero_facture || '—') + '</td>'
+            + '<td>' + moisC(n.periode || o.periode) + '</td>'
+            + '<td class="td-main" style="color:var(--blue);">' + eurC(Math.abs(+n.total_ttc || 0)) + '</td>'
+            + '<td>' + dateC(n.date_emission || n.created_at) + '</td>'
+            + '<td style="font-size:11.5px;color:var(--td);">' + escA(o.annulation_motif || n.annulation_motif || '—') + '</td>'
+            + '<td><button class="btn btn-accent-outline" style="width:auto;padding:4px 10px;font-size:10px;" onclick="voirFactureFiche(\'' + n.id + '\')">Voir</button></td></tr>';
+        }).join('') + '</tbody></table></div>';
+  }
+  box.innerHTML = h;
+  if (tot) tot.textContent = ncs.length ? ncs.length + ' note' + (ncs.length > 1 ? 's' : '') + ' de crédit · ' + eurC(ncs.reduce(function(s, n) { return s + Math.abs(+n.total_ttc || 0); }, 0)) : '';
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ONGLET STATS (v2.32) — prévisions jusqu'à fin d'année + historique
+//  Même moteur que la facture (fr-facturation.js) : données chargées une
+//  fois sur toute la plage, puis calcul mois par mois.
+// ══════════════════════════════════════════════════════════════
+var _statsClientEtat = 0;   // 0 = jamais, 1 = en cours, 2 = fait
+var _chartsClient = {};
+var _prevClient = [];
+
+function perDe(an, m0) { return an + '-' + String(m0 + 1).padStart(2, '0'); }
+function factureDuMois(per) {
+  return (FACTURES_CLIENT || []).find(function(f) {
+    return f.periode === per && estFactureValide(f) && (f.mensuelle === true || (f.mensuelle == null && /^Auto/.test(f.notes || '')));
+  }) || null;
+}
+
+async function chargerStatsClient(force) {
+  if (!clientId || !window.FR_FACT) return;
+  if (_statsClientEtat === 1 || (_statsClientEtat === 2 && !force)) return;
+  _statsClientEtat = 1;
+  var body = document.getElementById('prev-body');
+  if (body) body.innerHTML = '<div style="padding:14px 0;font-size:12px;color:var(--tf);">Calcul des prévisions…</div>';
+  try {
+    // Les factures sont chargées par loadClient : on attend qu'elles soient là
+    for (var w = 0; w < 50 && FACTURES_CLIENT === null; w++) await new Promise(function(r) { setTimeout(r, 100); });
+    var now = new Date(), an = now.getFullYear(), m0 = now.getMonth();
+    var auj = FR_FACT.aujourdhui();
+    document.getElementById('prev-annee').textContent = an;
+
+    // Mois à prévoir : du mois en cours à décembre (au moins deux mois)
+    var aPrevoir = [];
+    for (var m = m0; m <= 11; m++) aPrevoir.push(perDe(an, m));
+    if (aPrevoir.length < 2) aPrevoir.push(perDe(an + 1, 0));
+    // Historique : 12 derniers mois, mois en cours compris
+    var hist = [];
+    for (var k = 11; k >= 0; k--) { var dh = new Date(an, m0 - k, 1); hist.push(perDe(dh.getFullYear(), dh.getMonth())); }
+
+    var debut = FR_FACT.periodeMois(hist[0]).debut;
+    var fin = FR_FACT.periodeMois(aPrevoir[aPrevoir.length - 1]).fin;
+    var d = await FR_FACT.chargerDonnees(db, clientId, debut, fin);
+    var calc = {};
+    hist.concat(aPrevoir).forEach(function(per) {
+      if (calc[per]) return;
+      var b = FR_FACT.periodeMois(per);
+      calc[per] = FR_FACT.calculer(d, b.debut, b.fin, { label: b.label });
+    });
+
+    // ── Prévisions ──
+    var avoirReste = SITUATION_CLIENT ? (+SITUATION_CLIENT.avoir || 0) : 0;
+    document.getElementById('prev-avoir-info').textContent = avoirReste > 0 ? 'Avoir disponible : ' + eurC(avoirReste) : '';
+    _prevClient = aPrevoir.map(function(per) {
+      var f = factureDuMois(per), c = calc[per];
+      var ligne = { per: per, facture: f, calc: c, seances: c.nb_seances, annulees: c.nb_annulees };
+      if (f) {
+        ligne.montant = +f.total_ttc || 0; ligne.avoir = 0; ligne.net = resteFacture(f);
+      } else {
+        ligne.montant = c.total_ttc;
+        ligne.avoir = Math.min(avoirReste, ligne.montant); avoirReste -= ligne.avoir;
+        ligne.net = ligne.montant - ligne.avoir;
+        if (per === perDe(an, m0)) {
+          ligne.realise = c.seances.reduce(function(s, x) { return s + (x.date <= auj && x.presents.length ? (+x.montant || 0) : 0); }, 0);
+        }
+      }
+      return ligne;
+    });
+    renderPrevisionsClient(an);
+
+    // ── Historique ──
+    var factureParMois = {}, realiseParMois = {}, svcParMois = { walking: [], daycare: [], boarding: [] };
+    var cumul = { walking: 0, daycare: 0, boarding: 0, annulees: 0, horsZone: 0, transport: 0, facture: 0 };
+    hist.forEach(function(per, i) {
+      factureParMois[per] = (FACTURES_CLIENT || []).filter(function(f) { return f.periode === per && estFactureValide(f) && f.statut !== 'brouillon'; })
+        .reduce(function(s, f) { return s + (+f.total_ttc || 0); }, 0);
+      cumul.facture += factureParMois[per];
+      var c = calc[per];
+      realiseParMois[per] = c.total_ttc;
+      ['walking', 'daycare', 'boarding'].forEach(function(svc) {
+        var n = c.seances.filter(function(x) { return x.service === svc && x.presents.length; }).length;
+        svcParMois[svc][i] = n; cumul[svc] += n;
+      });
+      cumul.annulees += c.nb_annulees;
+      c.lignes.forEach(function(l) {
+        if (l.type === 'supplement') cumul.horsZone += l.qte;
+        if (l.type === 'transport') cumul.transport += l.qte;
+      });
+    });
+    document.getElementById('hist-total').textContent = 'Facturé : ' + eurC0(cumul.facture);
+    dessinerHistoriqueClient(hist, factureParMois, realiseParMois, svcParMois);
+    function tuile(l, v) { return '<div style="background:var(--s2);border-radius:8px;padding:10px;"><div style="font-size:10px;color:var(--tf);text-transform:uppercase;letter-spacing:0.08em;">' + l + '</div><div style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:18px;color:var(--tx);margin-top:3px;">' + v + '</div></div>'; }
+    document.getElementById('hist-resume').innerHTML =
+        tuile('Dog Walking', cumul.walking) + tuile('Day Care', cumul.daycare) + tuile('Boarding (nuits)', cumul.boarding)
+      + tuile('Annulations', cumul.annulees) + tuile('Trajets hors zone', cumul.horsZone) + tuile('Transports Day Care', cumul.transport);
+    _statsClientEtat = 2;
+  } catch (e) {
+    console.error('Stats client :', e);
+    _statsClientEtat = 0;
+    if (body) body.innerHTML = '<div style="padding:14px 0;font-size:12px;color:var(--red);">Prévisions indisponibles : ' + escA(e.message || e) + '</div>';
+  }
+}
+
+function renderPrevisionsClient(an) {
+  var body = document.getElementById('prev-body');
+  if (!body) return;
+  var P = _prevClient;
+  var factureAnnee = (FACTURES_CLIENT || []).filter(function(f) {
+    return f.periode && f.periode.slice(0, 4) === String(an) && estFactureValide(f) && f.statut !== 'brouillon'
+      && !P.some(function(p) { return p.per === f.periode; });
+  }).reduce(function(s, f) { return s + (+f.total_ttc || 0); }, 0);
+  var prevuAnnee = P.filter(function(p) { return p.per.slice(0, 4) === String(an); }).reduce(function(s, p) { return s + p.montant; }, 0);
+  var totMontant = 0, totAvoir = 0, totNet = 0;
+  var h = '<div class="stats-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px;">'
+    + '<div class="stat-card"><div class="stat-val" style="font-size:20px;">' + eurC0(factureAnnee) + '</div><div class="stat-label">Facturé ' + an + ' (mois clos)</div></div>'
+    + '<div class="stat-card"><div class="stat-val" style="font-size:20px;color:var(--accent);">' + eurC0(prevuAnnee) + '</div><div class="stat-label">Prévu d\'ici décembre</div></div>'
+    + '<div class="stat-card"><div class="stat-val" style="font-size:20px;color:var(--green);">' + eurC0(factureAnnee + prevuAnnee) + '</div><div class="stat-label">Total estimé ' + an + '</div></div>'
+    + '</div>';
+  h += '<div class="table-wrap"><table><thead><tr><th>Mois</th><th>Séances</th><th>Montant TTC</th><th>Avoir déduit</th><th>Net à payer</th><th>État</th></tr></thead><tbody>';
+  P.forEach(function(p, i) {
+    totMontant += p.montant; totAvoir += p.avoir; totNet += p.net;
+    var etat;
+    if (p.facture) {
+      var reste = resteFacture(p.facture);
+      etat = '<span class="badge ' + (reste > 0 ? 'b-amber' : 'b-green') + '">Facturée · ' + escA(p.facture.numero || p.facture.numero_facture || '') + (reste > 0 ? '' : ' · payée') + '</span>';
+    } else if (i === 0 && p.realise != null) {
+      etat = '<span class="badge b-accent">En cours · ' + eurC0(p.realise) + ' réalisés</span>';
+    } else {
+      etat = '<span class="badge b-muted">Estimation</span>';
+    }
+    var seances = p.seances + (p.annulees ? ' <span style="color:var(--tf);font-size:10.5px;">+' + p.annulees + ' annulée' + (p.annulees > 1 ? 's' : '') + '</span>' : '');
+    h += '<tr style="cursor:pointer;" onclick="basculerDetailPrev(' + i + ')">'
+      + '<td class="td-main">' + moisC(p.per) + ' <span style="color:var(--tf);font-size:10px;">▾</span></td>'
+      + '<td>' + seances + '</td>'
+      + '<td class="td-main">' + eurC(p.montant) + '</td>'
+      + '<td style="color:' + (p.avoir > 0 ? 'var(--green)' : 'var(--tf)') + ';">' + (p.avoir > 0 ? '− ' + eurC(p.avoir) : '—') + '</td>'
+      + '<td class="td-main" style="color:var(--accent);">' + eurC(p.net) + '</td>'
+      + '<td>' + etat + '</td></tr>'
+      + '<tr id="prev-detail-' + i + '" style="display:none;"><td colspan="6" style="background:var(--s2);padding:10px 14px;">' + detailPrev(p) + '</td></tr>';
+  });
+  h += '<tr style="border-top:2px solid var(--bd2);"><td class="td-main">Total</td><td></td><td class="td-main">' + eurC(totMontant) + '</td>'
+    + '<td style="color:var(--green);">' + (totAvoir > 0 ? '− ' + eurC(totAvoir) : '—') + '</td><td class="td-main" style="color:var(--accent);">' + eurC(totNet) + '</td><td></td></tr>';
+  h += '</tbody></table></div>';
+  var S = SITUATION_CLIENT;
+  if (S && (+S.solde_du || 0) > 0) {
+    h += '<div style="margin-top:10px;font-size:12px;color:var(--red);">À cela s\'ajoute le solde dû actuel : ' + eurC(S.solde_du) + '.</div>';
+  }
+  body.innerHTML = h;
+}
+
+function detailPrev(p) {
+  if (p.facture) {
+    var lignesF = Array.isArray(p.facture.lignes) ? p.facture.lignes : [];
+    if (!lignesF.length) return '<div style="font-size:12px;color:var(--td);">Facture ' + escA(p.facture.numero || '') + ' — ouvrez-la avec « Voir » dans l\'onglet Factures.</div>';
+    return lignesF.map(function(l) {
+      return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;"><span>' + escA(l.label || l.description || '') + (l.sousLabel ? ' <span style="color:var(--tf);">· ' + escA(l.sousLabel) + '</span>' : '') + '</span><span>' + eurC(l.total != null ? l.total : l.montant) + '</span></div>';
+    }).join('');
+  }
+  if (!p.calc.lignes.length) return '<div style="font-size:12px;color:var(--td);">Aucune réservation enregistrée sur ce mois.</div>';
+  return p.calc.lignes.map(function(l) {
+    return '<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:3px 0;' + (l.type === 'annulation' ? 'color:var(--red);' : '') + '"><span>' + escA(l.label) + ' <span style="color:var(--tf);">· ' + escA(l.sousLabel || '') + '</span></span><span style="white-space:nowrap;">' + eurC(l.total) + '</span></div>';
+  }).join('');
+}
+function basculerDetailPrev(i) {
+  var tr = document.getElementById('prev-detail-' + i);
+  if (tr) tr.style.display = tr.style.display === 'none' ? '' : 'none';
+}
+
+function couleurCss(nom, repli) {
+  var v = getComputedStyle(document.documentElement).getPropertyValue(nom).trim();
+  return v || repli;
+}
+function dessinerHistoriqueClient(hist, factureParMois, realiseParMois, svcParMois) {
+  if (!window.Chart) return;
+  var labels = hist.map(function(p) { return moisC(p, true); });
+  var tx = couleurCss('--td', '#999'), grid = couleurCss('--bd', 'rgba(128,128,128,0.15)');
+  var acc = couleurCss('--accent', '#ff5f1f'), gr = couleurCss('--green', '#5ec97a'), bl = couleurCss('--blue', '#5a9ae0'), am = couleurCss('--amber', '#f0b429');
+  var echelles = {
+    x: { ticks: { color: tx, font: { size: 10 } }, grid: { display: false } },
+    y: { beginAtZero: true, ticks: { color: tx, font: { size: 10 } }, grid: { color: grid } }
+  };
+  Object.keys(_chartsClient).forEach(function(k) { try { _chartsClient[k].destroy(); } catch (e) {} });
+  _chartsClient.ca = new Chart(document.getElementById('hist-ca'), {
+    data: { labels: labels, datasets: [
+      { type: 'bar', label: 'Facturé', data: hist.map(function(p) { return Math.round(factureParMois[p]); }), backgroundColor: acc, borderRadius: 4, maxBarThickness: 26 },
+      { type: 'line', label: 'Réalisé (planning)', data: hist.map(function(p) { return Math.round(realiseParMois[p]); }), borderColor: gr, backgroundColor: gr, tension: 0.3, pointRadius: 3, borderWidth: 2 }
+    ] },
+    options: { responsive: true, maintainAspectRatio: false, animation: { duration: 250 }, interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { labels: { color: tx, boxWidth: 10, font: { size: 11 } } },
+        tooltip: { callbacks: { label: function(c) { return c.dataset.label + ' : ' + eurC0(c.parsed.y); } } } },
+      scales: echelles }
+  });
+  _chartsClient.svc = new Chart(document.getElementById('hist-svc'), {
+    type: 'bar',
+    data: { labels: labels, datasets: [
+      { label: 'Dog Walking', data: svcParMois.walking, backgroundColor: acc, borderRadius: 3, maxBarThickness: 26 },
+      { label: 'Day Care', data: svcParMois.daycare, backgroundColor: gr, borderRadius: 3, maxBarThickness: 26 },
+      { label: 'Boarding (nuits)', data: svcParMois.boarding, backgroundColor: bl, borderRadius: 3, maxBarThickness: 26 }
+    ] },
+    options: { responsive: true, maintainAspectRatio: false, animation: { duration: 250 }, interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { labels: { color: tx, boxWidth: 10, font: { size: 11 } } } },
+      scales: { x: Object.assign({ stacked: true }, echelles.x), y: Object.assign({ stacked: true }, echelles.y) } }
+  });
 }
 
 function loadHistorique(promenades) {

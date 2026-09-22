@@ -928,17 +928,17 @@ textarea.form-control { resize: vertical; }
           <div class="stat-val" id="stat-promenades">—</div>
           <div class="stat-sub" id="stat-promenades-sub">chargement...</div>
         </div>
-        <div class="stat-card c-green" onclick="openStatDetail('revenus')" style="cursor:pointer;" title="Voir les factures payées">
+        <div class="stat-card c-green" onclick="openStatDetail('facture_passe')" style="cursor:pointer;" title="Voir les factures du mois passé">
           <div class="stat-accent-bar"></div>
-          <div class="stat-label" id="stat-revenus-label">Revenus</div>
-          <div class="stat-val" id="stat-revenus">—</div>
-          <div class="stat-sub" id="stat-revenus-sub">chargement...</div>
+          <div class="stat-label" id="stat-facture-passe-label">Facturé — mois passé</div>
+          <div class="stat-val" id="stat-facture-passe">—</div>
+          <div class="stat-sub" id="stat-facture-passe-sub">chargement...</div>
         </div>
-        <div class="stat-card c-blue" onclick="openStatDetail('clients')" style="cursor:pointer;" title="Voir les clients actifs">
+        <div class="stat-card c-blue" onclick="openStatDetail('estimation')" style="cursor:pointer;" title="Voir l'estimation par client">
           <div class="stat-accent-bar"></div>
-          <div class="stat-label">Clients actifs</div>
-          <div class="stat-val" id="stat-clients">—</div>
-          <div class="stat-sub" id="stat-clients-sub">chargement...</div>
+          <div class="stat-label" id="stat-estimation-label">Estimation — mois en cours</div>
+          <div class="stat-val" id="stat-estimation">—</div>
+          <div class="stat-sub" id="stat-estimation-sub">chargement...</div>
         </div>
         <div class="stat-card c-red" onclick="openStatDetail('impayes')" style="cursor:pointer;" title="Voir les impayés">
           <div class="stat-accent-bar"></div>
@@ -1977,23 +1977,66 @@ async function renvoyerInvitation(btn, email, prenom, langue) {
 }
 
 
+// ── CARTES « FACTURÉ — MOIS PASSÉ » ET « ESTIMATION — MOIS EN COURS » (v2.32) ──
+// Facturé : factures de la période du mois précédent (annulées, notes de
+// crédit et brouillons exclus, comptes test exclus). Estimation : même calcul
+// que la facture automatique (FR_FACT.calculerTous) sur le mois en cours.
+function perMois(decalage) {
+  var d = new Date(); d = new Date(d.getFullYear(), d.getMonth() + (decalage || 0), 1);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+function eur0(x) { return Math.round(+x || 0).toLocaleString('fr-LU') + ' €'; }
+function eur2(x) { return (Math.round((+x || 0) * 100) / 100).toLocaleString('fr-LU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; }
+async function facturesDuMois(per) {
+  var r = await db.from('factures')
+    .select('id, numero, periode, total_ttc, montant_paye, statut, client_id, clients!inner(prenom, nom, is_test)')
+    .eq('periode', per).eq('clients.is_test', false);
+  if (r.error) throw r.error;
+  return (r.data || []).filter(function(f) { return f.statut !== 'annulee' && f.statut !== 'avoir' && f.statut !== 'brouillon'; });
+}
+var _estimationCarte = null;
+async function chargerCartesFacturation() {
+  var perPasse = perMois(-1), perCourant = perMois(0);
+  var totalPasse = 0;
+  try {
+    var fp = await facturesDuMois(perPasse);
+    totalPasse = fp.reduce(function(s, f) { return s + (+f.total_ttc || 0); }, 0);
+    var encaisse = fp.reduce(function(s, f) { return s + (f.statut === 'payee' ? (+f.total_ttc || 0) : Math.min(+f.montant_paye || 0, +f.total_ttc || 0)); }, 0);
+    var mp = MOIS_FR[parseInt(perPasse.slice(5, 7), 10) - 1].toLowerCase();
+    document.getElementById('stat-facture-passe-label').textContent = 'Facturé — ' + mp;
+    document.getElementById('stat-facture-passe').textContent = eur0(totalPasse);
+    document.getElementById('stat-facture-passe-sub').textContent = fp.length
+      ? fp.length + ' facture' + (fp.length > 1 ? 's' : '') + ' · ' + eur0(encaisse) + ' encaissés'
+      : 'Aucune facture émise';
+  } catch (e) {
+    console.log('stat-facture-passe:', e);
+    document.getElementById('stat-facture-passe-sub').textContent = 'Indisponible';
+  }
+  try {
+    if (!window.FR_FACT) throw new Error('fr-facturation.js absent');
+    var b = FR_FACT.periodeMois(perCourant);
+    var est = await FR_FACT.calculerTous(db, b.debut, b.fin, { label: b.label });
+    _estimationCarte = { per: perCourant, label: b.label, data: est };
+    var mc = MOIS_FR[parseInt(perCourant.slice(5, 7), 10) - 1].toLowerCase();
+    document.getElementById('stat-estimation-label').textContent = 'Estimation — ' + mc;
+    document.getElementById('stat-estimation').textContent = eur0(est.total_ttc);
+    var nb = est.clients.length;
+    var delta = totalPasse > 0 ? Math.round((est.total_ttc - totalPasse) / totalPasse * 100) : null;
+    document.getElementById('stat-estimation-sub').textContent = nb + ' client' + (nb > 1 ? 's' : '')
+      + (delta == null ? '' : ' · ' + (delta >= 0 ? '+' : '') + delta + ' % vs mois passé');
+  } catch (e) {
+    console.log('stat-estimation:', e);
+    document.getElementById('stat-estimation-sub').textContent = 'Indisponible';
+  }
+}
+
 // ── CHARGEMENT DONNEES SUPABASE ──
 async function loadDashboardStats() {
   var today = new Date().toISOString().split('T')[0];
   var mois  = new Date().toISOString().slice(0, 7);
 
-  try {
-    // 1. Clients actifs (hors is_test)
-    var clientsRes = await db.from('clients')
-      .select('*', { count: 'exact', head: true })
-      .eq('actif', true)
-      .eq('is_test', false);
-    var nbClients = clientsRes.count || 0;
-    var el = document.getElementById('stat-clients');
-    if (el) el.textContent = nbClients;
-    var elSub = document.getElementById('stat-clients-sub');
-    if (elSub) elSub.textContent = nbClients + ' client' + (nbClients > 1 ? 's' : '') + ' actif' + (nbClients > 1 ? 's' : '');
-  } catch(e) { console.log('stat-clients:', e); }
+  // 1. Facturé le mois passé + estimation du mois en cours (v2.32)
+  chargerCartesFacturation();
 
   try {
     // 2. Total des chiens gérés aujourd'hui (promenade + day care + pension)
@@ -2043,22 +2086,6 @@ async function loadDashboardStats() {
     }
   } catch(e) { console.log('stat-impayes:', e); }
 
-  try {
-    // 4. Revenus du mois (factures payées, hors clients test)
-    var revRes = await db.from('factures')
-      .select('total_ttc, clients!inner(is_test)')
-      .ilike('periode', mois + '%')
-      .eq('statut', 'payee')
-      .eq('clients.is_test', false);
-    var total = 0;
-    if (revRes.data) revRes.data.forEach(function(f) { total += parseFloat(f.total_ttc) || 0; });
-    var elR = document.getElementById('stat-revenus');
-    if (elR) elR.textContent = total.toLocaleString('fr-LU', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' €';
-    var elRS = document.getElementById('stat-revenus-sub');
-    if (elRS) elRS.textContent = 'Encaissé ce mois · TVA incl.';
-    var elRL = document.getElementById('stat-revenus-label');
-    if (elRL) elRL.textContent = 'Revenus — ' + MOIS_FR[new Date().getMonth()].toLowerCase();
-  } catch(e) { console.log('stat-revenus:', e); }
 
   try {
     // 5. Charger planning du jour dans le tableau
@@ -6248,18 +6275,38 @@ async function openStatDetail(type) {
       var cr  = { matin: '09h00', midi: '12h00', apmidi: '14h30' };
       content.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:1px solid var(--border);"><th style="padding:8px;text-align:left;color:var(--text-faint);font-size:10px;">Client</th><th style="padding:8px;text-align:left;color:var(--text-faint);font-size:10px;">Service</th><th style="padding:8px;text-align:left;color:var(--text-faint);font-size:10px;">Creneau</th><th style="padding:8px;text-align:left;color:var(--text-faint);font-size:10px;">Ranger</th></tr></thead><tbody>'
         + data.map(function(r) { var cl = r.clients ? r.clients.prenom + ' ' + r.clients.nom : '—'; return '<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;color:var(--text);">' + cl + '</td><td style="padding:8px;color:var(--text-dim);">' + (svc[r.service]||r.service) + '</td><td style="padding:8px;color:var(--accent);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;">' + (cr[r.creneau]||r.creneau||'—') + '</td><td style="padding:8px;color:var(--text-dim);">' + (r.ranger_nom||'—') + '</td></tr>'; }).join('') + '</tbody></table>';
-    } else if (type === 'revenus') {
-      title.textContent = 'Factures payées — ' + mois.split('-').reverse().join('/');
-      var { data } = await db.from('factures').select('numero, total_ttc, created_at, clients!inner(prenom, nom, is_test)').ilike('periode', mois + '%').eq('statut', 'payee').eq('clients.is_test', false).order('created_at', { ascending: false });
-      if (!data || !data.length) { content.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-faint);">Aucune facture payée ce mois</div>'; return; }
-      var total = data.reduce(function(s,f) { return s + (parseFloat(f.total_ttc)||0); }, 0);
-      content.innerHTML = '<div class="stat-detail-total"><span>' + data.length + ' facture' + (data.length > 1 ? 's' : '') + ' payée' + (data.length > 1 ? 's' : '') + '</span><strong style="color:var(--green);">' + total.toLocaleString('fr-LU',{minimumFractionDigits:2}) + ' €</strong></div>'
-        + '<table style="width:100%;border-collapse:collapse;font-size:13px;">' + data.map(function(f) { var cl = f.clients ? f.clients.prenom + ' ' + f.clients.nom : '—'; var mt = parseFloat(f.total_ttc||0).toLocaleString('fr-LU',{minimumFractionDigits:2}); return '<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;color:var(--accent);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;">' + (f.numero||'—') + '</td><td style="padding:8px;color:var(--text);">' + cl + '</td><td style="padding:8px;color:var(--green);font-weight:700;">' + mt + ' €</td></tr>'; }).join('') + '</table>';
-    } else if (type === 'clients') {
-      title.textContent = 'Clients actifs';
-      var { data } = await db.from('clients').select('id, prenom, nom, commune, client_fidele, numero_client').eq('actif', true).eq('is_test', false).order('nom');
-      if (!data || !data.length) { content.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-faint);">Aucun client</div>'; return; }
-      content.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px;">' + data.map(function(c) { var badge = c.client_fidele ? '<span style="font-size:9px;background:var(--accent-dim);color:var(--accent);padding:2px 6px;border-radius:10px;">Fidele</span>' : '<span style="font-size:9px;background:var(--blue-dim);color:var(--blue);padding:2px 6px;border-radius:10px;">Nouveau</span>'; return '<tr style="border-bottom:1px solid var(--border);cursor:pointer;" onclick="document.getElementById(\'modal-stat-detail\').classList.remove(\'open\');window.location.href=\'forestrangers-client-detail.html?id=' + c.id + '&from=dashboard\'"><td style="padding:8px;color:var(--accent);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:11px;">#' + c.numero_client + '</td><td style="padding:8px;color:var(--text);">' + c.prenom + ' ' + c.nom + '</td><td style="padding:8px;color:var(--text-dim);">' + (c.commune||'—') + '</td><td style="padding:8px;">' + badge + '</td></tr>'; }).join('') + '</table>';
+    } else if (type === 'facture_passe') {
+      var perP = perMois(-1);
+      title.textContent = 'Facturé — ' + MOIS_FR[parseInt(perP.slice(5, 7), 10) - 1].toLowerCase() + ' ' + perP.slice(0, 4);
+      var fp = await facturesDuMois(perP);
+      if (!fp.length) { content.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-faint);">Aucune facture émise pour ce mois</div>'; return; }
+      fp.sort(function(a, b) { return (+b.total_ttc || 0) - (+a.total_ttc || 0); });
+      var totP = fp.reduce(function(s, f) { return s + (+f.total_ttc || 0); }, 0);
+      content.innerHTML = '<div class="stat-detail-total"><span>' + fp.length + ' facture' + (fp.length > 1 ? 's' : '') + '</span><strong style="color:var(--green);">' + eur2(totP) + '</strong></div>'
+        + '<table style="width:100%;border-collapse:collapse;font-size:13px;">' + fp.map(function(f) {
+            var cl = f.clients ? f.clients.prenom + ' ' + f.clients.nom : '—';
+            var payee = f.statut === 'payee';
+            return '<tr style="border-bottom:1px solid var(--border);cursor:pointer;" onclick="document.getElementById(\'modal-stat-detail\').classList.remove(\'open\');ouvrirFicheClient(\'' + f.client_id + '\')">'
+              + '<td style="padding:8px;color:var(--accent);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;">' + (f.numero || '—') + '</td>'
+              + '<td style="padding:8px;color:var(--text);">' + cl + '</td>'
+              + '<td style="padding:8px;color:var(--text);font-weight:700;text-align:right;">' + eur2(f.total_ttc) + '</td>'
+              + '<td style="padding:8px;text-align:right;font-size:11px;color:' + (payee ? 'var(--green)' : 'var(--amber,#f0b429)') + ';">' + (payee ? 'Payée' : 'À payer') + '</td></tr>';
+          }).join('') + '</table>';
+    } else if (type === 'estimation') {
+      if (!_estimationCarte) await chargerCartesFacturation();
+      var E = _estimationCarte;
+      if (!E) { content.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-faint);">Estimation indisponible</div>'; return; }
+      title.textContent = 'Estimation — ' + E.label;
+      if (!E.data.clients.length) { content.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-faint);">Aucune séance prévue ce mois</div>'; return; }
+      content.innerHTML = '<div class="stat-detail-total"><span>' + E.data.clients.length + ' client' + (E.data.clients.length > 1 ? 's' : '') + '</span><strong style="color:var(--blue);">' + eur2(E.data.total_ttc) + '</strong></div>'
+        + '<table style="width:100%;border-collapse:collapse;font-size:13px;">' + E.data.clients.map(function(r) {
+            var c = r.client || {};
+            return '<tr style="border-bottom:1px solid var(--border);cursor:pointer;" onclick="document.getElementById(\'modal-stat-detail\').classList.remove(\'open\');ouvrirFicheClient(\'' + c.id + '\')">'
+              + '<td style="padding:8px;color:var(--text);">' + (c.prenom || '') + ' ' + (c.nom || '') + '</td>'
+              + '<td style="padding:8px;color:var(--text-dim);font-size:11px;">' + r.nb_seances + ' séance' + (r.nb_seances > 1 ? 's' : '') + '</td>'
+              + '<td style="padding:8px;color:var(--text);font-weight:700;text-align:right;">' + eur2(r.total_ttc) + '</td></tr>';
+          }).join('') + '</table>'
+        + '<div style="font-size:11px;color:var(--text-faint);margin-top:10px;">Même calcul que la facture automatique du 1er. Réservations ponctuelles non encore prises : non comptées.</div>';
     } else if (type === 'impayes') {
       title.textContent = 'Factures impayées';
       var { data } = await db.from('factures').select('id, numero, total_ttc, created_at, periode, clients!inner(id, prenom, nom, email, is_test)').eq('statut', 'impayee').eq('clients.is_test', false).order('created_at', { ascending: true });
