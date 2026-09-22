@@ -182,4 +182,4 @@
     dansPeriode: dansPeriode,
     verdict: verdict
   };
-})(window);
+})(typeof window !== 'undefined' ? window : globalThis);
