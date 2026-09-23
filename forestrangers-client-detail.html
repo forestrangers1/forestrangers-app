@@ -989,6 +989,7 @@ async function loadClient(id) {
     loadChiens(chiens || [], c.client_fidele);
     var nbChiens = chiens ? chiens.length : 0;
     tags.innerHTML += '<span class="tag tag-accent">' + nbChiens + ' chien' + (nbChiens > 1 ? 's' : '') + '</span>';
+    if (c && c.acces_cle) tags.innerHTML += '<span class="tag" title="Clés confiées à Forest Rangers" style="font-size:14px;padding:2px 8px;">🔑</span>';
 
     // 3. Réservations
     var { data: resas } = await db.from('reservations')

@@ -927,18 +927,18 @@ html.dark .tbl th, html.dark .tbl td { border-color: rgba(255,255,255,0.08) !imp
             </div>
             <div class="field">
               <label class="field-label">Heure de dépôt <span class="req">*</span></label>
-              <select class="field-input">
-                <option>Entre 8h00 et 8h30</option>
-                <option>Entre 8h30 et 9h00</option>
+              <select class="field-input" id="dc-heure-depot">
+                <option value="08:00-08:30">Entre 8h00 et 8h30</option>
+                <option value="08:30-09:00">Entre 8h30 et 9h00</option>
               </select>
             </div>
           </div>
           <div class="form-row cols-2" style="margin-top:0;">
             <div class="field">
               <label class="field-label">Heure de récupération <span class="req">*</span></label>
-              <select class="field-input">
-                <option>Entre 16h00 et 17h00</option>
-                <option>Entre 17h00 et 18h00</option>
+              <select class="field-input" id="dc-heure-recup">
+                <option value="16:00-17:00">Entre 16h00 et 17h00</option>
+                <option value="17:00-18:00">Entre 17h00 et 18h00</option>
               </select>
             </div>
             <div class="field">
@@ -2127,8 +2127,15 @@ function buildRecap() {
       : '—';
 
     const slotEl = document.getElementById('walk-slot');
-    document.getElementById('recap-slot').textContent = slotEl?.value
-      ? slotEl.options[slotEl.selectedIndex].text : '8h00 – 18h00';
+    if (svc === 'daycare') {
+      // Day Care : heures de dépôt et de récupération choisies (v48)
+      const hd = document.getElementById('dc-heure-depot'), hr = document.getElementById('dc-heure-recup');
+      document.getElementById('recap-slot-row').style.display = 'flex';
+      document.getElementById('recap-slot').textContent = (hd ? hd.options[hd.selectedIndex].text : '') + ' → ' + (hr ? hr.options[hr.selectedIndex].text : '');
+    } else {
+      document.getElementById('recap-slot').textContent = slotEl?.value
+        ? slotEl.options[slotEl.selectedIndex].text : '8h00 – 18h00';
+    }
 
     document.getElementById('recap-validation').innerHTML = '<span class="badge b-green">Automatique</span>';
   }
@@ -2300,6 +2307,10 @@ async function saveReservation(svc, isBoarding) {
   if (svc === 'daycare') {
     const tr = transportChoisi();
     if (tr.aller || tr.retour) { base.transport_aller = tr.aller; base.transport_retour = tr.retour; }
+    // Heures de dépôt et de récupération choisies (v48)
+    const hd = document.getElementById('dc-heure-depot'), hr = document.getElementById('dc-heure-recup');
+    if (hd && hd.value) base.heure_depot = hd.value;
+    if (hr && hr.value) base.heure_recuperation = hr.value;
   }
   const recur = { jours_recurrence: jours_recurrence, date_fin_recurrence: date_fin_recurrence, recurrente: recurrente };
 
@@ -2321,6 +2332,11 @@ async function saveReservation(svc, isBoarding) {
     let error = null;
     ({ error } = await db.from('reservations').insert(buildRows(true, true)));
 
+    // Repli heures Day Care : migration v48 absente — la réservation passe, sans les heures
+    if (error && /heure_depot|heure_recuperation/i.test(error.message || '')) {
+      delete base.heure_depot; delete base.heure_recuperation;
+      ({ error } = await db.from('reservations').insert(buildRows(true, true)));
+    }
     // Repli 0 : migration v39 absente — la réservation passe, sans transport
     if (error && /transport_(aller|retour|statut)/i.test(error.message || '')) {
       console.log('Colonnes transport absentes — execute fr_migration_v39_acces_transport.sql.');
