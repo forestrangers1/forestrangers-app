@@ -501,6 +501,123 @@ html.light .badge.b-red   { background: rgba(198,40,40,0.12) !important; color: 
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Forest Rangers">
   <link rel="apple-touch-icon" href="/icon-192.png">
+<script>
+// ════════════════════════════════════════════════════════════════
+//  LANGUE DE LA PAGE (v2.48) — français ou anglais (même moteur que l'espace client)
+//  Règle de Gabriel : langue « fr » → français ; toute autre langue
+//  (en, lu, de…) → anglais. Le client peut changer dans Paramètres.
+//  Le français reste la langue source : chaque texte affiché garde son
+//  original en mémoire, la traduction se fait à l'affichage (dictionnaire
+//  exact, puis fragments pour les phrases composées : dates, nombres).
+//  Ce que le client écrit est toujours enregistré tel quel ; les messages
+//  de Gabriel et les notes restent dans leur langue (data-i18n-off).
+//  Factures PDF, emails et CGV restent en français.
+// ════════════════════════════════════════════════════════════════
+(function () {
+  'use strict';
+  var DICT = {"Connexion au serveur impossible": "Cannot connect to the server", "Votre reseau ne permet pas de charger l'application. Verifiez votre connexion,": "Your network cannot load the app. Check your connection,", "Votre reseau ne permet pas de charger l'application. Verifiez votre connexion, passez en wifi si possible, puis reessayez.": "Your network cannot load the app. Check your connection, switch to wifi if possible, then try again.", "passez en wifi si possible, puis reessayez.": "switch to wifi if possible, then try again.", "Reessayer": "Try again", "SDK Supabase indisponible": "Service unavailable", "Je me connecte en tant que": "I am logging in as", "Email ou mot de passe incorrect.": "Incorrect email or password.", "Adresse email": "Email address", "votre@email.com": "your@email.com", "Mot de passe": "Password", "Mot de passe oublié ?": "Forgot your password?", "Se connecter": "Log in", "Connexion Ranger": "Ranger login", "Accéder à mon espace": "Go to my area", "Première connexion ?": "First time here?", "Contactez Gabriel": "Contact Gabriel", "Veuillez remplir tous les champs.": "Please fill in all fields.", "Connexion au serveur indisponible. Verifiez votre reseau et reessayez.": "Server connection unavailable. Check your network and try again.", "Accès non autorisé pour ce profil.": "Access not allowed for this profile.", "Une erreur est survenue.": "An error occurred.", "Entrez votre email pour recevoir un lien de réinitialisation.": "Enter your email to receive a reset link.", "Envoi en cours…": "Sending…"};
+  var FRAG = [["Impossible de determiner votre profil (", "Could not determine your profile ("], ["Email de réinitialisation envoyé à", "Reset email sent to"], ["reseau indisponible", "network unavailable"], ["Envoi impossible :", "Could not send:"]];
+  var LETTRE = /[A-Za-zÀ-ÖØ-öø-ÿ]/;
+  var lang = ((function () { try { var v = localStorage.getItem('fr-client-lang'); if (v === 'en' || v === 'fr') return v; } catch (e) {} return null; })() || ((navigator.language || 'fr').toLowerCase().indexOf('fr') === 0 ? 'fr' : 'en'));
+  var SKIP = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, INPUT: 1 };
+  var occupe = false;
+
+  function sa(s) { return String(s || '').normalize ? String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '') : String(s || ''); }
+  function norm(s) { return String(s).replace(/\s+/g, ' ').trim(); }
+  function esc(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  var RX = FRAG.map(function (p) {
+    var a = p[0], deb = LETTRE.test(a.charAt(0)) ? '(^|[^A-Za-zÀ-ÖØ-öø-ÿ])' : '()', fin = LETTRE.test(a.charAt(a.length - 1)) ? '(?![A-Za-zÀ-ÖØ-öø-ÿ])' : '';
+    return { a: a, re: new RegExp(deb + esc(a) + fin, 'g'), b: p[1] };
+  });
+  function traduire(fr) {
+    var k = norm(fr);
+    if (!k) return fr;
+    if (DICT[k] != null) return DICT[k];
+    if (!/[a-zà-ÿ]{2}/i.test(k)) return k;
+    var out = k;
+    for (var i = 0; i < RX.length; i++) {
+      if (out.indexOf(RX[i].a) === -1) continue;
+      out = out.replace(RX[i].re, function (m, avant) { return (avant || '') + RX[i].b; });
+    }
+    // Prépositions devant une date ou un nombre
+    out = out.replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])avant le (?=\d)/g, '$1before ')
+             .replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])le (?=\d)/g, '$1on ').replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])Le (?=\d)/g, '$1On ')
+             .replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])du (?=\d)/g, '$1from ').replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])Du (?=\d)/g, '$1From ')
+             .replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])au (?=\d)/g, '$1to ').replace(/(\d) h (\d)/g, '$1:$2');
+    return out;
+  }
+  function t(fr) { return lang === 'en' ? traduire(fr) : fr; }
+  function exclu(n) { var p = n.parentElement; return !p || SKIP[p.nodeName] || !!p.closest('[data-i18n-off]'); }
+
+  function noeud(n) {
+    if (exclu(n)) return;
+    var v = n.nodeValue;
+    if (!v || !v.trim()) return;
+    if (n._fr == null) n._fr = v;
+    else if (!(v === n._aff || v === sa(n._aff))) n._fr = v;     // le code a réécrit le texte
+    var brut = n._fr, avant = (brut.match(/^\s*/) || [''])[0], apres = (brut.match(/\s*$/) || [''])[0];
+    var cible = lang === 'en' ? avant + traduire(brut) + apres : brut;
+    n._aff = cible;
+    if (v !== cible && v !== sa(cible)) { occupe = true; n.nodeValue = cible; occupe = false; }
+  }
+  function attrs(el) {
+    ['placeholder', 'title', 'aria-label'].forEach(function (a) {
+      if (!el.hasAttribute || !el.hasAttribute(a)) return;
+      var k = 'i18n' + a.replace(/-/g, ''), v = el.getAttribute(a);
+      if (el.dataset[k] == null || (v !== el.dataset[k + 'Aff'])) el.dataset[k] = v;
+      var cible = lang === 'en' ? traduire(el.dataset[k]) : el.dataset[k];
+      el.dataset[k + 'Aff'] = cible;
+      if (v !== cible) { occupe = true; el.setAttribute(a, cible); occupe = false; }
+    });
+  }
+  function scan(root) {
+    if (!root) return;
+    if (root.nodeType === 3) { noeud(root); return; }
+    if (root.nodeType !== 1 || root.closest && root.closest('[data-i18n-off]')) return;
+    var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false), n;
+    while ((n = w.nextNode())) noeud(n);
+    attrs(root);
+    var els = root.querySelectorAll ? root.querySelectorAll('[placeholder],[title],[aria-label]') : [];
+    for (var i = 0; i < els.length; i++) attrs(els[i]);
+  }
+  function demarrer() {
+    document.documentElement.setAttribute('lang', lang);
+    scan(document.body);
+    new MutationObserver(function (muts) {
+      if (occupe) return;
+      muts.forEach(function (m) {
+        if (m.type === 'characterData') noeud(m.target);
+        else if (m.type === 'attributes') attrs(m.target);
+        else for (var i = 0; i < m.addedNodes.length; i++) scan(m.addedNodes[i]);
+      });
+    }).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['placeholder', 'title', 'aria-label'] });
+  }
+  function choisir(l) {
+    l = l === 'en' ? 'en' : 'fr';
+    try { localStorage.setItem('fr-client-lang', l); } catch (e) {}
+    if (l === lang) return;
+    lang = l;
+    document.documentElement.setAttribute('lang', lang);
+    scan(document.body);
+  }
+  // Boîtes de dialogue du navigateur (confirmations, alertes)
+  ['alert', 'confirm', 'prompt'].forEach(function (f) {
+    var orig = window[f];
+    window[f] = function (msg) {
+      var args = Array.prototype.slice.call(arguments);
+      if (lang === 'en' && typeof msg === 'string') args[0] = msg.split('\n').map(function (l) { return l.trim() ? traduire(l) : l; }).join('\n');
+      return orig.apply(window, args);
+    };
+  });
+  window.FR_LANG = {
+    t: t, choisir: choisir, langue: function () { return lang; },
+    // Langue de la fiche client : « fr » → français, toute autre → anglais
+    depuisClient: function (langue) { choisir(langue && String(langue).toLowerCase() !== 'fr' ? 'en' : 'fr'); }
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', demarrer); else demarrer();
+})();
+
+</script>
 </head>
 <body>
 

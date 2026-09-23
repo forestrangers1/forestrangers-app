@@ -541,6 +541,123 @@ html.dark .tbl th, html.dark .tbl td { border-color: rgba(255,255,255,0.08) !imp
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Forest Rangers">
   <link rel="apple-touch-icon" href="/icon-192.png">
+<script>
+// ════════════════════════════════════════════════════════════════
+//  LANGUE DE LA PAGE (v2.48) — français ou anglais (même moteur que l'espace client)
+//  Règle de Gabriel : langue « fr » → français ; toute autre langue
+//  (en, lu, de…) → anglais. Le client peut changer dans Paramètres.
+//  Le français reste la langue source : chaque texte affiché garde son
+//  original en mémoire, la traduction se fait à l'affichage (dictionnaire
+//  exact, puis fragments pour les phrases composées : dates, nombres).
+//  Ce que le client écrit est toujours enregistré tel quel ; les messages
+//  de Gabriel et les notes restent dans leur langue (data-i18n-off).
+//  Factures PDF, emails et CGV restent en français.
+// ════════════════════════════════════════════════════════════════
+(function () {
+  'use strict';
+  var DICT = {"Connexion au serveur impossible": "Cannot connect to the server", "Votre reseau ne permet pas de charger l'application. Verifiez votre connexion,": "Your network cannot load the app. Check your connection,", "Votre reseau ne permet pas de charger l'application. Verifiez votre connexion, passez en wifi si possible, puis reessayez.": "Your network cannot load the app. Check your connection, switch to wifi if possible, then try again.", "passez en wifi si possible, puis reessayez.": "switch to wifi if possible, then try again.", "Reessayer": "Try again", "SDK Supabase indisponible": "Service unavailable", "Nouvelle réservation": "New booking", "Retour": "Back", "Service": "Service", "Détails": "Details", "Options": "Options", "Récapitulatif": "Summary", "Quel service souhaitez-vous reserver ?": "Which service would you like to book?", "Sélectionnez un service pour voir les disponibilités.": "Select a service to see availability.", "Promenade en groupe · Min. 3 km · Lundi–Vendredi": "Group walk · Min. 3 km · Monday–Friday", "Crèche du jour · 8h–18h · 2 promenades incluses": "Day care · 8:00–18:00 · 2 walks included", "Pension · Min. 2 nuits · Max. 5 chiens · Sans cage": "Boarding · Min. 2 nights · Max. 5 dogs · Cage-free", "Sur validation": "On approval", "Les promenades ont lieu du": "Walks take place from", "lundi au vendredi": "Monday to Friday", ", hors jours fériés luxembourgeois. Les horaires sont indicatifs — Forest Rangers fonctionne par tournées optimisées.": ", except Luxembourg public holidays. Times are approximate — Forest Rangers works in optimised rounds.", "Chienne en période de chaleur :": "Female dog in heat:", "les promenades en groupe et le Day Care ne sont pas disponibles. Seule la promenade individuelle reste possible — contactez Gabriel directement.": "group walks and Day Care are not available. Only an individual walk is possible — contact Gabriel directly.", "Continuer": "Continue", "Quel(s) chien(s) ?": "Which dog(s)?", "Sélectionné": "Selected", "Non sélectionné": "Not selected", "Si vous inscrivez plusieurs chiens, ils seront placés dans le même groupe selon les compatibilités. La réduction multi-chiens sera appliquée automatiquement.": "If you book several dogs, they will be placed in the same group depending on compatibility. The multi-dog discount is applied automatically.", "Aucun chien enregistré. Ajoutez votre chien depuis votre espace client avant de réserver.": "No dog registered. Add your dog from your client area before booking.", "En chaleur — indisponible jusqu'au": "In heat — unavailable until", "Dog Walking — Promenade en groupe": "Dog Walking — Group walk", "Votre chien sera promené avec un groupe (max. 6 chiens) sur au moins 3 km.": "Your dog will walk with a group (max. 6 dogs) over at least 3 km.", "Date et creneau": "Date and time slot", "Date": "Date", "Créneau": "Time slot", "Sélectionner...": "Select…", "Matin (récupération vers 9h00)": "Morning (pick-up around 9:00)", "Midi (récupération vers 12h00)": "Midday (pick-up around 12:00)", "Après-midi (récupération vers 14h30) — Printemps/Été": "Afternoon (pick-up around 14:30) — Spring/Summer", "Les horaires indiqués sont indicatifs. Forest Rangers fonctionne par tournées et ne peut garantir un horaire précis. Votre chien sera récupéré et ramené à votre domicile.": "The times shown are approximate. Forest Rangers works in rounds and cannot guarantee an exact time. Your dog will be picked up and brought back home.", "Recurrence": "Recurrence", "Réservation ponctuelle": "One-off booking", "Une seule fois à la date choisie.": "Just once, on the chosen date.", "Réservation récurrente": "Recurring booking", "Chaque semaine aux jours choisis, jusqu'à une date de fin.": "Every week on the chosen days, until an end date.", "Jours de la semaine": "Days of the week", "Lun": "Mon", "Mar": "Tue", "Mer": "Wed", "Jeu": "Thu", "Ven": "Fri", "Jusqu'au": "Until", "La date de fin est obligatoire.": "The end date is required.", "Toutes les occurrences seront confirmées automatiquement si la place est disponible. Si un jour est complet, vous serez notifié uniquement pour ce jour.": "All sessions are confirmed automatically if there is space. If a day is full, you will be notified for that day only.", "Pour des créneaux différents selon les jours (ex: lundi matin + vendredi midi), créez une réservation séparée par créneau.": "For different time slots on different days (e.g. Monday morning + Friday midday), create a separate booking per slot.", "Annulation — regles applicables": "Cancellation — applicable rules", "Période estivale clôturée :": "Summer closing period:", "toute annulation pendant cette période est facturée 100%, tous services confondus.": "any cancellation during this period is charged at 100%, for all services.", "Délai d'annulation": "Cancellation notice", "Facturation": "Charge", "Avant la veille à 9h00": "Before 9:00 the day before", "Gratuit": "Free", "Après la veille à 9h00": "After 9:00 the day before", "100% facturé": "100% charged", "Annulation sur place (ranger déjà arrivé)": "Cancellation on site (ranger already there)", "100% + frais déplacement 5€": "100% + €5 travel fee", "Day Care — Creche du jour": "Day Care", "Gardiennage de 8h à 18h avec 2 promenades en groupe incluses.": "Care from 8:00 to 18:00 with 2 group walks included.", "Première journée de test requise.": "First trial day required.", "Avant d'accepter votre chien en Day Care, une journée de test doit être effectuée pour évaluer sa compatibilité. Cette journée est facturée normalement. Gabriel vous confirmera la date.": "Before accepting your dog in Day Care, a trial day is needed to check compatibility. This day is charged normally. Gabriel will confirm the date.", "Date souhaitée": "Preferred date", "Heure de dépôt": "Drop-off time", "Entre 8h00 et 8h30": "Between 8:00 and 8:30", "Entre 8h30 et 9h00": "Between 8:30 and 9:00", "Heure de récupération": "Pick-up time", "Entre 16h00 et 17h00": "Between 16:00 and 17:00", "Entre 17h00 et 18h00": "Between 17:00 and 18:00", "Récupération par défaut": "Default pick-up", "Par le client à Kopstal": "By you, in Kopstal", "Le dépôt et la récupération se font à": "Drop-off and pick-up take place in", "Kopstal (siège)": "Kopstal (our base)", ". Si vous avez besoin d'un service de récupération/dépose à domicile, cochez l'option ci-dessous — Gabriel vous confirmera si c'est possible.": ". If you need a pick-up/drop-off at home, tick the option below — Gabriel will confirm whether it is possible.", "Service de recuperation / depose (optionnel)": "Pick-up / drop-off service (optional)", "Aucun transport": "No transport", "Je dépose et récupère moi-même mon chien à Kopstal.": "I drop off and pick up my dog myself in Kopstal.", "Forest Rangers vient chercher mon chien le matin": "Forest Rangers picks up my dog in the morning", "1 trajet par jour ·": "1 trip per day ·", "TTC (5 € HT).": "incl. VAT (€5 excl. VAT).", "Forest Rangers ramène mon chien le soir": "Forest Rangers brings my dog back in the evening", "Aller et retour par Forest Rangers": "Pick-up and drop-off by Forest Rangers", "2 trajets par jour ·": "2 trips per day ·", "TTC (2 × 5 € HT).": "incl. VAT (2 × €5 excl. VAT).", "Votre adresse est hors du secteur habituel : le transport est confirmé par Gabriel avant d'être facturé.": "Your address is outside our usual area: transport is confirmed by Gabriel before it is charged.", "Ponctuelle": "One-off", "Une seule journée.": "A single day.", "Récurrente — chaque semaine": "Recurring — every week", "Aux mêmes jours chaque semaine jusqu'à la date de fin choisie.": "On the same days every week until the chosen end date.", "Jours": "Days", "Le créneau 8h–18h s'applique à tous les jours sélectionnés.": "The 8:00–18:00 slot applies to all selected days.", "Pour des jours différents avec des horaires différents, créez une réservation séparée par créneau.": "For different days with different times, create a separate booking per slot.", "Délai": "Notice", "Boarding — Pension": "Boarding", "Hébergement sans cage avec 2 promenades par jour. Minimum 2 nuits. Maximum 5 chiens simultanément.": "Cage-free stay with 2 walks a day. Minimum 2 nights. Maximum 5 dogs at the same time.", "Nuitée de test requise.": "Trial night required.", "Pour tout nouveau client en pension, une nuitée de test est obligatoire afin de vérifier la compatibilité de votre chien. Cette nuitée est facturée. Une seconde peut être demandée par Gabriel si nécessaire. Le carnet de santé doit être à jour.": "For every new boarding client, a trial night is required to check your dog's compatibility. This night is charged. Gabriel may ask for a second one if needed. The health record must be up to date.", "Le service de pension est réservé aux clients": "Boarding is reserved for clients", "déjà inscrits aux promenades ou au Day Care": "already registered for walks or Day Care", "chez Forest Rangers.": "with Forest Rangers.", "Dates du sejour": "Dates of stay", "Date d'arrivée": "Arrival date", "Date de départ": "Departure date", "Durée estimée :": "Estimated length:", "nuits": "nights", "Par défaut,": "By default,", "vous déposez et récupérez votre chien à Kopstal": "you drop off and pick up your dog in Kopstal", ". La nourriture n'est pas incluse — pensez à apporter la nourriture habituelle de votre chien.": ". Food is not included — remember to bring your dog's usual food.", "Recuperation / Depose (optionnel — sur demande)": "Pick-up / drop-off (optional — on request)", "Je gère moi-même le transport": "I handle transport myself", "Je dépose et récupère mon chien à Kopstal.": "I drop off and pick up my dog in Kopstal.", "Récupération à domicile par Forest Rangers": "Pick-up at home by Forest Rangers", "Si en chemin lors d'une tournée — Gabriel confirme selon ses disponibilités. Frais éventuels.": "If on the way during a round — Gabriel confirms depending on availability. Fees may apply.", "Dépose à domicile à la fin du séjour": "Drop-off at home at the end of the stay", "Récupération + dépose à domicile": "Pick-up + drop-off at home", "Les deux soumis à confirmation de Gabriel.": "Both subject to Gabriel's confirmation.", "Délai avant le séjour": "Notice before the stay", "Plus de 30 jours avant": "More than 30 days before", "Entre 30 et 14 jours avant": "Between 30 and 14 days before", "50% facturé": "50% charged", "Moins de 14 jours avant": "Less than 14 days before", "Le nombre de places en pension est": "Boarding places are", "limité à 5 chiens par nuit": "limited to 5 dogs per night", ". Toute réservation de Boarding est soumise à": ". Every Boarding booking is subject to", "validation manuelle de Gabriel": "Gabriel's manual approval", "Notes pour cette reservation": "Notes for this booking", "Informations particulières, consignes spéciales, état de santé récent de votre chien...": "Special information, instructions, your dog's recent health…", "Conditions importantes": "Important conditions", "Veuillez prendre connaissance des points suivants avant de confirmer.": "Please read the following points before confirming.", "Conditions meteorologiques": "Weather conditions", "Alerte rouge (Meteolux) :": "Red alert (Meteolux):", "toutes les promenades peuvent être annulées.": "all walks may be cancelled.", "Alerte orange, chaleur +25°C, forte pluie ou vent :": "Orange alert, heat above 25°C, heavy rain or wind:", "durée et distance ajustées. En hiver (+5°C) : manteau obligatoire pour les petits chiens.": "length and distance adjusted. In winter (below 5°C): a coat is required for small dogs.", "Je comprends et accepte les conditions météorologiques": "I understand and accept the weather conditions", "Acces domicile": "Home access", "Vos informations d'accès enregistrées seront utilisées :": "Your saved access details will be used:", ". En cas d'absence et sans instructions claires, Forest Rangers poursuivra sa tournée. La journée sera intégralement facturée et la récupération se fera à Kopstal sur rendez-vous.": ". If you are away and there are no clear instructions, Forest Rangers will continue its round. The day will be charged in full and pick-up will be in Kopstal by appointment.", "Je confirme que l'accès à mon domicile est disponible": "I confirm that access to my home is available", "Sante et comportement": "Health and behaviour", "Mon chien est en bonne santé pour cette prestation": "My dog is in good health for this service", "Vaccins à jour, pas de maladie contagieuse, pas en période de chaleur. Mon chien porte une médaille avec un numéro de téléphone valide.": "Vaccinations up to date, no contagious disease, not in heat. My dog wears a tag with a valid phone number.", "Voir le recapitulatif": "See the summary", "Recapitulatif de votre demande": "Summary of your request", "Vérifiez les informations avant de confirmer.": "Check the details before confirming.", "Chien(s)": "Dog(s)", "Durée": "Length", "Récupération / Dépose": "Pick-up / drop-off", "Par le client": "By you", "Récurrence": "Recurrence", "Validation": "Approval", "Prix": "Price", "Estimation totale": "Total estimate", "Total estimé": "Estimated total", "Validation manuelle requise.": "Manual approval required.", "Votre demande de Boarding sera examinée par Gabriel. Vous recevrez une confirmation dans les 24h. La réservation n'est pas encore garantie.": "Your Boarding request will be reviewed by Gabriel. You will receive a confirmation within 24 hours. The booking is not guaranteed yet.", "Confirmer la demande": "Confirm the request", "Demande envoyee !": "Request sent!", "Chien": "Dog", "Statut": "Status", "Faire une autre reservation": "Make another booking", "Terminer et revenir a l'accueil": "Finish and go back to home", "Reservation enregistree. Retour a votre espace client…": "Booking saved. Back to your client area…", "Validation Gabriel requise": "Gabriel's approval required", "Automatique": "Automatic", "En attente de validation": "Awaiting approval", "Confirmé automatiquement": "Confirmed automatically", "Reservation confirmee !": "Booking confirmed!", "Demande de Boarding envoyee": "Boarding request sent", "Gabriel va examiner votre demande et vous répondra dans les 24h. Votre réservation n'est pas encore confirmée.": "Gabriel will review your request and reply within 24 hours. Your booking is not confirmed yet.", "Ponctuelle — une seule fois": "One-off — just once", "Aller et retour": "Pick-up and drop-off", "Aller (le matin)": "Pick-up (morning)", "Retour (le soir)": "Drop-off (evening)", "À définir (min. 2 nuits)": "To be set (min. 2 nights)", "Minimum 2 nuits requis": "Minimum 2 nights required", "par séance": "per session", "Matin": "Morning", "Midi": "Midday", "Après-midi": "Afternoon", "Nouvelles réservations suspendues": "New bookings suspended", "Des factures restent impayées. Vos réservations déjà confirmées sont maintenues. Les nouvelles réservations seront de nouveau possibles dès réception du paiement.": "Some invoices are still unpaid. Your confirmed bookings are kept. New bookings will be possible again as soon as payment is received.", "Voir mes factures": "See my invoices", "Demandes closes pour aujourd'hui.": "Requests closed for today.", "Aujourd'hui n'est plus reservable.": "Today can no longer be booked.", "Alerte meteo": "Weather alert", "Nouvel An.": "New Year's Day.", "Lundi de Pâques.": "Easter Monday.", "Fête du Travail.": "Labour Day.", "Journée de l'Europe.": "Europe Day.", "Ascension.": "Ascension Day.", "Lundi de Pentecôte.": "Whit Monday.", "Fête nationale.": "National Day.", "Assomption.": "Assumption Day.", "Toussaint.": "All Saints' Day.", "Noël.": "Christmas Day.", "Saint-Étienne.": "St Stephen's Day.", "Pas de service le samedi.": "No service on Saturdays.", "Pas de service le dimanche.": "No service on Sundays.", "Clés chez Forest Rangers": "Keys held by Forest Rangers", "Alarme": "Alarm", "Code :": "Code:", "Aucune consigne d'accès n'est enregistrée sur votre fiche :": "No access instructions are saved on your profile:", "précisez-la dans la note de la réservation, ou écrivez à Gabriel": "add them in the booking note, or write to Gabriel"};
+  var FRAG = [["Aucun client n'est rattaché à ce compte (clientId est null). L'espace client doit être testé depuis un vrai compte client, pas le compte admin.", "No client is linked to this account. The client area must be tested from a real client account, not the admin account."], ["Vos nouvelles réservations sont suspendues : des factures restent à régler. Vos réservations déjà confirmées sont maintenues.", "Your new bookings are suspended: some invoices are still unpaid. Your confirmed bookings are kept."], ["h00, les tournees sont lancees : la premiere date disponible est demain. Pour une demande urgente, appelez Gabriel au", ":00 the rounds have started: the first available date is tomorrow. For an urgent request, call Gabriel on"], ["Le Dog Walking et le Day Care ont lieu du lundi au vendredi. Choisissez un jour de semaine, ou appelez Gabriel au", "Dog Walking and Day Care take place Monday to Friday. Choose a weekday, or call Gabriel on"], ["h00 : les tournees sont deja lancees. Choisissez une date a partir de demain, ou appelez Gabriel au", ":00: the rounds have already started. Choose a date from tomorrow, or call Gabriel on"], ["jour férié légal, Forest Rangers est fermé. Pour une demande exceptionnelle, appelez Gabriel au", "public holiday, Forest Rangers is closed. For an exceptional request, call Gabriel on"], ["Retrouvez le solde et les coordonnées bancaires dans « Mes factures », ou contactez Gabriel.", "You will find the balance and bank details in \"My invoices\", or contact Gabriel."], ["aucune prestation sur cette période. Pour une demande exceptionnelle, appelez Gabriel au", "no service during this period. For an exceptional request, call Gabriel on"], ["a été automatiquement confirmé. Vous recevrez un rappel la veille.", "has been confirmed automatically. You will receive a reminder the day before."], ["Choisissez une autre date, ou la crèche du jour / la pension.", "Choose another date, or Day Care / Boarding."], ["Les reservations du jour meme ne sont plus acceptees passe", "Same-day bookings are no longer accepted after"], ["La crèche du jour et la pension restent disponibles.", "Day Care and Boarding remain available."], ["Pour une demande exceptionnelle, appelez Gabriel au", "For an exceptional request, call Gabriel on"], ["les promenades sont suspendues sur cette période.", "walks are suspended during this period."], ["pour une demande exceptionnelle.", "for an exceptional request."], ["Réservation non enregistrée.", "Booking not saved."], ["Réservation NON enregistrée.", "Booking NOT saved."], ["à confirmer par Gabriel", "to be confirmed by Gabriel"], ["jours non sélectionnés", "no days selected"], ["% dès le 2e chien", "% from the 2nd dog"], ["Erreur Supabase :", "Server error:"], ["Chaque semaine", "Every week"], ["€ TTC / séance", "€ incl. VAT / session"], ["· Après-midi ·", "· Afternoon ·"], ["par séance ×", "per session ×"], ["% dès le 2e)", "% from the 2nd)"], ["non définie", "not set"], ["TVA incluse", "VAT included"], ["par nuit ×", "per night ×"], ["chiens · −", "dogs · −"], ["chiens (−", "dogs (−"], ["· Matin ·", "· Morning ·"], ["jusqu'au", "until"], ["· Midi ·", "· Midday ·"], ["séances", "sessions"], ["Total :", "Total:"], ["/ jour", "/ day"], ["Passe", "After"], ["nuits", "nights"], ["Votre", "Your"]];
+  var LETTRE = /[A-Za-zÀ-ÖØ-öø-ÿ]/;
+  var lang = ((function () { try { var v = localStorage.getItem('fr-client-lang'); if (v === 'en' || v === 'fr') return v; } catch (e) {} return null; })() || 'fr');
+  var SKIP = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, INPUT: 1 };
+  var occupe = false;
+
+  function sa(s) { return String(s || '').normalize ? String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '') : String(s || ''); }
+  function norm(s) { return String(s).replace(/\s+/g, ' ').trim(); }
+  function esc(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  var RX = FRAG.map(function (p) {
+    var a = p[0], deb = LETTRE.test(a.charAt(0)) ? '(^|[^A-Za-zÀ-ÖØ-öø-ÿ])' : '()', fin = LETTRE.test(a.charAt(a.length - 1)) ? '(?![A-Za-zÀ-ÖØ-öø-ÿ])' : '';
+    return { a: a, re: new RegExp(deb + esc(a) + fin, 'g'), b: p[1] };
+  });
+  function traduire(fr) {
+    var k = norm(fr);
+    if (!k) return fr;
+    if (DICT[k] != null) return DICT[k];
+    if (!/[a-zà-ÿ]{2}/i.test(k)) return k;
+    var out = k;
+    for (var i = 0; i < RX.length; i++) {
+      if (out.indexOf(RX[i].a) === -1) continue;
+      out = out.replace(RX[i].re, function (m, avant) { return (avant || '') + RX[i].b; });
+    }
+    // Prépositions devant une date ou un nombre
+    out = out.replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])avant le (?=\d)/g, '$1before ')
+             .replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])le (?=\d)/g, '$1on ').replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])Le (?=\d)/g, '$1On ')
+             .replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])du (?=\d)/g, '$1from ').replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])Du (?=\d)/g, '$1From ')
+             .replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])au (?=\d)/g, '$1to ').replace(/(\d) h (\d)/g, '$1:$2');
+    return out;
+  }
+  function t(fr) { return lang === 'en' ? traduire(fr) : fr; }
+  function exclu(n) { var p = n.parentElement; return !p || SKIP[p.nodeName] || !!p.closest('[data-i18n-off]'); }
+
+  function noeud(n) {
+    if (exclu(n)) return;
+    var v = n.nodeValue;
+    if (!v || !v.trim()) return;
+    if (n._fr == null) n._fr = v;
+    else if (!(v === n._aff || v === sa(n._aff))) n._fr = v;     // le code a réécrit le texte
+    var brut = n._fr, avant = (brut.match(/^\s*/) || [''])[0], apres = (brut.match(/\s*$/) || [''])[0];
+    var cible = lang === 'en' ? avant + traduire(brut) + apres : brut;
+    n._aff = cible;
+    if (v !== cible && v !== sa(cible)) { occupe = true; n.nodeValue = cible; occupe = false; }
+  }
+  function attrs(el) {
+    ['placeholder', 'title', 'aria-label'].forEach(function (a) {
+      if (!el.hasAttribute || !el.hasAttribute(a)) return;
+      var k = 'i18n' + a.replace(/-/g, ''), v = el.getAttribute(a);
+      if (el.dataset[k] == null || (v !== el.dataset[k + 'Aff'])) el.dataset[k] = v;
+      var cible = lang === 'en' ? traduire(el.dataset[k]) : el.dataset[k];
+      el.dataset[k + 'Aff'] = cible;
+      if (v !== cible) { occupe = true; el.setAttribute(a, cible); occupe = false; }
+    });
+  }
+  function scan(root) {
+    if (!root) return;
+    if (root.nodeType === 3) { noeud(root); return; }
+    if (root.nodeType !== 1 || root.closest && root.closest('[data-i18n-off]')) return;
+    var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false), n;
+    while ((n = w.nextNode())) noeud(n);
+    attrs(root);
+    var els = root.querySelectorAll ? root.querySelectorAll('[placeholder],[title],[aria-label]') : [];
+    for (var i = 0; i < els.length; i++) attrs(els[i]);
+  }
+  function demarrer() {
+    document.documentElement.setAttribute('lang', lang);
+    scan(document.body);
+    new MutationObserver(function (muts) {
+      if (occupe) return;
+      muts.forEach(function (m) {
+        if (m.type === 'characterData') noeud(m.target);
+        else if (m.type === 'attributes') attrs(m.target);
+        else for (var i = 0; i < m.addedNodes.length; i++) scan(m.addedNodes[i]);
+      });
+    }).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['placeholder', 'title', 'aria-label'] });
+  }
+  function choisir(l) {
+    l = l === 'en' ? 'en' : 'fr';
+    try { localStorage.setItem('fr-client-lang', l); } catch (e) {}
+    if (l === lang) return;
+    lang = l;
+    document.documentElement.setAttribute('lang', lang);
+    scan(document.body);
+  }
+  // Boîtes de dialogue du navigateur (confirmations, alertes)
+  ['alert', 'confirm', 'prompt'].forEach(function (f) {
+    var orig = window[f];
+    window[f] = function (msg) {
+      var args = Array.prototype.slice.call(arguments);
+      if (lang === 'en' && typeof msg === 'string') args[0] = msg.split('\n').map(function (l) { return l.trim() ? traduire(l) : l; }).join('\n');
+      return orig.apply(window, args);
+    };
+  });
+  window.FR_LANG = {
+    t: t, choisir: choisir, langue: function () { return lang; },
+    // Langue de la fiche client : « fr » → français, toute autre → anglais
+    depuisClient: function (langue) { choisir(langue && String(langue).toLowerCase() !== 'fr' ? 'en' : 'fr'); }
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', demarrer); else demarrer();
+})();
+
+</script>
 </head>
 <body>
 
@@ -1075,7 +1192,7 @@ html.dark .tbl th, html.dark .tbl td { border-color: rgba(255,255,255,0.08) !imp
       <div class="section-body">
         <div class="info-box green" style="margin-bottom:10px;">
           <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-          <div>Vos informations d'accès enregistrées seront utilisées : <strong>Boîte à clé · Code 4521</strong>. En cas d'absence et sans instructions claires, Forest Rangers poursuivra sa tournée. La journée sera intégralement facturée et la récupération se fera à Kopstal sur rendez-vous.</div>
+          <div><span id="acces-intro">Vos informations d'accès enregistrées seront utilisées :</span> <strong id="acces-resume">—</strong>. En cas d'absence et sans instructions claires, Forest Rangers poursuivra sa tournée. La journée sera intégralement facturée et la récupération se fera à Kopstal sur rendez-vous.</div>
         </div>
         <div class="toggle-option selected" id="acces-accept" onclick="toggleAccept('acces-accept')">
           <div class="toggle-option-check"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
@@ -1347,6 +1464,30 @@ function messageSuspension() {
       + 'ou contactez Gabriel.');
 }
 
+// ── Accès domicile (v2.48) : les consignes de la fiche client, et non plus
+// un exemple écrit en dur. Colonnes de la v39 ; sans elles, message neutre.
+function escA(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+async function chargerAcces(id) {
+  var el = document.getElementById('acces-resume'), intro = document.getElementById('acces-intro');
+  if (!el) return;
+  var c = null;
+  try {
+    var r = await db.from('clients').select('acces_cle, acces_alarme, acces_code, acces_particularites').eq('id', id).maybeSingle();
+    if (!r.error) c = r.data;
+  } catch (e) {}
+  var parts = [];
+  if (c && c.acces_cle) parts.push('<span>Clés chez Forest Rangers</span>');
+  if (c && c.acces_alarme) parts.push('<span>Alarme</span>');
+  if (c && c.acces_code) parts.push('<span>Code :</span> <span data-i18n-off>' + escA(c.acces_code) + '</span>');
+  if (c && c.acces_particularites) parts.push('<span data-i18n-off>' + escA(c.acces_particularites) + '</span>');
+  if (parts.length) {
+    el.innerHTML = parts.join(' · ');
+  } else {
+    if (intro) intro.textContent = 'Aucune consigne d\'accès n\'est enregistrée sur votre fiche :';
+    el.innerHTML = '<span>précisez-la dans la note de la réservation, ou écrivez à Gabriel</span>';
+  }
+}
+
 async function loadProfileAndDogs() {
   try {
     const { data: session } = await db.auth.getSession();
@@ -1357,13 +1498,15 @@ async function loadProfileAndDogs() {
     const userId = session.session.user.id;
 
     const { data: client } = await db.from('clients')
-      .select('id, prenom, nom, client_fidele, tarif_walking, tarif_daycare, tarif_boarding, tarif_reduction, hors_zone')
+      .select('id, prenom, nom, langue, client_fidele, tarif_walking, tarif_daycare, tarif_boarding, tarif_reduction, hors_zone')
       .eq('auth_id', userId)
       .single();
     if (!client) return;
     clientId = client.id;
+    if (window.FR_LANG) FR_LANG.depuisClient(client.langue);   // langue de la fiche client (v2.48)
     await chargerPrixClient(client);
     await verifierSuspension(client.id);
+    await chargerAcces(client.id);
 
     const { data: chiens, error: chiensErr } = await db.from('chiens')
       .select('id, nom, race, poids_kg, sexe, sterilise, chaleur_debut, chaleur_fin')
@@ -1420,15 +1563,24 @@ function chaleurActive(d) {
 function chaleurDateFR(iso) {
   if (!iso) return '—';
   var d = new Date(iso + 'T00:00:00');
-  return isNaN(d) ? iso : d.toLocaleDateString('fr-LU', { day: '2-digit', month: 'long' });
+  return isNaN(d) ? iso : d.toLocaleDateString(locDates('fr-LU'), { day: '2-digit', month: 'long' });
 }
+
+// Badge « Sélectionné » — affiché « Selected » en anglais (v2.48) : on
+// reconnaît les deux, l'état ne dépend pas de la langue d'affichage.
+function badgeSelectionne(b) {
+  var t = b ? String(b.textContent || '').trim() : '';
+  return t === 'Sélectionné' || t === 'Selected';
+}
+// Langue des dates affichées (même règle que l'espace client)
+function locDates(fr) { return (window.FR_LANG && FR_LANG.langue() === 'en') ? 'en-GB' : (fr || 'fr-FR'); }
 
 function getSelectedDogIds() {
   const ids = [];
   document.querySelectorAll('.dog-check-item').forEach(function(el) {
     const badges = el.querySelectorAll('span');
     const last = badges[badges.length - 1];
-    if (last && last.textContent.trim() === 'Sélectionné' && el.dataset.chienId) {
+    if (badgeSelectionne(last) && el.dataset.chienId) {
       ids.push(el.dataset.chienId);
     }
   });
@@ -1926,7 +2078,7 @@ function buildRecap() {
         ? document.getElementById('walk-recur-end')
         : document.querySelector('#recur-dc-options input[type=date]');
       const endDate = endDateEl?.value
-        ? new Date(endDateEl.value).toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'})
+        ? new Date(endDateEl.value).toLocaleDateString(locDates(), {day:'numeric',month:'long',year:'numeric'})
         : 'non définie';
 
       const daysText = selectedDays.length > 0 ? selectedDays.join(', ') : 'jours non sélectionnés';
@@ -1971,7 +2123,7 @@ function buildRecap() {
       : document.getElementById('daycare-date')?.value;
 
     document.getElementById('recap-date').textContent = dateVal
-      ? new Date(dateVal).toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long',year:'numeric'})
+      ? new Date(dateVal).toLocaleDateString(locDates(), {weekday:'long',day:'numeric',month:'long',year:'numeric'})
       : '—';
 
     const slotEl = document.getElementById('walk-slot');
@@ -2235,7 +2387,7 @@ function getSelectedDogs() {
   document.querySelectorAll('.dog-check-item').forEach(el => {
     const badges = el.querySelectorAll('span');
     const lastBadge = badges[badges.length - 1];
-    const isSelected = lastBadge && lastBadge.textContent.trim() === 'Sélectionné';
+    const isSelected = badgeSelectionne(lastBadge);
     if (isSelected) {
       const name = el.dataset.dogName || el.querySelector('div[style*="flex:1"] div:first-child')?.textContent.trim();
       if (name && name !== '+') dogs.push(name);
