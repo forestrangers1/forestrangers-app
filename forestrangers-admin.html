@@ -468,10 +468,12 @@ html.light .brand-name .rangers { color: var(--accent); }
 .alert-r { background: var(--red-dim);   border: 1px solid rgba(224,90,90,0.2); }
 .alert-a { background: var(--accent-dim);border: 1px solid rgba(255,95,31,0.2); }
 .alert-g { background: var(--green-dim); border: 1px solid rgba(94,201,122,0.2); }
+.alert-b { background: var(--blue-dim);  border: 1px solid rgba(90,154,224,0.2); }
 .alert-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
 .alert-r .alert-dot { background: var(--red); }
 .alert-a .alert-dot { background: var(--accent); }
 .alert-g .alert-dot { background: var(--green); }
+.alert-b .alert-dot { background: var(--blue); }
 .alert-body { flex: 1; line-height: 1.5; }
 .alert-body strong { color: var(--text); font-weight: 600; }
 .alert-time { font-size: 10px; color: var(--text-faint); margin-top: 2px; }
@@ -5421,6 +5423,28 @@ async function chargerAlertes() {
           + '</div></div>';
       }
     } catch (eTr) { /* v39 absente */ }
+
+    // Fins de réservation dans les 30 jours (v45) : rappel client automatique à
+    // 1 mois (notification) et à 1 semaine (notification + email), à 8h
+    try {
+      var finR = await db.rpc('fr_fin_reservations', { p_jours: 30 });
+      var fins = (!finR.error && finR.data ? finR.data : []).filter(function(x) { return !x.is_test; });
+      if (fins.length) {
+        var urgF = fins.some(function(x) { return x.jours_restants <= 7; });
+        html += '<div class="alert ' + (urgF ? 'alert-a' : 'alert-b') + '"><div class="alert-dot"></div><div class="alert-body">'
+          + '<strong>' + fins.length + ' client' + (fins.length > 1 ? 's' : '') + ' en fin de réservation</strong> — dans les 30 jours'
+          + fins.slice(0, 8).map(function(x) {
+              var etat = x.j7_le ? 'rappel 1 semaine + email envoyés' : x.j30_le ? 'notifié à 1 mois' : 'rappel à venir';
+              var svc = String(x.services || '').split(',').map(function(v) { return v === 'daycare' ? 'Day Care' : 'Walking'; }).join(' + ');
+              return '<div style="font-size:11px;color:var(--text-dim);margin-top:4px;cursor:pointer;" onclick="navVers(\'clients\');ouvrirFicheClient(\'' + x.client_id + '\')">'
+                + '<span style="color:var(--text);">' + msgEsc((x.prenom || '') + ' ' + (x.nom || '')) + '</span>'
+                + ' · ' + svc + ' · fin le ' + formatDateFR(x.date_fin) + ' (J-' + x.jours_restants + ') · ' + etat + '</div>';
+            }).join('')
+          + (fins.length > 8 ? '<div style="font-size:11px;color:var(--text-faint);margin-top:4px;">… et ' + (fins.length - 8) + ' autre' + (fins.length - 8 > 1 ? 's' : '') + '</div>' : '')
+          + '<div class="alert-time">Le client est prévenu automatiquement à 8h : notification à 1 mois, notification + email à 1 semaine</div>'
+          + '</div></div>';
+      }
+    } catch (eFin) { /* v45 absente */ }
 
     // Recouvrement (migration v31) : ce que l'horloge propose, à traiter après pointage
     var suivi = await db.from('v_factures_suivi').select('id,client_id,numero,solde,jours_retard,etape_suggeree').gt('solde', 0).limit(300);

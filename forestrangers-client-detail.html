@@ -1673,7 +1673,7 @@ function renderSituationClient() {
   }
   el.innerHTML = '<div class="stats-row" style="margin-bottom:14px;">'
     + tuile('Solde dû', eurC(du), du > 0 ? 'var(--red)' : 'var(--green)', du > 0 ? (S.nb_factures_ouvertes || 0) + ' facture' + ((S.nb_factures_ouvertes || 0) > 1 ? 's' : '') + ' ouverte' + ((S.nb_factures_ouvertes || 0) > 1 ? 's' : '') : 'À jour')
-    + tuile('Avoir disponible', eurC(av), av > 0 ? 'var(--green)' : 'var(--td)', av > 0 ? ((+S.avoir || 0) > 0 && creditRegul() > 0 ? 'Trop-payé + séances annulées' : creditRegul() > 0 ? 'Séances annulées après facturation' : 'Trop-payé') + ' · déduit de la prochaine facture' : 'Aucun avoir')
+    + tuile('Avoir disponible', av > 0.004 ? eurC(av) : 'Aucun', av > 0 ? 'var(--green)' : 'var(--td)', av > 0 ? ((+S.avoir || 0) > 0 && creditRegul() > 0 ? 'Trop-payé + séances annulées' : creditRegul() > 0 ? 'Séances annulées après facturation' : 'Trop-payé') + ' · déduit de la prochaine facture' : 'Aucun avoir')
     + tuile('Dernier virement', dateC(S.dernier_virement), 'var(--tx)', '')
     + tuile('Plus ancien retard', S.jours_plus_ancienne && du > 0 ? S.jours_plus_ancienne + ' j' : '—', S.jours_plus_ancienne > 30 && du > 0 ? 'var(--red)' : 'var(--tx)', S.reservations_suspendues ? '<span style="color:var(--red);">Réservations suspendues</span>' : (S.suspension_possible ? '<span style="color:var(--amber);">Suspension possible</span>' : ''))
     + '</div>';
@@ -1742,8 +1742,12 @@ function renderAvoirsClient() {
   factures.forEach(function(f) { parId[f.id] = f; });
   var ncs = factures.filter(function(f) { return f.statut === 'avoir'; });
   var av = SITUATION_CLIENT ? (+SITUATION_CLIENT.avoir || 0) : 0;
+  var carte = document.getElementById('avoirs-card');
+  // Rien à montrer (ni trop-payé, ni régularisation, ni note de crédit) : carte masquée
+  if (av <= 0.004 && !ncs.length && !(REGUL_CLIENT || []).length) { if (carte) carte.style.display = 'none'; box.innerHTML = ''; if (tot) tot.textContent = ''; return; }
+  if (carte) carte.style.display = '';
   var h = '';
-  h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:8px;background:' + (av > 0 ? 'var(--gd)' : 'var(--s2)') + ';margin-bottom:10px;">'
+  if (av > 0.004) h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:8px;background:var(--gd);margin-bottom:10px;">'
      + '<div><div style="font-size:12.5px;font-weight:700;color:var(--tx);">Avoir disponible (trop-payé)</div>'
      + '<div style="font-size:11px;color:var(--td);">' + (av > 0 ? 'Déduit automatiquement de la prochaine facture' : 'Aucun montant payé en trop') + '</div></div>'
      + '<div style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:18px;color:' + (av > 0 ? 'var(--green)' : 'var(--td)') + ';">' + eurC(av) + '</div></div>';
@@ -1756,7 +1760,7 @@ function renderAvoirsClient() {
       + '<div style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:18px;color:' + (credit ? 'var(--green)' : 'var(--amber)') + ';white-space:nowrap;">' + (credit ? '' : '+ ') + eurC(Math.abs(x.reste)) + '</div></div>';
   });
   if (!ncs.length) {
-    h += '<div style="font-size:12px;color:var(--tf);padding:4px 2px;">Aucune note de crédit.</div>';
+    h += '';
   } else {
     h += '<div class="table-wrap"><table><thead><tr><th>Note de crédit</th><th>Facture annulée</th><th>Période</th><th>Montant</th><th>Émise le</th><th>Motif</th><th></th></tr></thead><tbody>'
       + ncs.map(function(n) {

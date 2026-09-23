@@ -1635,6 +1635,125 @@ html, body {
 </div>
 
 <script>
+// ════════════════════════════════════════════════════════════════
+//  LANGUE DE L'ESPACE CLIENT (v2.42) — français ou anglais
+//  Règle de Gabriel : langue « fr » → français ; toute autre langue
+//  (en, lu, de…) → anglais. Le client peut changer dans Paramètres.
+//  Le français reste la langue source : chaque texte affiché garde son
+//  original en mémoire, la traduction se fait à l'affichage (dictionnaire
+//  exact, puis fragments pour les phrases composées : dates, nombres).
+//  Ce que le client écrit est toujours enregistré tel quel ; les messages
+//  de Gabriel et les notes restent dans leur langue (data-i18n-off).
+//  Factures PDF, emails et CGV restent en français.
+// ════════════════════════════════════════════════════════════════
+(function () {
+  'use strict';
+  var DICT = {"Chargement…": "Loading…", "Chargement...": "Loading…", "Messages": "Messages", "Paramètres": "Settings", "Mode clair": "Light mode", "Mode sombre": "Dark mode", "Se déconnecter": "Log out", "Prochaine promenade": "Next walk", "Écrire à Gabriel": "Write to Gabriel", "Une question, un changement, une info sur votre chien": "A question, a change, news about your dog", "Notifications": "Notifications", "Aucune notification pour le moment": "No notifications yet", "Photo de groupe": "Group photo", "Agrandir": "Enlarge", "Promenade du matin": "Morning walk", "Terminé": "Done", "Parcours GPS": "GPS route", "Chiens du groupe": "Dogs in the group", "· votre chien": "· your dog", "Présent": "Present", "Présente": "Present", "Commentaires": "Comments", "Vous": "You", "Mes reservations": "My bookings", "Mes réservations": "My bookings", "Historique et à venir": "Past and upcoming", "Nouvelle reservation": "New booking", "Nouvelle réservation": "New booking", "Annuler une periode": "Cancel a period", "Annuler une période": "Cancel a period", "Mon chien": "My dog", "Photos": "Photos", "Les photos de promenade arriveront prochainement.": "Walk photos are coming soon.", "Ajouter un chien": "Add a dog", "Mes factures": "My invoices", "Suivi de vos paiements": "Your payments", "Factures émises": "Issued invoices", "Gabriel vous répond directement ici. Les avis automatiques (annulations, météo) restent sur l'accueil.": "Gabriel replies to you directly here. Automatic notices (cancellations, weather) stay on the home screen.", "Pour une annulation, passez par l'onglet Réservations : la règle de facturation s'applique automatiquement.": "To cancel, use the Bookings tab: the billing rule is applied automatically.", "Mes coordonnées": "My details", "Enregistrer": "Save", "Espace client": "Client area", "Navigation": "Navigation", "Accueil": "Home", "Réservations": "Bookings", "Factures": "Invoices", "Mon compte": "My account", "Client": "Client", "Promenades et crèche du jour. Pour la pension, ouvrez la réservation concernée : ses délais d'annulation sont différents.": "Walks and day care. For boarding, open the booking itself: its cancellation deadlines are different.", "Date": "Date", "Jusqu'au": "Until", "Annuler ces séances": "Cancel these sessions", "Modifier le chien": "Edit dog", "Pourquoi ces informations comptent": "Why this information matters", "Prenez le temps de les remplir correctement : elles ne servent pas qu'à nous.": "Take the time to fill them in properly: they are not only useful to us.", "En voyage, ou chez un vétérinaire que vous ne connaissez pas, vous retrouvez le nom exact des traitements de votre chien.": "When travelling, or at a vet you don't know, you have the exact name of your dog's treatments.", "En cas de fugue ou de perte, son numéro de puce et sa photo restent accessibles depuis votre téléphone, à tout moment.": "If your dog runs away or gets lost, its microchip number and photo are always available on your phone.", "En cas d'urgence pendant une promenade, nous savons immédiatement qui appeler et quoi signaler.": "In an emergency during a walk, we know straight away who to call and what to report.", "Photo du chien": "Dog photo", "Touchez le carré pour choisir une photo depuis votre téléphone.": "Tap the square to choose a photo from your phone.", "Prénom": "First name", "Nom": "Last name", "Race": "Breed", "Poids (kg)": "Weight (kg)", "Sexe": "Sex", "Mâle": "Male", "Femelle": "Female", "Naissance": "Date of birth", "Stérilisé": "Neutered", "Stérilisée": "Spayed", "Oui": "Yes", "Non": "No", "N° de puce": "Microchip no.", "Où le trouver ? Dans le passeport européen de votre chien, rubrique III « Marquage de l'animal », point 1 « Code alphanumérique du transpondeur » — 15 chiffres.": "Where to find it? In your dog's European pet passport, section III \"Marking of the animal\", point 1 \"Alphanumeric code of the transponder\" — 15 digits.", "Vaccins à jour": "Vaccinations up to date", "Assurance": "Insurance", "Vétérinaire": "Vet", "Tél. vétérinaire": "Vet phone", "Allergies": "Allergies", "Médicaments en cours": "Current medication", "Pathologies / Antécédents": "Conditions / medical history", "Comportement": "Behaviour", "Liberté autorisée": "Off-lead allowed", "Protection nourriture": "Food guarding", "Rappel fiable": "Reliable recall", "Dominant": "Dominant", "Instinct chasseur": "Hunting instinct", "Sociable avec femelles": "Good with females", "Réactif en laisse": "Lead reactive", "Sociable avec mâles": "Good with males", "Adore l'eau": "Loves water", "Rescue dog": "Rescue dog", "Peurs / Phobies": "Fears / phobias", "Marche en laisse": "Lead walking", "Bien": "Good", "À améliorer": "Needs work", "Tire fort": "Pulls hard", "Harnais requis": "Harness required", "Niveau d'énergie": "Energy level", "Très calme": "Very calm", "Moyen": "Medium", "Très énergique": "Very energetic", "Remarques importantes": "Important notes", "Fiche complète": "Full profile", "Fermer": "Close", "Modifier": "Edit", "Menu du compte": "Account menu", "Laisser un commentaire à Gabriel...": "Leave a comment for Gabriel…", "Rechercher (service, chien, date…)": "Search (service, dog, date…)", "Vue calendrier": "Calendar view", "Rechercher (numéro, période, montant…)": "Search (number, period, amount…)", "Rechercher dans la conversation…": "Search the conversation…", "Votre message à Gabriel…": "Your message to Gabriel…", "Envoyer": "Send", "Changer d'apparence": "Change appearance", "Ex : Max": "E.g. Max", "Cliquez ou tapez pour rechercher...": "Click or type to search…", "Où trouver ce numéro ?": "Where do I find this number?", "15 chiffres": "15 digits", "Ex : acariens, certains aliments...": "E.g. dust mites, certain foods…", "Nom, dosage, fréquence...": "Name, dose, frequency…", "Ex : dysplasie, épilepsie, chirurgies...": "E.g. dysplasia, epilepsy, surgery…", "Ex : orage, feux d'artifice, voitures...": "E.g. thunder, fireworks, cars…", "Habitudes, consignes particulières, petites manies...": "Habits, special instructions, little quirks…", "Votre reseau ne permet pas de charger l'application. Verifiez votre connexion,": "Your network cannot load the app. Check your connection,", "passez en wifi si possible, puis reessayez.": "switch to wifi if possible, then try again.", "Reessayer": "Try again", "Se déconnecter de votre espace Forest Rangers ?": "Log out of your Forest Rangers area?", "Téléphone": "Phone", "Adresse": "Address", "Commune": "Town", "Code postal": "Postcode", "Email (compte)": "Email (account)", "Télécharger le PDF": "Download the PDF", "J'accepte les conditions générales": "I accept the terms and conditions", "Lisez le PDF avant d'accepter. La date et l'heure de votre acceptation sont enregistrées (article 3.2).": "Read the PDF before accepting (French version). The date and time of your acceptance are recorded (article 3.2).", "✓ Conditions générales acceptées": "✓ Terms and conditions accepted", "Acceptation impossible": "Could not accept", "Acceptées": "Accepted", "À accepter": "To be accepted", "✓ Coordonnées enregistrées": "✓ Details saved", "✗ Erreur — réessayez": "✗ Error — please try again", "✓ Demande envoyée — Gabriel confirmera sous 24h": "✓ Request sent — Gabriel will confirm within 24h", "✓ Message envoyé à Gabriel": "✓ Message sent to Gabriel", "✗ Envoi impossible": "✗ Could not send", "Envoi impossible": "Could not send", "Pour votre sécurité, la connexion se coupe après un certain temps.": "For your security, the session ends after a while.", "Les informations affichées peuvent ne plus être à jour.": "The information shown may be out of date.", "Se reconnecter": "Log in again", "Aucune fiche client rattachée à ce compte": "No client profile is linked to this account", "Erreur de chargement": "Loading error", "Profil indisponible": "Profile unavailable", "Profil indisponible.": "Profile unavailable.", "Nouvelle réponse de Gabriel": "New reply from Gabriel", "Aucun message pour le moment. Écrivez à Gabriel ci-dessous.": "No messages yet. Write to Gabriel below.", "Alerte météo": "Weather alert", "Alerte meteo": "Weather alert", "Réservation": "Booking", "Repondre a Gabriel": "Reply to Gabriel", "Répondre à Gabriel": "Reply to Gabriel", "Passer en mode sombre": "Switch to dark mode", "Passer en mode clair": "Switch to light mode", "Facture en retard": "Overdue invoice", "Facture disponible": "Invoice available", "Chien": "Dog", "Votre chienne": "Your dog", "est en chaleur": "is in heat", "Confirmé": "Confirmed", "En attente": "Pending", "En cours": "In progress", "Annulé": "Cancelled", "Séance annulée": "Session cancelled", "Retirée — chienne en chaleur": "Removed — dog in heat", "Annulée à votre demande": "Cancelled at your request", "Annulée par Forest Rangers": "Cancelled by Forest Rangers", "Tous les chiens": "All dogs", "Récurrence non enregistrée": "Recurrence not recorded", "aller et retour": "pick-up and drop-off", "aller le matin": "pick-up in the morning", "retour le soir": "drop-off in the evening", "Aucune réservation": "No bookings", "Aucun résultat pour cette recherche": "No results for this search", "Férié": "Public holiday", "Fermé": "Closed", "✗ Réservation introuvable": "✗ Booking not found", "Statut": "Status", "Annulée par": "Cancelled by", "Facturation": "Billing", "Motif": "Reason", "Arrivée": "Arrival", "Départ": "Departure", "Nuits": "Nights", "Période": "Period", "Jours": "Days", "Séances": "Sessions", "Séance concernée": "Session concerned", "Créneau": "Time slot", "Chien(s)": "Dog(s)", "Ranger": "Ranger", "Prochaine séance": "Next session", "Montant TTC": "Amount incl. VAT", "Note": "Note", "Séances annulées": "Cancelled sessions", "Les séances affichées couvrent donc tous les jours ouvrés de la période (lundi au vendredi).": "The sessions shown therefore cover every working day in the period (Monday to Friday).", "Signalez-le à Gabriel pour correction.": "Let Gabriel know so he can correct it.", "(la remise multi-chiens ne s'applique plus).": "(the multi-dog discount no longer applies).", "Annuler la réservation": "Cancel the booking", "Règles d'annulation : voir les CGV.": "Cancellation rules: see the terms and conditions.", "Période estivale (1 er juin — 31 août) : toute annulation est facturée à 100 %, quelle que soit l'heure.": "Summer period (1 June — 31 August): every cancellation is charged at 100%, whatever the time.", "Période estivale (1 er juin — 31 août) : toute annulation est facturée à 100 %, quel que soit le délai.": "Summer period (1 June — 31 August): every cancellation is charged at 100%, whatever the notice.", "(préavis client régulier).": "(regular client notice).", "Annulation entre 14 et 30 jours avant l'arrivée : 50 % du séjour est facturé.": "Cancellation 14 to 30 days before arrival: 50% of the stay is charged.", "Annulation à moins de 14 jours de l'arrivée : 100 % du séjour est facturé.": "Cancellation less than 14 days before arrival: 100% of the stay is charged.", "Limite dépassée (9h00 la veille) : la prestation sera facturée à 100 %.": "Deadline passed (9:00 the day before): the service will be charged at 100%.", "✗ Sélectionnez au moins un chien": "✗ Select at least one dog", "Cette série est déjà terminée": "This series has already ended", "Annulation gratuite.": "Free cancellation.", "✓ Réservation annulée": "✓ Booking cancelled", "Annulation impossible": "Could not cancel", "Annuler": "Cancel", "Montant facturé :": "Amount charged:", "Aucun frais : toutes les séances sont dans les délais.": "No charge: all sessions are within the deadline.", "Confirmez-vous ?": "Do you confirm?", "Annulation en cours…": "Cancelling…", "Partiellement payée": "Partly paid", "À payer": "To pay", "Payée": "Paid", "Avoirs": "Credits", "Avoirs — notes de crédit": "Credits — credit notes", "Annule la facture": "Cancels invoice", "Votre compte est à jour. Merci !": "Your account is up to date. Thank you!", "Virement à ARCANIN S.à r.l.": "Bank transfer to ARCANIN S.à r.l.", "Communication :": "Reference:", "votre numéro de facture": "your invoice number", "Aucune facture": "No invoices", "✗ Nouvelles réservations suspendues : des factures restent à régler": "✗ New bookings suspended: some invoices are still unpaid", "Situation de votre compte": "Your account", "Solde à régler": "Balance due", "Avoir disponible": "Credit available", "Déduit automatiquement de votre prochaine facture": "Automatically deducted from your next invoice", "Nouvelles réservations suspendues.": "New bookings suspended.", "Vos réservations déjà confirmées sont maintenues. Les nouvelles réservations seront de nouveau possibles dès réception du paiement.": "Your confirmed bookings are kept. New bookings will be possible again as soon as payment is received.", "Rien à payer": "Nothing to pay", "Note de crédit": "Credit note", "Facture": "Invoice", "✗ Facture introuvable": "✗ Invoice not found", "✗ PDF disponible uniquement pour une facture émise": "✗ PDF only available for an issued invoice", "✗ Génération PDF indisponible": "✗ PDF generation unavailable", "Génération…": "Generating…", "✗ Erreur lors de la génération du PDF": "✗ Error while generating the PDF", "Grand gabarit": "Large breed", "Notes santé": "Health notes", "Les chaleurs sont passées — reprendre les promenades": "The heat is over — resume walks", "un ranger": "a ranger", "Votre planning n'a pas été modifié : c'est à vous de décider.": "Your schedule has not been changed: it's your decision.", "Confirmer et suspendre les promenades": "Confirm and pause walks", "Fausse alerte — ne rien changer": "False alarm — change nothing", "Signaler des chaleurs": "Report heat", "Le mode chaleur n'est pas encore actif sur le serveur.": "Heat mode is not active on the server yet.", "Le détail des séances concernées n'a pas pu être calculé.": "The affected sessions could not be calculated.", "Aucune séance n'est prévue sur les trois prochaines semaines : rien ne sera retiré ni facturé.": "No sessions are planned in the next three weeks: nothing will be removed or charged.", "Aucune n'est facturée : toutes sont annulées dans les délais.": "None are charged: all are cancelled within the deadline.", "Calcul des séances concernées…": "Calculating the affected sessions…", "votre chienne": "your dog", "✓ Mode chaleur activé": "✓ Heat mode on", "✓ Signalement écarté": "✓ Report dismissed", "✓ Promenades reprises": "✓ Walks resumed", "Opération impossible": "Operation not possible", "Les séances à venir qui avaient été retirées sont remises au planning,": "Upcoming sessions that had been removed are put back on the schedule,", "et les frais d'annulation correspondants sont annulés.": "and the related cancellation fees are cancelled.", "Les séances déjà passées restent annulées.": "Past sessions remain cancelled.", "Croisé / Mix": "Crossbreed / mix", "Mixte": "Mixed", "Race inconnue": "Unknown breed", "Autre": "Other", "» Race personnalisée": "» Custom breed", "Poids": "Weight", "Médicaments": "Medication", "Pathologies": "Conditions", "Remarques": "Notes", "Calme": "Calm", "Énergique": "Energetic", "Peurs :": "Fears:", "Marche en laisse :": "Lead walking:", "Énergie :": "Energy:", "✗ Le prénom est requis": "✗ The name is required", "✗ Session expirée — reconnectez-vous": "✗ Session expired — please log in again", "✗ Photo non envoyée (bucket ?)": "✗ Photo not uploaded", "✓ Chien ajouté": "✓ Dog added", "Erreur — réessayez": "Error — please try again", "✓ Fiche enregistrée": "✓ Profile saved", "Aujourd'hui": "Today", "Demain": "Tomorrow", "Dog Walking": "Dog Walking", "Day Care": "Day Care", "Boarding": "Boarding", "Pension": "Boarding", "Promenade": "Walk", "Promenades": "Walks", "Matin · 09h00": "Morning · 9:00", "Midi · 12h00": "Midday · 12:00", "Après-midi · 14h30": "Afternoon · 14:30", "Matin — 09h00": "Morning — 9:00", "Midi — 12h00": "Midday — 12:00", "Après-midi — 14h30": "Afternoon — 14:30", "Matin": "Morning", "Midi": "Midday", "Après-midi": "Afternoon", "Journée": "Full day", "Langue de l'application": "App language", "Français": "Français", "English": "English", "Déconnexion": "Log out", "Mes chiens": "My dogs", "Voir": "View", "Détail": "Details", "Total TTC": "Total incl. VAT", "Retour": "Back", "Réserver": "Book", "Confirmer": "Confirm", "Oui, annuler": "Yes, cancel", "Non, garder": "No, keep", "Fin de réservation": "Booking ending", "Réserver la suite": "Book the next period", "Masquer": "Hide", "Vos réservations se terminent aujourd'hui": "Your bookings end today", "Vos réservations se terminent demain": "Your bookings end tomorrow"};
+  var FRAG = [["Montant prévisionnel d'après vos réservations. Touchez pour voir le détail. La facture définitive est émise en fin de mois.", "Estimated amount based on your bookings. Tap for details. The final invoice is issued at the end of the month."], ["Un virement est imputé à la facture dont le numéro figure en communication, sinon à la plus ancienne.", "A transfer is allocated to the invoice whose number is in the reference, otherwise to the oldest one."], ["Pour n'annuler qu'une seule date, ouvrez la vue calendrier et touchez le jour concerné.", "To cancel a single date, open the calendar view and tap that day."], ["Si vous n'annulez qu'un chien, celui qui reste est facturé au tarif d'un chien seul", "If you cancel only one dog, the remaining dog is charged at the single-dog rate"], ["Choisissez une date. Cochez « Jusqu'au » pour une absence de plusieurs jours.", "Choose a date. Tick \"Until\" for an absence of several days."], ["Le statut est mis à jour dès que Gabriel a pointé le virement sur le compte.", "The status is updated as soon as Gabriel has matched the transfer on the account."], ["Si les chaleurs passent plus tôt, vous relancez les promenades en un clic.", "If the heat ends sooner, you can resume walks with one click."], ["· déduit automatiquement de votre prochaine facture", "· automatically deducted from your next invoice"], ["Annulation gratuite : vous êtes avant la limite du", "Free cancellation: you are before the deadline of"], ["seront facturés selon les conditions générales.", "will be charged according to the terms and conditions."], ["d'entre elles restent facturées selon les CGV :", "of them are still charged under the terms:"], ["La facture définitive est émise en fin de mois.", "The final invoice is issued at the end of the month."], ["Montant prévisionnel d'après vos réservations.", "Estimated amount based on your bookings."], ["· réservez la suite pour garder votre place", "· book the next period to keep your place"], ["Le reste de la récurrence est conservé.", "The rest of the recurrence is kept."], ["séance(s) effectuée(s) conservée(s)", "session(s) done kept"], ["Vos réservations se terminent dans", "Your bookings end in"], ["— montant facturé selon les CGV :", "— amount charged under the terms:"], ["séances à venir seront annulées.", "upcoming sessions will be cancelled."], ["(s) annulée(s) après facturation", "(s) cancelled after invoicing"], ["Aucun message ne correspond à «", "No message matches \""], ["Annuler cette réservation pour", "Cancel this booking for"], ["— dans les délais, sans frais.", "— within the deadline, free of charge."], ["Promenades suspendues jusqu'au", "Walks paused until"], ["Votre planning reste inchangé.", "Your schedule stays the same."], ["Conditions générales — version", "Terms and conditions — version"], ["nouvelles réponses de Gabriel", "new replies from Gabriel"], ["Annulation gratuite : plus de", "Free cancellation: more than"], ["Note de crédit · rien à payer", "Credit note · nothing to pay"], ["Elle sort du planning pendant", "She is taken off the schedule for"], ["Aucun message pour le moment.", "No messages yet."], ["Écrivez à Gabriel ci-dessous.", "Write to Gabriel below."], ["retirée (chienne en chaleur)", "removed (dog in heat)"], ["· en attente de confirmation", "· awaiting confirmation"], ["Arrêter la série à partir du", "Stop the series from"], ["Annulation de la réservation", "Booking cancellation"], ["Activer le mode chaleur pour", "Turn on heat mode for"], ["Touchez pour voir le détail.", "Tap for details."], ["Annuler toute la série pour", "Cancel the whole series for"], ["✓ Série arrêtée à partir du", "✓ Series stopped from"], ["Touchez pour voir le détail", "Tap for details"], ["annulée par Forest Rangers", "cancelled by Forest Rangers"], ["Annulation de la séance du", "Cancellation of the session on"], ["— facturation applicable :", "— applicable charge:"], ["Relancer les promenades de", "Resume walks for"], ["Annuler toute la série (", "Cancel the whole series ("], ["Facturation applicable :", "Applicable charge:"], ["Échéance dépassée depuis", "Overdue for"], ["Constaté en promenade le", "Noticed during a walk on"], ["Écarter ce signalement ?", "Dismiss this report?"], ["annulée à votre demande", "cancelled at your request"], ["Signalée en chaleur par", "Reported in heat by"], ["Annulée · rien à payer", "Cancelled · nothing to pay"], ["jours avant l'arrivée", "days before arrival"], ["tous les jours ouvrés", "every working day"], ["Cette réservation est", "This booking is"], ["factures disponibles", "invoices available"], [": chaleurs signalées", ": heat reported"], ["Annuler seulement le", "Cancel only"], ["Annuler la séance du", "Cancel the session on"], ["· la plus ancienne a", "· the oldest is"], ["Conditions générales", "Terms and conditions"], ["· à régler avant le", "· to pay before"], ["Partiellement payée", "Partly paid"], ["factures en retard", "overdue invoices"], ["À payer · avant le", "To pay · before"], ["Dernière séance le", "Last session on"], ["Arrêt de la série", "Series stopped"], ["factures ouvertes", "open invoices"], [". Reste à payer :", ". Remaining to pay:"], ["dès aujourd'hui ?", "from today?"], ["séances annulées", "sessions cancelled"], ["· non disponible", "· not available"], ["frais de dossier", "admin fee"], ["seront annulées", "will be cancelled"], ["facture ouverte", "open invoice"], ["tous les chiens", "all dogs"], ["à votre demande", "at your request"], ["vaccins à jour", "vaccinations up to date"], ["numéro de puce", "microchip number"], ["· non facturée", "· not charged"], ["séance annulée", "session cancelled"], ["déjà effectuée", "already done"], ["hors délai sur", "late out of"], ["Avoir — séance", "Credit — session"], ["séances tenues", "sessions held"], ["Estimation · ", "Estimate · "], [" · estimation", " · estimate"], [" — estimation", " — estimate"], ["· non facturé", "· not charged"], ["restent dues.", "remain due."], ["· facturée à", "· charged at"], ["sera annulée", "will be cancelled"], ["annulée pour", "cancelled for"], ["rien à payer", "nothing to pay"], ["séance tenue", "session held"], ["Soit environ", "About"], ["du planning.", "from the schedule."], ["· facturé à", "· charged at"], ["Récurrent :", "Recurring:"], ["✓ Séance du", "✓ Session on"], ["à partir du", "from"], ["— séance du", "— session on"], ["j de retard", "d overdue"], ["Attention —", "Warning —"], ["Aujourd'hui", "Today"], ["à partir de", "from"], ["Estimation", "Estimate"], ["· jusqu'au", "· until"], ["reste due.", "remains due."], ["facturée à", "charged at"], ["Absence du", "Absence from"], ["· avant le", "· before"], ["· émise le", "· issued on"], ["Après-midi", "Afternoon"], ["En attente", "Pending"], ["Virement à", "Bank transfer to"], ["de retard", "overdue"], ["Récurrent", "Recurring"], ["facturés.", "charged."], ["Ajouter «", "Add \""], ["Séance du", "Session on"], ["la séance", "the session"], ["concernée", "concerned"], ["septembre", "September"], ["Septembre", "September"], ["Promenade", "Walk"], ["en retard", "overdue"], ["Bonjour,", "Hello,"], ["jusqu'au", "until"], ["séances)", "sessions)"], ["Payée le", "Paid on"], ["payée le", "paid on"], ["journées", "days"], ["le chien", "the dog"], ["à venir)", "upcoming)"], ["Mercredi", "Wednesday"], ["Vendredi", "Friday"], ["Dimanche", "Sunday"], ["mercredi", "Wednesday"], ["vendredi", "Friday"], ["dimanche", "Sunday"], ["novembre", "November"], ["décembre", "December"], ["Novembre", "November"], ["Décembre", "December"], ["Confirmé", "Confirmed"], ["à régler", "to pay"], ["Bonjour", "Hello"], ["· reste", "· remaining"], ["retirée", "removed"], ["séances", "sessions"], ["journée", "day"], ["à venir", "upcoming"], ["annulée", "cancelled"], ["Semaine", "Week"], ["janvier", "January"], ["février", "February"], ["juillet", "July"], ["octobre", "October"], ["Janvier", "January"], ["Février", "February"], ["Juillet", "July"], ["Octobre", "October"], ["Pension", "Boarding"], ["Terminé", "Done"], ["À payer", "To pay"], ["Facture", "Invoice"], ["facture", "invoice"], ["à payer", "to pay"], ["Femelle", "Female"], ["de TVA", "VAT"], ["séance", "session"], ["chiens", "dogs"], ["annulé", "cancelled"], ["Demain", "Tomorrow"], ["Samedi", "Saturday"], ["samedi", "Saturday"], ["Annulé", "Cancelled"], ["Retard", "Overdue"], ["à 9h00", "at 9:00"], ["à jour", "up to date"], ["dont ", "incl. "], ["nuits", "nights"], ["chien", "dog"], ["(dont", "(incl."], ["Lundi", "Monday"], ["Mardi", "Tuesday"], ["Jeudi", "Thursday"], ["lundi", "Monday"], ["mardi", "Tuesday"], ["jeudi", "Thursday"], ["avril", "April"], ["Avril", "April"], ["janv.", "Jan"], ["févr.", "Feb"], ["juil.", "Jul"], ["sept.", "Sep"], ["Matin", "Morning"], ["Payée", "Paid"], ["Total", "Total"], ["avri.", "Apr"], ["octo.", "Oct"], ["nove.", "Nov"], ["déce.", "Dec"], ["jours", "days"], ["nuit", "night"], ["Mois", "Month"], ["Hier", "Yesterday"], ["mars", "March"], ["juin", "June"], ["août", "August"], ["Mars", "March"], ["Juin", "June"], ["Août", "August"], ["avr.", "Apr"], ["oct.", "Oct"], ["nov.", "Nov"], ["déc.", "Dec"], ["Midi", "Midday"], ["Mâle", "Male"], [" HT", " excl. VAT"], ["Lun", "Mon"], ["Mar", "Tue"], ["Mer", "Wed"], ["Jeu", "Thu"], ["Ven", "Fri"], ["Sam", "Sat"], ["Dim", "Sun"], ["mai", "May"], ["Mai", "May"], ["par", "by"], [" à ", " at "]];
+  var LETTRE = /[A-Za-zÀ-ÖØ-öø-ÿ]/;
+  var lang = 'fr';
+  try { lang = localStorage.getItem('fr-client-lang') === 'en' ? 'en' : 'fr'; } catch (e) {}
+  var SKIP = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, INPUT: 1 };
+  var occupe = false;
+
+  function sa(s) { return String(s || '').normalize ? String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '') : String(s || ''); }
+  function norm(s) { return String(s).replace(/\s+/g, ' ').trim(); }
+  function esc(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  var RX = FRAG.map(function (p) {
+    var a = p[0], deb = LETTRE.test(a.charAt(0)) ? '(^|[^A-Za-zÀ-ÖØ-öø-ÿ])' : '()', fin = LETTRE.test(a.charAt(a.length - 1)) ? '(?![A-Za-zÀ-ÖØ-öø-ÿ])' : '';
+    return { a: a, re: new RegExp(deb + esc(a) + fin, 'g'), b: p[1] };
+  });
+  function traduire(fr) {
+    var k = norm(fr);
+    if (!k) return fr;
+    if (DICT[k] != null) return DICT[k];
+    if (!/[a-zà-ÿ]{2}/i.test(k)) return k;
+    var out = k;
+    for (var i = 0; i < RX.length; i++) {
+      if (out.indexOf(RX[i].a) === -1) continue;
+      out = out.replace(RX[i].re, function (m, avant) { return (avant || '') + RX[i].b; });
+    }
+    // Prépositions devant une date ou un nombre
+    out = out.replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])avant le (?=\d)/g, '$1before ')
+             .replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])le (?=\d)/g, '$1on ').replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])Le (?=\d)/g, '$1On ')
+             .replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])du (?=\d)/g, '$1from ').replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])Du (?=\d)/g, '$1From ')
+             .replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])au (?=\d)/g, '$1to ').replace(/(\d) h (\d)/g, '$1:$2');
+    return out;
+  }
+  function t(fr) { return lang === 'en' ? traduire(fr) : fr; }
+  function exclu(n) { var p = n.parentElement; return !p || SKIP[p.nodeName] || !!p.closest('[data-i18n-off]'); }
+
+  function noeud(n) {
+    if (exclu(n)) return;
+    var v = n.nodeValue;
+    if (!v || !v.trim()) return;
+    if (n._fr == null) n._fr = v;
+    else if (!(v === n._aff || v === sa(n._aff))) n._fr = v;     // le code a réécrit le texte
+    var brut = n._fr, avant = (brut.match(/^\s*/) || [''])[0], apres = (brut.match(/\s*$/) || [''])[0];
+    var cible = lang === 'en' ? avant + traduire(brut) + apres : brut;
+    n._aff = cible;
+    if (v !== cible && v !== sa(cible)) { occupe = true; n.nodeValue = cible; occupe = false; }
+  }
+  function attrs(el) {
+    ['placeholder', 'title', 'aria-label'].forEach(function (a) {
+      if (!el.hasAttribute || !el.hasAttribute(a)) return;
+      var k = 'i18n' + a.replace(/-/g, ''), v = el.getAttribute(a);
+      if (el.dataset[k] == null || (v !== el.dataset[k + 'Aff'])) el.dataset[k] = v;
+      var cible = lang === 'en' ? traduire(el.dataset[k]) : el.dataset[k];
+      el.dataset[k + 'Aff'] = cible;
+      if (v !== cible) { occupe = true; el.setAttribute(a, cible); occupe = false; }
+    });
+  }
+  function scan(root) {
+    if (!root) return;
+    if (root.nodeType === 3) { noeud(root); return; }
+    if (root.nodeType !== 1 || root.closest && root.closest('[data-i18n-off]')) return;
+    var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false), n;
+    while ((n = w.nextNode())) noeud(n);
+    attrs(root);
+    var els = root.querySelectorAll ? root.querySelectorAll('[placeholder],[title],[aria-label]') : [];
+    for (var i = 0; i < els.length; i++) attrs(els[i]);
+  }
+  function demarrer() {
+    document.documentElement.setAttribute('lang', lang);
+    scan(document.body);
+    new MutationObserver(function (muts) {
+      if (occupe) return;
+      muts.forEach(function (m) {
+        if (m.type === 'characterData') noeud(m.target);
+        else if (m.type === 'attributes') attrs(m.target);
+        else for (var i = 0; i < m.addedNodes.length; i++) scan(m.addedNodes[i]);
+      });
+    }).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['placeholder', 'title', 'aria-label'] });
+  }
+  function choisir(l) {
+    l = l === 'en' ? 'en' : 'fr';
+    try { localStorage.setItem('fr-client-lang', l); } catch (e) {}
+    if (l === lang) return;
+    lang = l;
+    document.documentElement.setAttribute('lang', lang);
+    scan(document.body);
+  }
+  // Boîtes de dialogue du navigateur (confirmations, alertes)
+  ['alert', 'confirm', 'prompt'].forEach(function (f) {
+    var orig = window[f];
+    window[f] = function (msg) {
+      var args = Array.prototype.slice.call(arguments);
+      if (lang === 'en' && typeof msg === 'string') args[0] = msg.split('\n').map(function (l) { return l.trim() ? traduire(l) : l; }).join('\n');
+      return orig.apply(window, args);
+    };
+  });
+  window.FR_LANG = {
+    t: t, choisir: choisir, langue: function () { return lang; },
+    // Langue de la fiche client : « fr » → français, toute autre → anglais
+    depuisClient: function (langue) { choisir(langue && String(langue).toLowerCase() !== 'fr' ? 'en' : 'fr'); }
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', demarrer); else demarrer();
+})();
+
+</script>
+
+<script>
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
@@ -1706,9 +1825,29 @@ function renderSettings() {
   html += '<div class="field-group"><label class="field-label">Email (compte)</label>'
     + '<input class="field-input" type="email" value="' + String(mail).replace(/"/g, '&quot;') + '" disabled></div>';
 
+  var langApp = window.FR_LANG ? FR_LANG.langue() : 'fr';
+  html += '<div class="field-group"><label class="field-label">Langue de l\'application</label>'
+    + '<select class="field-input" id="set-langue-app" onchange="changerLangueApp(this.value)">'
+    + '<option value="fr"' + (langApp === 'fr' ? ' selected' : '') + '>Français</option>'
+    + '<option value="en"' + (langApp === 'en' ? ' selected' : '') + '>English</option></select></div>';
+
   html += blocCGV();
 
   el.innerHTML = html;
+}
+
+// Langue de l'espace client (v2.42) : enregistrée sur la fiche du client
+async function changerLangueApp(v) {
+  if (window.FR_LANG) FR_LANG.choisir(v);
+  if (!clientData || !clientId) return;
+  var ancienne = clientData.langue;
+  // « en » pour l'anglais ; « fr » pour le français (un client luxembourgeois qui repasse en français devient « fr »)
+  try {
+    var r = await db.from('clients').update({ langue: v }).eq('id', clientId).select('id');
+    if (r.error) throw r.error;
+    clientData.langue = v;
+    showToast(v === 'en' ? '✓ Language saved' : '✓ Langue enregistrée');
+  } catch (e) { console.log('langue :', e); clientData.langue = ancienne; }
 }
 
 // ── Conditions générales : version acceptée, PDF, acceptation ──
@@ -1981,6 +2120,7 @@ async function loadClientProfile() {
     }
     clientData = client;
     clientId = client.id;
+    if (window.FR_LANG) FR_LANG.depuisClient(client.langue);
 
     // Charger les chiens directement (plus fiable que le join imbriqué)
     var chiens = client.chiens || [];
@@ -2181,7 +2321,7 @@ function renderMessagesClient() {
     return '<div style="display:flex;justify-content:' + (moi ? 'flex-end' : 'flex-start') + ';margin-bottom:8px;">'
       + '<div style="max-width:80%;background:' + (moi ? 'var(--accent-dim)' : 'var(--surface2)') + ';border:1px solid ' + (moi ? 'rgba(255,95,31,0.28)' : 'var(--border)') + ';border-radius:14px;padding:10px 13px;">'
       +   (moi ? '' : '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent);font-weight:700;margin-bottom:4px;">Gabriel</div>')
-      +   '<div style="font-size:13px;line-height:1.55;white-space:pre-wrap;color:var(--text);">' + esc(m.contenu || '') + '</div>'
+      +   '<div data-i18n-off style="font-size:13px;line-height:1.55;white-space:pre-wrap;color:var(--text);">' + esc(m.contenu || '') + '</div>'
       +   '<div style="font-size:10px;color:var(--text-faint);margin-top:5px;text-align:right;">' + msgHeure(m.created_at) + '</div>'
       + '</div></div>';
   }).join('');
@@ -2218,6 +2358,14 @@ async function marquerMessagesLus() {
   } catch(e) { console.log('maj lu client:', e); }
 }
 
+// Rappels automatiques de fin de réservation (fonction fr-rappels-fin, v2.44)
+var RE_FIN = /(se termine (le|dans)|end (on|in) )/i;
+function titreNotification(m) {
+  var c = m.contenu || '';
+  if (RE_FIN.test(c)) return 'Fin de réservation';
+  return /(météo|meteo|meteolux|alerte)/i.test(c) ? 'Alerte météo' : 'Réservation';
+}
+
 // Notifications d'accueil : les derniers messages de Gabriel
 function renderNotifications() {
   var el = document.getElementById('notifications-list');
@@ -2228,11 +2376,11 @@ function renderNotifications() {
     return;
   }
   el.innerHTML = recus.map(function(m) {
-    var titre = /(météo|meteo|meteolux|alerte)/i.test(m.contenu || '') ? 'Alerte météo' : 'Réservation';
+    var titre = titreNotification(m);
     return '<div class="notif-card ' + (m.lu ? 'read' : 'new') + '" onclick="ouvrirNotification(\'' + m.id + '\')">'
       + '<div class="notif-header"><span class="notif-type">' + titre + '</span>'
       +   '<span class="notif-time">' + msgHeure(m.created_at) + '</span></div>'
-      + '<div class="notif-sub">' + esc((m.contenu || '').slice(0, 140)) + ((m.contenu || '').length > 140 ? '…' : '') + '</div>'
+      + '<div class="notif-sub" data-i18n-off>' + esc((m.contenu || '').slice(0, 140)) + ((m.contenu || '').length > 140 ? '…' : '') + '</div>'
       + '</div>';
   }).join('');
 }
@@ -2245,7 +2393,8 @@ async function ouvrirNotification(id) {
   for (var i = 0; i < messagesClient.length; i++) if (String(messagesClient[i].id) === String(id)) m = messagesClient[i];
   if (!m) { openMessages(); return; }
 
-  var titre = /(météo|meteo|meteolux|alerte)/i.test(m.contenu || '') ? 'Alerte météo' : 'Réservation';
+  var titre = titreNotification(m);
+  var estFin = RE_FIN.test(m.contenu || '');
   var body  = document.getElementById('notif-modal-body');
 
   if (body) {
@@ -2260,9 +2409,11 @@ async function ouvrirNotification(id) {
       +     '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>'
       +     'Repondre a Gabriel'
       +   '</button>'
-      +   '<button class="btn-outline-big" style="flex:1;min-width:150px;" onclick="closeNotification();goTab(\'screen-bookings\',\'tab-bookings\');">'
-      +     'Mes reservations'
-      +   '</button>'
+      +   (estFin
+            ? '<button class="btn-outline-big" style="flex:1;min-width:150px;" onclick="closeNotification();allerReserver();">Réserver la suite</button>'
+            : '<button class="btn-outline-big" style="flex:1;min-width:150px;" onclick="closeNotification();goTab(\'screen-bookings\',\'tab-bookings\');">'
+            +   'Mes reservations'
+            + '</button>')
       + '</div>';
     document.getElementById('notifModal').classList.add('open');
   }
@@ -2350,6 +2501,34 @@ function htmlAlerteMeteo() {
     + '</div></div>';
 }
 
+// Fin de la dernière série récurrente Dog Walking / Day Care (même règle que
+// la fonction serveur fr_fin_reservations) : null si rien ne se termine
+// dans les 30 jours, ou si une série n'a pas de date de fin.
+function finSeriesClient() {
+  var auj = isoDate(new Date()), max = null, sansFin = false;
+  (resasData || []).forEach(function(r) {
+    if (r.service !== 'walking' && r.service !== 'daycare') return;
+    if (r.statut === 'annule' || r.statut === 'refuse') return;
+    if (!r.recurrente && !String(r.jours_recurrence || '').trim()) return;
+    var f = r.date_fin_recurrence || r.date_fin;
+    if (!f) { sansFin = true; return; }
+    f = String(f).slice(0, 10);
+    if (f < auj) return;
+    if (!max || f > max) max = f;
+  });
+  if (sansFin || !max) return null;
+  var j = Math.round((new Date(max + 'T12:00:00') - new Date(auj + 'T12:00:00')) / 86400000);
+  return j <= 30 ? { date: max, jours: j } : null;
+}
+// Le client peut masquer le bandeau du premier mois ; il revient à une semaine.
+function finMasquee(date) {
+  try { return localStorage.getItem('fr_fin_masquee') === date && finSeriesClient().jours > 7; } catch (e) { return false; }
+}
+function masquerFin(date) {
+  try { localStorage.setItem('fr_fin_masquee', date); } catch (e) {}
+  var b = document.getElementById('alerte-fin-resa'); if (b) b.remove();
+}
+
 function renderAlertesAccueil() {
   var el = document.getElementById('home-alertes');
   if (!el) return;
@@ -2387,6 +2566,22 @@ function renderAlertesAccueil() {
       + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:' + coul + ';">' + titre + '</div>'
       + '<div style="font-size:11.5px;color:var(--text-dim);">' + sousTitre + '</div></div>'
       + '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5" style="flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>'
+      + '</div>';
+  }
+
+  // Fin de réservation (v2.44) : la dernière série Dog Walking / Day Care
+  // se termine dans 30 jours ou moins. Orange à une semaine.
+  var fin = finSeriesClient();
+  if (fin && !finMasquee(fin.date)) {
+    var urgent = fin.jours <= 7;
+    var cF = urgent ? 'var(--accent)' : 'var(--text)';
+    var quand = fin.jours === 0 ? 'aujourd\'hui' : fin.jours === 1 ? 'demain' : 'dans ' + fin.jours + ' jours';
+    html += '<div onclick="allerReserver()" style="background:' + (urgent ? 'var(--accent-dim, rgba(255,95,31,0.10))' : 'var(--surface2)') + ';border:1px solid ' + (urgent ? 'rgba(255,95,31,0.35)' : 'var(--border)') + ';border-radius:var(--radius);padding:13px 15px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:11px;" id="alerte-fin-resa">'
+      + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="' + (urgent ? 'var(--accent)' : 'var(--text-dim)') + '" stroke-width="2" style="flex-shrink:0;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'
+      + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:' + cF + ';">Vos réservations se terminent ' + quand + '</div>'
+      + '<div style="font-size:11.5px;color:var(--text-dim);">Dernière séance le ' + dateCourte(fin.date) + ' · réservez la suite pour garder votre place</div></div>'
+      + '<button class="btn-big btn-accent" style="flex-shrink:0;width:auto;padding:8px 14px;font-size:12px;" onclick="event.stopPropagation();allerReserver();">Réserver</button>'
+      + (urgent ? '' : '<span title="Masquer" onclick="event.stopPropagation();masquerFin(\'' + fin.date + '\');" style="flex-shrink:0;color:var(--text-faint);font-size:18px;line-height:1;padding:2px 4px;cursor:pointer;">×</span>')
       + '</div>';
   }
 
@@ -2892,13 +3087,25 @@ function resasUniques(list) {
   return out;
 }
 
+// Nombre de nuits d'une pension, compté comme la facture : de l'arrivée à la
+// veille du départ (un séjour d'une journée compte une nuit), dates annulées exclues.
+function nbNuits(r) {
+  var d0 = parseDate(r.date_debut), d1 = parseDate(r.date_fin) || d0;
+  if (!d0) return 0;
+  var excl = datesExclues(r), n = 0;
+  for (var b = new Date(d0); b < d1; b.setDate(b.getDate() + 1)) if (excl.indexOf(isoDate(b)) === -1) n++;
+  if (!n && +d1 === +d0 && excl.indexOf(isoDate(d0)) === -1) n = 1;
+  return n;
+}
+
 function ligneResa(r, dateOcc) {
   var occ = occurrences(r);
   var recurrente = occ.length > 1 && r.service !== 'boarding';
   var couleur = SVC_COLORS[r.service] || 'var(--accent)';
   var periode;
   if (r.service === 'boarding' && r.date_fin && r.date_fin !== r.date_debut) {
-    periode = dateCourte(r.date_debut) + ' → ' + dateCourte(r.date_fin) + ' · ' + occ.length + ' nuits';
+    var nn = nbNuits(r);
+    periode = dateCourte(r.date_debut) + ' → ' + dateCourte(r.date_fin) + ' · ' + nn + (nn > 1 ? ' nuits' : ' nuit');
   } else if (recurrente) {
     periode = (joursLabel(joursDeResa(r)) || 'Récurrence non enregistrée') + ' · jusqu\'au ' + dateCourte(r.date_fin) + ' · ' + occ.length + ' séances';
   } else {
@@ -3147,7 +3354,7 @@ function openResaDetail(id, dateOcc) {
   if (r.service === 'boarding') {
     rows += detailRow('Arrivée', esc(dateLongue(r.date_debut)));
     rows += detailRow('Départ',  esc(dateLongue(r.date_fin || r.date_debut)));
-    rows += detailRow('Nuits',   occ.length);
+    rows += detailRow('Nuits',   nbNuits(r));
   } else if (recurrente) {
     rows += detailRow('Période', esc(dateCourte(r.date_debut) + ' → ' + dateCourte(r.date_fin)));
     rows += detailRow('Jours', joursLabel(joursDeResa(r))
@@ -3179,7 +3386,7 @@ function openResaDetail(id, dateOcc) {
       + '</div>';
     rows += detailRow('Montant TTC', detailMt, true);
   }
-  if (r.notes) rows += detailRow('Note', esc(r.notes));
+  if (r.notes) rows += detailRow('Note', '<span data-i18n-off>' + esc(r.notes) + '</span>');
   var excl = datesExclues(r);
   if (excl.length) {
     rows += detailRow('Séances annulées', excl.slice().sort().map(function(d) {
@@ -4108,7 +4315,7 @@ function factureDocHTML(opts) {
     ? opts.lignes.map(function(l) { return (l && l.label !== undefined && l.qte !== undefined) ? ligneCalcHTML(l) : ligneFactureHTML(l); }).join('')
     : '<tr><td colspan="5" style="color:#6b7450;font-size:11px;">Détail des prestations indisponible</td></tr>';
 
-  return '<div class="inv-doc" id="facture-doc">'
+  return '<div class="inv-doc" id="facture-doc" data-i18n-off>'
     + '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
     +   '<div><div class="inv-h1">FOREST <span class="rangers">RANGERS</span></div><div class="inv-sub">ARCANIN S.à r.l. · 42 rue de Mersch · L-8181 Kopstal · TVA LU34907315</div></div>'
     +   '<div style="text-align:right;"><div class="inv-ref">' + esc(opts.numero || 'ESTIMATION') + '</div>'
@@ -4707,7 +4914,7 @@ function openDogFull(idx) {
   html += row('Allergies', d.allergies ? esc(d.allergies) : '—');
   html += row('Médicaments', d.medicaments ? esc(d.medicaments) : '—');
   html += row('Pathologies', d.pathologies ? esc(d.pathologies) : '—');
-  html += row('Remarques', d.notes_sante ? esc(d.notes_sante) : '—');
+  html += row('Remarques', d.notes_sante ? '<span data-i18n-off>' + esc(d.notes_sante) + '</span>' : '—');
   document.getElementById('dog-full-body').innerHTML = html;
   document.getElementById('dogFullModal').classList.add('open');
 }
