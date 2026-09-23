@@ -13,14 +13,14 @@
      etre chargee. Elle ne s'affichait que sur les machines ou elle est
      installee localement ; partout ailleurs le navigateur retombait sur un
      sans-serif generique. Elle est desormais auto-hebergee (licence SIL OFL,
-     voir fonts/OFL-Norwester.txt). Oswald sert de repli condense si le
+     voir OFL-Norwester.txt). Oswald sert de repli condense si le
      fichier est absent. -->
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 @font-face {
   font-family: 'Norwester';
-  src: url('fonts/norwester.woff2') format('woff2'),
-       url('fonts/norwester.woff') format('woff');
+  src: url('norwester.woff2') format('woff2'),
+       url('norwester.woff') format('woff');
   font-weight: 400 900;
   font-style: normal;
   font-display: swap;
@@ -1852,7 +1852,7 @@ async function changerLangueApp(v) {
 
 // ── Conditions générales : version acceptée, PDF, acceptation ──
 var CGV_VERSION = '2026-10';
-var CGV_PDF     = '/cgv/Conditions_Generales_Forest_Rangers_2026-10.pdf';   // absolu : fonctionne quelle que soit l'adresse de la page
+var CGV_PDF     = '/Conditions_Generales_Forest_Rangers_2026-10.pdf';   // absolu : fonctionne quelle que soit l'adresse de la page
 
 function blocCGV() {
   var acceptee = clientData && clientData.cgv_version === CGV_VERSION;
