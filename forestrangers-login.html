@@ -11,24 +11,23 @@
 try { if (localStorage.getItem('fr-theme') !== 'dark') document.documentElement.classList.add('light'); } catch(e) {}
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<!-- Correctif police : Norwester etait appelee dans font-family sans jamais
+<!-- Correctif police : FRDisplay etait appelee dans font-family sans jamais
      etre chargee. Elle ne s'affichait que sur les machines ou elle est
      installee localement ; partout ailleurs le navigateur retombait sur un
      sans-serif generique. Elle est desormais auto-hebergee (licence SIL OFL,
-     voir OFL-Norwester.txt). Oswald sert de repli condense si le
+     voir OFL-FR-Display.txt). Oswald sert de repli condense si le
      fichier est absent. -->
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 @font-face {
-  font-family: 'Norwester';
-  src: url('norwester.woff2') format('woff2'),
-       url('norwester.woff') format('woff');
+  font-family: 'FRDisplay';
+  src: url('frdisplay.woff2') format('woff2'),
+       url('frdisplay.woff') format('woff');
   font-weight: 400 900;
   font-style: normal;
   font-display: swap;
 }
 </style>
-<link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- Repli CDN : si jsDelivr n'a pas repondu, on tente unpkg avant d'abandonner. -->
 <script>if (!window.supabase) { document.write('<scr' + 'ipt src="https://unpkg.com/@supabase/supabase-js@2"><\/scr' + 'ipt>'); }</script>
@@ -201,7 +200,7 @@ body::before {
   margin-bottom: 14px;
 }
 .brand-name {
-  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 13px; font-weight: 800;
+  font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 13px; font-weight: 800;
   color: #eceee6; letter-spacing: 0.03em;
   line-height: 1.8; padding-bottom: 6px; overflow: visible;
   clip: auto; display: inline-block;
@@ -239,7 +238,7 @@ body::before {
   border: none;
   background: transparent;
   color: var(--td);
-  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif;
+  font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
@@ -332,7 +331,7 @@ body::before {
   border: none;
   background: var(--accent);
   color: white;
-  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif;
+  font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;
   font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.06em;

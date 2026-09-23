@@ -11,24 +11,23 @@
 try { if (localStorage.getItem('fr-theme') === 'dark') document.documentElement.classList.add('dark'); } catch(e) {}
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<!-- Correctif police : Norwester etait appelee dans font-family sans jamais
+<!-- Correctif police : FRDisplay etait appelee dans font-family sans jamais
      etre chargee. Elle ne s'affichait que sur les machines ou elle est
      installee localement ; partout ailleurs le navigateur retombait sur un
      sans-serif generique. Elle est desormais auto-hebergee (licence SIL OFL,
-     voir OFL-Norwester.txt). Oswald sert de repli condense si le
+     voir OFL-FR-Display.txt). Oswald sert de repli condense si le
      fichier est absent. -->
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 @font-face {
-  font-family: 'Norwester';
-  src: url('norwester.woff2') format('woff2'),
-       url('norwester.woff') format('woff');
+  font-family: 'FRDisplay';
+  src: url('frdisplay.woff2') format('woff2'),
+       url('frdisplay.woff') format('woff');
   font-weight: 400 900;
   font-style: normal;
   font-display: swap;
 }
 </style>
-  <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -101,7 +100,7 @@ body {
 }
 .brand-mark svg { width: 16px; height: 16px; fill: white; }
 .brand-name {
-  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 13px; font-weight: 800;
+  font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 13px; font-weight: 800;
   color: #eceee6; letter-spacing: 0.03em;
   line-height: 1.8; padding-bottom: 6px; overflow: visible;
   clip: auto; display: inline-block;
@@ -132,7 +131,7 @@ body {
   padding: 4px 12px; border-radius: 20px; margin-bottom: 14px;
 }
 .hero h1 {
-  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: clamp(22px, 4vw, 32px);
+  font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: clamp(22px, 4vw, 32px);
   font-weight: 800; color: white; line-height: 1.2; margin-bottom: 10px;
 }
 .hero h1 span { color: var(--accent); }
@@ -169,7 +168,7 @@ body {
 .step-num {
   width: 32px; height: 32px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 12px; font-weight: 800;
+  font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 12px; font-weight: 800;
   flex-shrink: 0; transition: all 0.3s; position: relative; z-index: 1;
   border: 2px solid var(--border2); background: var(--bg); color: var(--text-faint);
 }
@@ -203,7 +202,7 @@ body {
 }
 .form-section-icon svg { width: 15px; height: 15px; stroke: white; fill: none; }
 .form-section-title {
-  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 12px; font-weight: 800;
+  font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 12px; font-weight: 800;
   text-transform: uppercase; letter-spacing: 0.1em; color: white;
 }
 .form-section-body { padding: 20px; }
@@ -325,7 +324,7 @@ input[type=range]::-webkit-slider-runnable-track {
   position: relative;
 }
 .person-card-title {
-  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 800;
+  font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 800;
   text-transform: uppercase; letter-spacing: 0.1em;
   color: var(--kaki-light); margin-bottom: 10px;
 }
@@ -359,7 +358,7 @@ input[type=range]::-webkit-slider-runnable-track {
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   padding: 13px 24px; border-radius: 10px;
-  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 13px; font-weight: 800;
+  font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 13px; font-weight: 800;
   cursor: pointer; border: none; transition: all 0.2s; letter-spacing: 0.02em;
 }
 .btn-accent { background: var(--accent); color: white; flex: 1; }
@@ -418,7 +417,7 @@ input[type=range]::-webkit-slider-runnable-track {
 }
 .success-icon svg { width: 36px; height: 36px; stroke: var(--green); }
 .success-title {
-  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 22px; font-weight: 800;
+  font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 22px; font-weight: 800;
   color: var(--accent);
   margin-bottom: 10px;
 }
@@ -432,7 +431,7 @@ input[type=range]::-webkit-slider-runnable-track {
   margin-bottom: 16px;
 }
 .success-card-title {
-  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 10px; font-weight: 800;
+  font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 10px; font-weight: 800;
   text-transform: uppercase; letter-spacing: 0.14em;
   color: var(--text-faint); margin-bottom: 10px;
 }
@@ -1646,7 +1645,7 @@ input[type=range]::-webkit-slider-runnable-track {
     <div id="chiens-supps-container"></div>
 
     <!-- Bouton ajouter un chien -->
-    <button onclick="ajouterChien()" style="width:100%;padding:12px;border-radius:10px;background:transparent;border:1.5px dashed rgba(255,95,31,0.4);color:var(--accent);font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px;">
+    <button onclick="ajouterChien()" style="width:100%;padding:12px;border-radius:10px;background:transparent;border:1.5px dashed rgba(255,95,31,0.4);color:var(--accent);font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Ajouter un autre chien
     </button>
@@ -1684,7 +1683,7 @@ input[type=range]::-webkit-slider-runnable-track {
         <!-- Résumé traduit, affiché dans la langue choisie. Le texte officiel
              ci-dessous reste en français (data-i18n-off) : lui seul fait foi. -->
         <div style="border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:14px;background:var(--surface2);">
-          <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent);margin-bottom:8px;">L'essentiel en bref</div>
+          <div style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent);margin-bottom:8px;">L'essentiel en bref</div>
           <div style="display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);"><div style="flex:0 0 33%;font-weight:700;font-size:12.5px;color:var(--text);">Réservations et annulations</div><div style="flex:1;font-size:12.5px;color:var(--text-dim);line-height:1.55;">Les réservations se font à l'avance selon les disponibilités. Une annulation tardive est facturée, et la prestation est due en entier si le ranger est déjà sur place.</div></div>
           <div style="display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);"><div style="flex:0 0 33%;font-weight:700;font-size:12.5px;color:var(--text);">Santé et sécurité du chien</div><div style="flex:1;font-size:12.5px;color:var(--text-dim);line-height:1.55;">Le chien doit être vacciné contre la rage, en bonne santé, couvert par une assurance responsabilité civile et porter une médaille avec un numéro de téléphone à jour.</div></div>
           <div style="display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);"><div style="flex:0 0 33%;font-weight:700;font-size:12.5px;color:var(--text);">Accès au domicile</div><div style="flex:1;font-size:12.5px;color:var(--text-dim);line-height:1.55;">Vous fournissez un accès permanent et sans attente — clé, code ou autre moyen — ainsi que le matériel de nettoyage du chien (serviettes, lingettes).</div></div>
@@ -2817,7 +2816,7 @@ function renderPreRecap() {
     if (!body) return '';
     var sep = premier ? '' : 'margin-top:18px;padding-top:14px;border-top:1px solid var(--border);';
     return '<div style="' + sep + '">'
-      + '<div style="font-family:\'Norwester\', \'Oswald\', \'Arial Narrow\', sans-serif;font-size:11px;font-weight:800;'
+      + '<div style="font-family:\'FRDisplay\', \'Oswald\', \'Arial Narrow\', sans-serif;font-size:11px;font-weight:800;'
       + 'letter-spacing:0.09em;text-transform:uppercase;color:var(--text-faint);margin-bottom:8px;">' + titre + '</div>'
       + body + '</div>';
   }
@@ -2934,9 +2933,12 @@ function isHorsZone(commune) {
   return !zonesNormales.some(function(z) { return commune.toLowerCase().includes(z); });
 }
 
-// Retire les accents UNIQUEMENT sur les textes rendus en Norwester (la police
+// Retire les accents UNIQUEMENT sur les textes rendus en FRDisplay (la police
 // d'affichage n'a pas de capitales accentuées → « É » cassé). Le corps de texte
 // (Instrument Sans) garde ses accents normalement.
+function frAccentsPolice(s) {   // v2.53 : FR Display dessine ces lettres ; les autres perdent leur accent
+  return String(s).replace(/[\u00C0-\u024F]/g, function (c) { return 'àâäéèêëîïôöùûüçÿáíóúÀÂÄÉÈÊËÎÏÔÖÙÛÜÇŸÁÍÓÚ'.indexOf(c) !== -1 ? c : c.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); });
+}
 function stripDisplayAccents(root) {
   var scope = root || document.body;
   if (!scope) return;
@@ -2945,11 +2947,11 @@ function stripDisplayAccents(root) {
     var el = nodes[i];
     var ff = '';
     try { ff = window.getComputedStyle(el).fontFamily || ''; } catch(e) {}
-    if (ff.indexOf('Norwester') === -1) continue;
+    if (ff.indexOf('FRDisplay') === -1) continue;
     for (var j = 0; j < el.childNodes.length; j++) {
       var node = el.childNodes[j];
       if (node.nodeType === 3 && /[\u00C0-\u024F]/.test(node.nodeValue)) {
-        node.nodeValue = node.nodeValue.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        node.nodeValue = frAccentsPolice(node.nodeValue);
       }
     }
   }
@@ -3249,11 +3251,11 @@ async function sauvegarderInscription(motDePasse) {
         + '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-faint);">' + t('Email') + '</span><span>' + email + '</span></div>'
         + '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-faint);">' + t('Commune') + '</span><span>' + (commune || '—') + '</span></div>'
         + (nomChien ? '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-faint);">' + t('Chien') + '</span><span>' + nomChien + (race ? ' · ' + race : '') + '</span></div>' : '')
-        + '<div style="display:flex;justify-content:space-between;padding:6px 0;"><span style="color:var(--text-faint);">' + t('N° client') + '</span><span style="color:var(--accent);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:15px;font-weight:800;">#' + nextNum + '</span></div>'
+        + '<div style="display:flex;justify-content:space-between;padding:6px 0;"><span style="color:var(--text-faint);">' + t('N° client') + '</span><span style="color:var(--accent);font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:15px;font-weight:800;">#' + nextNum + '</span></div>'
         + '</div>';
     }
 
-    // Re-traiter les accents des titres Norwester mis à jour dynamiquement
+    // Re-traiter les accents des titres FRDisplay mis à jour dynamiquement
     stripDisplayAccents(document.getElementById('page-4'));
 
   } catch(e) {

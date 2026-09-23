@@ -11,24 +11,23 @@
 try { if (localStorage.getItem('fr-theme') !== 'dark') document.documentElement.classList.add('light'); } catch(e) {}
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<!-- Correctif police : Norwester etait appelee dans font-family sans jamais
+<!-- Correctif police : FRDisplay etait appelee dans font-family sans jamais
      etre chargee. Elle ne s'affichait que sur les machines ou elle est
      installee localement ; partout ailleurs le navigateur retombait sur un
      sans-serif generique. Elle est desormais auto-hebergee (licence SIL OFL,
-     voir OFL-Norwester.txt). Oswald sert de repli condense si le
+     voir OFL-FR-Display.txt). Oswald sert de repli condense si le
      fichier est absent. -->
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 @font-face {
-  font-family: 'Norwester';
-  src: url('norwester.woff2') format('woff2'),
-       url('norwester.woff') format('woff');
+  font-family: 'FRDisplay';
+  src: url('frdisplay.woff2') format('woff2'),
+       url('frdisplay.woff') format('woff');
   font-weight: 400 900;
   font-style: normal;
   font-display: swap;
 }
 </style>
-<link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -73,7 +72,7 @@ html, body { min-height: 100vh; font-family: 'Instrument Sans', sans-serif; back
   text-decoration: none; transition: all 0.15s;
 }
 .back-btn:hover { color: var(--text); border-color: var(--border2); }
-.page-title { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 18px; font-weight: 800; }
+.page-title { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 18px; font-weight: 800; }
 
 /* ── FILTRES ── */
 .filters-bar {
@@ -90,12 +89,12 @@ html, body { min-height: 100vh; font-family: 'Instrument Sans', sans-serif; back
 .filter-select:focus { border-color: var(--accent); }
 .filter-label { font-size: 11px; color: var(--text-faint); font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; }
 .filter-sep { width: 1px; height: 20px; background: var(--border2); margin: 0 4px; }
-.btn-reset { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; color: var(--text-dim); font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 0.08em; }
+.btn-reset { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; color: var(--text-dim); font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 0.08em; }
 .btn-reset:hover { border-color: var(--accent); color: var(--accent); }
 
 /* ── LAYOUT ── */
 .content { padding: 20px 24px 40px; max-width: 1200px; }
-.section-title { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-faint); margin-bottom: 10px; margin-top: 24px; display: flex; align-items: center; gap: 8px; }
+.section-title { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-faint); margin-bottom: 10px; margin-top: 24px; display: flex; align-items: center; gap: 8px; }
 .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 .grid { display: grid; gap: 10px; }
 .grid-4 { grid-template-columns: repeat(4, 1fr); }
@@ -117,7 +116,7 @@ html, body { min-height: 100vh; font-family: 'Instrument Sans', sans-serif; back
 .kpi.red::before { background: var(--red); }
 .kpi.amber::before { background: var(--amber); }
 .kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-faint); font-weight: 700; margin-bottom: 6px; }
-.kpi-val { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 28px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+.kpi-val { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 28px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
 .kpi-sub { font-size: 11px; color: var(--text-faint); }
 .kpi.green .kpi-val { color: var(--green); }
 .kpi.accent .kpi-val { color: var(--accent); }
@@ -132,7 +131,7 @@ html, body { min-height: 100vh; font-family: 'Instrument Sans', sans-serif; back
 /* ── CARDS ── */
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
 .card-head { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-.card-title { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-dim); }
+.card-title { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-dim); }
 .card-body { padding: 14px 16px; }
 
 /* ── BARRES ── */
@@ -144,12 +143,12 @@ html, body { min-height: 100vh; font-family: 'Instrument Sans', sans-serif; back
 
 /* ── TABLE ── */
 .tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
-.tbl th { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-faint); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 700; }
+.tbl th { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-faint); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 700; }
 .tbl td { padding: 9px 12px; border-bottom: 1px solid var(--border); color: var(--text-dim); vertical-align: middle; }
 .tbl tr:last-child td { border-bottom: none; }
 .tbl tr:hover td { background: var(--surface2); }
 .tbl td.main { color: var(--text); font-weight: 500; }
-.badge { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 9px; font-weight: 800; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.08em; display: inline-block; }
+.badge { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 9px; font-weight: 800; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.08em; display: inline-block; }
 .b-green  { background: var(--green-dim);  color: var(--green); border: 1px solid rgba(94,201,122,0.25); }
 .b-red    { background: var(--red-dim);    color: var(--red);   border: 1px solid rgba(224,90,90,0.25); }
 .b-accent { background: var(--accent-dim); color: var(--accent);border: 1px solid var(--accent-mid); }
@@ -188,7 +187,7 @@ html, body { min-height: 100vh; font-family: 'Instrument Sans', sans-serif; back
 .mini-list .row b { color: var(--text); font-weight: 600; }
 .van-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
 .van { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; }
-.van-t { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 15px; color: var(--text); }
+.van-t { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 15px; color: var(--text); }
 .van-s { font-size: 11px; color: var(--text-faint); margin-bottom: 10px; }
 .info-note { background: var(--amber-dim); color: var(--text); border: 1px solid rgba(240,180,41,0.3); border-radius: 10px; padding: 10px 14px; font-size: 12px; line-height: 1.5; }
 .tbl-wrap { overflow-x: auto; }
@@ -738,7 +737,7 @@ function sectionAffluence(b, C, EV) {
   var j0 = auj();
   var topH = top.length ? '<div class="mini-list">' + top.map(function(j) {
       var det = SVCS.filter(function(s) { return j[s]; }).map(function(s) { return SVC_NOMS[s] + ' ' + j[s]; }).join(' · ');
-      return '<div class="row"><span><b>' + JOURS_C[(parseISO(j.date).getDay() + 6) % 7] + ' ' + dateFr(j.date, true) + '</b>' + (j.date > j0 ? ' <span class="badge b-muted">prévu</span>' : '') + '<br><span style="font-size:11px;">' + det + '</span></span><span style="font-family:Norwester,Oswald,sans-serif;font-size:18px;color:var(--accent);">' + j.total + '</span></div>';
+      return '<div class="row"><span><b>' + JOURS_C[(parseISO(j.date).getDay() + 6) % 7] + ' ' + dateFr(j.date, true) + '</b>' + (j.date > j0 ? ' <span class="badge b-muted">prévu</span>' : '') + '<br><span style="font-size:11px;">' + det + '</span></span><span style="font-family:FRDisplay,Oswald,sans-serif;font-size:18px;color:var(--accent);">' + j.total + '</span></div>';
     }).join('') + '</div>' : '<div class="empty">Aucune séance</div>';
   var h = '<div class="section-title">🔥 Périodes les plus chargées — ' + esc(b.label) + '</div>';
   h += '<div class="grid grid-21">'

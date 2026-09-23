@@ -9,24 +9,23 @@
 (function(){ try { if (localStorage.getItem('fr-theme') !== 'dark') document.documentElement.classList.add('light'); } catch(e) {} })();
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<!-- Correctif police : Norwester etait appelee dans font-family sans jamais
+<!-- Correctif police : FRDisplay etait appelee dans font-family sans jamais
      etre chargee. Elle ne s'affichait que sur les machines ou elle est
      installee localement ; partout ailleurs le navigateur retombait sur un
      sans-serif generique. Elle est desormais auto-hebergee (licence SIL OFL,
-     voir OFL-Norwester.txt). Oswald sert de repli condense si le
+     voir OFL-FR-Display.txt). Oswald sert de repli condense si le
      fichier est absent. -->
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 @font-face {
-  font-family: 'Norwester';
-  src: url('norwester.woff2') format('woff2'),
-       url('norwester.woff') format('woff');
+  font-family: 'FRDisplay';
+  src: url('frdisplay.woff2') format('woff2'),
+       url('frdisplay.woff') format('woff');
   font-weight: 400 900;
   font-style: normal;
   font-display: swap;
 }
 </style>
-  <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -141,7 +140,7 @@ html, body {
   padding: 0 28px 6px; font-size: 12px; font-weight: 600;
   position: relative; z-index: 50;
 }
-.status-time { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 15px; font-weight: 700; }
+.status-time { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 15px; font-weight: 700; }
 .status-icons { display: flex; align-items: center; gap: 5px; }
 .status-icons svg { width: 14px; height: 14px; fill: var(--text); }
 
@@ -214,7 +213,7 @@ html, body {
   display: flex; align-items: center; justify-content: space-between;
 }
 .card-title {
-  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 700;
+  font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim);
 }
 .card-body { padding: 14px 16px; }
@@ -242,7 +241,7 @@ html, body {
   margin-bottom: 8px;
 }
 .notif-type {
-  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 700;
+  font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.1em;
 }
 .notif-card.new .notif-type { color: var(--accent); }
@@ -256,7 +255,7 @@ html, body {
 }
 .notif-stat { font-size: 12px; color: var(--text-dim); display: flex; align-items: center; gap: 5px; }
 .notif-stat svg { width: 13px; height: 13px; color: var(--accent); }
-.notif-stat strong { color: var(--accent); font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-weight: 700; }
+.notif-stat strong { color: var(--accent); font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-weight: 700; }
 
 /* ── WALK DETAIL (full screen) ── */
 .walk-photo {
@@ -338,7 +337,7 @@ html, body {
 .booking-date { font-size: 11px; color: var(--text-faint); margin-bottom: 3px; }
 .booking-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
 .booking-meta { display: flex; align-items: center; justify-content: space-between; }
-.booking-price { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 15px; font-weight: 800; color: var(--accent); }
+.booking-price { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 15px; font-weight: 800; color: var(--accent); }
 
 /* ── DOG PROFILE ── */
 .dog-hero {
@@ -353,7 +352,7 @@ html, body {
   display: flex; align-items: center; justify-content: center;
   font-size: 28px; flex-shrink: 0; border: 2px solid var(--accent);
 }
-.dog-name { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 18px; font-weight: 800; }
+.dog-name { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 18px; font-weight: 800; }
 .dog-breed { font-size: 12px; color: var(--text-faint); margin-top: 3px; }
 .dog-prop-row {
   display: flex; justify-content: space-between; align-items: center;
@@ -374,13 +373,13 @@ html, body {
 .invoice-detail { flex: 1; }
 .invoice-name { font-size: 13px; font-weight: 600; }
 .invoice-date { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
-.invoice-amount { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 15px; font-weight: 800; }
+.invoice-amount { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 15px; font-weight: 800; }
 
 /* ── BTN ── */
 .btn-big {
   width: 100%; padding: 16px;
   border-radius: var(--radius); border: none;
-  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 15px; font-weight: 800;
+  font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 15px; font-weight: 800;
   cursor: pointer; transition: all 0.2s;
   display: flex; align-items: center; justify-content: center; gap: 10px;
 }
@@ -390,7 +389,7 @@ html, body {
 .btn-outline-big {
   background: transparent; border: 1.5px solid var(--border2);
   color: var(--text-dim); padding: 14px;
-  border-radius: var(--radius); font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif;
+  border-radius: var(--radius); font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;
   font-size: 13px; font-weight: 700; cursor: pointer;
   transition: all 0.15s; letter-spacing: 0.02em;
   display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -433,7 +432,7 @@ html, body {
 
 .jour-pill {
   padding: 6px 2px; border-radius: 7px; text-align: center;
-  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 10px; font-weight: 800;
+  font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 10px; font-weight: 800;
   background: var(--surface2); border: 1.5px solid var(--border);
   cursor: pointer; transition: all 0.15s; color: var(--text-dim);
 }
@@ -594,7 +593,7 @@ html, body {
 /* ── CALENDRIER MENSUEL ── */
 .cal-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
 .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.cal-title { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
+.cal-title { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
 .cal-nav {
   width: 28px; height: 28px; border-radius: 8px; background: var(--surface2);
   border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
@@ -682,7 +681,7 @@ html, body {
     background: transparent; border: 0; box-shadow: none;
   }
   .nav-brand-name {
-    font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 13px; font-weight: 800;
+    font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 13px; font-weight: 800;
     letter-spacing: 0.03em; line-height: 1.2; white-space: nowrap;
   }
   .nav-brand-name .forest  { color: var(--text); }
@@ -722,7 +721,7 @@ html, body {
   }
   .nav-badge {
     margin-left: auto; background: var(--accent); color: #fff;
-    font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 10px; font-weight: 800;
+    font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 10px; font-weight: 800;
     min-width: 19px; height: 19px; border-radius: 10px; padding: 0 6px;
     display: none; align-items: center; justify-content: center; flex-shrink: 0;
   }
@@ -737,7 +736,7 @@ html, body {
     width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
     background: linear-gradient(135deg, #3d4429, #6b7450);
     border: 2px solid var(--accent); display: flex; align-items: center; justify-content: center;
-    font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 12px; font-weight: 800; color: var(--text);
+    font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 12px; font-weight: 800; color: var(--text);
   }
   html.light .nav-user-av { color: #fff; }
   .nav-user-txt { min-width: 0; }
@@ -858,9 +857,9 @@ html, body {
 
 /* ── BLOC FACTURE (fond blanc — sert aussi au PDF) ── */
 .inv-doc { background: #ffffff; color: #1c1f14; border-radius: 12px; padding: 20px; }
-.inv-doc .inv-h1 { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 18px; font-weight: 800; color: #1c1f14; }
+.inv-doc .inv-h1 { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 18px; font-weight: 800; color: #1c1f14; }
 .inv-doc .inv-h1 .rangers { color: #ff5f1f; }
-.inv-doc .inv-ref { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 13px; font-weight: 800; color: #ff5f1f; letter-spacing: 0.04em; }
+.inv-doc .inv-ref { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 13px; font-weight: 800; color: #ff5f1f; letter-spacing: 0.04em; }
 .inv-doc th { color: #ff5f1f !important; }
 .inv-doc .inv-tot.big { border-top-color: #1c1f14 !important; color: #1c1f14; }
 .inv-doc .inv-tot.big span:last-child { color: #ff5f1f; }
@@ -879,7 +878,7 @@ html, body {
   .inv-doc td.qte, .inv-doc th.qte { width: 30px; padding-left: 8px; }
 }
 .inv-doc .inv-tot { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; }
-.inv-doc .inv-tot.big { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 16px; font-weight: 800; border-top: 1.5px solid #1c1f14; margin-top: 6px; padding-top: 8px; }
+.inv-doc .inv-tot.big { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 16px; font-weight: 800; border-top: 1.5px solid #1c1f14; margin-top: 6px; padding-top: 8px; }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="fr-calendrier.js"></script>
@@ -970,16 +969,16 @@ html, body {
             <img class="home-logo" alt="Forest Rangers" src="logo-forestrangers.png">
             <div style="min-width:0;">
               <div id="client-date" style="font-size:12px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">&nbsp;</div>
-              <div id="client-bonjour" style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:20px;font-weight:800;margin-top:2px;">Chargement…</div>
+              <div id="client-bonjour" style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:20px;font-weight:800;margin-top:2px;">Chargement…</div>
             </div>
           </div>
           <div class="home-account" style="position:relative;flex-shrink:0;">
-            <div id="client-avatar" onclick="toggleAvatarMenu(event)" aria-label="Menu du compte" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#3d4429,#6b7450);display:flex;align-items:center;justify-content:center;font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-weight:800;font-size:13px;border:2px solid var(--accent);cursor:pointer;"></div>
+            <div id="client-avatar" onclick="toggleAvatarMenu(event)" aria-label="Menu du compte" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#3d4429,#6b7450);display:flex;align-items:center;justify-content:center;font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-weight:800;font-size:13px;border:2px solid var(--accent);cursor:pointer;"></div>
             <div id="avatarMenu" class="avatar-menu">
               <button class="avatar-menu-item" onclick="openMessages()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                 Messages
-                <span id="avatar-msg-badge" style="display:none;margin-left:auto;background:var(--accent);color:#fff;font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:9px;padding:0 5px;align-items:center;justify-content:center;">0</span>
+                <span id="avatar-msg-badge" style="display:none;margin-left:auto;background:var(--accent);color:#fff;font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:9px;padding:0 5px;align-items:center;justify-content:center;">0</span>
               </button>
               <button class="avatar-menu-item" onclick="openSettings()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
@@ -1061,7 +1060,7 @@ html, body {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
             </div>
             <div>
-              <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:16px;font-weight:800;">Promenade du matin</div>
+              <div style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:16px;font-weight:800;">Promenade du matin</div>
               <div style="font-size:12px;color:var(--text-faint);">Aujourd'hui · 08:00 → 08:48</div>
             </div>
             <span class="badge b-green" style="margin-left:auto;">Terminé</span>
@@ -1070,15 +1069,15 @@ html, body {
           [[ Stats ]]
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
             <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
-              <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:22px;font-weight:800;color:var(--accent);">3,4</div>
+              <div style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:22px;font-weight:800;color:var(--accent);">3,4</div>
               <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">km</div>
             </div>
             <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
-              <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:22px;font-weight:800;color:var(--accent);">48</div>
+              <div style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:22px;font-weight:800;color:var(--accent);">48</div>
               <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">min</div>
             </div>
             <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
-              <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:22px;font-weight:800;color:var(--green);">3</div>
+              <div style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:22px;font-weight:800;color:var(--green);">3</div>
               <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">chiens</div>
             </div>
           </div>
@@ -1148,7 +1147,7 @@ html, body {
     <!-- ══ RÉSERVATIONS ══ -->
     <div class="screen" id="screen-bookings">
       <div class="screen-pad">
-        <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:20px;font-weight:800;margin-bottom:4px;margin-top:4px;">Mes reservations</div>
+        <div style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:20px;font-weight:800;margin-bottom:4px;margin-top:4px;">Mes reservations</div>
         <div style="font-size:13px;color:var(--text-dim);margin-bottom:18px;">Historique et à venir</div>
 
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
@@ -1188,7 +1187,7 @@ html, body {
 
     <div class="screen" id="screen-dog">
       <div class="screen-pad">
-        <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:20px;font-weight:800;margin-bottom:16px;margin-top:4px;">Mon chien</div>
+        <div style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:20px;font-weight:800;margin-bottom:16px;margin-top:4px;">Mon chien</div>
 
         <div id="chiens-list">
           <div style="padding:24px;text-align:center;color:var(--text-faint);font-size:13px;">Chargement…</div>
@@ -1201,7 +1200,7 @@ html, body {
           <div style="font-size:12.5px;color:var(--text-dim);line-height:1.5;">Les photos de promenade arriveront prochainement.</div>
         </div>
 
-        <a href="javascript:void(0)" class="desk-inline" onclick="openDogAdd()" style="width:100%;margin-top:20px;padding:14px;background:var(--accent);border:1.5px solid var(--accent);border-radius:12px;color:#fff;font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-weight:700;font-size:13px;letter-spacing:0.04em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;">
+        <a href="javascript:void(0)" class="desk-inline" onclick="openDogAdd()" style="width:100%;margin-top:20px;padding:14px;background:var(--accent);border:1.5px solid var(--accent);border-radius:12px;color:#fff;font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-weight:700;font-size:13px;letter-spacing:0.04em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
           Ajouter un chien
         </a>
@@ -1212,7 +1211,7 @@ html, body {
     <!-- ══ FACTURES ══ -->
     <div class="screen" id="screen-invoices">
       <div class="screen-pad">
-        <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:20px;font-weight:800;margin-bottom:4px;margin-top:4px;">Mes factures</div>
+        <div style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:20px;font-weight:800;margin-bottom:4px;margin-top:4px;">Mes factures</div>
         <div style="font-size:13px;color:var(--text-dim);margin-bottom:18px;">Suivi de vos paiements</div>
 
         <!-- Estimation du mois en cours (rempli par loadMoisCourant) -->
@@ -1246,7 +1245,7 @@ html, body {
           <div class="back-btn" onclick="goTab('screen-home','tab-home')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
           </div>
-          <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:20px;font-weight:800;">Messages</div>
+          <div style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:20px;font-weight:800;">Messages</div>
         </div>
         <div class="msg-sub" style="font-size:12.5px;color:var(--text-dim);margin-bottom:12px;padding-left:46px;">Gabriel vous répond directement ici. Les avis automatiques (annulations, météo) restent sur l'accueil.</div>
 
@@ -1282,7 +1281,7 @@ html, body {
           <div class="back-btn" onclick="goTab('screen-home','tab-home')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
           </div>
-          <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:20px;font-weight:800;">Paramètres</div>
+          <div style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:20px;font-weight:800;">Paramètres</div>
         </div>
 
         <div class="card">
@@ -1393,7 +1392,7 @@ html, body {
     <div class="modal-close" onclick="closeAbsence()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </div>
-    <div style="font-family:'Norwester','Oswald','Arial Narrow',sans-serif;font-size:19px;font-weight:800;margin-bottom:4px;">Annuler une periode</div>
+    <div style="font-family:'FRDisplay','Oswald','Arial Narrow',sans-serif;font-size:19px;font-weight:800;margin-bottom:4px;">Annuler une periode</div>
     <div style="font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:16px;">
       Promenades et crèche du jour. Pour la pension, ouvrez la réservation concernée : ses délais d'annulation sont différents.
     </div>
@@ -1454,7 +1453,7 @@ html, body {
     <div class="modal-close" onclick="closeDogEdit()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </div>
-    <div id="dog-modal-title" style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:17px;font-weight:800;margin-bottom:16px;">Modifier le chien</div>
+    <div id="dog-modal-title" style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:17px;font-weight:800;margin-bottom:16px;">Modifier le chien</div>
 
     <!-- Encart : a quoi servent ces informations (rassurance client) -->
     <div style="background:var(--accent-dim);border:1px solid var(--accent-mid);border-radius:var(--radius);padding:12px 14px;margin-bottom:18px;display:flex;gap:10px;align-items:flex-start;font-size:12px;color:var(--text-dim);line-height:1.55;">
@@ -1626,7 +1625,7 @@ html, body {
     <div class="modal-close" onclick="closeDogFull()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </div>
-    <div id="dog-full-title" style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:17px;font-weight:800;margin-bottom:16px;">Fiche complète</div>
+    <div id="dog-full-title" style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:17px;font-weight:800;margin-bottom:16px;">Fiche complète</div>
     <div id="dog-full-body"></div>
     <button class="btn-big btn-accent" style="margin-top:16px;" onclick="closeDogFull()">
       <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -1964,7 +1963,7 @@ async function saveSettings() {
 function showToast(msg, isError) {
   var toast = document.createElement('div');
   var bg = isError ? 'var(--red)' : 'var(--green)';
-  toast.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:' + bg + ';color:white;padding:12px 20px;border-radius:12px;font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-size:13px;font-weight:800;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,0.4);white-space:nowrap;';
+  toast.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:' + bg + ';color:white;padding:12px 20px;border-radius:12px;font-family:FRDisplay,Oswald,Arial Narrow,sans-serif;font-size:13px;font-weight:800;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,0.4);white-space:nowrap;';
   toast.textContent = msg;
   document.body.appendChild(toast);
   setTimeout(function(){ toast.remove(); }, 3200);
@@ -2043,7 +2042,7 @@ async function envoyerDemande() {
 
   // Toast confirmation
   var toast = document.createElement('div');
-  toast.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--green);color:white;padding:12px 20px;border-radius:12px;font-family:Norwester,Oswald,Arial Narrow,sans-serif;font-size:13px;font-weight:800;z-index:999;box-shadow:0 8px 24px rgba(94,201,122,0.4);white-space:nowrap;';
+  toast.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--green);color:white;padding:12px 20px;border-radius:12px;font-family:FRDisplay,Oswald,Arial Narrow,sans-serif;font-size:13px;font-weight:800;z-index:999;box-shadow:0 8px 24px rgba(94,201,122,0.4);white-space:nowrap;';
   toast.textContent = '✓ Demande envoyée — Gabriel confirmera sous 24h';
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 3500);
@@ -2439,7 +2438,7 @@ async function ouvrirNotification(id) {
 
   if (body) {
     body.innerHTML =
-        '<div style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;">' + titre + '</div>'
+        '<div style="font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;">' + titre + '</div>'
       + '<div style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">' + esc(msgHeure(m.created_at)) + '</div>'
       + '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;'
       +      'font-size:13.5px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-word;">'
@@ -2447,7 +2446,7 @@ async function ouvrirNotification(id) {
       + '<div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">'
       +   '<button class="btn-big btn-accent" style="flex:1;min-width:150px;" onclick="closeNotification();openMessages();">'
       +     '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>'
-      +     'Repondre a Gabriel'
+      +     'Répondre à Gabriel'
       +   '</button>'
       +   (estFin
             ? '<button class="btn-outline-big" style="flex:1;min-width:150px;" onclick="closeNotification();allerReserver();">Réserver la suite</button>'
@@ -2922,7 +2921,7 @@ async function loadProchainePromenade(id) {
       el.onclick = null;
       el.innerHTML = '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--accent);font-weight:700;margin-bottom:8px;">Prochaine promenade</div>'
         + '<div style="font-size:13px;color:var(--text-dim);">Aucune réservation à venir</div>'
-        + '<div style="margin-top:12px;"><a href="javascript:void(0)" onclick="allerReserver()" style="background:var(--accent);color:white;padding:8px 14px;border-radius:8px;font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:11px;font-weight:800;text-decoration:none;">Reserver maintenant</a></div>';
+        + '<div style="margin-top:12px;"><a href="javascript:void(0)" onclick="allerReserver()" style="background:var(--accent);color:white;padding:8px 14px;border-radius:8px;font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:11px;font-weight:800;text-decoration:none;">Reserver maintenant</a></div>';
       return;
     }
 
@@ -2958,7 +2957,7 @@ async function loadProchainePromenade(id) {
       +   '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:' + teinte + ';font-weight:700;">Prochaine promenade</div>'
       +   '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="' + teinte + '" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>'
       + '</div>'
-      + '<div style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;">' + esc(dateLongue(bestDate)) + (cr !== '—' ? ' · ' + cr : '') + '</div>'
+      + '<div style="font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;">' + esc(dateLongue(bestDate)) + (cr !== '—' ? ' · ' + cr : '') + '</div>'
       + '<div style="font-size:13px;color:var(--text-dim);">' + esc(SVC_NAMES[best.service] || best.service) + ' · ' + esc(best.ranger_nom || 'Gabriel') + '</div>'
       + infoAnnul
       + '<div style="display:flex;gap:8px;margin-top:12px;align-items:center;">' + badge
@@ -3504,7 +3503,7 @@ function openResaDetail(id, dateOcc) {
   document.getElementById('resa-modal-body').innerHTML =
       '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">'
     +   '<div style="width:10px;height:10px;border-radius:50%;background:' + (SVC_COLORS[r.service] || 'var(--accent)') + ';"></div>'
-    +   '<div style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:17px;font-weight:800;">' + esc(SVC_NAMES[r.service] || r.service) + '</div>'
+    +   '<div style="font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:17px;font-weight:800;">' + esc(SVC_NAMES[r.service] || r.service) + '</div>'
     + '</div>'
     + alerte
     + '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:4px 14px;margin-bottom:16px;">' + rows + '</div>'
@@ -4044,7 +4043,7 @@ function renderAvoirsClient() {
   html += ncs.map(function(n, i) { i += credits.length;
     var o = parId[String(n.facture_origine_id)] || null;
     return '<div onclick="openFactureDetail(\'' + esc(n.id) + '\')" style="padding:13px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;' + (i ? 'border-top:1px solid var(--border);' : '') + '">'
-      + '<div style="min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--text);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;">Note de crédit ' + esc(n.numero || '') + '</div>'
+      + '<div style="min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--text);font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;">Note de crédit ' + esc(n.numero || '') + '</div>'
       + '<div style="font-size:11px;color:var(--text-dim);margin-top:2px;">' + (o ? 'Annule la facture ' + esc(o.numero || '') + ' · ' : '') + esc(periodeLabel(n)) + (n.date_emission ? ' · ' + esc(dateCourte(n.date_emission)) : '') + '</div></div>'
       + '<div style="text-align:right;"><div style="font-size:14px;font-weight:700;color:var(--green);margin-bottom:3px;">' + eur(Math.abs(frNum(n.total_ttc))) + '</div>'
       + '<span class="badge b-green" style="white-space:nowrap;">Rien à payer</span></div></div>';
@@ -4085,7 +4084,7 @@ function renderSituationCompte() {
   if (solde > 0.004) {
     html += '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;">'
       + '<div style="font-size:13px;color:var(--text-dim);">Solde à régler</div>'
-      + '<div style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:24px;font-weight:800;color:' + (maxRetard > 0 ? 'var(--red)' : 'var(--text)') + ';">' + eur(solde) + '</div></div>'
+      + '<div style="font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:24px;font-weight:800;color:' + (maxRetard > 0 ? 'var(--red)' : 'var(--text)') + ';">' + eur(solde) + '</div></div>'
       + '<div style="font-size:11.5px;color:' + (maxRetard > 0 ? 'var(--red)' : 'var(--text-dim)') + ';margin-bottom:10px;">'
       +   ouvertes.length + (ouvertes.length > 1 ? ' factures ouvertes' : ' facture ouverte')
       +   (maxRetard > 0 ? ' · la plus ancienne a ' + maxRetard + ' jour' + (maxRetard > 1 ? 's' : '') + ' de retard' : '')
@@ -4140,7 +4139,7 @@ function renderFactures() {
     if (frais > 0.004) sous += ' · <span style="color:var(--red);">+ ' + eur(frais) + ' frais de dossier</span>';
     if (solde > 0.004 && frNum(f.montant_paye) > 0.004) sous += ' · reste ' + eur(solde);
     return '<div onclick="openFactureDetail(\'' + esc(f.id) + '\')" style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;' + (retard > 0 ? 'border-left:3px solid var(--red);' : '') + '">'
-      + '<div style="min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--text);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;">' + esc(f.numero || '—') + '</div>'
+      + '<div style="min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--text);font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;">' + esc(f.numero || '—') + '</div>'
       +   '<div style="font-size:11px;color:var(--text-dim);margin-top:2px;">' + sous + '</div></div>'
       + '<div style="display:flex;align-items:center;gap:10px;">'
       +   '<div style="text-align:right;"><div style="font-size:14px;font-weight:700;color:' + (retard > 0 ? 'var(--red)' : 'var(--text)') + ';margin-bottom:3px;">' + eur(totalAPayer(f)) + '</div>'
@@ -4198,7 +4197,7 @@ async function loadMoisCourant(id) {
       +   (seanceLabel ? '<div style="font-size:11px;color:var(--text-dim);">' + seanceLabel + '</div>' : '')
       + '</div>'
       + '<div style="display:flex;align-items:center;justify-content:space-between;">'
-      +   '<div style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:26px;font-weight:800;color:var(--text);margin-bottom:2px;">' + eur(totalTTC) + '</div>'
+      +   '<div style="font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:26px;font-weight:800;color:var(--text);margin-bottom:2px;">' + eur(totalTTC) + '</div>'
       +   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>'
       + '</div>'
       + '<div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;">dont ' + eur(tva) + ' de TVA (17 %) · ' + eur(totalHT) + ' HT</div>'
@@ -4301,7 +4300,7 @@ function ligneCalcHTML(l) {
   var rouge = l.type === 'annulation';
   var detail = esc(l.sousLabel || '');
   if (l.discountNote) detail += '<div style="font-size:10px;color:#2e7d32;margin-top:1px;">' + esc(l.discountNote) + '</div>';
-  return '<tr><td style="' + (rouge ? 'color:#a33;' : '') + '">' + esc(l.label)
+  return '<tr><td style="' + (rouge ? 'color:#a33;' : '') + '">' + esc(String(l.label == null ? '' : l.label).replace(/\s*·\s*déplacement inutile/i, ''))
     + '<div style="font-size:10px;color:' + (rouge ? '#c62828' : '#6b7450') + ';margin-top:2px;">' + detail + '</div></td>'
     + '<td class="num qte">' + l.qte + '</td>'
     + colonnesUnitaires(l.prixUnit != null ? l.prixUnit : (l.qte ? ttc / l.qte : 0))
@@ -4399,7 +4398,7 @@ async function openFactureDetail(id) {
   window._factureCourante = f;
 
   body.innerHTML =
-      '<div style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;">' + (f.statut === 'avoir' ? 'Note de crédit ' : 'Facture ') + esc(f.numero || '') + '</div>'
+      '<div style="font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;">' + (f.statut === 'avoir' ? 'Note de crédit ' : 'Facture ') + esc(f.numero || '') + '</div>'
     + '<div style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">' + esc(periodeLabel(f)) + ' · émise le ' + esc(dateCourte(f.date_emission || f.created_at)) + ' &nbsp;' + badge + '</div>'
     + (retard > 0 ? '<div class="warn-box" style="background:var(--red-dim);border:1px solid rgba(224,90,90,0.35);color:var(--red);border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.5;margin-bottom:12px;">'
         + 'Échéance dépassée depuis ' + retard + ' jour' + (retard > 1 ? 's' : '') + '. Reste à payer : <strong>' + eur(solde) + '</strong>. Si vous avez déjà fait le virement, il sera pointé très prochainement.</div>' : '')
@@ -4427,7 +4426,7 @@ function openMoisCourantDetail() {
   window._factureCourante = null;
 
   body.innerHTML =
-      '<div style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;color:var(--accent);">Mois en cours</div>'
+      '<div style="font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;color:var(--accent);">Mois en cours</div>'
     + '<div style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">' + MOIS_LONG[m.mois] + ' ' + m.an + ' · estimation</div>'
     + '<div class="warn-box warn-amber">Facture non encore émise. Le montant peut évoluer jusqu\'à la fin du mois (annulations, séances ajoutées). Le PDF sera disponible une fois la facture définitive émise par Gabriel.</div>'
     + factureDocHTML({
@@ -4480,7 +4479,7 @@ function updateDogScreen(chiens) {
       + '<div style="font-size:30px;margin-bottom:8px;">🐾</div>'
       + '<div style="font-size:14px;font-weight:600;margin-bottom:4px;">Aucun chien enregistré</div>'
       + '<div style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">Ajoutez votre chien pour pouvoir réserver une promenade.</div>'
-      + '<a href="javascript:void(0)" onclick="openDogAdd()" style="display:inline-block;background:var(--accent);color:#fff;padding:9px 16px;border-radius:9px;font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:12px;font-weight:800;text-decoration:none;cursor:pointer;">Ajouter mon chien</a>'
+      + '<a href="javascript:void(0)" onclick="openDogAdd()" style="display:inline-block;background:var(--accent);color:#fff;padding:9px 16px;border-radius:9px;font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:12px;font-weight:800;text-decoration:none;cursor:pointer;">Ajouter mon chien</a>'
       + '</div>';
     return;
   }
@@ -4533,7 +4532,7 @@ function updateDogScreen(chiens) {
       // En-tête cliquable (déplie le détail)
       + '<div onclick="toggleDogDetail(' + idx + ')" style="display:flex;align-items:center;gap:12px;cursor:pointer;">'
       + avatar
-      + '<div style="flex:1;min-width:0;"><div style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:16px;font-weight:800;">' + name + '</div>'
+      + '<div style="flex:1;min-width:0;"><div style="font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:16px;font-weight:800;">' + name + '</div>'
       + '<div style="font-size:12px;color:var(--text-dim);">' + sub + '</div></div>'
       + (chaleurActive(d) ? '<span class="badge" style="background:rgba(214,92,140,0.16);color:#d65c8c;">En chaleur</span>'
           : chaleurSignalement(d) ? '<span class="badge b-amber">Signalée</span>'
@@ -4542,8 +4541,8 @@ function updateDogScreen(chiens) {
       + '</div>'
       // Stats rapides (toujours visibles)
       + '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:14px;">'
-      + '<div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center;"><div style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:15px;font-weight:800;color:var(--accent);">' + (d.poids_kg ? d.poids_kg + ' kg' : '—') + '</div><div style="font-size:9px;color:var(--text-faint);text-transform:uppercase;margin-top:2px;">Poids</div></div>'
-      + '<div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center;"><div style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:13px;font-weight:800;color:var(--text);">' + (d.race || '—') + '</div><div style="font-size:9px;color:var(--text-faint);text-transform:uppercase;margin-top:2px;">Race</div></div>'
+      + '<div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center;"><div style="font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:15px;font-weight:800;color:var(--accent);">' + (d.poids_kg ? d.poids_kg + ' kg' : '—') + '</div><div style="font-size:9px;color:var(--text-faint);text-transform:uppercase;margin-top:2px;">Poids</div></div>'
+      + '<div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center;"><div style="font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:13px;font-weight:800;color:var(--text);">' + (d.race || '—') + '</div><div style="font-size:9px;color:var(--text-faint);text-transform:uppercase;margin-top:2px;">Race</div></div>'
       + '</div>'
       // Détail dépliable
       + '<div id="dog-detail-' + idx + '" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:8px;">' + rows + '</div>'
@@ -4552,7 +4551,7 @@ function updateDogScreen(chiens) {
       + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z"/></svg>'
       + 'Modifier'
       + '</button>'
-      + '<button onclick="openDogFull(' + idx + ')" style="width:100%;margin-top:8px;background:transparent;border:none;color:var(--text-dim);font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;cursor:pointer;padding:6px;">Voir fiche complète</button>'
+      + '<button onclick="openDogFull(' + idx + ')" style="width:100%;margin-top:8px;background:transparent;border:none;color:var(--text-dim);font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;cursor:pointer;padding:6px;">Voir fiche complète</button>'
       + blocChaleurChien(d, idx)
       + '</div>';
   }).join('');
@@ -4623,13 +4622,13 @@ function blocChaleurChien(d, idx) {
     return '<div style="margin-top:12px;background:rgba(214,92,140,0.10);border:1px solid rgba(214,92,140,0.32);border-radius:12px;padding:13px 14px;">'
       + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
       +   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d65c8c" stroke-width="2"><path d="M12 2s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z"/></svg>'
-      +   '<span style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:13px;font-weight:800;color:#d65c8c;">Mode chaleur actif</span>'
+      +   '<span style="font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:13px;font-weight:800;color:#d65c8c;">Mode chaleur actif</span>'
       + '</div>'
       + '<div style="font-size:12px;color:var(--text-dim);line-height:1.55;">'
       +   'Promenades suspendues jusqu\'au <strong>' + chaleurDateFR(d.chaleur_fin) + '</strong> ('
       +   n + ' jour' + (n > 1 ? 's' : '') + ' restant' + (n > 1 ? 's' : '') + ').'
       + '</div>'
-      + '<button onclick="annulerChaleur(' + idx + ')" style="width:100%;margin-top:11px;padding:10px;background:transparent;border:1.5px solid rgba(214,92,140,0.45);border-radius:10px;color:#d65c8c;font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:12px;font-weight:800;cursor:pointer;">'
+      + '<button onclick="annulerChaleur(' + idx + ')" style="width:100%;margin-top:11px;padding:10px;background:transparent;border:1.5px solid rgba(214,92,140,0.45);border-radius:10px;color:#d65c8c;font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:12px;font-weight:800;cursor:pointer;">'
       +   'Les chaleurs sont passées — reprendre les promenades'
       + '</button>'
       + '</div>';
@@ -4641,13 +4640,13 @@ function blocChaleurChien(d, idx) {
   var sig = chaleurSignalement(d);
   if (sig) {
     return '<div style="margin-top:12px;background:rgba(240,180,41,0.10);border:1px solid rgba(240,180,41,0.35);border-radius:12px;padding:13px 14px;">'
-      + '<div style="font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:12.5px;font-weight:800;color:#f0b429;margin-bottom:5px;">'
+      + '<div style="font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:12.5px;font-weight:800;color:#f0b429;margin-bottom:5px;">'
       +   'Signalée en chaleur par ' + esc(sig.signale_par_nom || 'un ranger') + '</div>'
       + '<div style="font-size:12px;color:var(--text-dim);line-height:1.55;">'
       +   'Constaté en promenade le ' + chaleurDateFR(sig.date_debut) + '. '
       +   'Votre planning n\'a pas été modifié : c\'est à vous de décider.'
       + '</div>'
-      + '<button onclick="declarerChaleur(' + idx + ')" style="width:100%;margin-top:11px;padding:10px;background:#d65c8c;border:none;border-radius:10px;color:#fff;font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:12px;font-weight:800;cursor:pointer;">'
+      + '<button onclick="declarerChaleur(' + idx + ')" style="width:100%;margin-top:11px;padding:10px;background:#d65c8c;border:none;border-radius:10px;color:#fff;font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:12px;font-weight:800;cursor:pointer;">'
       +   'Confirmer et suspendre les promenades</button>'
       + '<button onclick="ecarterChaleur(' + idx + ')" style="width:100%;margin-top:7px;padding:8px;background:transparent;border:none;color:var(--text-dim);font-size:11.5px;font-weight:600;cursor:pointer;">'
       +   'Fausse alerte — ne rien changer</button>'
@@ -4655,7 +4654,7 @@ function blocChaleurChien(d, idx) {
   }
 
   // 3. Rien en cours
-  return '<button onclick="declarerChaleur(' + idx + ')" style="width:100%;margin-top:8px;padding:11px;background:transparent;border:1.5px solid rgba(214,92,140,0.35);border-radius:10px;color:#d65c8c;font-family:\'Norwester\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:11.5px;font-weight:800;letter-spacing:0.03em;cursor:pointer;">'
+  return '<button onclick="declarerChaleur(' + idx + ')" style="width:100%;margin-top:8px;padding:11px;background:transparent;border:1.5px solid rgba(214,92,140,0.35);border-radius:10px;color:#d65c8c;font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:11.5px;font-weight:800;letter-spacing:0.03em;cursor:pointer;">'
     + 'Signaler des chaleurs</button>';
 }
 
@@ -5265,11 +5264,11 @@ async function saveDogEdit() {
   if (btn) btn.style.opacity = '1';
 }
 
-/* ── Norwester : la police n'a pas de glyphes accentués (é, è, à, ö, ü…).
+/* ── FRDisplay : la police n'a pas de glyphes accentués (é, è, à, ö, ü…).
       On retire donc les diacritiques de TOUT texte rendu dans cette police.
       Vaut aussi pour le contenu injecté dynamiquement (innerHTML). ────────── */
 (function () {
-  var SEL = '[style*="Norwester"],[style*="norwester"],.norwester,'
+  var SEL = '[style*="FRDisplay"],[style*="norwester"],.norwester,'
           + '.status-time,.card-title,.notif-type,.notif-stat strong,.booking-price,'
           + '.dog-name,.invoice-amount,.btn-big,.btn-outline-big,.jour-pill,.cal-title,'
           + '.nav-brand-name,.nav-badge,.nav-user-av,.inv-h1,.inv-ref,.inv-tot.big';
@@ -5282,7 +5281,8 @@ async function saveDogEdit() {
     if (!/[^\u0000-\u007F]/.test(s)) return s;              // ASCII pur : rien à faire
     s = s.replace(/[\u0152\u0153\u00C6\u00E6\u00DF\u00D8\u00F8\u0141\u0142\u0110\u0111]/g,
                   function (c) { return LIG[c]; });
-    return s.normalize ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : s;
+    // v2.53 : FR Display dessine ces lettres ; seules les autres perdent leur accent
+    return s.replace(/[\u00C0-\u024F]/g, function (c) { return 'àâäéèêëîïôöùûüçÿáíóúÀÂÄÉÈÊËÎÏÔÖÙÛÜÇŸÁÍÓÚ'.indexOf(c) !== -1 ? c : (c.normalize ? c.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : c); });
   }
 
   var SKIP = { INPUT:1, TEXTAREA:1, SELECT:1, OPTION:1, SCRIPT:1, STYLE:1 };
@@ -5310,7 +5310,7 @@ async function saveDogEdit() {
     try {
       var els = document.querySelectorAll(SEL);
       for (var i = 0; i < els.length; i++) nettoyer(els[i]);
-    } catch (e) { console.log('Norwester accents:', e); }
+    } catch (e) { console.log('FRDisplay accents:', e); }
     if (obs) obs.observe(document.body, { childList: true, subtree: true, characterData: true });
   }
 

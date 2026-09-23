@@ -11,24 +11,23 @@
 try { if (localStorage.getItem('fr-theme') !== 'dark') document.documentElement.classList.add('light'); } catch(e) {}
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<!-- Correctif police : Norwester etait appelee dans font-family sans jamais
+<!-- Correctif police : FRDisplay etait appelee dans font-family sans jamais
      etre chargee. Elle ne s'affichait que sur les machines ou elle est
      installee localement ; partout ailleurs le navigateur retombait sur un
      sans-serif generique. Elle est desormais auto-hebergee (licence SIL OFL,
-     voir OFL-Norwester.txt). Oswald sert de repli condense si le
+     voir OFL-FR-Display.txt). Oswald sert de repli condense si le
      fichier est absent. -->
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 @font-face {
-  font-family: 'Norwester';
-  src: url('norwester.woff2') format('woff2'),
-       url('norwester.woff') format('woff');
+  font-family: 'FRDisplay';
+  src: url('frdisplay.woff2') format('woff2'),
+       url('frdisplay.woff') format('woff');
   font-weight: 400 900;
   font-style: normal;
   font-display: swap;
 }
 </style>
-  <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/norwester">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -117,7 +116,7 @@ html, body {
   cursor: pointer; color: var(--td); flex-shrink: 0;
 }
 .back-btn svg { width: 13px; height: 13px; }
-.page-title { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 15px; font-weight: 800; }
+.page-title { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 15px; font-weight: 800; }
 .topbar-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
 
 /* ── CONTENT ── */
@@ -136,7 +135,7 @@ html, body {
 .period-btn {
   padding: 6px 14px; border-radius: 8px; font-size: 11px; font-weight: 700;
   cursor: pointer; border: 1px solid var(--bd2); background: var(--s1);
-  color: var(--td); transition: all 0.15s; font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif;
+  color: var(--td); transition: all 0.15s; font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;
   text-transform: uppercase; letter-spacing: 0.04em;
 }
 .period-btn:hover { border-color: var(--accent); color: var(--accent); }
@@ -160,7 +159,7 @@ html, body {
 .c-amber::before  { background: var(--amber); }
 .c-red::before    { background: var(--red); }
 .stat-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--tf); font-weight: 700; margin-bottom: 8px; }
-.stat-val { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 26px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+.stat-val { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 26px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
 .c-accent .stat-val { color: var(--accent); }
 .c-green  .stat-val { color: var(--green); }
 .c-amber  .stat-val { color: var(--amber); }
@@ -181,7 +180,7 @@ html, body {
   padding: 12px 16px; border-bottom: 1px solid var(--bd);
   display: flex; align-items: center; justify-content: space-between;
 }
-.card-title { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: var(--td); }
+.card-title { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: var(--td); }
 .card-body { padding: 14px 16px; }
 
 /* ── BADGE ── */
@@ -194,7 +193,7 @@ html, body {
 .b-muted  { background: rgba(255,255,255,0.06); color: var(--tf); }
 
 /* ── BTN ── */
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 800; cursor: pointer; border: none; transition: all 0.15s; letter-spacing: 0.04em; text-transform: uppercase; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 800; cursor: pointer; border: none; transition: all 0.15s; letter-spacing: 0.04em; text-transform: uppercase; }
 .btn-accent { background: var(--accent); color: white; }
 .btn-accent:hover { background: #ff7a3d; }
 .btn-outline { background: transparent; border: 1px solid var(--bd2); color: var(--td); }
@@ -213,7 +212,7 @@ html, body {
 .r-avatar {
   width: 40px; height: 40px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 13px; font-weight: 800;
+  font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 13px; font-weight: 800;
   flex-shrink: 0; border: 1px solid var(--bd2);
 }
 .r-name { font-size: 13px; font-weight: 600; }
@@ -227,7 +226,7 @@ html, body {
 .km-label { color: var(--td); min-width: 80px; font-size: 11px; }
 .km-track { flex: 1; height: 5px; background: var(--s3); border-radius: 3px; overflow: hidden; }
 .km-fill  { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
-.km-val   { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 14px; font-weight: 800; min-width: 70px; text-align: right; }
+.km-val   { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 14px; font-weight: 800; min-width: 70px; text-align: right; }
 
 /* ── LOG TABLE ── */
 .tbl { width: 100%; border-collapse: collapse; }
@@ -242,7 +241,7 @@ html, body {
   border-radius: var(--rl); padding: 16px; position: relative;
 }
 .van-km-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.van-km-name { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 14px; font-weight: 800; }
+.van-km-name { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 14px; font-weight: 800; }
 .van-km-plate { font-family: monospace; font-size: 11px; color: var(--tf); margin-top: 2px; }
 
 .progress-circle {
@@ -252,7 +251,7 @@ html, body {
 .pc-bg    { fill: none; stroke: var(--s3); stroke-width: 6; }
 .pc-fill  { fill: none; stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 0.8s ease; }
 .pc-text  { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.pc-val   { font-family: 'Norwester', 'Oswald', 'Arial Narrow', sans-serif; font-size: 13px; font-weight: 800; line-height: 1; }
+.pc-val   { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 13px; font-weight: 800; line-height: 1; }
 .pc-unit  { font-size: 9px; color: var(--tf); margin-top: 1px; }
 
 .entretien-row {
@@ -451,10 +450,10 @@ html, body {
                 <div style="margin-bottom:14px;">
                   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
                     <div style="display:flex;align-items:center;gap:8px;">
-                      <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--accent),#c44010);display:flex;align-items:center;justify-content:center;font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:10px;font-weight:800;color:white;">GQ</div>
+                      <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--accent),#c44010);display:flex;align-items:center;justify-content:center;font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:10px;font-weight:800;color:white;">GQ</div>
                       <span style="font-size:13px;font-weight:600;">Gabriel</span>
                     </div>
-                    <span style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:16px;font-weight:800;color:var(--accent);">187 km</span>
+                    <span style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:16px;font-weight:800;color:var(--accent);">187 km</span>
                   </div>
                   <div style="height:6px;background:var(--s3);border-radius:3px;overflow:hidden;">
                     <div style="height:100%;width:60%;background:var(--accent);border-radius:3px;"></div>
@@ -468,10 +467,10 @@ html, body {
                 <div>
                   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
                     <div style="display:flex;align-items:center;gap:8px;">
-                      <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--s3),#6b7450);display:flex;align-items:center;justify-content:center;font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:10px;font-weight:800;color:var(--tx);">SM</div>
+                      <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--s3),#6b7450);display:flex;align-items:center;justify-content:center;font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:10px;font-weight:800;color:var(--tx);">SM</div>
                       <span style="font-size:13px;font-weight:600;">Sophie M.</span>
                     </div>
-                    <span style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:16px;font-weight:800;color:var(--green);">125 km</span>
+                    <span style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:16px;font-weight:800;color:var(--green);">125 km</span>
                   </div>
                   <div style="height:6px;background:var(--s3);border-radius:3px;overflow:hidden;">
                     <div style="height:100%;width:40%;background:var(--green);border-radius:3px;"></div>
@@ -536,13 +535,13 @@ html, body {
                   </div>
                   <div style="flex:1;">
                     <div style="font-size:12px;color:var(--td);margin-bottom:4px;">Km total cumulé</div>
-                    <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:18px;font-weight:800;color:var(--tx);">42 180 km</div>
+                    <div style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:18px;font-weight:800;color:var(--tx);">42 180 km</div>
                     <div style="font-size:11px;color:var(--tf);margin-top:2px;">Prochain entretien à 50 000 km</div>
                   </div>
                 </div>
                 <div class="entretien-row"><span class="entretien-key">Huile</span><span class="badge b-green">OK</span></div>
                 <div class="entretien-row"><span class="entretien-key">AdBlue</span><span class="badge b-green">OK</span></div>
-                <div class="entretien-row"><span class="entretien-key">Km cette semaine</span><span style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-weight:800;color:var(--green);">125 km</span></div>
+                <div class="entretien-row"><span class="entretien-key">Km cette semaine</span><span style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-weight:800;color:var(--green);">125 km</span></div>
               </div>
 
               <div class="van-km-card" style="border-color:rgba(224,90,90,0.25);">
@@ -569,13 +568,13 @@ html, body {
                   </div>
                   <div style="flex:1;">
                     <div style="font-size:12px;color:var(--td);margin-bottom:4px;">Km total cumulé</div>
-                    <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:18px;font-weight:800;color:var(--tx);">48 320 km</div>
+                    <div style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:18px;font-weight:800;color:var(--tx);">48 320 km</div>
                     <div style="font-size:11px;color:var(--red);margin-top:2px;font-weight:600;">⚠ 1 680 km avant révision</div>
                   </div>
                 </div>
                 <div class="entretien-row"><span class="entretien-key">Huile</span><span class="badge b-amber">À surveiller</span></div>
                 <div class="entretien-row"><span class="entretien-key">AdBlue</span><span class="badge b-green">OK</span></div>
-                <div class="entretien-row"><span class="entretien-key">Km cette semaine</span><span style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-weight:800;color:var(--accent);">187 km</span></div>
+                <div class="entretien-row"><span class="entretien-key">Km cette semaine</span><span style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-weight:800;color:var(--accent);">187 km</span></div>
               </div>
             </div>
           </div>
@@ -596,7 +595,7 @@ html, body {
                 <div class="r-role">Fondateur · Camionnette B par défaut</div>
               </div>
               <div style="text-align:right;">
-                <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:22px;font-weight:800;color:var(--accent);">4 820 km</div>
+                <div style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:22px;font-weight:800;color:var(--accent);">4 820 km</div>
                 <div style="font-size:10px;color:var(--tf);">Total 2026</div>
               </div>
             </div>
@@ -641,7 +640,7 @@ html, body {
                 <div class="r-role">Walker · Camionnette A par défaut</div>
               </div>
               <div style="text-align:right;">
-                <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:22px;font-weight:800;color:var(--green);">3 020 km</div>
+                <div style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:22px;font-weight:800;color:var(--green);">3 020 km</div>
                 <div style="font-size:10px;color:var(--tf);">Total 2026</div>
               </div>
             </div>
@@ -704,12 +703,12 @@ html, body {
                     </div>
                   </div>
                   <div>
-                    <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:24px;font-weight:800;color:var(--tx);">42 180</div>
+                    <div style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:24px;font-weight:800;color:var(--tx);">42 180</div>
                     <div style="font-size:11px;color:var(--tf);">km total</div>
                     <div style="font-size:11px;color:var(--green);margin-top:4px;">Prochain entretien : 50 000 km</div>
                   </div>
                 </div>
-                <div class="info-row"><span class="info-key">Km restants avant révision</span><span style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-weight:800;color:var(--green);">7 820 km</span></div>
+                <div class="info-row"><span class="info-key">Km restants avant révision</span><span style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-weight:800;color:var(--green);">7 820 km</span></div>
                 <div class="info-row"><span class="info-key">Dernière révision</span><span>à 35 000 km · Mars 2026</span></div>
                 <div class="info-row"><span class="info-key">Huile</span><span class="badge b-green">OK</span></div>
                 <div class="info-row"><span class="info-key">AdBlue</span><span class="badge b-green">OK</span></div>
@@ -762,12 +761,12 @@ html, body {
                     </div>
                   </div>
                   <div>
-                    <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:24px;font-weight:800;color:var(--tx);">48 320</div>
+                    <div style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:24px;font-weight:800;color:var(--tx);">48 320</div>
                     <div style="font-size:11px;color:var(--tf);">km total</div>
                     <div style="font-size:11px;color:var(--red);margin-top:4px;font-weight:600;">⚠ Révision dans 1 680 km</div>
                   </div>
                 </div>
-                <div class="info-row"><span class="info-key">Km restants avant révision</span><span style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-weight:800;color:var(--red);">1 680 km</span></div>
+                <div class="info-row"><span class="info-key">Km restants avant révision</span><span style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-weight:800;color:var(--red);">1 680 km</span></div>
                 <div class="info-row"><span class="info-key">Dernière révision</span><span>à 30 000 km · Oct 2025</span></div>
                 <div class="info-row"><span class="info-key">Huile</span><span class="badge b-amber">À surveiller</span></div>
                 <div class="info-row"><span class="info-key">AdBlue</span><span class="badge b-green">OK</span></div>
@@ -830,7 +829,7 @@ html, body {
                   <td>Cam. B</td>
                   <td style="font-family:monospace;">48 133</td>
                   <td style="font-family:monospace;">48 320</td>
-                  <td><span style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-weight:800;color:var(--accent);">187 km</span></td>
+                  <td><span style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-weight:800;color:var(--accent);">187 km</span></td>
                   <td><span class="badge b-amber">Surveiller</span></td>
                   <td><span class="badge b-green">OK</span></td>
                   <td style="font-size:11px;color:var(--tf);">Voyant huile allumé brièvement ce matin</td>
@@ -840,7 +839,7 @@ html, body {
                   <td>Cam. A</td>
                   <td style="font-family:monospace;">42 055</td>
                   <td style="font-family:monospace;">42 180</td>
-                  <td><span style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-weight:800;color:var(--green);">125 km</span></td>
+                  <td><span style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-weight:800;color:var(--green);">125 km</span></td>
                   <td><span class="badge b-green">OK</span></td>
                   <td><span class="badge b-green">OK</span></td>
                   <td style="font-size:11px;color:var(--tf);">RAS</td>
