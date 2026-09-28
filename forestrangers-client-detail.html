@@ -960,7 +960,7 @@ async function loadClient(id) {
     document.getElementById('sidebar-num').textContent = '#' + c.numero_client;
     document.getElementById('s-email').textContent = c.email || '—';
     document.getElementById('s-tel').textContent = c.telephone || '—';
-    document.getElementById('s-commune').textContent = c.commune || '—';
+    document.getElementById('s-commune').textContent = fmtCommune(c);
     var since = (c.client_depuis || c.created_at) ? new Date(c.client_depuis || c.created_at).toLocaleDateString('fr-LU', { month: 'short', year: 'numeric' }) : '—';
     document.getElementById('s-since').textContent = since;
     var stEl = document.getElementById('s-statut');
@@ -1135,7 +1135,7 @@ function renderInfosDisplay(c) {
     '<div class="info-item"><div class="info-label">Email</div><div class="info-value">' + (c.email || '—') + '</div></div>' +
     '<div class="info-item"><div class="info-label">Téléphone</div><div class="info-value">' + (c.telephone || '—') + '</div></div>' +
     '<div class="info-item"><div class="info-label">Adresse</div><div class="info-value">' + (c.adresse || '—') + '</div></div>' +
-    '<div class="info-item"><div class="info-label">Commune</div><div class="info-value">' + (c.commune || '—') + '</div></div>' +
+    '<div class="info-item"><div class="info-label">Commune</div><div class="info-value">' + escapeAttr(fmtCommune(c)) + '</div></div>' +
     '<div class="info-item"><div class="info-label">N° client</div><div class="info-value" style="color:var(--accent);font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;">#' + c.numero_client + '</div></div>' +
     '<div class="info-item"><div class="info-label">Date inscription</div><div class="info-value">' + (c.created_at ? new Date(c.created_at).toLocaleDateString('fr-LU', { day: '2-digit', month: 'long', year: 'numeric' }) : '—') + '</div></div>' +
     '<div class="info-item"><div class="info-label">Client depuis le</div><div class="info-value">' + (depuis ? new Date(depuis).toLocaleDateString('fr-LU', { day: '2-digit', month: 'long', year: 'numeric' }) : '—') + '</div></div>'
@@ -1146,7 +1146,7 @@ function renderInfosDisplay(c) {
   if (tarifGrid) {
     tarifGrid.innerHTML =
       '<div class="info-item"><div class="info-label">Type</div><div class="info-value" style="color:' + (mode === 'sur_mesure' ? 'var(--accent)' : (c.client_fidele ? 'var(--green)' : 'var(--amber)')) + ';">' + LIBELLE_MODE[mode] + '</div></div>' +
-      '<div class="info-item"><div class="info-label">Zone</div><div class="info-value">' + (c.commune || '—') + ' · ' + (c.hors_zone ? 'Hors zone +' + GRILLE.supplement_hors_zone + ' € HTVA / trajet' : 'Sans frais') + '</div></div>' +
+      '<div class="info-item"><div class="info-label">Zone</div><div class="info-value">' + escapeAttr(c.quartier ? c.quartier : (c.commune || '—')) + ' · ' + (c.hors_zone ? 'Hors zone +' + GRILLE.supplement_hors_zone + ' € HTVA / trajet' : 'Sans frais') + '</div></div>' +
       '<div class="info-item"><div class="info-label">Dog Walking</div><div class="info-value">' + tarif.walking + ' € / séance</div></div>' +
       '<div class="info-item"><div class="info-label">Day Care</div><div class="info-value">' + tarif.daycare + ' € / journée</div></div>' +
       '<div class="info-item"><div class="info-label">Boarding</div><div class="info-value">' + tarif.boarding + ' € / nuit</div></div>' +
@@ -1197,6 +1197,15 @@ function renderPersonnesDisplay(personnes) {
   }).join('');
 }
 
+// Quartiers officiels de Luxembourg-Ville (vdl.lu) — la zone se décide par quartier (v2.56)
+var QUARTIERS_LUX = ["Beggen", "Belair", "Bonnevoie-Nord/Verlorenkost", "Bonnevoie-Sud", "Cents", "Cessange", "Clausen", "Dommeldange", "Eich", "Gare", "Gasperich", "Grund", "Hamm", "Hollerich", "Kirchberg/Kiem", "Limpertsberg", "Merl", "Mühlenbach", "Neudorf/Weimershof", "Pfaffenthal", "Pulvermühl", "Rollingergrund/Belair-Nord", "Ville Haute", "Weimerskirch"];
+function fmtCommune(c) {
+  if (!c) return '—';
+  var s = (c.code_postal ? 'L-' + c.code_postal + ' ' : '') + (c.commune || '');
+  if (c.quartier) s += ' — ' + c.quartier;
+  return s.trim() || '—';
+}
+
 function fieldHtml(label, id, value, type) {
   return '<div class="info-item"><div class="info-label">' + label + '</div><input class="edit-input" type="' + (type || 'text') + '" id="' + id + '" value="' + escapeAttr(value) + '"></div>';
 }
@@ -1209,7 +1218,7 @@ function renderInfosEdit(c) {
   var tarif = getTarifValues(c);
   var mode  = tarifMode(c);
   var depuis = c.client_depuis || c.created_at;
-  var depuisVal = depuis ? new Date(depuis).toISOString().slice(0, 10) : '';
+  var depuisVal = depuis ? (function (x) { return new Date(x.getTime() - x.getTimezoneOffset() * 60000).toISOString().slice(0, 10); })(new Date(depuis)) : '';
 
   var grid = document.querySelector('#panel-infos .info-grid');
   grid.innerHTML =
@@ -1219,6 +1228,13 @@ function renderInfosEdit(c) {
     fieldHtml('Téléphone', 'edit-telephone', c.telephone) +
     fieldHtml('Adresse', 'edit-adresse', c.adresse) +
     fieldHtml('Commune', 'edit-commune', c.commune) +
+    ('quartier' in c
+      ? fieldHtml('Code postal', 'edit-cp', c.code_postal) +
+        '<div class="info-item"><div class="info-label">Quartier (Luxembourg-Ville)</div><select class="edit-select" id="edit-quartier">'
+        + '<option value="">— hors Luxembourg-Ville —</option>'
+        + QUARTIERS_LUX.map(function (q) { return '<option value="' + escapeAttr(q) + '"' + (c.quartier === q ? ' selected' : '') + '>' + q + '</option>'; }).join('')
+        + '</select></div>'
+      : '') +
     '<div class="info-item"><div class="info-label">N° client</div><div class="info-value" style="color:var(--accent);font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;">#' + c.numero_client + '</div></div>' +
     '<div class="info-item"><div class="info-label">Date inscription</div><div class="info-value">' + (c.created_at ? new Date(c.created_at).toLocaleDateString('fr-LU', { day: '2-digit', month: 'long', year: 'numeric' }) : '—') + '</div></div>' +
     '<div class="info-item"><div class="info-label">Client depuis le</div><input class="edit-input" type="date" id="edit-client-depuis" value="' + depuisVal + '"></div>'
@@ -1235,7 +1251,7 @@ function renderInfosEdit(c) {
       '<div class="info-item"><div class="info-label">Zone</div><select class="edit-select" id="edit-hors-zone">' +
         '<option value="false"' + (!c.hors_zone ? ' selected' : '') + '>Sans frais</option>' +
         '<option value="true"' + (c.hors_zone ? ' selected' : '') + '>Hors zone (+' + GRILLE.supplement_hors_zone + ' € HTVA / trajet)</option>' +
-      '</select></div>' +
+      '</select><div style="font-size:10.5px;color:var(--text-faint);margin-top:4px;line-height:1.4;">Recalculée d\'après Paramètres → Zones si vous changez l\'adresse sans toucher à ce champ.</div></div>' +
       numFieldHtml('Dog Walking (€ / séance)', 'edit-tarif-walking', tarif.walking) +
       numFieldHtml('Day Care (€ / journée)', 'edit-tarif-daycare', tarif.daycare) +
       numFieldHtml('Boarding (€ / nuit)', 'edit-tarif-boarding', tarif.boarding) +
@@ -1334,7 +1350,7 @@ function updateSidebarFromClient(c) {
   document.getElementById('sidebar-name').textContent = c.prenom + ' ' + c.nom;
   document.getElementById('s-email').textContent = c.email || '—';
   document.getElementById('s-tel').textContent = c.telephone || '—';
-  document.getElementById('s-commune').textContent = c.commune || '—';
+  document.getElementById('s-commune').textContent = fmtCommune(c);
   var since = c.client_depuis || c.created_at;
   document.getElementById('s-since').textContent = since ? new Date(since).toLocaleDateString('fr-LU', { month: 'short', year: 'numeric' }) : '—';
   var typeLabel = c.client_fidele ? 'Fidèle' : 'Nouveau';
@@ -1371,6 +1387,11 @@ async function saveInfos() {
       tarif_reduction: parseFloat(document.getElementById('edit-tarif-reduction').value),
       personnes_autorisees: collectPersonnesRows()
     };
+    // Code postal + quartier (v49)
+    if (document.getElementById('edit-quartier')) {
+      update.code_postal = (document.getElementById('edit-cp').value || '').replace(/\D/g, '') || null;
+      update.quartier = document.getElementById('edit-quartier').value || null;
+    }
     // Accès au domicile (v39)
     if (window._accesV39 && document.getElementById('edit-acces-code')) {
       update.acces_cle = document.getElementById('edit-acces-cle').value === 'true';
@@ -1392,10 +1413,10 @@ async function saveInfos() {
       update.tarif_reduction = null;
     }
 
-    var { error } = await db.from('clients').update(update).eq('id', clientId);
+    var { data: apres, error } = await db.from('clients').update(update).eq('id', clientId).select('*').maybeSingle();
     if (error) throw error;
 
-    Object.assign(currentClient, update);
+    Object.assign(currentClient, update, apres || {});   // zone éventuellement recalculée par la base
     editMode = false;
     renderInfosDisplay(currentClient);
     updateSidebarFromClient(currentClient);

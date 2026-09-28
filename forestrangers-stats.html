@@ -531,7 +531,7 @@ async function loadAllData(force) {
   var b = bornes();
   var n = new Date();
   var debutCharge = [b.prevDebut, debMois(n.getFullYear(), n.getMonth() - 12)].sort()[0];
-  var finCharge = [b.fin, n.getFullYear() + '-12-31'].sort()[1];
+  var finCharge = [b.fin, n.getFullYear() + '-12-31', finMois(n.getFullYear(), n.getMonth() + 12)].sort()[2];   // v2.58 : projections à 12 mois
   try {
     if (force || !ST || ST.debut > debutCharge || ST.fin < finCharge) {
       document.getElementById('stats-content').innerHTML = '<div class="loading">Chargement des statistiques…</div>';
@@ -574,6 +574,7 @@ function renderStats() {
 
   var h = '';
   h += sectionFinance(b, A, AP, EV, idxCourant);
+  h += sectionProjection();
   h += sectionServices(b, C, A, AP, EV, idxCourant);
   h += sectionAffluence(b, C, EV);
   h += sectionClients(b, A, AP, EV, idxCourant);
@@ -581,6 +582,7 @@ function renderStats() {
   h += sectionCamionnettes(b, EV, idxCourant);
   document.getElementById('stats-content').innerHTML = h;
   dessiner(b, C, A, EV, idxCourant);
+  majProj();
 }
 
 // ── HTML : aides ──
@@ -652,6 +654,100 @@ function sectionFinance(b, A, AP, EV, ic) {
     + '<div class="card"><div class="card-head"><span class="card-title">Clients à relancer</span><span class="badge b-red">' + rel.length + '</span></div>' + relH + '</div>'
     + '</div>';
   return h;
+}
+
+// ── SECTION PROJECTIONS (v2.58) ──
+// Estimation à 3, 6 et 12 mois = ce qui est déjà réservé (réservations
+// récurrentes comprises) + la tendance : chaque mois, (nouveaux clients −
+// départs) × CA moyen par client. Hypothèses calculées sur les 6 derniers
+// mois complets, modifiables à la main. Tous services, montants TTC.
+var PROJ_TOUS = { service: '', ranger: '' };
+function projMois(k) { var n = new Date(); var per = perDe(n.getFullYear(), n.getMonth() + k); var bm = FR_FACT.periodeMois(per); return { per: per, debut: bm.debut, fin: bm.fin }; }
+function projHistorique() {
+  if (ST.cache.__projHist) return ST.cache.__projHist;
+  var hist = [];
+  for (var k = -6; k <= -1; k++) { var m = projMois(k); m.a = agreger(calc(m.debut, m.fin, PROJ_TOUS)); hist.push(m); }
+  var avec = hist.filter(function(m) { return m.a.nbClients > 0; });
+  var der3 = hist.slice(-3);
+  var base = somme(der3, function(m) { return m.a.valeur; }) / 3;
+  var panier = avec.length ? somme(avec, function(m) { return m.a.valeur / m.a.nbClients; }) / avec.length : 0;
+  // Nouveaux : clients arrivés sur les 6 derniers mois
+  var d0 = hist[0].debut, d1 = hist[5].fin;
+  var nouveaux = ST.clients.filter(function(c) { var d = String(c.client_depuis || c.date_inscription || c.created_at || '').slice(0, 10); return d >= d0 && d <= d1; });
+  // Départs : servis sur la période, plus rien depuis 2 mois (ni ce mois-ci, ni réservé dans les 3 prochains)
+  var actifs = {}; hist.forEach(function(m) { Object.keys(m.a.clientsActifs).forEach(function(id) { actifs[id] = true; }); });
+  var recents = {};
+  [hist[4], hist[5]].concat([0, 1, 2, 3].map(projMois)).forEach(function(m) {
+    var c = m.a ? m.a : agreger(calc(m.debut, m.fin, PROJ_TOUS));
+    Object.keys(c.clientsActifs).forEach(function(id) { recents[id] = true; });
+  });
+  var partis = Object.keys(actifs).filter(function(id) { return !recents[id]; });
+  var nbMoisDonnees = Math.max(1, avec.length);
+  ST.cache.__projHist = { hist: hist, base: base, panier: panier,
+    nouveaux: nouveaux.length / 6, departs: partis.length / nbMoisDonnees,
+    nbNouveaux: nouveaux.length, nbPartis: partis.length, clientsActuels: hist[5].a.nbClients };
+  return ST.cache.__projHist;
+}
+function sectionProjection() {
+  var H = projHistorique();
+  function champ(id, label, val, unite, aide) {
+    return '<label style="display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--text-dim);">' + label
+      + '<span style="display:flex;align-items:center;gap:6px;"><input type="number" step="0.5" min="0" id="' + id + '" class="filter-input" value="' + (Math.round(val * 10) / 10) + '" oninput="majProj()" style="width:110px;">'
+      + '<span style="color:var(--text-faint);">' + unite + '</span></span>'
+      + '<span style="font-size:10.5px;color:var(--text-faint);">' + aide + '</span></label>';
+  }
+  var h = '<div class="section-title">📈 Projections — 3 mois, 6 mois, 1 an</div>';
+  h += carte('Hypothèses de tendance',
+    '<div style="display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start;">'
+    + champ('proj-nouveaux', 'Nouveaux clients par mois', H.nouveaux, 'clients', 'Calculé : ' + H.nbNouveaux + ' sur les 6 derniers mois')
+    + champ('proj-panier', 'CA moyen par client et par mois', H.panier, '€ TTC', 'Calculé : moyenne des 6 derniers mois')
+    + champ('proj-departs', 'Départs par mois', H.departs, 'clients', 'Calculé : ' + H.nbPartis + ' client' + (H.nbPartis > 1 ? 's' : '') + ' sans séance depuis 2 mois')
+    + '<button class="filter-select" style="cursor:pointer;align-self:center;" onclick="resetProj()">Valeurs calculées</button>'
+    + '</div>'
+    + '<div class="card-note">Base de départ : ' + eur(H.base) + ' par mois (moyenne des 3 derniers mois complets, ' + H.clientsActuels + ' clients servis le mois dernier). Modifiez les hypothèses pour tester un scénario, par ex. 2 nouveaux clients par mois à 350 €.</div>');
+  h += '<div id="proj-res" style="margin-top:10px;"></div>';
+  return h;
+}
+function resetProj() {
+  var H = projHistorique();
+  document.getElementById('proj-nouveaux').value = Math.round(H.nouveaux * 10) / 10;
+  document.getElementById('proj-panier').value = Math.round(H.panier * 10) / 10;
+  document.getElementById('proj-departs').value = Math.round(H.departs * 10) / 10;
+  majProj();
+}
+function majProj() {
+  var zone = document.getElementById('proj-res');
+  if (!zone || !ST) return;
+  var H = projHistorique();
+  var lire = function(id, def) { var v = parseFloat(String((document.getElementById(id) || {}).value || '').replace(',', '.')); return isNaN(v) ? def : Math.max(0, v); };
+  var nv = lire('proj-nouveaux', H.nouveaux), panier = lire('proj-panier', H.panier), dep = lire('proj-departs', H.departs);
+  var net = nv - dep;
+  var mois = [];
+  for (var k = 1; k <= 12; k++) {
+    var m = projMois(k);
+    m.reserve = calc(m.debut, m.fin, PROJ_TOUS).total;
+    m.estime = Math.max(m.reserve, Math.max(m.reserve, H.base) + net * k * panier);
+    m.clients = Math.max(0, Math.round(H.clientsActuels + net * k));
+    mois.push(m);
+  }
+  function horizon(n, couleur) {
+    var l = mois.slice(0, n), fin = l[n - 1];
+    var cumE = somme(l, 'estime'), cumR = somme(l, 'reserve');
+    var titre = n === 12 ? 'Dans 1 an' : 'Dans ' + n + ' mois';
+    return kpi(couleur, titre + ' — ' + MOIS_L[+fin.per.slice(5, 7) - 1] + ' ' + fin.per.slice(0, 4), eur(fin.estime) + '<span style="font-size:13px;color:var(--text-faint);"> /mois</span>',
+      'Cumul ' + n + ' mois : <b>' + eur(cumE) + '</b> estimés, dont ' + eur(cumR) + ' déjà réservés · ~' + fin.clients + ' clients');
+  }
+  zone.innerHTML = '<div class="grid grid-3">' + horizon(3, 'green') + horizon(6, 'accent') + horizon(12, 'blue') + '</div>'
+    + '<div style="margin-top:10px;">' + carte('Déjà réservé et estimation, mois par mois',
+      '<div class="chart-box"><canvas id="ch-proj"></canvas></div>'
+      + '<div class="card-note">Barres : réservations déjà enregistrées (récurrentes comprises). Ligne : estimation = le plus élevé entre le réservé et la base de ' + eur(H.base) + '/mois, plus ' + (Math.round(net * 10) / 10).toString().replace('.', ',') + ' client' + (Math.abs(net) > 1 ? 's' : '') + ' net' + (Math.abs(net) > 1 ? 's' : '') + ' par mois × ' + eur(panier) + '. '
+      + 'Ne tient pas compte de la saisonnalité (hiver, vacances) ni des hausses de tarifs : c\'est une tendance, pas une garantie.</div>') + '</div>';
+  if (CHARTS['ch-proj']) { try { CHARTS['ch-proj'].destroy(); } catch (e) {} delete CHARTS['ch-proj']; }
+  var acc = couleur('--accent', '#ff5f1f'), bl = couleur('--blue', '#5a9ae0');
+  nouveauGraph('ch-proj', { data: { labels: mois.map(function(m) { return moisCourt(m.per); }), datasets: [
+    { type: 'bar', label: 'Déjà réservé', data: mois.map(function(m) { return Math.round(m.reserve); }), backgroundColor: rgba(bl, 0.55), borderRadius: 4, maxBarThickness: 26 },
+    { type: 'line', label: 'Estimation', data: mois.map(function(m) { return Math.round(m.estime); }), borderColor: acc, backgroundColor: acc, pointRadius: 3, borderWidth: 2, tension: 0.25, cubicInterpolationMode: 'monotone' }
+  ] }, options: optsBase(false, ' €') });
 }
 
 // ── SECTION SERVICES ──

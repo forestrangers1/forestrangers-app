@@ -688,6 +688,22 @@ html.light .badge.b-red   { background: rgba(198,40,40,0.12) !important; color: 
 <script>
 var currentRole = 'admin';
 
+// Déjà connecté ? On renvoie directement vers son panel, sans repasser par
+// le formulaire (cas « Retour », favori ou onglet rouvert). Pour changer de
+// compte, se déconnecter d'abord depuis le panel.
+(async function frDejaConnecte() {
+  try {
+    if (!db) return;
+    var s = (await db.auth.getSession()).data.session;
+    if (!s) return;
+    var r = await db.from('staff').select('role').eq('auth_id', s.user.id).maybeSingle();
+    if (r.error) return;   // jeton périmé ou refus : on laisse le formulaire
+    var role = r.data ? (r.data.role === 'admin' ? 'admin' : 'staff') : 'client';
+    var pages = { admin: 'forestrangers-admin.html', staff: 'forestrangers-staff.html', client: 'forestrangers-client.html' };
+    window.location.replace(pages[role]);
+  } catch (e) {}
+})();
+
 function setRole(role, btn) {
   currentRole = role;
   document.querySelectorAll('.role-tab').forEach(function(t) { t.classList.remove('active'); });
@@ -772,7 +788,9 @@ async function login() {
       throw { message: 'Accès non autorisé pour ce profil.' };
     }
 
-    window.location.href = redirects[role] || 'forestrangers-client.html';
+    // replace() : la page de connexion sort de l'historique. « Retour » depuis
+    // le panel ne ramène plus ici.
+    window.location.replace(redirects[role] || 'forestrangers-client.html');
 
   } catch(err) {
     btn.disabled = false;

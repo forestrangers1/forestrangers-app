@@ -629,6 +629,11 @@ input[type=range]::-webkit-slider-runnable-track {
 "Nom": "Last name",
 "Adresse complète": "Full address",
 "Code postal": "Postcode",
+"Quartier": "District",
+"Choisissez votre quartier": "Choose your district",
+"Ce code couvre :": "This postcode covers:",
+"Indiquez la vôtre.": "Please enter yours.",
+"Code postal introuvable : vérifiez-le. Vous pouvez continuer, nous contrôlerons votre adresse.": "Postcode not found: please check it. You can continue, we will check your address.",
 "Zone sans frais de déplacement": "Area with no travel surcharge",
 "Zone avec supplément déplacement (+5 € HTVA)": "Area with travel surcharge (+€5 excl. VAT)",
 "Commune": "Municipality",
@@ -848,6 +853,11 @@ input[type=range]::-webkit-slider-runnable-track {
 "Nom": "Numm",
 "Adresse complète": "Komplett Adress",
 "Code postal": "Postleitzuel",
+"Quartier": "Quartier",
+"Choisissez votre quartier": "Wielt Äre Quartier",
+"Ce code couvre :": "Dëse Code deckt of:",
+"Indiquez la vôtre.": "Gitt Är un.",
+"Code postal introuvable : vérifiez-le. Vous pouvez continuer, nous contrôlerons votre adresse.": "Postleitzuel net fonnt: kontrolléiert en w.e.g. Dir kënnt weidermaachen, mir kontrolléieren Är Adress.",
 "Zone sans frais de déplacement": "Zon ouni Deplacementskäschten",
 "Zone avec supplément déplacement (+5 € HTVA)": "Zon mat Deplacementssupplement (+5 € HTVA)",
 "Commune": "Gemeng",
@@ -1233,6 +1243,7 @@ input[type=range]::-webkit-slider-runnable-track {
           <div class="field">
             <label class="field-label">Code postal <span class="req">*</span></label>
             <input class="field-input" type="text" id="postalCode" placeholder="8280" maxlength="4" oninput="detectZone(this.value)">
+            <div id="cp-info" style="display:none;font-size:11.5px;margin-top:5px;line-height:1.4;"></div>
             <div class="zone-result free" id="zone-free">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
               Zone sans frais de déplacement
@@ -1244,7 +1255,15 @@ input[type=range]::-webkit-slider-runnable-track {
           </div>
           <div class="field">
             <label class="field-label">Commune <span class="req">*</span></label>
-            <input class="field-input" type="text" id="commune" placeholder="Strassen">
+            <input class="field-input" type="text" id="commune" placeholder="Strassen" list="commune-liste" autocomplete="off" oninput="majZone()">
+            <datalist id="commune-liste"></datalist>
+          </div>
+        </div>
+        <!-- v2.56 : à Luxembourg-Ville, la zone dépend du quartier -->
+        <div class="form-row solo" id="quartier-row" style="display:none;">
+          <div class="field">
+            <label class="field-label">Quartier <span class="req">*</span></label>
+            <select class="field-input" id="quartier" onchange="majZone()"><option value="">Choisissez votre quartier</option><option value="Beggen">Beggen</option><option value="Belair">Belair</option><option value="Bonnevoie-Nord/Verlorenkost">Bonnevoie-Nord/Verlorenkost</option><option value="Bonnevoie-Sud">Bonnevoie-Sud</option><option value="Cents">Cents</option><option value="Cessange">Cessange</option><option value="Clausen">Clausen</option><option value="Dommeldange">Dommeldange</option><option value="Eich">Eich</option><option value="Gare">Gare</option><option value="Gasperich">Gasperich</option><option value="Grund">Grund</option><option value="Hamm">Hamm</option><option value="Hollerich">Hollerich</option><option value="Kirchberg/Kiem">Kirchberg/Kiem</option><option value="Limpertsberg">Limpertsberg</option><option value="Merl">Merl</option><option value="Mühlenbach">Mühlenbach</option><option value="Neudorf/Weimershof">Neudorf/Weimershof</option><option value="Pfaffenthal">Pfaffenthal</option><option value="Pulvermühl">Pulvermühl</option><option value="Rollingergrund/Belair-Nord">Rollingergrund/Belair-Nord</option><option value="Ville Haute">Ville Haute</option><option value="Weimerskirch">Weimerskirch</option></select>
           </div>
         </div>
         <div class="form-row cols-2">
@@ -2116,13 +2135,16 @@ function validerPage1() {
     { id: 'nom',       label: 'Nom' },
     { id: 'email',     label: 'Email' },
     { id: 'telephone', label: 'Téléphone' },
+    { id: 'postalCode', label: 'Code postal' },
     { id: 'commune',   label: 'Commune' },
+    { id: 'quartier',  label: 'Quartier', si: estLuxVille },
     { id: 'contact-nom', label: "Contact d'urgence — nom" },
     { id: 'contact-tel', label: "Contact d'urgence — téléphone" },
   ];
   var erreurs = [];
   champs.forEach(function(c) {
     var el = document.getElementById(c.id);
+    if (el && c.si && !c.si()) { el.style.borderColor = ''; return; }
     if (el) {
       el.style.borderColor = '';
       if (!el.value.trim()) {
@@ -2131,6 +2153,12 @@ function validerPage1() {
       }
     }
   });
+  // v2.57 : la localité doit correspondre au code postal
+  var elCom = document.getElementById('commune');
+  if (elCom && elCom.value.trim() && !communeValide()) {
+    elCom.style.borderColor = '#e05a5a';
+    erreurs.push('Commune (' + _cpLocalites.join(' / ') + ')');
+  }
   // Au moins une personne autorisée (nom + téléphone) — auto-remplie si la case est cochée
   var aNom = document.querySelector('#person-1 .auth-nom');
   var aTel = document.querySelector('#person-1 .auth-tel');
@@ -2520,49 +2548,79 @@ function syncAuthFromContact() {
     if (addBtn) addBtn.style.display = '';
   }
 }
-const ZONES_FREE = [
-  'kopstal','kehlen','bridel','rollingergrund','limpertsberg',
-  'eich','dommeldange','reckenthal','strassen','bertrange','belair','merl'
-];
-
-// Codes postaux Luxembourg par commune
-const POSTAL_ZONES = {
-  '8180':'kopstal','8181':'kopstal','8182':'kopstal','8183':'kopstal',
-  '8280':'kehlen','8281':'kehlen','8282':'kehlen','8283':'kehlen',
-  '8140':'bridel','8141':'bridel','8142':'bridel',
-  '2440':'rollingergrund','2441':'rollingergrund','2442':'rollingergrund','2443':'rollingergrund',
-  '2210':'limpertsberg','2211':'limpertsberg','2212':'limpertsberg','2213':'limpertsberg','2214':'limpertsberg',
-  '1460':'eich','1461':'eich','1462':'eich','1463':'eich',
-  '2540':'dommeldange','2541':'dommeldange','2542':'dommeldange',
-  '8422':'reckenthal','8423':'reckenthal',
-  '8030':'strassen','8031':'strassen','8032':'strassen','8033':'strassen','8034':'strassen',
-  '8050':'bertrange','8051':'bertrange','8052':'bertrange','8053':'bertrange','8054':'bertrange',
-  '1250':'belair','1251':'belair','1252':'belair','1253':'belair','1254':'belair','1255':'belair',
-  '2120':'merl','2121':'merl','2122':'merl','2123':'merl',
-};
-
-function detectZone(val) {
-  const free  = document.getElementById('zone-free');
-  const paid  = document.getElementById('zone-paid');
-  const commune = document.getElementById('commune');
-
-  free.style.display = 'none';
-  paid.style.display = 'none';
-
-  if (val.length < 4) return;
-
-  const c = POSTAL_ZONES[val];
-  if (c) {
-    commune.value = c.charAt(0).toUpperCase() + c.slice(1);
-    if (ZONES_FREE.includes(c)) {
-      free.style.display = 'flex';
-    } else {
-      paid.style.display = 'flex';
-    }
+// ── ZONE (v2.57) ──
+// Le code postal donne la localité (table codes_postaux, migration v50).
+// Plusieurs localités pour un code (ex. 8181 = Kopstal ou Keispelt) → le
+// client choisit parmi elles. À Luxembourg-Ville, le quartier est demandé.
+// La base décide de la zone à l'enregistrement ; ici, simple aperçu.
+var _cpLocalites = [];   // localités du code saisi ([] = code inconnu ou pas encore saisi)
+var _cpSeq = 0;
+function cpChiffres() { return ((document.getElementById('postalCode') || {}).value || '').replace(/\D/g, ''); }
+function normTxt(x) { return String(x || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, ''); }
+function estLuxVille() {
+  return ['luxembourg', 'luxembourgville', 'letzebuerg', 'villedeluxembourg'].indexOf(normTxt((document.getElementById('commune') || {}).value)) !== -1;
+}
+function afficherCpInfo(texte, erreur) {
+  var el = document.getElementById('cp-info');
+  if (!el) return;
+  el.textContent = texte ? t(texte) : '';
+  el.style.display = texte ? 'block' : 'none';
+  el.style.color = erreur ? '#e05a5a' : 'var(--text-faint)';
+}
+async function detectZone(val) {
+  var commune = document.getElementById('commune');
+  var liste = document.getElementById('commune-liste');
+  var cp = String(val || '').replace(/\D/g, '');
+  _cpLocalites = [];
+  if (liste) liste.innerHTML = '';
+  afficherCpInfo('');
+  if (cp.length !== 4) { majZone(); return; }
+  var seq = ++_cpSeq;
+  try {
+    if (!db) throw 0;
+    var r = await db.rpc('fr_localites_cp', { p_code_postal: cp });
+    if (seq !== _cpSeq) return;
+    if (r.error) throw r.error;
+    _cpLocalites = r.data || [];
+  } catch (e) { _cpLocalites = []; }
+  if (!_cpLocalites.length) {
+    afficherCpInfo('Code postal introuvable : vérifiez-le. Vous pouvez continuer, nous contrôlerons votre adresse.', true);
+  } else if (_cpLocalites.length === 1) {
+    commune.value = _cpLocalites[0];
   } else {
-    // Code inconnu → zone payante par défaut
-    paid.style.display = 'flex';
+    if (_cpLocalites.map(normTxt).indexOf(normTxt(commune.value)) === -1) commune.value = '';
+    if (liste) liste.innerHTML = _cpLocalites.map(function (l) { return '<option value="' + l.replace(/"/g, '&quot;') + '">'; }).join('');
+    afficherCpInfo(t('Ce code couvre :') + ' ' + _cpLocalites.join(', ') + '. ' + t('Indiquez la vôtre.'));
   }
+  majZone();
+}
+var _zoneSeq = 0, _zoneTimer = null;
+function majZone() {
+  var free = document.getElementById('zone-free'), paid = document.getElementById('zone-paid');
+  var row = document.getElementById('quartier-row'), qEl = document.getElementById('quartier');
+  var commune = document.getElementById('commune');
+  free.style.display = 'none'; paid.style.display = 'none';
+  var lux = estLuxVille();
+  row.style.display = lux ? '' : 'none';
+  if (!lux && qEl) qEl.value = '';
+  var cp = cpChiffres(), com = (commune.value || '').trim(), q = lux ? (qEl.value || '') : '';
+  if (lux && !q) return;                    // quartier d'abord
+  if (!com) return;
+  var seq = ++_zoneSeq;
+  clearTimeout(_zoneTimer);
+  _zoneTimer = setTimeout(async function () {
+    try {
+      if (!db) return;
+      var r = await db.rpc('fr_zone_apercu', { p_commune: com || null, p_quartier: q || null, p_code_postal: cp || null });
+      if (seq !== _zoneSeq || r.error || typeof r.data !== 'boolean') return;
+      (r.data ? paid : free).style.display = 'flex';
+    } catch (e) {}
+  }, 350);
+}
+// La localité doit être l'une de celles du code postal (quand le code est connu)
+function communeValide() {
+  if (!_cpLocalites.length) return true;
+  return _cpLocalites.map(normTxt).indexOf(normTxt((document.getElementById('commune') || {}).value)) !== -1;
 }
 
 var poidsGrandGabarit = false;
@@ -2829,7 +2887,7 @@ function renderPreRecap() {
     [t('Prénom / Nom'), (v('prenom') + ' ' + v('nom')).trim()],
     [t('Email'),        v('email')],
     [t('Téléphone'),    v('telephone')],
-    [t('Commune'),      v('commune')]
+    [t('Commune'),      (cpChiffres() ? 'L-' + cpChiffres() + ' ' : '') + v('commune') + (estLuxVille() && v('quartier') ? ' — ' + v('quartier') : '')]
   ], true);
 
   html += bloc(t('Fiche chien'), [
@@ -2927,11 +2985,6 @@ async function allerEspaceClient() {
 }
 
 // ── LIRE TOKEN DEPUIS URL ──
-function isHorsZone(commune) {
-  var zonesNormales = ['kopstal','bridel','strassen','bertrange','mamer','kehlen','capellen','steinfort','luxembourg','limpertsberg','belair','merl'];
-  if (!commune) return false;
-  return !zonesNormales.some(function(z) { return commune.toLowerCase().includes(z); });
-}
 
 // Retire les accents UNIQUEMENT sur les textes rendus en FRDisplay (la police
 // d'affichage n'a pas de capitales accentuées → « É » cassé). Le corps de texte
@@ -3077,7 +3130,8 @@ async function sauvegarderInscription(motDePasse) {
     var sterilise = sterilPill ? (frOriginal(sterilPill) === 'Oui') : null;
     var numeroPuce = (((document.getElementById('puce-chien') || {}).value || '').trim().replace(/\s/g, '')) || null;
     var naissance = ((document.getElementById('naissance-chien') || {}).value || '') || null;
-    var horsZone  = isHorsZone(commune);
+    var codePostal = cpChiffres();
+    var quartier  = estLuxVille() ? ((document.getElementById('quartier') || {}).value || '') : '';
 
     if (!prenom || !nom || !email) {
       alert(t('Veuillez remplir au minimum le prénom, le nom et l\'email.'));
@@ -3195,8 +3249,9 @@ async function sauvegarderInscription(motDePasse) {
         telephone: telephone || null,
         adresse: adresse || null,
         commune: commune || null,
+        code_postal: codePostal || null,
+        quartier: quartier || null,   // hors_zone : calculé par la base (v49)
         langue: langue,
-        hors_zone: horsZone,
         personnes_autorisees: personnes,
         // Accès au domicile (v39 : enregistrés ; sans v39, ignorés sans erreur)
         acces_cle: !!(document.getElementById('toggle-keys') && document.getElementById('toggle-keys').classList.contains('on')),

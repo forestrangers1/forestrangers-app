@@ -1579,7 +1579,7 @@ function confirmerDebut() {
   try {
     db.from('kilometrage').insert({
       ranger_nom: rangerNom,
-      date: new Date().toISOString().split('T')[0],
+      date: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10),
       km_depart: kmDepart,
       created_at: new Date().toISOString()
     });
@@ -1629,7 +1629,7 @@ function confirmerFin() {
   try {
     db.from('kilometrage').upsert({
       ranger_nom: rangerNom,
-      date: new Date().toISOString().split('T')[0],
+      date: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10),
       km_arrivee: parseInt(km),
       km_total: kmTotal > 0 ? kmTotal : 0
     }, { onConflict: 'ranger_nom,date' });
@@ -1816,7 +1816,7 @@ async function envoyerMessageStaff() {
 }
 
 async function loadMissionsJour() {
-  var today = new Date().toISOString().split('T')[0];
+  var today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   var joursFr = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
   var moisFr  = ['janvier','fevrier','mars','avril','mai','juin','juillet','aout','septembre','octobre','novembre','decembre'];
   var now = new Date();

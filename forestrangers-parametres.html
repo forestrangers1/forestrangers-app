@@ -850,7 +850,9 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
         placeholder="Kopstal, Bridel, Strassen, Bertrange..."
         style="resize:vertical;min-height:80px;"></textarea>
       <div style="font-size:11px;color:var(--text-faint);margin-top:5px;">
-        Séparez les communes par une virgule ou un retour à la ligne.
+        Séparez les communes par une virgule ou un retour à la ligne.<br>
+        <strong>Luxembourg-Ville :</strong> indiquez les <em>quartiers</em> couverts (Belair, Merl, Rollingergrund…), jamais « Luxembourg » :
+        il est ignoré, sinon toute la Ville serait en zone. Une adresse absente des zones sans supplément est hors zone.
       </div>
     </div>
     <div class="modal-foot">
@@ -1804,7 +1806,7 @@ function renderFeries() {
   var liste = document.getElementById('feries-liste');
   if (!label || !liste || !window.FR_CAL) return;
   label.textContent = anneeFeries;
-  var aujourdhui = new Date().toISOString().slice(0, 10);
+  var aujourdhui = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   liste.innerHTML = FR_CAL.feries(anneeFeries).map(function(f) {
     var d = new Date(f.date + 'T00:00:00');
     var passe = f.date < aujourdhui;
@@ -1863,7 +1865,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Date d'entree en vigueur par defaut : un mois, comme le preavis des CGV
   var dEffet = document.getElementById('tarifs-date-effet');
-  if (dEffet) { dEffet.value = dansUnMois(); dEffet.min = new Date().toISOString().slice(0,10); }
+  if (dEffet) { dEffet.value = dansUnMois(); dEffet.min = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
 
   // Le bouton "Ajouter camionnette" n'apparaît que sur l'onglet Camionnettes (actif par défaut)
   appliquerVue();
@@ -1944,7 +1946,7 @@ var CAPACITE_KEYS = [
 function dansUnMois() {
   var d = new Date();
   d.setMonth(d.getMonth() + 1);
-  return d.toISOString().slice(0, 10);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
 
 function dateFr(iso) {
@@ -2026,7 +2028,7 @@ async function chargerVersionsTarifs() {
       if (actif) actif.textContent = '';
       return;
     }
-    var today = new Date().toISOString().slice(0, 10);
+    var today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
     var enVigueur = data.filter(function(v) { return v.date_effet <= today; })[0];
     if (actif) actif.textContent = enVigueur
       ? 'En vigueur depuis le ' + dateFr(enVigueur.date_effet) : '';
@@ -2333,7 +2335,7 @@ var DM_CR = { matin: 'matin 09h00', midi: 'midi 12h00', apmidi: 'après-midi 14h
 })();
 async function chargerDemandesMission() {
   var d = document.getElementById('dm-date');
-  if (d && !d.value) { var t = new Date(); t.setDate(t.getDate() + 1); d.value = t.toISOString().slice(0, 10); }
+  if (d && !d.value) { var t = new Date(); t.setDate(t.getDate() + 1); d.value = new Date(t.getTime() - t.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
   try {
     var st = await db.from('staff').select('id,prenom,nom,actif,role').order('prenom');
     DM_STAFF = (st.data || []).filter(function(x) { return x.actif !== false; });
@@ -2680,7 +2682,7 @@ async function loadConges() {
     if (r.error) throw r.error;
     var st = await db.from('staff').select('id,prenom,nom');
     var noms = {}; (st.data || []).forEach(function(x) { noms[x.id] = x; });
-    var auj = new Date().toISOString().slice(0, 10);
+    var auj = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
     var attente = (r.data || []).filter(function(c) { return (c.statut || 'en_attente') === 'en_attente'; });
     var approuves = (r.data || []).filter(function(c) { return c.statut === 'approuve' && c.date_fin >= moisPasse(); });
     CONGES_LISTE = r.data || [];
@@ -2710,7 +2712,7 @@ async function loadConges() {
     att.innerHTML = '<div style="font-size:12.5px;color:var(--text-faint);">Congés indisponibles : ' + echapper((e && e.message) || e) + '</div>';
   }
 }
-function moisPasse() { var d = new Date(); d.setDate(d.getDate() - 31); return d.toISOString().slice(0, 10); }
+function moisPasse() { var d = new Date(); d.setDate(d.getDate() - 31); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
 function periodeConge(c) {
   var f = function(x) { return new Date(x + 'T00:00:00').toLocaleDateString('fr-LU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); };
   if (c.date_debut === c.date_fin) return f(c.date_debut) + ' · 1 jour';

@@ -1773,7 +1773,7 @@ function goTab(screenId, tabId) {
 async function seDeconnecter() {
   if (!confirm('Se déconnecter de votre espace Forest Rangers ?')) return;
   try { await db.auth.signOut(); } catch(e) {}
-  window.location.href = 'forestrangers-login.html';
+  window.location.replace('forestrangers-login.html');
 }
 
 // ── MENU AVATAR ──
@@ -2131,7 +2131,7 @@ function frDemandeReconnexion() {
 
 function frReconnexion() {
   try { if (db) db.auth.signOut(); } catch(e) {}
-  window.location.href = 'forestrangers-login.html';
+  window.location.replace('forestrangers-login.html');
 }
 
 async function loadClientProfile() {
@@ -2139,7 +2139,7 @@ async function loadClientProfile() {
     // Récupérer la session — sans session active, on renvoie vers la connexion
     var { data: session } = await db.auth.getSession();
     if (!session || !session.session) {
-      window.location.href = 'forestrangers-login.html';
+      window.location.replace('forestrangers-login.html');
       return;
     }
     var userId = session.session.user.id;

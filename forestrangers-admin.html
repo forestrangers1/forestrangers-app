@@ -843,6 +843,7 @@ textarea.form-control { resize: vertical; }
     <div class="nav-item" onclick="nav('clients',this)">
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
       Clients
+      <span class="nav-count" id="nav-count-clients" style="display:none;" title="Nouvelles inscriptions depuis votre dernière visite">0</span>
     </div>
     <div class="nav-item" onclick="nav('chiens',this)">
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="6.3" cy="9.8" rx="1.7" ry="2.2" transform="rotate(-22 6.3 9.8)"/><ellipse cx="10.3" cy="7.1" rx="1.7" ry="2.4" transform="rotate(-8 10.3 7.1)"/><ellipse cx="14.4" cy="7.1" rx="1.7" ry="2.4" transform="rotate(8 14.4 7.1)"/><ellipse cx="18.4" cy="9.8" rx="1.7" ry="2.2" transform="rotate(22 18.4 9.8)"/><path d="M12.3 11.9C15.3 11.9 18 14.1 18 16.6C18 18.6 16.3 20 14.2 19.6C13.4 19.5 12.9 19.3 12.3 19.3C11.7 19.3 11.2 19.5 10.4 19.6C8.3 20 6.6 18.6 6.6 16.6C6.6 14.1 9.3 11.9 12.3 11.9Z"/></svg>
@@ -1058,18 +1059,8 @@ textarea.form-control { resize: vertical; }
           <div style="padding:16px;text-align:center;color:var(--text-faint);font-size:12px;">Chargement…</div>
         </div>
       </div>
-      <div class="card" style="margin-bottom:14px;">
-        <div class="card-head">
-          <span class="card-title">Dates annulees a l'unite</span>
-          <span style="font-size:11px;color:var(--text-faint);">Seances retirees d'une recurrence</span>
-        </div>
-        <div id="resa-occ-list">
-          <div style="padding:16px;text-align:center;color:var(--text-faint);font-size:12px;">Chargement…</div>
-        </div>
-      </div>
-
       <div class="card">
-        <div class="card-head"><span class="card-title">Historique des reservations</span></div>
+        <div class="card-head"><span class="card-title">Réservations</span><span style="font-size:11px;color:var(--text-faint);">La plus récente en haut</span></div>
         <div>
           <table class="tbl">
             <thead><tr><th>Reservee le</th><th>Client</th><th>Chien(s)</th><th>Service</th><th>Date prestation</th><th>Ranger</th><th>Statut</th><th>Montant</th></tr></thead>
@@ -1077,6 +1068,15 @@ textarea.form-control { resize: vertical; }
               <tr><td colspan="8" style="text-align:center;color:var(--text-faint);padding:18px;font-size:12px;">Chargement…</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px;">
+        <div class="card-head">
+          <span class="card-title">Annulations</span>
+          <span style="font-size:11px;color:var(--text-faint);">Une ligne par demande · cliquez pour le détail</span>
+        </div>
+        <div id="resa-occ-list">
+          <div style="padding:16px;text-align:center;color:var(--text-faint);font-size:12px;">Chargement…</div>
         </div>
       </div>
     </div>
@@ -1548,7 +1548,7 @@ async function loadReservationsAdmin() {
 
   try {
     var { data: resas, error } = await db.from('reservations')
-      .select('id,service,creneau,statut,date_debut,date_fin,montant_ttc,ranger_nom,client_id,chien_id,dates_exclues,jours_recurrence,created_at')
+      .select('*')   // * : cree_par (v51) sans casser si la colonne manque
       .order('created_at',{ascending:false})
       .limit(300);
 
@@ -1571,7 +1571,7 @@ async function loadReservationsAdmin() {
     var groups={};
     resas.forEach(function(r){
       var key=[r.client_id,r.service,r.date_debut,r.date_fin,r.creneau,r.statut].join('|');
-      if(!groups[key]) groups[key]={ id:r.id, client_id:r.client_id, service:r.service, creneau:r.creneau, statut:r.statut, date_debut:r.date_debut, date_fin:r.date_fin, ranger_nom:r.ranger_nom, dates_exclues:r.dates_exclues, created_at:r.created_at, montant:0, dogs:[] };
+      if(!groups[key]) groups[key]={ id:r.id, client_id:r.client_id, service:r.service, creneau:r.creneau, statut:r.statut, date_debut:r.date_debut, date_fin:r.date_fin, ranger_nom:r.ranger_nom, dates_exclues:r.dates_exclues, created_at:r.created_at, cree_par:r.cree_par, montant:0, dogs:[] };
       var g=groups[key];
       g.montant += parseFloat(r.montant_ttc)||0;
       if (r.chien_id && chiensMap[r.chien_id]) g.dogs.push(chiensMap[r.chien_id].nom);
@@ -1623,7 +1623,7 @@ async function loadReservationsAdmin() {
       } else {
         var badge={confirme:'<span class="badge b-green">Confirmé</span>',termine:'<span class="badge b-green">Terminé</span>',annule:'<span class="badge b-red">Annulé</span>'};
         histBody.innerHTML=hist.map(function(g){
-          return '<tr style="cursor:pointer;" title="Ouvrir le détail" onclick="openResaDetail(\''+g.id+'\',\''+g.date_debut+'\')"><td style="white-space:nowrap;color:var(--text-dim);">'+fmtResaLe(g.created_at)+'</td><td>'+clientName(g)+'</td><td>'+dogsName(g)+'</td><td>'+(SVC[g.service]||g.service)+'</td><td>'+fmtPlage(g.date_debut,g.date_fin)+'</td><td>'+(g.ranger_nom||'—')+'</td><td>'+(badge[g.statut]||'<span class="badge b-muted">'+g.statut+'</span>')+(g.dates_exclues?' <span class="badge b-amber" title="'+g.dates_exclues+'">'+g.dates_exclues.split(',').filter(Boolean).length+' date(s) annulee(s)</span>':'')+'</td><td style="color:var(--accent);font-weight:700;">'+(g.montant>0?euros(g.montant):'—')+'</td></tr>';
+          return '<tr style="cursor:pointer;" title="Ouvrir le détail" onclick="openResaDetail(\''+g.id+'\',\''+g.date_debut+'\')"><td style="white-space:nowrap;color:var(--text-dim);">'+fmtResaLe(g.created_at)+'</td><td>'+clientName(g)+(g.cree_par!=='equipe' && estNouveau('reservations',g.created_at)?' <span class="badge b-accent">Nouveau</span>':'')+'</td><td>'+dogsName(g)+'</td><td>'+(SVC[g.service]||g.service)+'</td><td>'+fmtPlage(g.date_debut,g.date_fin)+'</td><td>'+(g.ranger_nom||'—')+'</td><td>'+(badge[g.statut]||'<span class="badge b-muted">'+g.statut+'</span>')+(g.dates_exclues?' <span class="badge b-amber" title="'+g.dates_exclues+'">'+g.dates_exclues.split(',').filter(Boolean).length+' date(s) annulee(s)</span>':'')+'</td><td style="color:var(--accent);font-weight:700;">'+(g.montant>0?euros(g.montant):'—')+'</td></tr>';
         }).join('');
       }
     }
@@ -1640,37 +1640,73 @@ async function chargerAnnulationsOccurrences() {
   if (!box) return;
   try {
     var { data: occ, error } = await db.from('annulations_occurrences')
-      .select('*').order('created_at', { ascending: false }).limit(40);
+      .select('*').order('created_at', { ascending: false }).limit(600);
     if (error) throw error;
     if (!occ || !occ.length) {
-      box.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-faint);font-size:12px;">Aucune date annulée à l\'unité</div>';
+      box.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-faint);font-size:12px;">Aucune annulation</div>';
       return;
     }
     var rids = [...new Set(occ.map(function(o){ return o.reservation_id; }).filter(Boolean))];
-    var rMap = {}, cMap = {};
-    if (rids.length) {
-      var rr = await db.from('reservations').select('id,service,creneau,client_id').in('id', rids);
+    var rMap = {}, cMap = {}, dMap = {};
+    for (var i = 0; i < rids.length; i += 150) {
+      var rr = await db.from('reservations').select('id,service,creneau,client_id,chien_id').in('id', rids.slice(i, i + 150));
       (rr.data || []).forEach(function(r){ rMap[r.id] = r; });
-      var cids = [...new Set((rr.data || []).map(function(r){ return r.client_id; }).filter(Boolean))];
-      if (cids.length) {
-        var rc = await db.from('clients').select('id,prenom,nom').in('id', cids);
-        (rc.data || []).forEach(function(c){ cMap[c.id] = c; });
-      }
     }
+    var tous = Object.keys(rMap).map(function(k){ return rMap[k]; });
+    var cids = [...new Set(tous.map(function(r){ return r.client_id; }).filter(Boolean))];
+    var dids = [...new Set(tous.map(function(r){ return r.chien_id; }).filter(Boolean))];
+    if (cids.length) { var rc = await db.from('clients').select('id,prenom,nom').in('id', cids); (rc.data || []).forEach(function(c){ cMap[c.id] = c; }); }
+    if (dids.length) { var rd = await db.from('chiens').select('id,nom').in('id', dids); (rd.data || []).forEach(function(d){ dMap[d.id] = d; }); }
+
+    // Une ligne par demande : même client, même service, même auteur, même minute d'enregistrement
+    var groupes = {}, ordre = [];
+    occ.forEach(function(o) {
+      var r = rMap[o.reservation_id] || {};
+      var cle = [r.client_id || '?', r.service || '?', o.annule_par || '?', String(o.created_at || '').slice(0, 16)].join('|');
+      if (!groupes[cle]) { groupes[cle] = { cle: cle, r: r, annule_par: o.annule_par, created_at: o.created_at, lignes: [] }; ordre.push(cle); }
+      groupes[cle].lignes.push(o);
+    });
     var SVCL = { walking:'Dog Walking', daycare:'Day Care', boarding:'Boarding' };
-    box.innerHTML = occ.map(function(o) {
-      var r = rMap[o.reservation_id];
-      var c = r && r.client_id ? cMap[r.client_id] : null;
-      var qui = o.annule_par === 'client' ? 'le client' : 'Gabriel';
-      var pct = o.facture_pourcentage != null ? o.facture_pourcentage : 0;
-      return '<div class="inv-row">'
-        + '<div style="width:8px;height:8px;border-radius:50%;background:' + (o.annulation_tardive ? 'var(--red)' : 'var(--text-faint)') + ';flex-shrink:0;"></div>'
-        + '<div style="flex:1;' + (r ? 'cursor:pointer;' : '') + '"' + (r ? ' onclick="openResaDetail(\'' + o.reservation_id + '\',\'' + o.date_occurrence + '\')"' : '') + '>'
-        +   '<div class="inv-client">' + (c ? c.prenom + ' ' + c.nom : 'Client') + ' — ' + formatDateFR(o.date_occurrence) + '</div>'
-        +   '<div class="inv-desc">' + (r ? (SVCL[r.service] || r.service) : 'Réservation') + ' · annulé par ' + qui + '</div>'
+    window._annulGroupes = groupes;
+    function jj(d) { var p = String(d).slice(0, 10).split('-'); return p[2] + '/' + p[1]; }
+    box.innerHTML = ordre.slice(0, 60).map(function(cle, idx) {
+      var g = groupes[cle], r = g.r, c = r.client_id ? cMap[r.client_id] : null;
+      var dates = [...new Set(g.lignes.map(function(o){ return String(o.date_occurrence).slice(0, 10); }))].sort();
+      var chiens = [], tousChiens = false;
+      g.lignes.forEach(function(o) { var rr = rMap[o.reservation_id]; if (!rr) return; if (!rr.chien_id) tousChiens = true; else if (dMap[rr.chien_id] && chiens.indexOf(dMap[rr.chien_id].nom) === -1) chiens.push(dMap[rr.chien_id].nom); });
+      var periode = dates.length === 1 ? formatDateFR(dates[0]) : 'du ' + jj(dates[0]) + ' au ' + formatDateFR(dates[dates.length - 1]);
+      // Facturation : répartition par pourcentage (sur les séances, pas les lignes par chien)
+      var parPct = {};
+      dates.forEach(function(d) { var pct = 0; g.lignes.forEach(function(o){ if (String(o.date_occurrence).slice(0, 10) === d) pct = Math.max(pct, +o.facture_pourcentage || 0); }); parPct[pct] = (parPct[pct] || 0) + 1; });
+      var pcts = Object.keys(parPct).map(Number).sort(function(a, b){ return a - b; });
+      var badgePct = pcts.length === 1
+        ? '<span class="badge ' + (pcts[0] > 0 ? 'b-accent' : 'b-green') + '">' + pcts[0] + ' %</span>'
+        : pcts.map(function(p){ return '<span class="badge ' + (p > 0 ? 'b-accent' : 'b-green') + '">' + parPct[p] + ' à ' + p + ' %</span>'; }).join(' ');
+      var tardives = g.lignes.some(function(o){ return o.annulation_tardive; });
+      var qui = g.annule_par === 'client' ? 'annulé par le client' : g.annule_par === 'chaleur' ? 'chienne en chaleur' : 'annulé par Gabriel';
+      var quand = g.created_at ? new Date(g.created_at) : null;
+      var quandTxt = quand && !isNaN(quand) ? ' · le ' + String(quand.getDate()).padStart(2, '0') + '/' + String(quand.getMonth() + 1).padStart(2, '0') + ' à ' + String(quand.getHours()).padStart(2, '0') + 'h' + String(quand.getMinutes()).padStart(2, '0') : '';
+      var nouveau = g.annule_par === 'client' && estNouveau('reservations', g.created_at);
+      var detail = dates.map(function(d) {
+        var ls = g.lignes.filter(function(o){ return String(o.date_occurrence).slice(0, 10) === d; });
+        var noms = ls.map(function(o){ var rr = rMap[o.reservation_id]; return rr && rr.chien_id && dMap[rr.chien_id] ? dMap[rr.chien_id].nom : 'tous les chiens'; });
+        var pct = Math.max.apply(null, ls.map(function(o){ return +o.facture_pourcentage || 0; }));
+        return '<div style="display:flex;align-items:center;gap:10px;padding:7px 16px 7px 40px;font-size:12px;border-top:1px solid var(--border);cursor:pointer;" onclick="openResaDetail(\'' + ls[0].reservation_id + '\',\'' + d + '\')">'
+          + '<span style="flex:1;color:var(--text-dim);">' + formatDateFR(d) + ' · ' + [...new Set(noms)].join(', ') + '</span>'
+          + '<span class="badge ' + (pct > 0 ? 'b-accent' : 'b-green') + '">' + pct + ' %</span></div>';
+      }).join('');
+      return '<div>'
+        + '<div class="inv-row" style="cursor:pointer;" onclick="var d=document.getElementById(\'annul-det-' + idx + '\');d.style.display=d.style.display===\'none\'?\'\':\'none\';">'
+        +   '<div style="width:8px;height:8px;border-radius:50%;background:' + (tardives ? 'var(--red)' : 'var(--text-faint)') + ';flex-shrink:0;"></div>'
+        +   '<div style="flex:1;min-width:0;">'
+        +     '<div class="inv-client">' + (c ? c.prenom + ' ' + c.nom : 'Client') + ' — ' + periode + (nouveau ? ' <span class="badge b-accent">Nouveau</span>' : '') + '</div>'
+        +     '<div class="inv-desc">' + (SVCL[r.service] || r.service || 'Réservation') + ' · ' + dates.length + ' séance' + (dates.length > 1 ? 's' : '')
+        +       ' · ' + (tousChiens && !chiens.length ? 'tous les chiens' : chiens.join(', ') + (tousChiens ? ' + tous' : '')) + ' · ' + qui + quandTxt + '</div>'
+        +   '</div>'
+        +   (tardives ? '<span class="badge b-red">Tardive</span>' : '<span class="badge b-muted">A temps</span>')
+        +   badgePct
         + '</div>'
-        + (o.annulation_tardive ? '<span class="badge b-red">Tardive</span>' : '<span class="badge b-muted">A temps</span>')
-        + '<span class="badge ' + (pct > 0 ? 'b-accent' : 'b-green') + '">' + pct + ' %</span>'
+        + '<div id="annul-det-' + idx + '" style="display:none;background:var(--k800,rgba(0,0,0,0.03));">' + detail + '</div>'
         + '</div>';
     }).join('');
   } catch(e) {
@@ -1730,7 +1766,14 @@ function nav(id, el) {
   }
 
   if (id === 'messages')     { chargerMessages(true); initAlerteMeteo(); }
-  if (id === 'reservations') { loadReservationsAdmin(); chargerAnnulationsOccurrences(); }
+  if (id === 'reservations') {
+    chargerVus().then(function () {
+      enregistrerVu('reservations');
+      loadReservationsAdmin(); chargerAnnulationsOccurrences();
+      majCompteursSidebar();
+    });
+  }
+  if (id === 'clients') { chargerVus().then(function () { enregistrerVu('clients'); majCompteursSidebar(); }); }
   if (id === 'staff')        { loadStaff(); loadStaffOrga(); }
   if (id === 'factures')     loadFacturesAdmin();
   if (id === 'parametres')   loadParametres();
@@ -2071,8 +2114,8 @@ function sansAccentsN(t) { return frAccentsPolice(t); }
 
 async function loadDashboardStats() {
   _estMoisPromesse = {};   // recalcul à chaque rafraîchissement du tableau de bord
-  var today = new Date().toISOString().split('T')[0];
-  var mois  = new Date().toISOString().slice(0, 7);
+  var today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  var mois  = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 7);
 
   // 1. Facturé le mois passé + estimation du mois en cours (v2.32)
   chargerCartesFacturation();
@@ -3066,7 +3109,7 @@ async function loadFacturesAdminAncien() {
   var statsRow = document.getElementById('factures-stats');
   var list = document.getElementById('factures-list');
   if (list) list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-faint);font-size:12px;">Chargement…</div>';
-  var mois = new Date().toISOString().slice(0, 7);
+  var mois = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 7);
   function euros(n){ return (parseFloat(n) || 0).toLocaleString('fr-LU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; }
   function euros0(n){ return (parseFloat(n) || 0).toLocaleString('fr-LU', { maximumFractionDigits: 0 }) + ' €'; }
   function card(cls, label, val, sub){
@@ -4214,7 +4257,7 @@ function carteJourHtml(rows, clientsMap, chiensMap, clientDogsMap, dateStr) {
          : r.statut === 'en_attente' ? ['rgba(240,180,41,0.14)', '#f0b429', 'À valider']
          : ['rgba(94,201,122,0.12)', '#5ec97a', 'Confirmée'];
   var meta = [client];
-  if (c && c.commune) meta.push(c.commune + (c.hors_zone ? ' (hors zone)' : ''));
+  if (c && (c.commune || c.quartier)) meta.push((c.quartier ? 'Lux. ' + c.quartier : c.commune) + (c.hors_zone ? ' (hors zone)' : ''));
   if (r.service === 'boarding' && r.date_debut && r.date_fin) {
     var dd = r.date_debut.slice(0, 10), df = r.date_fin.slice(0, 10);
     meta.push(dd === dateStr ? 'Arrivée aujourd\'hui' : df === dateStr ? 'Départ aujourd\'hui' : 'Du ' + formatDateFR(dd) + ' au ' + formatDateFR(df));
@@ -4827,17 +4870,89 @@ function nbMessagesNonLus() {
 function majCompteurNav(id, n) {
   var el = document.getElementById(id);
   if (!el) return;
-  if (n > 0) { el.textContent = n > 99 ? '99+' : n; el.style.display = ''; }
+  if (n > 0) { el.textContent = n > 99 ? '99+' : n; el.style.display = el.classList.contains('mobile-nav-badge') ? 'flex' : ''; }
   else { el.style.display = 'none'; }
 }
 
+// ── NOUVEAUTÉS DEPUIS LA DERNIÈRE VISITE (v2.59) ──
+// La date de dernière visite de chaque menu est gardée en base (parametres,
+// clés admin_vu_*) : même compteur sur l'ordinateur et le téléphone.
+var FR_VU = {}, FR_VU_AVANT = {}, _vusCharges = null;
+function chargerVus() {
+  if (_vusCharges) return _vusCharges;
+  _vusCharges = (async function () {
+    try {
+      var r = await db.from('parametres').select('cle,valeur').in('cle', ['admin_vu_reservations', 'admin_vu_clients']);
+      (r.data || []).forEach(function (p) { FR_VU[p.cle.replace('admin_vu_', '')] = p.valeur; });
+    } catch (e) {}
+    ['reservations', 'clients'].forEach(function (k) { if (!FR_VU[k]) enregistrerVu(k); });
+  })();
+  return _vusCharges;
+}
+function enregistrerVu(k) {
+  var now = new Date().toISOString();
+  FR_VU_AVANT[k] = FR_VU[k] || now;
+  FR_VU[k] = now;
+  try { db.from('parametres').upsert({ cle: 'admin_vu_' + k, valeur: now, updated_at: now }, { onConflict: 'cle' }).then(function () {}, function () {}); } catch (e) {}
+}
+// Arrivé après la visite précédente du menu (étiquette « Nouveau »)
+function estNouveau(k, quand) {
+  var ref = FR_VU_AVANT[k];
+  if (!ref || !quand) return false;
+  return new Date(quand) > new Date(ref);
+}
+function minute(v) { return String(v || '').slice(0, 16); }
+
 async function majCompteursSidebar() {
+  await chargerVus();
+  var vuR = FR_VU.reservations, detail = [];
+  var nAttente = 0, nNouv = 0, nAnnul = 0;
   try {
     var r = await db.from('reservations')
       .select('id', { count: 'exact', head: true })
       .eq('statut', 'en_attente');
-    majCompteurNav('nav-count-resa', r.count || 0);
+    nAttente = r.count || 0;
   } catch (e) { console.log('compteur resa:', e); }
+  if (vuR) {
+    // Nouvelles réservations des clients (une par demande, pas par chien)
+    try {
+      var rn = await db.from('reservations').select('*').gt('created_at', vuR).neq('statut', 'en_attente').limit(500);
+      var vus = {};
+      (rn.data || []).forEach(function (x) { if (x.cree_par === 'equipe') return; vus[[x.client_id, x.service, x.date_debut, minute(x.created_at)].join('|')] = 1; });
+      nNouv = Object.keys(vus).length;
+    } catch (e) {}
+    // Annulations des clients : à l'unité / par période, et séries entières
+    try {
+      var ro = await db.from('annulations_occurrences').select('reservation_id,annule_par,created_at').gt('created_at', vuR).eq('annule_par', 'client').limit(1000);
+      var occ = ro.data || [], ids = [...new Set(occ.map(function (o) { return o.reservation_id; }))], cli = {};
+      if (ids.length) { var rc = await db.from('reservations').select('id,client_id').in('id', ids.slice(0, 300)); (rc.data || []).forEach(function (x) { cli[x.id] = x.client_id; }); }
+      var ga = {};
+      occ.forEach(function (o) { ga[(cli[o.reservation_id] || '?') + '|' + minute(o.created_at)] = 1; });
+      nAnnul = Object.keys(ga).length;
+    } catch (e) {}
+    try {
+      var rs = await db.from('reservations').select('client_id,annule_le,annule_par').gt('annule_le', vuR).eq('annule_par', 'client').limit(500);
+      if (!rs.error) { var gs = {}; (rs.data || []).forEach(function (x) { gs[x.client_id + '|' + minute(x.annule_le)] = 1; }); nAnnul += Object.keys(gs).length; }
+    } catch (e) {}
+  }
+  if (nAttente) detail.push(nAttente + ' en attente');
+  if (nNouv) detail.push(nNouv + ' nouvelle' + (nNouv > 1 ? 's' : '') + ' réservation' + (nNouv > 1 ? 's' : ''));
+  if (nAnnul) detail.push(nAnnul + ' annulation' + (nAnnul > 1 ? 's' : ''));
+  var totalR = nAttente + nNouv + nAnnul;
+  majCompteurNav('nav-count-resa', totalR);
+  majCompteurNav('mnav-count-resa', totalR);
+  var elR = document.getElementById('nav-count-resa'); if (elR) elR.title = detail.join(' · ');
+
+  var nCli = 0;
+  try {
+    if (FR_VU.clients) {
+      var rcl = await db.from('clients').select('id', { count: 'exact', head: true }).gt('created_at', FR_VU.clients).eq('is_test', false);
+      nCli = rcl.count || 0;
+    }
+  } catch (e) {}
+  majCompteurNav('nav-count-clients', nCli);
+  window._nbNouveauxClients = nCli;
+  majBadgePlus();
 
   try {
     var limite = new Date();
@@ -4853,10 +4968,14 @@ async function majCompteursSidebar() {
 
 function majBadgeMessages(n) {
   var b = document.getElementById('msg-badge');
+  window._nbMsgNonLus = n || 0;
+  majBadgePlus();
   if (!b) return;
   if (n > 0) { b.textContent = n; b.style.display = 'flex'; }
   else { b.style.display = 'none'; }
 }
+// Mobile : le bouton « Plus » additionne clients et messages
+function majBadgePlus() { majCompteurNav('mnav-count-plus', (window._nbNouveauxClients || 0) + (window._nbMsgNonLus || 0)); }
 
 // Regroupe par conversation : dernier message + nombre de non-lus
 function conversations() {
@@ -5971,7 +6090,7 @@ async function ouvrirNouvelleReservationAdmin() {
   document.getElementById('resa-client-selected').style.display = 'none';
   document.getElementById('resa-chien-group').style.display = 'none';
   document.getElementById('resa-notes').value = '';
-  document.getElementById('resa-date-debut').value = new Date().toISOString().split('T')[0];
+  document.getElementById('resa-date-debut').value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   document.getElementById('resa-date-fin').value = '';
   document.getElementById('resa-date-fin-recurrence').value = '';
   document.getElementById('resa-fin-recurrence-group').style.display = 'none';
@@ -6221,8 +6340,10 @@ if ('serviceWorker' in navigator) {
   <div class="mobile-nav-item" id="mnav-reservations" onclick="nav('reservations',this);setMobileNav(this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
     Résa
+    <span class="mobile-nav-badge" id="mnav-count-resa" style="display:none;">0</span>
   </div>
   <div class="mobile-nav-item" id="mnav-more" onclick="toggleMobileMenu()">
+    <span class="mobile-nav-badge" id="mnav-count-plus" style="display:none;">0</span>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="19" cy="12" r="1.5" fill="currentColor"/></svg>
     Plus
   </div>
@@ -6481,8 +6602,8 @@ async function openStatDetail(type) {
   var content = document.getElementById('stat-detail-content');
   modal.classList.add('open');
   content.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-faint);">Chargement...</div>';
-  var today = new Date().toISOString().split('T')[0];
-  var mois  = new Date().toISOString().slice(0, 7);
+  var today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  var mois  = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 7);
   try {
     if (type === 'promenades') {
       title.textContent = 'Réservations du jour';
