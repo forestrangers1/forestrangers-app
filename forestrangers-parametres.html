@@ -1088,8 +1088,8 @@ function erreurV33(e) {
 
 async function initCamionnettes() {
   try {
-    var st = await db.from('staff').select('id,prenom,nom,type_contrat,actif').eq('actif', true).order('prenom');
-    STAFF_ATTR = st.data || [];
+    var st = await db.from('staff').select('id,prenom,nom,type_contrat,actif,role').eq('actif', true).order('prenom');
+    STAFF_ATTR = (st.data || []).filter(function(x) { return x.role !== 'admin'; });   // v2.62
   } catch(e) { STAFF_ATTR = []; }
   // Attribution quotidienne : table créée par la v33
   try {
@@ -2070,7 +2070,7 @@ async function loadStaff() {
   try {
     var { data } = await db.from('staff').select('*').eq('actif', true).order('prenom');
     if (!data) return;
-    renderStaffList(data);
+    renderStaffList(data.filter(function(x) { return x.role !== 'admin'; }));   // v2.62 : le compte admin n'est pas un ranger
   } catch(e) { console.log('Erreur loadStaff:', e); }
 }
 
@@ -2083,7 +2083,7 @@ function rangerRowHTML(s) {
   var prenom = s.prenom || '', nom = s.nom || '';
   var initials = ((prenom[0] || '') + (nom[0] || '')).toUpperCase();
   var admin = s.role === 'admin';
-  var type = s.type_ranger === 'B' ? 'Care' : 'Walker';
+  var type = s.role === 'caretaker' ? 'Caretaker' : s.role === 'walker' ? 'Dogwalker' : (s.type_ranger === 'B' ? 'Care' : 'Walker');
   var jours = listeTexte(s.jours_habituels), cr = listeTexte(s.creneaux_habituels);
   var planning = '<div style="width:100%;padding:10px 12px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);margin-top:2px;">'
     + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
@@ -2099,7 +2099,9 @@ function rangerRowHTML(s) {
     + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
     + (cr.length ? cr.map(function(c) { return '<span class="badge b-accent" style="font-size:9px;">' + (CRENEAUX_STAFF[c] || echapper(c)) + '</span>'; }).join('') : '<span style="font-size:11px;color:var(--text-faint);">Créneaux non renseignés</span>')
     + (s.flexible ? '<span class="badge b-green" style="font-size:9px;">Heures sup. possibles</span>' : '')
-    + '</div></div>';
+    + '</div>'
+    + (s.secteur && s.secteur.length ? '<div style="font-size:11.5px;color:var(--text-dim);margin-top:8px;">📍 Secteur : ' + echapper(s.secteur.join(', ')) + '</div>' : '')
+    + '</div>';
   return '<div class="staff-row" style="cursor:default;flex-wrap:wrap;gap:10px;">'
     + '<div class="staff-avatar" style="background:' + (admin ? 'linear-gradient(135deg,var(--accent),#c44010);color:white;' : 'linear-gradient(135deg,var(--surface3),#6b7450);color:var(--text);') + '">' + initials + '</div>'
     + '<div style="flex:1;min-width:160px;">'
@@ -2133,6 +2135,8 @@ function ouvrirStaff(id) {
   document.querySelectorAll('#edit-staff-jours .day-btn').forEach(function(b) { b.classList.toggle('on', jours.indexOf(b.getAttribute('data-j')) !== -1); });
   document.querySelectorAll('#edit-staff-creneaux input').forEach(function(c) { c.checked = cr.indexOf(c.value) !== -1; });
   document.getElementById('edit-staff-flexible').checked = !!s.flexible;
+  var sec = document.getElementById('edit-staff-secteur');
+  if (sec) { sec.value = (s.secteur || []).join(', '); document.getElementById('edit-staff-secteur-bloc').style.display = ('secteur' in s) ? '' : 'none'; }
   openModal('modal-edit-staff');
 }
 
@@ -2145,6 +2149,12 @@ async function enregistrerStaff() {
   var h = parseInt(document.getElementById('edit-staff-heures').value, 10);
   var maj = { heures_semaine: isNaN(h) ? null : h, jours_habituels: jours.join(',') || null,
               creneaux_habituels: cr.join(',') || null, flexible: document.getElementById('edit-staff-flexible').checked };
+  var sEl = document.getElementById('edit-staff-secteur');
+  var sAvant = STAFF_CACHE.filter(function(x) { return x.id === id; })[0] || {};
+  if (sEl && ('secteur' in sAvant)) {
+    var sec = sEl.value.split(/[,;\n]/).map(function(x) { return x.trim(); }).filter(Boolean);
+    maj.secteur = sec.length ? sec : null;
+  }
   try {
     var r = await db.from('staff').update(maj).eq('id', id).select('id');
     if (r.error) throw r.error;
@@ -2803,6 +2813,11 @@ function majCompteurConges(n) {
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
         <input type="checkbox" id="edit-staff-flexible" style="accent-color:var(--accent);width:15px;height:15px;"> Disponible pour heures supplémentaires
       </label>
+    </div>
+    <div class="form-group" id="edit-staff-secteur-bloc">
+      <label class="form-label">Secteur des promenades (dogwalker)</label>
+      <input type="text" class="form-input" id="edit-staff-secteur" placeholder="Hesperange, Itzig, Howald, Bonnevoie, Hamm">
+      <div style="font-size:11px;color:var(--text-faint);margin-top:5px;line-height:1.45;">Localités, ou quartiers de Luxembourg-Ville, séparés par une virgule. Une promenade d'un client de ce secteur, sur les jours et créneaux cochés ci-dessus, est attribuée automatiquement à ce ranger ; tout le reste va au caretaker. Vide = aucun secteur réservé.</div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-outline" onclick="closeModal('modal-edit-staff')">Annuler</button>

@@ -401,6 +401,9 @@ html.light .brand-name .rangers { color: var(--accent); }
 }
 .tbl td { padding: 10px 12px; font-size: 12.5px; border-top: 1px solid var(--border); color: var(--text-dim); }
 .tbl td:first-child { color: var(--text); font-weight: 500; }
+/* Liste des réservations (v2.60) : en-têtes aérés, colonnes centrées */
+.tbl-resa th { text-align: center; padding: 16px 14px 12px; white-space: nowrap; }
+.tbl-resa td { text-align: center; padding: 12px 14px; }
 .tbl tr:hover td { background: rgba(255,255,255,0.02); }
 
 /* ─── BADGE ─── */
@@ -1062,8 +1065,8 @@ textarea.form-control { resize: vertical; }
       <div class="card">
         <div class="card-head"><span class="card-title">Réservations</span><span style="font-size:11px;color:var(--text-faint);">La plus récente en haut</span></div>
         <div>
-          <table class="tbl">
-            <thead><tr><th>Reservee le</th><th>Client</th><th>Chien(s)</th><th>Service</th><th>Date prestation</th><th>Ranger</th><th>Statut</th><th>Montant</th></tr></thead>
+          <table class="tbl tbl-resa">
+            <thead><tr><th>Réservée le</th><th>Client</th><th>Chien(s)</th><th>Service</th><th>Date prestation</th><th>Ranger</th><th>Statut</th><th>Montant</th></tr></thead>
             <tbody id="resa-history-tbody">
               <tr><td colspan="8" style="text-align:center;color:var(--text-faint);padding:18px;font-size:12px;">Chargement…</td></tr>
             </tbody>
@@ -2293,7 +2296,7 @@ async function loadStaff() {
     // Membres du staff
     var { data: staff, error } = await db.from('staff').select('*').order('prenom');
     if (error) throw error;
-    staff = (staff || []).filter(function(s){ return s.actif !== false; });
+    staff = (staff || []).filter(function(s){ return s.actif !== false && s.role !== 'admin'; });   // v2.62 : le compte admin n'est pas un ranger
 
     // Semaine courante (lundi → dimanche)
     var now = new Date();
@@ -2433,12 +2436,14 @@ async function enregistrerStaff() {
   };
   try {
     var r = id
-      ? await db.from('staff').update(ligne).eq('id', id)
-      : await db.from('staff').insert(ligne);
+      ? await db.from('staff').update(ligne).eq('id', id).select('id')
+      : await db.from('staff').insert(ligne).select('id');
     if (r.error) throw r.error;
+    if (!r.data || !r.data.length) throw new Error('la base n\'a rien enregistré (droits insuffisants ou fiche introuvable)');
     document.getElementById('modal-staff').classList.remove('open');
     showToastAdmin(id ? '✓ Fiche mise à jour' : '✓ Membre ajouté', 'green');
     loadStaff();
+    rafraichirVuesStaff();
   } catch(e) { showToastAdmin('Erreur : ' + (e.message || e), 'red'); }
 }
 
@@ -2447,11 +2452,15 @@ async function desactiverStaff() {
   if (!id) return;
   if (!confirm('Désactiver ce membre ? Sa fiche et son historique sont conservés, il n\'apparaîtra plus dans les plannings.')) return;
   try {
-    var r = await db.from('staff').update({ actif: false }).eq('id', id);
+    // .select() : sans ligne renvoyée, la base a refusé en silence (droits) —
+    // avant la v2.61, le message « désactivé » s'affichait quand même.
+    var r = await db.from('staff').update({ actif: false }).eq('id', id).select('id');
     if (r.error) throw r.error;
+    if (!r.data || !r.data.length) throw new Error('la base n\'a rien modifié (droits insuffisants ou fiche introuvable)');
     document.getElementById('modal-staff').classList.remove('open');
     showToastAdmin('✓ Membre désactivé', 'green');
     loadStaff();
+    rafraichirVuesStaff();
   } catch(e) { showToastAdmin('Erreur : ' + (e.message || e), 'red'); }
 }
 
@@ -3247,6 +3256,16 @@ function loadStaffOrga() {
   if (frame && !frame.getAttribute('src')) {
     frame.setAttribute('src', 'forestrangers-parametres.html?vue=staff');
   }
+}
+// Après un changement d'équipe : l'organisation (cadre), le filtre du planning
+// et le formulaire de réservation relisent la liste des rangers actifs.
+function rafraichirVuesStaff() {
+  var frame = document.getElementById('staff-frame');
+  try { if (frame && frame.getAttribute('src')) frame.contentWindow.location.reload(); } catch (e) {}
+  ['filtre-ranger', 'resa-ranger'].forEach(function (id) {
+    var sel = document.getElementById(id);
+    if (sel) while (sel.options.length > 1) sel.remove(1);
+  });
 }
 
 // ── PARAMETRES (ouvre l'éditeur intégré forestrangers-parametres.html) ──
@@ -4118,8 +4137,9 @@ async function loadPlanning() {
     // Charger rangers dans filtre
     var selR = document.getElementById('filtre-ranger');
     if (selR&&selR.options.length<=1) {
-      var {data:staff} = await db.from('staff').select('prenom').eq('actif',true);
-      if (staff) staff.forEach(function(s){var o=document.createElement('option');o.value=s.prenom;o.textContent=s.prenom;selR.appendChild(o);});
+      var {data:staff} = await db.from('staff').select('prenom,role').eq('actif',true);
+      var vusR = {};
+      if (staff) staff.forEach(function(s){ if (s.role === 'admin' || vusR[s.prenom]) return; vusR[s.prenom] = 1; var o=document.createElement('option');o.value=s.prenom;o.textContent=s.prenom;selR.appendChild(o);});
     }
   } catch(e) {
     console.error(e);
@@ -6109,9 +6129,13 @@ async function ouvrirNouvelleReservationAdmin() {
   // Charger rangers
   var selR = document.getElementById('resa-ranger');
   if (selR.options.length <= 1) {
-    var {data:staff} = await db.from('staff').select('prenom').eq('actif',true);
+    // v2.62 : rangers actifs par fiche (id) ; « Automatique » = règle de secteur en base
+    var {data:staff} = await db.from('staff').select('id,prenom,nom,role').eq('actif',true).order('prenom');
     if (staff) staff.forEach(function(s){
-      if (s.prenom !== 'Gabriel') { var o=document.createElement('option'); o.value=s.prenom; o.textContent=s.prenom; selR.appendChild(o); }
+      if (s.role === 'admin') return;
+      var o=document.createElement('option'); o.value=s.id; o.dataset.prenom=s.prenom;
+      o.textContent=s.prenom + (s.role === 'walker' ? ' — dogwalker' : s.role === 'caretaker' ? ' — caretaker' : '');
+      selR.appendChild(o);
     });
   }
   // Cache clients
@@ -6291,7 +6315,8 @@ async function sauvegarderResaAdmin() {
       jours_recurrence: jours.length ? jours.join(',') : null,
       recurrente: jours.length > 0,
       statut:     'confirme',          // créée par l'admin : confirmée, boarding compris
-      ranger_nom: ranger || null,
+      ranger_id:  ranger || null,     // v2.62 : fiche choisie, sinon la base répartit
+      ranger_nom: ranger ? ((document.getElementById('resa-ranger').selectedOptions[0] || {}).dataset || {}).prenom || null : null,
       notes:      notes || null,
       created_at: new Date().toISOString()
   };
@@ -6721,7 +6746,7 @@ document.addEventListener('click', function(e) {
       <div class="form-group">
         <label class="form-label">Ranger</label>
         <select class="form-control" id="resa-ranger" style="width:100%;">
-          <option value="Gabriel">Gabriel</option>
+          <option value="">Automatique (selon secteur et jours)</option>
         </select>
       </div>
     </div>
@@ -6947,7 +6972,7 @@ async function frShowApp() {
     if (!u) return;
     var st = await db.from('staff').select('prenom,nom').eq('auth_id', u.id).maybeSingle();
     var p = (st.data && st.data.prenom) || '', n = (st.data && st.data.nom) || '';
-    var nom = p ? (p + (n ? ' ' + n.charAt(0) + '.' : '')) : (u.email || '');
+    var nom = p ? (p + (n ? ' ' + n : '')) : (u.email || '');   // v2.62 : « Gabriel Admin » en entier
     var ini = p ? (p.charAt(0) + (n ? n.charAt(0) : '')) : (u.email || '?').charAt(0);
     document.getElementById('sb-nom').textContent = nom;
     document.getElementById('sb-avatar').textContent = ini.toUpperCase();

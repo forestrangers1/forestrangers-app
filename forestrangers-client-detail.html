@@ -1388,9 +1388,15 @@ async function saveInfos() {
       personnes_autorisees: collectPersonnesRows()
     };
     // Code postal + quartier (v49)
+    var zoneAvant = !!currentClient.hors_zone;
     if (document.getElementById('edit-quartier')) {
       update.code_postal = (document.getElementById('edit-cp').value || '').replace(/\D/g, '') || null;
       update.quartier = document.getElementById('edit-quartier').value || null;
+      // v2.63 : Luxembourg-Ville sans quartier → la zone ne peut pas être vérifiée
+      var cNorm = (update.commune || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
+      if (!update.quartier && (cNorm === 'luxembourg' || cNorm === 'luxembourgville')) {
+        if (!confirm('Luxembourg-Ville sans quartier : la zone ne peut pas être vérifiée et reste telle quelle.\n\nChoisissez le quartier pour qu\'elle soit contrôlée. Enregistrer quand même ?')) { btn.textContent = orig; btn.disabled = false; return; }
+      }
     }
     // Accès au domicile (v39)
     if (window._accesV39 && document.getElementById('edit-acces-code')) {
@@ -1417,6 +1423,9 @@ async function saveInfos() {
     if (error) throw error;
 
     Object.assign(currentClient, update, apres || {});   // zone éventuellement recalculée par la base
+    if (apres && ('hors_zone' in apres) && !!apres.hors_zone !== zoneAvant && update.hors_zone === zoneAvant) {
+      alert('Zone recalculée d\'après l\'adresse (Paramètres → Zones) : ' + (apres.hors_zone ? 'HORS ZONE (supplément par trajet)' : 'SANS FRAIS') + '.\n\nSi ce n\'est pas voulu, remettez le champ « Zone » à la main : votre choix est prioritaire.');
+    }
     editMode = false;
     renderInfosDisplay(currentClient);
     updateSidebarFromClient(currentClient);
