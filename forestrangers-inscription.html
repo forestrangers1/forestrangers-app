@@ -549,6 +549,7 @@ input[type=range]::-webkit-slider-runnable-track {
 
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="fr-quartier.js"></script>
 <!-- Repli CDN : si jsDelivr n'a pas repondu, on tente unpkg avant d'abandonner. -->
 <script>if (!window.supabase) { document.write('<scr' + 'ipt src="https://unpkg.com/@supabase/supabase-js@2"><\/scr' + 'ipt>'); }</script>
   <script>
@@ -631,6 +632,10 @@ input[type=range]::-webkit-slider-runnable-track {
 "Code postal": "Postcode",
 "Quartier": "District",
 "Choisissez votre quartier": "Choose your district",
+"Recherche du quartier…": "Looking up your district…",
+"Quartier trouvé d'après votre adresse :": "District found from your address:",
+"Corrigez-le si besoin.": "Change it if needed.",
+"Quartier non trouvé automatiquement : choisissez-le dans la liste.": "District not found automatically: please choose it from the list.",
 "Le code postal luxembourgeois a 4 chiffres (ex. 8181).": "Luxembourg postcodes have 4 digits (e.g. 8181).",
 "Ce code couvre :": "This postcode covers:",
 "Indiquez la vôtre.": "Please enter yours.",
@@ -856,6 +861,10 @@ input[type=range]::-webkit-slider-runnable-track {
 "Code postal": "Postleitzuel",
 "Quartier": "Quartier",
 "Choisissez votre quartier": "Wielt Äre Quartier",
+"Recherche du quartier…": "Quartier gëtt gesicht…",
+"Quartier trouvé d'après votre adresse :": "Quartier no Ärer Adress fonnt:",
+"Corrigez-le si besoin.": "Verbessert en wann néideg.",
+"Quartier non trouvé automatiquement : choisissez-le dans la liste.": "Quartier net automatesch fonnt: wielt en an der Lëscht.",
 "Le code postal luxembourgeois a 4 chiffres (ex. 8181).": "Lëtzebuerger Postleitzuelen hunn 4 Zifferen (z. B. 8181).",
 "Ce code couvre :": "Dëse Code deckt of:",
 "Indiquez la vôtre.": "Gitt Är un.",
@@ -1238,7 +1247,7 @@ input[type=range]::-webkit-slider-runnable-track {
         <div class="form-row solo">
           <div class="field">
             <label class="field-label">Adresse complète <span class="req">*</span></label>
-            <input class="field-input" id="adresse" type="text" placeholder="12 rue des Chênes">
+            <input class="field-input" id="adresse" type="text" placeholder="12 rue des Chênes" autocomplete="street-address" onchange="chercherQuartier(true)">
           </div>
         </div>
         <div class="form-row cols-2">
@@ -1261,11 +1270,12 @@ input[type=range]::-webkit-slider-runnable-track {
             <datalist id="commune-liste"></datalist>
           </div>
         </div>
-        <!-- v2.56 : à Luxembourg-Ville, la zone dépend du quartier -->
+        <!-- v2.56 : à Luxembourg-Ville, la zone dépend du quartier (v2.65 : trouvé d'après l'adresse) -->
         <div class="form-row solo" id="quartier-row" style="display:none;">
           <div class="field">
             <label class="field-label">Quartier <span class="req">*</span></label>
-            <select class="field-input" id="quartier" onchange="majZone()"><option value="">Choisissez votre quartier</option><option value="Beggen">Beggen</option><option value="Belair">Belair</option><option value="Bonnevoie-Nord/Verlorenkost">Bonnevoie-Nord/Verlorenkost</option><option value="Bonnevoie-Sud">Bonnevoie-Sud</option><option value="Cents">Cents</option><option value="Cessange">Cessange</option><option value="Clausen">Clausen</option><option value="Dommeldange">Dommeldange</option><option value="Eich">Eich</option><option value="Gare">Gare</option><option value="Gasperich">Gasperich</option><option value="Grund">Grund</option><option value="Hamm">Hamm</option><option value="Hollerich">Hollerich</option><option value="Kirchberg/Kiem">Kirchberg/Kiem</option><option value="Limpertsberg">Limpertsberg</option><option value="Merl">Merl</option><option value="Mühlenbach">Mühlenbach</option><option value="Neudorf/Weimershof">Neudorf/Weimershof</option><option value="Pfaffenthal">Pfaffenthal</option><option value="Pulvermühl">Pulvermühl</option><option value="Rollingergrund/Belair-Nord">Rollingergrund/Belair-Nord</option><option value="Ville Haute">Ville Haute</option><option value="Weimerskirch">Weimerskirch</option></select>
+            <select class="field-input" id="quartier" onchange="this.dataset.auto='';majZone()"><option value="">Choisissez votre quartier</option><option value="Beggen">Beggen</option><option value="Belair">Belair</option><option value="Bonnevoie-Nord/Verlorenkost">Bonnevoie-Nord/Verlorenkost</option><option value="Bonnevoie-Sud">Bonnevoie-Sud</option><option value="Cents">Cents</option><option value="Cessange">Cessange</option><option value="Clausen">Clausen</option><option value="Dommeldange">Dommeldange</option><option value="Eich">Eich</option><option value="Gare">Gare</option><option value="Gasperich">Gasperich</option><option value="Grund">Grund</option><option value="Hamm">Hamm</option><option value="Hollerich">Hollerich</option><option value="Kirchberg/Kiem">Kirchberg/Kiem</option><option value="Limpertsberg">Limpertsberg</option><option value="Merl">Merl</option><option value="Mühlenbach">Mühlenbach</option><option value="Neudorf/Weimershof">Neudorf/Weimershof</option><option value="Pfaffenthal">Pfaffenthal</option><option value="Pulvermühl">Pulvermühl</option><option value="Rollingergrund/Belair-Nord">Rollingergrund/Belair-Nord</option><option value="Ville Haute">Ville Haute</option><option value="Weimerskirch">Weimerskirch</option></select>
+            <div id="quartier-info" style="display:none;font-size:11.5px;margin-top:5px;line-height:1.4;"></div>
           </div>
         </div>
         <div class="form-row cols-2">
@@ -2617,6 +2627,29 @@ async function detectZone(val) {
   }
   majZone();
 }
+// v2.65 : quartier présélectionné d'après la rue et le code postal (OpenStreetMap)
+var _qSeq = 0;
+function chercherQuartier(forcer) {
+  var qEl = document.getElementById('quartier'), info = document.getElementById('quartier-info');
+  if (!qEl || !window.FR_QUARTIER || !estLuxVille()) return;
+  if (qEl.value && qEl.dataset.auto !== '1' && !forcer) return;   // choix du client : on n'y touche pas
+  if (qEl.value && qEl.dataset.auto !== '1') return;
+  var adr = ((document.getElementById('adresse') || {}).value || '').trim();
+  if (!adr) return;
+  var seq = ++_qSeq;
+  if (info) { info.style.display = 'block'; info.style.color = 'var(--text-faint)'; info.textContent = t('Recherche du quartier…'); }
+  FR_QUARTIER.trouver(adr, cpChiffres()).then(function (q) {
+    if (seq !== _qSeq) return;
+    if (q) {
+      qEl.value = q; qEl.dataset.auto = '1';
+      if (info) { info.style.color = 'var(--green, #2e7d32)'; info.textContent = '✓ ' + t('Quartier trouvé d\'après votre adresse :') + ' ' + q + '. ' + t('Corrigez-le si besoin.'); }
+      majZone();
+    } else if (info) {
+      info.style.color = 'var(--text-faint)'; info.textContent = t('Quartier non trouvé automatiquement : choisissez-le dans la liste.');
+    }
+  });
+}
+
 var _zoneSeq = 0, _zoneTimer = null;
 function majZone() {
   var free = document.getElementById('zone-free'), paid = document.getElementById('zone-paid');
@@ -2624,8 +2657,10 @@ function majZone() {
   var commune = document.getElementById('commune');
   free.style.display = 'none'; paid.style.display = 'none';
   var lux = estLuxVille();
+  var dejaVisible = row.style.display !== 'none';
   row.style.display = lux ? '' : 'none';
   if (!lux && qEl) qEl.value = '';
+  if (lux && !dejaVisible && qEl && !qEl.value) chercherQuartier(false);
   var cp = cpChiffres(), com = (commune.value || '').trim(), q = lux ? (qEl.value || '') : '';
   if (lux && !q) return;                    // quartier d'abord
   if (!com) return;

@@ -807,6 +807,7 @@ textarea.form-control { resize: vertical; }
   <script src="fr-facturation.js"></script>
   <script src="fr-email.js"></script>
   <script src="fr-session.js"></script>
+  <script src="fr-quartier.js"></script>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#ff5f1f">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1092,6 +1093,7 @@ textarea.form-control { resize: vertical; }
       <div class="search-row">
         <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" id="clients-search" placeholder="Rechercher un client..." oninput="filterClients(this.value)">
+        <button class="btn btn-outline" style="padding:6px 12px;" onclick="completerQuartiers()" title="Luxembourg-Ville : quartiers manquants, trouvés d'après l'adresse">📍 Quartiers</button>
         <button class="btn btn-accent" style="padding:6px 12px;" onclick="nav('invitation',document.querySelector('[onclick*=invitation]'))">+ Nouveau client</button>
       </div>
       <div class="card">
@@ -3259,6 +3261,55 @@ function loadStaffOrga() {
 }
 // Après un changement d'équipe : l'organisation (cadre), le filtre du planning
 // et le formulaire de réservation relisent la liste des rangers actifs.
+// ── QUARTIERS MANQUANTS (v2.65) ──
+// Clients de Luxembourg-Ville sans quartier : proposition d'après l'adresse
+// (OpenStreetMap), vérifiée par Gabriel avant enregistrement. L'enregistrement
+// recalcule la zone (si elle n'a pas été choisie à la main) et le ranger.
+async function completerQuartiers() {
+  var m = document.getElementById('modal-quartiers');
+  if (!m) { m = document.createElement('div'); m.id = 'modal-quartiers'; document.body.appendChild(m); }
+  m.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;padding:20px;';
+  m.innerHTML = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;max-width:760px;width:100%;max-height:85vh;overflow:auto;">'
+    + '<div class="card-head"><span class="card-title">Quartiers — Luxembourg-Ville</span><button class="btn btn-outline" style="padding:4px 10px;" onclick="document.getElementById(\'modal-quartiers\').remove()">Fermer</button></div>'
+    + '<div id="quartiers-corps" style="padding:14px 16px;font-size:12.5px;color:var(--text-dim);">Chargement…</div></div>';
+  var corps = document.getElementById('quartiers-corps');
+  var r = await db.from('clients').select('*').eq('actif', true).order('nom');
+  if (r.error) { corps.textContent = 'Lecture impossible : ' + r.error.message; return; }
+  if (r.data && r.data.length && !('quartier' in r.data[0])) { corps.textContent = 'La colonne « quartier » manque : lancez la migration v49.'; return; }
+  var norm = function (x) { return String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, ''); };
+  var liste = (r.data || []).filter(function (c) { return !c.is_test && !c.quartier && ['luxembourg', 'luxembourgville', 'letzebuerg'].indexOf(norm(c.commune)) !== -1; });
+  if (!liste.length) { corps.innerHTML = '<div style="color:var(--green);">✓ Tous les clients de Luxembourg-Ville ont un quartier.</div>'; return; }
+  var opts = FR_QUARTIER.officiels.map(function (q) { return '<option value="' + q + '">' + q + '</option>'; }).join('');
+  corps.innerHTML = '<div style="margin-bottom:10px;">' + liste.length + ' client' + (liste.length > 1 ? 's' : '') + ' sans quartier. Recherche d\'après l\'adresse (environ 1 seconde par client) — vérifiez avant d\'enregistrer.</div>'
+    + '<table class="tbl"><thead><tr><th>Client</th><th>Adresse</th><th>Quartier proposé</th></tr></thead><tbody>'
+    + liste.map(function (c, i) {
+        return '<tr><td>' + (c.prenom || '') + ' ' + (c.nom || '') + '</td><td>' + (c.adresse || '—') + (c.code_postal ? ', L-' + c.code_postal : '') + '</td>'
+          + '<td><select class="form-control" id="qm-' + i + '" style="min-width:190px;"><option value="">— recherche… —</option>' + opts + '</select></td></tr>';
+      }).join('') + '</tbody></table>'
+    + '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;"><button class="btn btn-accent" id="qm-enregistrer" onclick="enregistrerQuartiers()">Enregistrer les quartiers choisis</button></div>';
+  window._qmListe = liste;
+  for (var i = 0; i < liste.length; i++) {
+    var q = await FR_QUARTIER.trouver(liste[i].adresse, liste[i].code_postal);
+    var sel = document.getElementById('qm-' + i);
+    if (!sel) return;   // fenêtre fermée
+    sel.options[0].textContent = q ? '—' : '— non trouvé, à choisir —';
+    if (q) sel.value = q;
+  }
+}
+async function enregistrerQuartiers() {
+  var liste = window._qmListe || [], n = 0, err = 0;
+  var btn = document.getElementById('qm-enregistrer'); if (btn) { btn.disabled = true; btn.textContent = 'Enregistrement…'; }
+  for (var i = 0; i < liste.length; i++) {
+    var sel = document.getElementById('qm-' + i);
+    if (!sel || !sel.value) continue;
+    var u = await db.from('clients').update({ quartier: sel.value }).eq('id', liste[i].id).select('id');
+    if (u.error || !u.data || !u.data.length) err++; else n++;
+  }
+  document.getElementById('modal-quartiers').remove();
+  showToastAdmin((err ? '✗ ' + err + ' erreur(s) · ' : '✓ ') + n + ' quartier' + (n > 1 ? 's' : '') + ' enregistré' + (n > 1 ? 's' : ''), err ? 'red' : 'green');
+  if (typeof loadClients === 'function') loadClients();
+}
+
 function rafraichirVuesStaff() {
   var frame = document.getElementById('staff-frame');
   try { if (frame && frame.getAttribute('src')) frame.contentWindow.location.reload(); } catch (e) {}

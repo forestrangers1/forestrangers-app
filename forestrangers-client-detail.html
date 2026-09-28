@@ -39,6 +39,7 @@ try {
 <script src="fr-calendrier.js"></script>
 <script src="fr-facturation.js"></script>
 <script src="fr-email.js"></script>
+<script src="fr-quartier.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <!-- Repli CDN : si jsDelivr n'a pas repondu, on tente unpkg avant d'abandonner. -->
 <script>if (!window.supabase) { document.write('<scr' + 'ipt src="https://unpkg.com/@supabase/supabase-js@2"><\/scr' + 'ipt>'); }</script>
@@ -1199,6 +1200,26 @@ function renderPersonnesDisplay(personnes) {
 
 // Quartiers officiels de Luxembourg-Ville (vdl.lu) — la zone se décide par quartier (v2.56)
 var QUARTIERS_LUX = ["Beggen", "Belair", "Bonnevoie-Nord/Verlorenkost", "Bonnevoie-Sud", "Cents", "Cessange", "Clausen", "Dommeldange", "Eich", "Gare", "Gasperich", "Grund", "Hamm", "Hollerich", "Kirchberg/Kiem", "Limpertsberg", "Merl", "Mühlenbach", "Neudorf/Weimershof", "Pfaffenthal", "Pulvermühl", "Rollingergrund/Belair-Nord", "Ville Haute", "Weimerskirch"];
+// v2.65 : quartier trouvé d'après la rue et le code postal (OpenStreetMap)
+function trouverQuartierFiche(btn) {
+  if (!window.FR_QUARTIER) return;
+  var adr = (document.getElementById('edit-adresse') || {}).value || '';
+  var cp = (document.getElementById('edit-cp') || {}).value || '';
+  if (!adr.trim()) { alert('Indiquez d\'abord l\'adresse (rue et numéro).'); return; }
+  var txt = btn.textContent; btn.textContent = 'Recherche…'; btn.disabled = true;
+  FR_QUARTIER.trouver(adr, cp).then(function (q) {
+    btn.disabled = false;
+    if (q) {
+      document.getElementById('edit-quartier').value = q;
+      var com = document.getElementById('edit-commune'); if (com && !com.value.trim()) com.value = 'Luxembourg';
+      btn.textContent = '✓ ' + q + ' — vérifiez puis enregistrez';
+    } else {
+      btn.textContent = txt;
+      alert('Quartier non trouvé automatiquement. Choisissez-le dans la liste.');
+    }
+  });
+}
+
 function fmtCommune(c) {
   if (!c) return '—';
   var s = (c.code_postal ? 'L-' + c.code_postal + ' ' : '') + (c.commune || '');
@@ -1233,7 +1254,7 @@ function renderInfosEdit(c) {
         '<div class="info-item"><div class="info-label">Quartier (Luxembourg-Ville)</div><select class="edit-select" id="edit-quartier">'
         + '<option value="">— hors Luxembourg-Ville —</option>'
         + QUARTIERS_LUX.map(function (q) { return '<option value="' + escapeAttr(q) + '"' + (c.quartier === q ? ' selected' : '') + '>' + q + '</option>'; }).join('')
-        + '</select></div>'
+        + '</select><button type="button" onclick="trouverQuartierFiche(this)" style="margin-top:6px;background:none;border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:11.5px;color:var(--accent);cursor:pointer;">📍 Trouver le quartier d\'après l\'adresse</button></div>'
       : '') +
     '<div class="info-item"><div class="info-label">N° client</div><div class="info-value" style="color:var(--accent);font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;">#' + c.numero_client + '</div></div>' +
     '<div class="info-item"><div class="info-label">Date inscription</div><div class="info-value">' + (c.created_at ? new Date(c.created_at).toLocaleDateString('fr-LU', { day: '2-digit', month: 'long', year: 'numeric' }) : '—') + '</div></div>' +
