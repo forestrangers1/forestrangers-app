@@ -631,6 +631,7 @@ input[type=range]::-webkit-slider-runnable-track {
 "Code postal": "Postcode",
 "Quartier": "District",
 "Choisissez votre quartier": "Choose your district",
+"Le code postal luxembourgeois a 4 chiffres (ex. 8181).": "Luxembourg postcodes have 4 digits (e.g. 8181).",
 "Ce code couvre :": "This postcode covers:",
 "Indiquez la vôtre.": "Please enter yours.",
 "Code postal introuvable : vérifiez-le. Vous pouvez continuer, nous contrôlerons votre adresse.": "Postcode not found: please check it. You can continue, we will check your address.",
@@ -855,6 +856,7 @@ input[type=range]::-webkit-slider-runnable-track {
 "Code postal": "Postleitzuel",
 "Quartier": "Quartier",
 "Choisissez votre quartier": "Wielt Äre Quartier",
+"Le code postal luxembourgeois a 4 chiffres (ex. 8181).": "Lëtzebuerger Postleitzuelen hunn 4 Zifferen (z. B. 8181).",
 "Ce code couvre :": "Dëse Code deckt of:",
 "Indiquez la vôtre.": "Gitt Är un.",
 "Code postal introuvable : vérifiez-le. Vous pouvez continuer, nous contrôlerons votre adresse.": "Postleitzuel net fonnt: kontrolléiert en w.e.g. Dir kënnt weidermaachen, mir kontrolléieren Är Adress.",
@@ -1242,7 +1244,7 @@ input[type=range]::-webkit-slider-runnable-track {
         <div class="form-row cols-2">
           <div class="field">
             <label class="field-label">Code postal <span class="req">*</span></label>
-            <input class="field-input" type="text" id="postalCode" placeholder="8280" maxlength="4" oninput="detectZone(this.value)">
+            <input class="field-input" type="text" id="postalCode" placeholder="8280" maxlength="7" autocomplete="postal-code" oninput="detectZone(this.value)">
             <div id="cp-info" style="display:none;font-size:11.5px;margin-top:5px;line-height:1.4;"></div>
             <div class="zone-result free" id="zone-free">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
@@ -2153,6 +2155,12 @@ function validerPage1() {
       }
     }
   });
+  // v2.64 : code postal à 4 chiffres
+  var elCp = document.getElementById('postalCode');
+  if (elCp && elCp.value.trim() && cpChiffres().length !== 4) {
+    elCp.style.borderColor = '#e05a5a';
+    erreurs.push('Code postal (4 chiffres)');
+  }
   // v2.57 : la localité doit correspondre au code postal
   var elCom = document.getElementById('commune');
   if (elCom && elCom.value.trim() && !communeValide()) {
@@ -2560,6 +2568,14 @@ function normTxt(x) { return String(x || '').toLowerCase().normalize('NFD').repl
 function estLuxVille() {
   return ['luxembourg', 'luxembourgville', 'letzebuerg', 'villedeluxembourg'].indexOf(normTxt((document.getElementById('commune') || {}).value)) !== -1;
 }
+// Confirmation verte : le client voit tout de suite que son code est reconnu
+function afficherCpInfoOk(texte) {
+  var el = document.getElementById('cp-info');
+  if (!el) return;
+  el.textContent = '✓ ' + texte;
+  el.style.display = 'block';
+  el.style.color = 'var(--green, #2e7d32)';
+}
 function afficherCpInfo(texte, erreur) {
   var el = document.getElementById('cp-info');
   if (!el) return;
@@ -2574,7 +2590,12 @@ async function detectZone(val) {
   _cpLocalites = [];
   if (liste) liste.innerHTML = '';
   afficherCpInfo('');
-  if (cp.length !== 4) { majZone(); return; }
+  var champCp = document.getElementById('postalCode');
+  if (champCp) champCp.style.borderColor = '';
+  if (cp.length !== 4) {
+    if (cp.length > 0 && String(val || '').replace(/[\sLl-]/g, '').length >= 4) { afficherCpInfo('Le code postal luxembourgeois a 4 chiffres (ex. 8181).', true); if (champCp) champCp.style.borderColor = '#e05a5a'; }
+    majZone(); return;
+  }
   var seq = ++_cpSeq;
   try {
     if (!db) throw 0;
@@ -2585,8 +2606,10 @@ async function detectZone(val) {
   } catch (e) { _cpLocalites = []; }
   if (!_cpLocalites.length) {
     afficherCpInfo('Code postal introuvable : vérifiez-le. Vous pouvez continuer, nous contrôlerons votre adresse.', true);
+    if (champCp) champCp.style.borderColor = '#e05a5a';
   } else if (_cpLocalites.length === 1) {
     commune.value = _cpLocalites[0];
+    afficherCpInfoOk('L-' + cp + ' : ' + _cpLocalites[0]);
   } else {
     if (_cpLocalites.map(normTxt).indexOf(normTxt(commune.value)) === -1) commune.value = '';
     if (liste) liste.innerHTML = _cpLocalites.map(function (l) { return '<option value="' + l.replace(/"/g, '&quot;') + '">'; }).join('');
