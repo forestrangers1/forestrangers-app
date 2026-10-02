@@ -808,6 +808,7 @@ textarea.form-control { resize: vertical; }
   <script src="fr-email.js"></script>
   <script src="fr-session.js"></script>
   <script src="fr-quartier.js"></script>
+  <script src="fr-remplacements.js"></script>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#ff5f1f">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1038,8 +1039,10 @@ textarea.form-control { resize: vertical; }
           </select>
           <select id="filtre-ranger" onchange="loadPlanning()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 8px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:12px;outline:none;">
             <option value="">Tous rangers</option>
+            <option value="__aucun__">Non attribué</option>
           </select>
           <input type="text" id="filtre-client" placeholder="Client / Chien..." oninput="loadPlanning()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:12px;outline:none;width:140px;">
+          <button class="btn btn-outline" style="padding:6px 12px;font-size:11px;color:var(--red);border-color:rgba(224,90,90,0.45);" onclick="ouvrirFermetureExceptionnelle()" title="Maladie, rendez-vous : annuler et fermer une période">Fermeture exceptionnelle</button>
           <button class="btn btn-accent" style="padding:6px 12px;font-size:11px;" onclick="ouvrirNouvelleReservationAdmin()">+ Réservation</button>
         </div>
       </div>
@@ -3315,7 +3318,9 @@ function rafraichirVuesStaff() {
   try { if (frame && frame.getAttribute('src')) frame.contentWindow.location.reload(); } catch (e) {}
   ['filtre-ranger', 'resa-ranger'].forEach(function (id) {
     var sel = document.getElementById(id);
-    if (sel) while (sel.options.length > 1) sel.remove(1);
+    if (!sel) return;
+    if (id === 'filtre-ranger') { sel.querySelectorAll('option[data-staff]').forEach(function (o) { o.remove(); }); return; }
+    while (sel.options.length > 1) sel.remove(1);
   });
 }
 
@@ -4100,12 +4105,50 @@ function slotHtml(rows, clientsMap, chiensMap, clientDogsMap, dateStr) {
   return '<div class="week-slot'+(r.service==='boarding'?' boarding':'')+'" style="border-left:2px solid '+sc+';cursor:pointer;" onclick="openResaDetail(\''+r.id+'\',\''+dateStr+'\')">'
     +'<div class="ws-time" style="color:'+color+';">'+cr+'</div>'
     +'<div class="ws-title" style="font-weight:800;">'+dogsTxt+(dogs.length>1?' <span style="font-weight:400;opacity:0.6;">('+dogs.length+')</span>':'')+(c&&c.acces_cle?' <span title="Clés confiées à Forest Rangers">🔑</span>':'')+(isTest?' <span style="font-size:8px;opacity:0.5;">TEST</span>':'')+'</div>'
-    +'<div class="ws-meta">'+svc+' · '+client+'</div>'
+    +'<div class="ws-meta">'+svc+' · '+client+(function(){ if (r.service!=='walking') return ''; var e=rangerSeance(r,dateStr);
+        return ' · <span style="color:'+(e.cle==='__aucun__'?'var(--red)':e.remplace?'var(--accent)':'inherit')+';">'+(e.cle==='__aucun__'?'non attribué':msgEsc(e.prenom))+'</span>'; })()+'</div>'
     +(r.statut==='en_attente'?'<span style="font-size:9px;color:#f0b429;">⚠ À valider</span>':'')
     +'</div>';
 }
 
-var PLANNING_COLS = 'id,service,creneau,statut,date_debut,date_fin,jours_recurrence,date_fin_recurrence,dates_exclues,client_id,chien_id';
+var PLANNING_COLS = 'id,service,creneau,statut,date_debut,date_fin,jours_recurrence,date_fin_recurrence,dates_exclues,client_id,chien_id,ranger_id,ranger_nom';
+
+// ── Ranger d'une séance (v2.67) ──
+// Ranger de la réservation, ou son remplaçant si le ranger est en congé ce
+// jour-là (fr-remplacements.js). '__aucun__' = personne.
+// Missions acceptées pour un jour (v43, lot staff) : prioritaires (v2.68)
+var AFFECTATIONS = {}, PRENOMS_STAFF = {};
+async function chargerAffectations(debut, fin) {
+  try {
+    if (!Object.keys(PRENOMS_STAFF).length) {
+      var st = await db.from('staff').select('id,prenom');
+      (st.data || []).forEach(function(x) { PRENOMS_STAFF[x.id] = x.prenom; });
+    }
+    var a = await db.from('missions_affectations').select('reservation_id,date_mission,staff_id').gte('date_mission', debut).lte('date_mission', fin);
+    if (a.error) return;
+    (a.data || []).forEach(function(x) { AFFECTATIONS[x.reservation_id + '|' + String(x.date_mission).slice(0, 10)] = x.staff_id; });
+  } catch (e) { /* v43 absente */ }
+}
+function rangerSeance(r, ds) {
+  var aff = AFFECTATIONS[r.id + '|' + ds];
+  if (aff) return { id: aff, prenom: PRENOMS_STAFF[aff] || '?', remplace: null, sansRemplacant: false, mission: true, cle: PRENOMS_STAFF[aff] || '?' };
+  var e = window.FR_REMPL ? FR_REMPL.rangerEffectif(r, ds)
+        : { id: r.ranger_id || null, prenom: r.ranger_nom || null, remplace: null, sansRemplacant: false };
+  e.cle = (e.prenom && !e.sansRemplacant) ? e.prenom : '__aucun__';
+  return e;
+}
+// Séances du jour pour le planning, filtre « Ranger » appliqué
+function seancesPlanning(resas, ds) {
+  var liste = filterResasForDay(resas, ds);
+  var f = (document.getElementById('filtre-ranger') || {}).value || '';
+  if (!f) return liste;
+  return liste.filter(function(r) { return rangerSeance(r, ds).cle === f; });
+}
+function filtreRangerSeances(liste, ds) {
+  var f = (document.getElementById('filtre-ranger') || {}).value || '';
+  if (!f) return liste;
+  return liste.filter(function(r) { return rangerSeance(r, ds).cle === f; });
+}
 async function loadPlanning() {
   var grid = document.getElementById('planning-grid');
   if (!grid) return;
@@ -4145,7 +4188,10 @@ async function loadPlanning() {
   try {
     var query = db.from('reservations').select(PLANNING_COLS+(window._planningSansTransport?'':',transport_aller,transport_retour,transport_statut')+(window._planningSansHeures?'':',heure_depot,heure_recuperation')).lte('date_debut',fin).gte('date_fin',debut).order('creneau',{ascending:true});
     if (filtSvc)    query = query.eq('service',filtSvc);
-    // filtRanger : ranger non stocké en base pour l'instant (assignation à coder)
+    // filtRanger : appliqué jour par jour (seancesPlanning), car un congé
+    // peut confier la séance à un remplaçant ce jour-là (v2.67)
+    if (window.FR_REMPL) { try { await FR_REMPL.charger(db, debut, fin); } catch(e) {} }
+    await chargerAffectations(debut, fin);
     var {data:resas,error} = await query;
     if (error && /heure_depot|heure_recuperation/.test(error.message||'') && !window._planningSansHeures) {
       window._planningSansHeures = true; return loadPlanning(); // v48 pas encore passée
@@ -4187,10 +4233,11 @@ async function loadPlanning() {
     }
     // Charger rangers dans filtre
     var selR = document.getElementById('filtre-ranger');
-    if (selR&&selR.options.length<=1) {
+    if (selR&&!selR.querySelector('option[data-staff]')) {
       var {data:staff} = await db.from('staff').select('prenom,role').eq('actif',true);
       var vusR = {};
-      if (staff) staff.forEach(function(s){ if (s.role === 'admin' || vusR[s.prenom]) return; vusR[s.prenom] = 1; var o=document.createElement('option');o.value=s.prenom;o.textContent=s.prenom;selR.appendChild(o);});
+      var avant = selR.querySelector('option[value="__aucun__"]');
+      if (staff) staff.forEach(function(s){ if (s.role === 'admin' || vusR[s.prenom]) return; vusR[s.prenom] = 1; var o=document.createElement('option');o.value=s.prenom;o.textContent=s.prenom;o.setAttribute('data-staff','1');selR.insertBefore(o, avant);});
     }
   } catch(e) {
     console.error(e);
@@ -4259,7 +4306,7 @@ function renderPlanningSemaine(resas, clientsMap, chiensMap, clientDogsMap, debu
     var ds=formatDateISO(day);
     var isT=ds===today; var isWE=day.getDay()===0||day.getDay()===6;
     var hc=isT?'week-head today':isWE?'week-head weekend':'week-head other';
-    var bookings=groupBookings(filterResasForDay(resas,ds));
+    var bookings=groupBookings(seancesPlanning(resas,ds));
     var dayOffset=daysBetween(day,todayMid);
     var parGroupe = {}; GROUPES_SEMAINE.forEach(function(g){ parGroupe[g.k] = []; });
     bookings.forEach(function(rows){ parGroupe[groupeResa(rows[0])].push(rows); });
@@ -4352,15 +4399,72 @@ function carteJourHtml(rows, clientsMap, chiensMap, clientDogsMap, dateStr) {
     +   '<span style="flex-shrink:0;font-size:10px;background:' + st[0] + ';color:' + st[1] + ';padding:3px 8px;border-radius:10px;font-family:FRDisplay,Oswald,Arial Narrow,sans-serif;font-weight:800;">' + st[2] + '</span>'
     + '</div>'
     + '<div style="font-size:12px;color:var(--text-dim);margin-top:3px;' + (annulee ? 'text-decoration:line-through;' : '') + '">' + meta.join(' · ') + '</div>'
-    + tr + '</div>';
+    + tr + badgeRemplacement(r, dateStr) + '</div>';
+}
+
+// v2.67 : « Anita → Gabriel (congé) » sur la carte ; un clic change le
+// remplaçant pour ce jour-là seulement (exception datée).
+function badgeRemplacement(r, dateStr) {
+  var aff = AFFECTATIONS[r.id + '|' + dateStr];
+  if (aff) return '<div style="margin-top:6px;"><span style="font-size:10.5px;font-weight:700;border-radius:8px;padding:2px 8px;background:var(--blue-dim, rgba(90,154,224,.14));color:var(--blue, #5a9ae0);">Mission acceptée · ' + msgEsc(PRENOMS_STAFF[aff] || '') + '</span></div>';
+  if (r.service !== 'walking' || !window.FR_REMPL) return '';
+  var p = FR_REMPL.pour(r.ranger_id, dateStr, r.creneau);
+  if (!p) return '';
+  var lib = msgEsc(p.absent_prenom) + ' → ' + (p.id ? msgEsc(p.prenom) : 'personne') + ' (congé' + (p.exception ? ', ce jour' : '') + ')';
+  return '<div style="margin-top:6px;"><span title="Changer le remplaçant pour ce jour seulement" '
+    + 'onclick="event.stopPropagation();changerRemplacantJour(\'' + p.conge.id + '\',\'' + dateStr + '\',\'' + (r.creneau || '') + '\')" '
+    + 'style="cursor:pointer;font-size:10.5px;font-weight:700;border-radius:8px;padding:2px 8px;'
+    + (p.id ? 'background:var(--accent-dim);color:var(--accent);' : 'background:var(--red-dim);color:var(--red);') + '">'
+    + lib + ' ✎</span></div>';
+}
+
+// Exception datée : la tournée de l'absent, ce jour et ce créneau, va à quelqu'un d'autre
+async function changerRemplacantJour(congeId, dateStr, creneau) {
+  var c = (window.FR_REMPL ? FR_REMPL.conges() : []).filter(function(x){ return String(x.id) === String(congeId); })[0];
+  if (!c) return;
+  var st = await db.from('staff').select('id,prenom,role,actif').neq('role', 'admin');
+  var equipe = (st.data || []).filter(function(x){ return x.actif !== false && String(x.id) !== String(c.absent_id); });
+  var actuel = FR_REMPL.pour(c.absent_id, dateStr, creneau) || {};
+  var old = document.getElementById('modal-rempl-jour'); if (old) old.remove();
+  var m = document.createElement('div');
+  m.id = 'modal-rempl-jour';
+  m.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+  m.innerHTML = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;max-width:380px;width:100%;">'
+    + '<div style="font-family:FRDisplay,Oswald,Arial Narrow,sans-serif;font-size:17px;font-weight:800;margin-bottom:6px;">Tournée de ' + msgEsc(c.absent_prenom) + '</div>'
+    + '<div style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">' + msgEsc(frJourLong(new Date(dateStr + 'T00:00:00'))) + ' · ' + ({ matin: 'Matin', midi: 'Midi', apmidi: 'Après-midi' }[creneau] || 'sans créneau')
+    + '<br>Pour ce jour seulement : les autres jours du congé ne changent pas.</div>'
+    + '<select id="rj-sel" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px;color:var(--text);font-size:13px;">'
+    + equipe.map(function(x){ return '<option value="' + x.id + '"' + (String(x.id) === String(actuel.id) ? ' selected' : '') + '>' + msgEsc(x.prenom) + '</option>'; }).join('')
+    + '<option value=""' + (!actuel.id ? ' selected' : '') + '>— Personne —</option></select>'
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap;">'
+    + (actuel.exception ? '<button class="btn btn-outline" onclick="enregistrerRemplacantJour(\'' + congeId + '\',\'' + dateStr + '\',\'' + creneau + '\',true)">Revenir à la règle du congé</button>' : '')
+    + '<button class="btn btn-outline" onclick="document.getElementById(\'modal-rempl-jour\').remove()">Annuler</button>'
+    + '<button class="btn btn-accent" onclick="enregistrerRemplacantJour(\'' + congeId + '\',\'' + dateStr + '\',\'' + creneau + '\',false)">Enregistrer</button></div></div>';
+  document.body.appendChild(m);
+}
+async function enregistrerRemplacantJour(congeId, dateStr, creneau, retirer) {
+  try {
+    var del = await db.from('remplacements').delete().eq('conge_id', congeId).eq('date_jour', dateStr).eq('creneau', creneau);
+    if (del.error) throw del.error;
+    if (!retirer) {
+      var v = (document.getElementById('rj-sel') || {}).value || null;
+      var ins = await db.from('remplacements').insert({ conge_id: congeId, date_jour: dateStr, creneau: creneau, remplacant_id: v }).select('id');
+      if (ins.error) throw ins.error;
+    }
+    var m = document.getElementById('modal-rempl-jour'); if (m) m.remove();
+    showToastAdmin('✓ Remplacement du jour enregistré', 'green');
+    loadPlanning();
+  } catch (e) {
+    showToastAdmin('Erreur : ' + ((e && e.message) || e) + (/remplacements/.test((e && e.message) || '') ? ' — exécutez la migration v56' : ''), 'red');
+  }
 }
 
 function renderPlanningJour(resas, clientsMap, chiensMap, clientDogsMap, dateStr, today) {
   var grid = document.getElementById('planning-grid');
   grid.style.gridTemplateColumns = '1fr';
   var day = new Date(dateStr + 'T00:00:00');
-  var actives = filterResasForDay(resas, dateStr);
-  var annulees = seancesAnnuleesDuJour(resas, dateStr);
+  var actives = seancesPlanning(resas, dateStr);
+  var annulees = filtreRangerSeances(seancesAnnuleesDuJour(resas, dateStr), dateStr);
   var tout = actives.concat(annulees);
   function blocs(filtre) {
     var rows = tout.filter(filtre);
@@ -4381,6 +4485,34 @@ function renderPlanningJour(resas, clientsMap, chiensMap, clientDogsMap, dateStr
   }
   var W = SVC_COLORS.walking, D = SVC_COLORS.daycare, B = SVC_COLORS.boarding;
   function walk(cr) { return function(r){ return r.service === 'walking' && r.creneau === cr; }; }
+  // v2.67 : dans chaque créneau, un sous-groupe par ranger (remplaçant pendant
+  // un congé), « Non attribué » en rouge, puis les rangers en congé ce jour-là.
+  function blocsRangers(filtre) {
+    var rows = tout.filter(filtre);
+    var parR = {}, absents = {};
+    rows.forEach(function(r) {
+      var e = rangerSeance(r, dateStr);
+      (parR[e.cle] = parR[e.cle] || []).push(r);
+      if (e.remplace) absents[e.remplace] = 1;
+    });
+    var cles = Object.keys(parR).filter(function(k){ return k !== '__aucun__'; }).sort();
+    if (parR.__aucun__) cles.push('__aucun__');
+    var n = 0, html = '';
+    cles.forEach(function(k) {
+      var ok = groupBookings(parR[k].filter(function(r){ return !r._annulee; }));
+      var ko = groupBookings(parR[k].filter(function(r){ return r._annulee; }));
+      var nb = ok.reduce(function(s, g){ return s + Math.max(1, dogNamesForRows(g, chiensMap, clientDogsMap).length); }, 0);
+      n += nb;
+      var rouge = k === '__aucun__';
+      html += '<div style="display:flex;justify-content:space-between;align-items:baseline;margin:' + (html ? '12px' : '2px') + ' 2px 6px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:' + (rouge ? 'var(--red)' : 'var(--text-dim)') + ';">'
+        + '<span>' + (rouge ? '⚠ Non attribué' : msgEsc(k)) + '</span><span style="font-weight:400;letter-spacing:0;text-transform:none;">' + (nb ? nb + ' chien' + (nb > 1 ? 's' : '') : '') + '</span></div>'
+        + ok.concat(ko).map(function(g){ return carteJourHtml(g, clientsMap, chiensMap, clientDogsMap, dateStr); }).join('');
+    });
+    Object.keys(absents).forEach(function(a) {
+      html += '<div style="margin:10px 2px 0;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);">' + msgEsc(a) + ' · en congé</div>';
+    });
+    return { html: html, n: n };
+  }
   var sansCreneau = blocs(function(r){ return r.service === 'walking' && ['matin','midi','apmidi'].indexOf(r.creneau) === -1; });
   var isT = dateStr === today, isWE = day.getDay() === 0 || day.getDay() === 6;
   var hc = isT ? 'week-head today' : isWE ? 'week-head weekend' : 'week-head other';
@@ -4390,9 +4522,9 @@ function renderPlanningJour(resas, clientsMap, chiensMap, clientDogsMap, dateStr
     + bandeauCalendrier(dateStr, false)
     + '<div class="planning-jour-cols">'
     +   '<div>'
-    +     boite('Matin', '09h00', W, blocs(walk('matin')))
-    +     boite('Midi', '12h00', W, blocs(walk('midi')))
-    +     boite('Après-midi', '14h30', W, blocs(walk('apmidi')))
+    +     boite('Matin', '09h00', W, blocsRangers(walk('matin')))
+    +     boite('Midi', '12h00', W, blocsRangers(walk('midi')))
+    +     boite('Après-midi', '14h30', W, blocsRangers(walk('apmidi')))
     +     (sansCreneau.html ? boite('Promenade sans créneau', '', W, sansCreneau) : '')
     +   '</div>'
     +   '<div>'
@@ -4413,7 +4545,7 @@ function renderPlanningMois(resas, clientsMap, debut, fin, today) {
   for(var i=0;i<offset;i++) html+='<div></div>';
   var cur=new Date(first); var last=new Date(fin+'T00:00:00'); var todayMid=new Date(today+'T00:00:00');
   while(cur<=last) {
-    var ds=formatDateISO(cur); var dr=filterResasForDay(resas,ds);
+    var ds=formatDateISO(cur); var dr=seancesPlanning(resas,ds);
     var isT=ds===today; var nbR=dr.length;
     var isWE=cur.getDay()===0||cur.getDay()===6;
     var cols=[...new Set(dr.map(function(r){return SVC_COLORS[r.service]||'#ff5f1f';}))];
@@ -5587,6 +5719,249 @@ async function annulerPromenadesJour() {
   }
 }
 
+// ══════════════════════════════════════════════════════════════
+//  FERMETURE EXCEPTIONNELLE (v2.67) — maladie, rendez-vous, imprévu
+//  Période (un ou plusieurs jours), créneau (promenades), services,
+//  ranger, motif → aperçu → annulation à 0 % (non facturé), message à
+//  chaque client dans sa langue, nouvelles réservations bloquées
+//  (journée entière, tous rangers ; colonne services de la v56).
+//  Pension déjà commencée : jamais annulée, signalée.
+// ══════════════════════════════════════════════════════════════
+var FE = null;
+var FE_SVC = { walking: 'Dog Walking', daycare: 'Day Care', boarding: 'Boarding' };
+var FE_CR = { matin: 'Matin', midi: 'Midi', apmidi: 'Après-midi' };
+var FE_CR_EN = { matin: 'morning', midi: 'midday', apmidi: 'afternoon' };
+
+async function ouvrirFermetureExceptionnelle() {
+  var st = await db.from('staff').select('id,prenom,role,actif').neq('role', 'admin');
+  var equipe = (st.data || []).filter(function(x){ return x.actif !== false; });
+  var vus = {}; equipe = equipe.filter(function(x){ if (vus[x.prenom]) return false; vus[x.prenom] = 1; return true; });
+  var auj = formatDateISO(new Date());
+  var old = document.getElementById('modal-fermeture'); if (old) old.remove();
+  var m = document.createElement('div');
+  m.id = 'modal-fermeture';
+  m.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.75);display:flex;align-items:flex-start;justify-content:center;padding:24px 12px;overflow-y:auto;';
+  var lab = 'font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-faint);font-weight:700;margin-bottom:5px;display:block;';
+  var inp = 'width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;font-family:inherit;';
+  m.innerHTML = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;max-width:620px;width:100%;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;"><div style="font-family:FRDisplay,Oswald,Arial Narrow,sans-serif;font-size:19px;font-weight:800;">Fermeture exceptionnelle</div>'
+    + '<button class="btn btn-outline" style="padding:4px 10px;" onclick="document.getElementById(\'modal-fermeture\').remove()">✕</button></div>'
+    + '<div style="font-size:12px;color:var(--text-dim);margin:4px 0 16px;">Maladie, rendez-vous, imprévu : les séances choisies sont annulées sans être facturées et les clients sont prévenus.</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;">'
+    +   '<div><label style="' + lab + '">Du</label><input type="date" id="fe-du" value="' + auj + '" min="' + auj + '" style="' + inp + '" onchange="var a=document.getElementById(\'fe-au\');if(!a.value||a.value<this.value)a.value=this.value;feApercu()"></div>'
+    +   '<div><label style="' + lab + '">Au (inclus)</label><input type="date" id="fe-au" value="' + auj + '" min="' + auj + '" style="' + inp + '" onchange="feApercu()"></div>'
+    +   '<div><label style="' + lab + '">Créneau (promenades)</label><select id="fe-cr" style="' + inp + '" onchange="feApercu()"><option value="">Toute la journée</option><option value="matin">Matin</option><option value="midi">Midi</option><option value="apmidi">Après-midi</option></select></div>'
+    +   '<div><label style="' + lab + '">Ranger</label><select id="fe-ranger" style="' + inp + '" onchange="feApercu()"><option value="">Tous</option>'
+    +     equipe.map(function(x){ return '<option value="' + msgEsc(x.prenom) + '">Seulement ' + msgEsc(x.prenom) + '</option>'; }).join('') + '</select></div>'
+    + '</div>'
+    + '<div style="margin-top:14px;"><span style="' + lab + '">Services</span><div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px;">'
+    +   ['walking', 'daycare', 'boarding'].map(function(s){ return '<label style="display:flex;gap:6px;align-items:center;cursor:pointer;"><input type="checkbox" class="fe-svc" value="' + s + '"' + (s !== 'boarding' ? ' checked' : '') + ' onchange="feApercu()">' + FE_SVC[s] + '</label>'; }).join('')
+    + '</div></div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:14px;">'
+    +   '<div><label style="' + lab + '">Motif</label><select id="fe-motif" style="' + inp + '" onchange="document.getElementById(\'fe-motif-txt\').style.display=this.value===\'autre\'?\'\':\'none\';feApercu()">'
+    +     '<option value="maladie">Maladie</option><option value="rdv">Rendez-vous</option><option value="autre">Autre…</option></select></div>'
+    +   '<div><label style="' + lab + '">&nbsp;</label><input id="fe-motif-txt" placeholder="Motif affiché au client (facultatif)" style="' + inp + 'display:none;" oninput="feApercuMessage()"></div>'
+    + '</div>'
+    + '<div id="fe-apercu" style="margin-top:16px;"></div>'
+    + '</div>';
+  document.body.appendChild(m);
+  FE = { equipe: equipe };
+  feApercu();
+}
+
+function feParams() {
+  return {
+    du: document.getElementById('fe-du').value, au: document.getElementById('fe-au').value || document.getElementById('fe-du').value,
+    creneau: document.getElementById('fe-cr').value, ranger: document.getElementById('fe-ranger').value,
+    services: Array.prototype.map.call(document.querySelectorAll('.fe-svc:checked'), function(x){ return x.value; }),
+    motif: document.getElementById('fe-motif').value, motifTxt: (document.getElementById('fe-motif-txt').value || '').trim()
+  };
+}
+
+async function feApercu() {
+  var box = document.getElementById('fe-apercu');
+  if (!box || !FE) return;
+  var P = feParams();
+  if (!P.du || P.au < P.du) { box.innerHTML = '<div style="color:var(--red);font-size:12px;">Dates invalides.</div>'; return; }
+  if (!P.services.length) { box.innerHTML = '<div style="color:var(--text-faint);font-size:12px;">Cochez au moins un service.</div>'; return; }
+  box.innerHTML = '<div style="color:var(--text-faint);font-size:12px;">Calcul…</div>';
+  var jeton = FE.jeton = Math.random();
+  try {
+    await assurerCalendrier();
+    if (window.FR_REMPL) { try { await FR_REMPL.charger(db, P.du, P.au); } catch (e) {} }
+    var q = await db.from('reservations').select(PLANNING_COLS + ',jours,date_fin_recurrence').in('service', P.services).neq('statut', 'annule').lte('date_debut', P.au);
+    if (q.error) throw q.error;
+    if (jeton !== FE.jeton) return;
+    var resas = (q.data || []).filter(function(r){ return !(r.date_fin && r.date_fin < P.du && !(r.date_fin_recurrence && r.date_fin_recurrence >= P.du)); });
+    var ids = []; resas.forEach(function(r){ if (r.client_id && ids.indexOf(r.client_id) === -1) ids.push(r.client_id); });
+    var clientsMap = {}, chiensMap = {}, clientDogsMap = {};
+    if (ids.length) {
+      var rr = await Promise.all([db.from('clients').select('id,prenom,nom,langue,is_test').in('id', ids), db.from('chiens').select('id,nom,client_id,actif').in('client_id', ids)]);
+      (rr[0].data || []).forEach(function(c){ clientsMap[c.id] = c; });
+      (rr[1].data || []).forEach(function(d){ chiensMap[d.id] = d; if (d.actif !== false) (clientDogsMap[d.client_id] = clientDogsMap[d.client_id] || []).push(d.nom); });
+    }
+    if (jeton !== FE.jeton) return;
+
+    var seances = [], pensionsEnCours = [], vusP = {};
+    // Pension : séjours qui commencent dans la période → annulés en entier ; déjà commencés → signalés
+    resas.filter(function(r){ return r.service === 'boarding'; }).forEach(function(r) {
+      var dep = r.date_fin || r.date_debut;
+      if (P.ranger && r.ranger_nom !== P.ranger) return;
+      if (r.date_debut >= P.du && r.date_debut <= P.au) seances.push({ r: r, date: r.date_debut, entiere: true });
+      else if (r.date_debut < P.du && dep > P.du && !vusP[r.client_id + r.date_debut]) { vusP[r.client_id + r.date_debut] = 1; pensionsEnCours.push(r); }
+    });
+    for (var d = new Date(P.du + 'T00:00:00'); formatDateISO(d) <= P.au; d.setDate(d.getDate() + 1)) {
+      var ds = formatDateISO(d);
+      filterResasForDay(resas.filter(function(r){ return r.service !== 'boarding'; }), ds, { nuits: true }).forEach(function(r) {
+        if (r.service === 'walking' && P.creneau && r.creneau !== P.creneau) return;
+        if (P.ranger && rangerSeance(r, ds).cle !== P.ranger) return;
+        seances.push({ r: r, date: ds, entiere: false });
+      });
+    }
+    FE.seances = seances; FE.pensionsEnCours = pensionsEnCours; FE.clientsMap = clientsMap; FE.chiensMap = chiensMap; FE.clientDogsMap = clientDogsMap;
+
+    // Regroupement d'affichage : client × service × date × créneau
+    var groupes = {};
+    seances.forEach(function(s) {
+      var k = s.date + '|' + s.r.service + '|' + (s.r.creneau || '') + '|' + s.r.client_id;
+      (groupes[k] = groupes[k] || []).push(s.r);
+    });
+    var cles = Object.keys(groupes).sort();
+    var clientsT = {}; seances.forEach(function(s){ if (s.r.client_id) clientsT[s.r.client_id] = 1; });
+    var nbC = Object.keys(clientsT).length;
+    var bloque = !P.creneau && !P.ranger;
+    var html = '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">'
+      + '<div style="background:var(--surface2);border-radius:8px;padding:8px 12px;font-size:12px;"><b style="font-size:16px;">' + cles.length + '</b> séance' + (cles.length > 1 ? 's' : '') + '</div>'
+      + '<div style="background:var(--surface2);border-radius:8px;padding:8px 12px;font-size:12px;"><b style="font-size:16px;">' + nbC + '</b> client' + (nbC > 1 ? 's' : '') + ' prévenu' + (nbC > 1 ? 's' : '') + '</div></div>';
+    if (pensionsEnCours.length) html += '<div style="background:var(--amber-dim);color:var(--amber);border-radius:8px;padding:9px 12px;font-size:12px;margin-bottom:10px;">⚠ '
+      + pensionsEnCours.length + ' pension' + (pensionsEnCours.length > 1 ? 's' : '') + ' déjà commencée' + (pensionsEnCours.length > 1 ? 's' : '') + ' (chien déjà chez vous), non annulée' + (pensionsEnCours.length > 1 ? 's' : '') + ' : '
+      + pensionsEnCours.map(function(r){ var c = clientsMap[r.client_id]; return msgEsc((dogNamesForRows([r], chiensMap, clientDogsMap).join(' + ') || 'chien') + (c ? ' (' + c.nom + ')' : '') + ' jusqu\'au ' + formatDateFR(r.date_fin)); }).join(', ') + '</div>';
+    html += '<div style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;">'
+      + (cles.length ? cles.map(function(k) {
+          var rows = groupes[k], r = rows[0], c = clientsMap[r.client_id];
+          var e = r.service === 'walking' ? rangerSeance(r, k.split('|')[0]) : null;
+          return '<div style="display:flex;gap:8px;justify-content:space-between;padding:7px 10px;border-bottom:1px solid var(--border);font-size:12px;">'
+            + '<span><span style="color:var(--text-dim);">' + msgEsc(frJourLong(new Date(k.split('|')[0] + 'T00:00:00')).replace(/ \d{4}$/, '')) + '</span> · '
+            + '<span style="color:' + (SVC_COLORS[r.service] || 'inherit') + ';">' + FE_SVC[r.service] + (r.creneau && r.service === 'walking' ? ' ' + (FE_CR[r.creneau] || '').toLowerCase() : '') + (r.service === 'boarding' ? ' (séjour entier)' : '') + '</span> · '
+            + '<strong>' + msgEsc(dogNamesForRows(rows, chiensMap, clientDogsMap).join(' + ') || 'Tous les chiens') + '</strong> <span style="color:var(--text-faint);">' + msgEsc(c ? c.prenom + ' ' + (c.nom || '') : '') + '</span></span>'
+            + '<span style="color:var(--text-faint);white-space:nowrap;">' + (e ? msgEsc(e.cle === '__aucun__' ? '—' : e.prenom) : '') + '</span></div>';
+        }).join('') : '<div style="padding:14px;text-align:center;color:var(--text-faint);font-size:12px;">Aucune séance sur cette période.</div>')
+      + '</div>';
+    html += '<div style="font-size:11.5px;color:var(--text-faint);margin-top:10px;line-height:1.5;">'
+      + (bloque ? '✓ Les nouvelles réservations ' + P.services.map(function(s){ return FE_SVC[s]; }).join(' / ') + ' seront bloquées sur cette période.'
+                : 'ⓘ Fermeture partielle (créneau ou ranger) : les nouvelles réservations ne sont pas bloquées.') + '</div>';
+    html += '<label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-top:12px;cursor:pointer;"><input type="checkbox" id="fe-prevenir" checked onchange="feApercuMessage()"> <strong>Prévenir les clients</strong> <span style="font-size:11px;color:var(--text-faint);">(message dans leur langue)</span></label>'
+      + '<div id="fe-msg"></div>'
+      + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap;">'
+      + '<button class="btn btn-outline" onclick="document.getElementById(\'modal-fermeture\').remove()">Annuler</button>'
+      + '<button class="btn" id="fe-valider" style="background:var(--red);color:white;" ' + (cles.length || bloque ? '' : 'disabled') + ' onclick="validerFermeture()">'
+      + (cles.length ? 'Annuler ' + cles.length + ' séance' + (cles.length > 1 ? 's' : '') + ' et fermer' : 'Fermer la période') + '</button></div>';
+    box.innerHTML = html;
+    feApercuMessage();
+  } catch (e) {
+    box.innerHTML = '<div style="color:var(--red);font-size:12px;">Erreur : ' + msgEsc((e && e.message) || e) + '</div>';
+  }
+}
+
+function feMotif(P, en) {
+  if (P.motif === 'maladie') return en ? 'due to illness' : 'pour raison de santé';
+  if (P.motif === 'rdv') return en ? 'due to an appointment' : 'en raison d\'un rendez-vous';
+  return P.motifTxt ? (en ? '(' + P.motifTxt + ')' : '(' + P.motifTxt + ')') : '';
+}
+function feMessage(clientId, langue) {
+  var en = langue === 'en', P = feParams();
+  var mine = FE.seances.filter(function(s){ return String(s.r.client_id) === String(clientId); });
+  var lignes = {}, ordre = [];
+  mine.forEach(function(s) {
+    var k = s.date + '|' + s.r.service + '|' + (s.r.creneau || '');
+    if (!lignes[k]) { lignes[k] = []; ordre.push(k); }
+    dogNamesForRows([s.r], FE.chiensMap, FE.clientDogsMap).forEach(function(n){ if (lignes[k].indexOf(n) === -1) lignes[k].push(n); });
+  });
+  ordre.sort();
+  var fmt = function(ds) { return new Date(ds + 'T00:00:00').toLocaleDateString(en ? 'en-GB' : 'fr-LU', { weekday: 'long', day: 'numeric', month: 'long' }); };
+  var liste = ordre.map(function(k) {
+    var p = k.split('|'), svc = FE_SVC[p[1]] + (p[1] === 'walking' && p[2] ? ' (' + (en ? FE_CR_EN[p[2]] : FE_CR[p[2]].toLowerCase()) + ')' : '') + (p[1] === 'boarding' ? (en ? ' — whole stay' : ' — séjour entier') : '');
+    return '· ' + fmt(p[0]) + ' — ' + svc + (en ? ': ' : ' : ') + lignes[k].join(' + ');
+  }).join('\n');
+  var periode = P.du === P.au ? (en ? 'on ' : 'le ') + fmt(P.du) : (en ? 'from ' + fmt(P.du) + ' to ' + fmt(P.au) : 'du ' + fmt(P.du) + ' au ' + fmt(P.au));
+  var mot = feMotif(P, en);
+  if (en) return 'Hello,\nForest Rangers has to close exceptionally ' + periode + (mot ? ' ' + mot : '') + '. The following sessions are cancelled and will not be charged:\n' + liste + '\nWe apologise for the inconvenience.\n— Forest Rangers';
+  return 'Bonjour,\nForest Rangers doit fermer exceptionnellement ' + periode + (mot ? ' ' + mot : '') + '. Les séances suivantes sont annulées et ne vous seront pas facturées :\n' + liste + '\nToutes nos excuses pour ce contretemps.\n— Forest Rangers';
+}
+function feApercuMessage() {
+  var box = document.getElementById('fe-msg');
+  if (!box || !FE || !FE.seances) return;
+  var on = (document.getElementById('fe-prevenir') || {}).checked;
+  var premier = FE.seances.filter(function(s){ return s.r.client_id; })[0];
+  if (!on || !premier) { box.innerHTML = ''; return; }
+  var c = FE.clientsMap[premier.r.client_id] || {};
+  box.innerHTML = '<div style="font-size:11px;color:var(--text-faint);margin-top:8px;">Aperçu — ' + msgEsc((c.prenom || '') + ' ' + (c.nom || '')) + ' :</div>'
+    + '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.55;color:var(--text-dim);margin-top:4px;">'
+    + msgEsc(feMessage(premier.r.client_id, 'fr')).replace(/\n/g, '<br>') + '</div>';
+}
+
+async function validerFermeture() {
+  if (!FE || !FE.seances) return;
+  var P = feParams();
+  var n = FE.seances.length;
+  var btn = document.getElementById('fe-valider');
+  if (btn) { btn.disabled = true; btn.textContent = 'En cours…'; }
+  var faites = 0, erreurs = 0;
+  // Une séance par réservation et par date ; ponctuelle → réservation annulée
+  for (var i = 0; i < FE.seances.length; i++) {
+    var s = FE.seances[i], r = s.r;
+    try {
+      var unique = s.entiere || (!(r.jours_recurrence || '').trim() && !(Array.isArray(r.jours) && r.jours.length) && String(r.date_debut).slice(0, 10) === s.date);
+      if (unique) {
+        var up = await db.from('reservations').update({ statut: 'annule', annule_par: 'gabriel', annulation_tardive: false, facture_pourcentage: 0 }).eq('id', r.id).select('id');
+        if (up.error && /annule_par|annulation_tardive|facture_pourcentage/i.test(up.error.message || '')) up = await db.from('reservations').update({ statut: 'annule' }).eq('id', r.id).select('id');
+        if (up.error) throw up.error;
+        if (!up.data || !up.data.length) throw new Error('droits insuffisants (RLS)');
+      } else {
+        var cur = await db.from('reservations').select('dates_exclues').eq('id', r.id).limit(1);
+        var ex = String(((cur.data || [])[0] || {}).dates_exclues || r.dates_exclues || '').split(',').map(function(x){ return x.trim(); }).filter(Boolean);
+        if (ex.indexOf(s.date) === -1) ex.push(s.date);
+        var maj = await db.from('reservations').update({ dates_exclues: ex.join(',') }).eq('id', r.id).select('id');
+        if (maj.error) throw maj.error;
+        if (!maj.data || !maj.data.length) throw new Error('droits insuffisants (RLS)');
+        await db.from('annulations_occurrences').insert({ reservation_id: r.id, date_occurrence: s.date, annule_par: 'gabriel', annulation_tardive: false, facture_pourcentage: 0 });
+      }
+      faites++;
+    } catch (e) { erreurs++; console.error('fermeture exceptionnelle:', e); }
+  }
+  // Blocage des nouvelles réservations (journée entière, tous rangers)
+  var blocage = '';
+  if (!P.creneau && !P.ranger) {
+    var tous = P.services.length === 3, prom = P.services.length === 1 && P.services[0] === 'walking';
+    var nom = 'Fermeture exceptionnelle' + (P.motif === 'maladie' ? ' (maladie)' : P.motif === 'rdv' ? ' (rendez-vous)' : P.motifTxt ? ' (' + P.motifTxt + ')' : '');
+    var ligne = { nom: nom, type: prom ? 'promenades' : 'fermeture', annuel: false, debut: P.du, fin: P.au, actif: true, ordre: 0, services: P.services };
+    var pf = await db.from('periodes_fermeture').insert(ligne);
+    if (pf.error && /services/.test(pf.error.message || '') && (tous || prom)) { delete ligne.services; pf = await db.from('periodes_fermeture').insert(ligne); }
+    if (pf.error) blocage = ' · réservations non bloquées (' + (/services/.test(pf.error.message || '') ? 'migration v56 à exécuter' : pf.error.message) + ')';
+    else if (window.FR_CAL) { try { await FR_CAL.charger(db); } catch (e) {} }
+  }
+  // Messages aux clients
+  var prevenus = 0;
+  if ((document.getElementById('fe-prevenir') || {}).checked) {
+    var ids = {}; FE.seances.forEach(function(s){ if (s.r.client_id) ids[s.r.client_id] = 1; });
+    var rows = Object.keys(ids).map(function(cid) {
+      var c = FE.clientsMap[cid] || {};
+      var lg = c.langue && String(c.langue).toLowerCase() !== 'fr' ? 'en' : 'fr';
+      return { client_id: cid, expediteur: 'admin', contenu: feMessage(cid, lg), lu: false };
+    });
+    for (var k = 0; k < rows.length; k += 50) {
+      var rm = await insererMessages(rows.slice(k, k + 50), 'notification');
+      if (rm.error) { blocage += ' · clients non prévenus : ' + rm.error.message; break; }
+      prevenus += Math.min(50, rows.length - k);
+    }
+  }
+  var m = document.getElementById('modal-fermeture'); if (m) m.remove();
+  showToastAdmin('✓ ' + faites + ' séance' + (faites > 1 ? 's' : '') + ' annulée' + (faites > 1 ? 's' : '') + (erreurs ? ' · ' + erreurs + ' en échec' : '')
+    + (prevenus ? ' · ' + prevenus + ' client' + (prevenus > 1 ? 's' : '') + ' prévenu' + (prevenus > 1 ? 's' : '') : '') + blocage, erreurs || blocage ? 'amber' : 'green');
+  loadPlanning();
+  if (typeof loadDashboardStats === 'function') loadDashboardStats();
+}
+
 // ── Banniere espace client (table `alertes_meteo`, document maitre §19.2) ──
 async function publierBanniere() {
   var mod = alerteModeleCourant();
@@ -5719,6 +6094,49 @@ async function chargerAlertes() {
         + '<div class="alert-time">Réservations en attente de confirmation</div>'
         + '</div></div>';
     }
+
+    // Congés approuvés : tournées sans remplaçant (45 prochains jours, v2.67)
+    try {
+      if (window.FR_REMPL && window.FR_FACT) {
+        var finR = formatDateISO(new Date(Date.now() + 45 * 864e5));
+        await assurerCalendrier();
+        var congesR = await FR_REMPL.charger(db, today, finR);
+        await chargerAffectations(today, finR);
+        congesR = congesR.filter(function(c){ return c.fin >= today && c.debut <= finR; });
+        if (congesR.length) {
+          var rq = await db.from('reservations').select(PLANNING_COLS + ',jours').eq('service', 'walking').neq('statut', 'annule')
+            .in('ranger_id', congesR.map(function(c){ return c.absent_id; })).lte('date_debut', finR);
+          var trous = {};
+          (rq.data || []).forEach(function(r) {
+            congesR.forEach(function(c) {
+              if (String(c.absent_id) !== String(r.ranger_id)) return;
+              for (var dd = new Date((c.debut > today ? c.debut : today) + 'T00:00:00'); formatDateISO(dd) <= c.fin && formatDateISO(dd) <= finR; dd.setDate(dd.getDate() + 1)) {
+                var ds = formatDateISO(dd);
+                if (!FR_FACT.aSeanceLe(r, ds)) continue;
+                var p = FR_REMPL.pour(r.ranger_id, ds, r.creneau);
+                if (!p || p.id || AFFECTATIONS[r.id + '|' + ds]) continue;
+                var k = c.id + '|' + FR_REMPL.isoDow(ds) + '|' + (r.creneau || '');
+                (trous[k] = trous[k] || { c: c, jour: FR_REMPL.isoDow(ds), creneau: r.creneau, dates: {} }).dates[ds] = 1;
+              }
+            });
+          });
+          var lt = Object.keys(trous).map(function(k){ return trous[k]; });
+          if (lt.length) {
+            var JR = ['', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+            var CRN = { matin: 'matin', midi: 'midi', apmidi: 'après-midi' };
+            html += '<div class="alert alert-r" style="cursor:pointer;" onclick="navVers(\'staff\')">'
+              + '<div class="alert-dot"></div><div class="alert-body">'
+              + '<strong>' + lt.length + ' tournée' + (lt.length > 1 ? 's' : '') + ' sans remplaçant pendant un congé</strong>'
+              + lt.slice(0, 6).map(function(t) {
+                  var n = Object.keys(t.dates).length;
+                  return '<div style="font-size:11px;color:var(--text-dim);margin-top:3px;">' + msgEsc(t.c.absent_prenom) + ' · ' + JR[t.jour] + ' ' + (CRN[t.creneau] || '') + ' · ' + n + ' jour' + (n > 1 ? 's' : '') + ' (dès le ' + formatDateFR(Object.keys(t.dates).sort()[0]) + ')</div>';
+                }).join('')
+              + '<div class="alert-time">Équipe → Congés → « Remplaçants » sur le congé</div>'
+              + '</div></div>';
+          }
+        }
+      }
+    } catch (eR) { console.log('alerte remplaçants:', eR); }
 
     // Transports Day Care à confirmer (clients hors zone, v39)
     try {

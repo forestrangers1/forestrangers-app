@@ -377,6 +377,7 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
   </script>
   <script src="fr-calendrier.js"></script>
   <script src="fr-facturation.js"></script>
+  <script src="fr-remplacements.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
   <link rel="manifest" href="/manifest.json">
@@ -1691,7 +1692,10 @@ function renderPeriodes() {
     return;
   }
   box.innerHTML = PERIODES_CACHE.map(function(p) {
-    var effet = (p.type === 'fermeture')
+    var sf = (window.FR_CAL && FR_CAL.servicesFermes) ? FR_CAL.servicesFermes(p) : [];
+    var effet = (p.services && p.services.length && sf.length && sf.length < 3 && !(sf.length === 1 && sf[0] === 'walking'))
+      ? '<span class="badge b-amber">' + sf.map(function(x){ return { walking: 'Dog Walking', daycare: 'Day Care', boarding: 'Boarding' }[x]; }).join(' + ') + ' suspendus</span>'
+      : (p.type === 'fermeture')
       ? '<span class="badge b-red">Fermeture complète</span>'
       : '<span class="badge b-amber">Promenades suspendues</span>';
     var etat = p.actif ? '' : '<span class="badge b-muted">Inactive</span>';
@@ -1768,6 +1772,10 @@ async function enregistrerPeriode() {
     actif: document.getElementById('periode-actif').checked,
     updated_at: new Date().toISOString()
   };
+  // v2.67 : une fermeture exceptionnelle limitée à certains services garde
+  // ses services, sauf si l'effet est changé ici (le type fait alors foi)
+  var orig = id ? PERIODES_CACHE.filter(function(x) { return String(x.id) === String(id); })[0] : null;
+  if (orig && orig.services && orig.services.length && orig.type !== ligne.type) ligne.services = null;
   try {
     var r = id
       ? await db.from('periodes_fermeture').update(ligne).eq('id', id)
@@ -1814,7 +1822,16 @@ function renderFeries() {
       + '<span style="font-size:12px;color:var(--text);">' + f.nom + '</span>'
       + '<span style="font-size:11.5px;color:var(--text-faint);white-space:nowrap;">'
       + d.toLocaleDateString('fr-LU', { weekday: 'short', day: 'numeric', month: 'short' }) + '</span></div>';
-  }).join('');
+  }).join('')
+  // v2.66 : vacances scolaires de Noël, calculées (promenades suspendues)
+  + (function() {
+    if (!FR_CAL.vacancesNoel) return '';
+    var v = FR_CAL.vacancesNoel(anneeFeries);
+    var fmt = function(s) { return new Date(s + 'T00:00:00').toLocaleDateString('fr-LU', { day: 'numeric', month: 'short' }); };
+    return '<div style="grid-column:1/-1;display:flex;justify-content:space-between;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);opacity:' + (v.fin < aujourdhui ? '0.5' : '1') + ';">'
+      + '<span style="font-size:12px;color:var(--text);">🎄 ' + v.nom + ' — promenades suspendues (crèche et pension ouvertes)</span>'
+      + '<span style="font-size:11.5px;color:var(--text-faint);white-space:nowrap;">' + fmt(v.debut) + ' → ' + fmt(v.fin) + '</span></div>';
+  })();
 }
 
 // ── FONCTION GLOBALE : vérifier si une date est en période clôturée ──
@@ -2480,10 +2497,12 @@ async function ajouterAbsence() {
     }
   }
   if (r.error) { showToast('Erreur : ' + r.error.message, 'red'); return; }
-  var modif = !!CONGE_EDIT;
+  var modif = !!CONGE_EDIT, idConge = CONGE_EDIT || (r.data && r.data[0] && r.data[0].id);
   annulerModifConge();
   showToast(modif ? '✓ Modifié' : '✓ Enregistré', 'green');
   loadConges();
+  // v2.67 : qui reprend les tournées pendant cette absence ?
+  if (idConge) ouvrirRemplacants(idConge, false);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2741,18 +2760,20 @@ function congeHtml(c, enAttente, auj) {
     + (enAttente ? '<span class="badge b-amber">En attente</span>' : '<span class="badge b-green">Approuvé</span>')
     + '</div>'
     + (enAttente
-        ? (c._impact != null ? '<div class="conge-impact"><strong>Impact planning :</strong> ' + (c._impact ? c._impact + ' réservation' + (c._impact > 1 ? 's' : '') + ' assignée' + (c._impact > 1 ? 's' : '') + ' à ce ranger sur la période, à réassigner.' : 'aucune réservation assignée à ce ranger sur la période.') + '</div>' : '')
+        ? (c._impact != null ? '<div class="conge-impact"><strong>Impact planning :</strong> ' + (c._impact ? c._impact + ' réservation' + (c._impact > 1 ? 's' : '') + ' assignée' + (c._impact > 1 ? 's' : '') + ' à ce ranger sur la période : les remplaçants se choisissent en approuvant.' : 'aucune réservation assignée à ce ranger sur la période.') + '</div>' : '')
           + '<div class="conge-actions">'
           +   '<button class="btn btn-green" onclick="deciderConge(\'' + c.id + '\',\'approuve\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Approuver</button>'
           +   '<button class="btn btn-red" onclick="deciderConge(\'' + c.id + '\',\'refuse\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Refuser</button>'
           + '</div>'
         : '<div class="conge-actions">'
+          +   (passe ? '' : '<button class="btn btn-accent" style="padding:4px 10px;font-size:11px;" onclick="ouvrirRemplacants(\'' + c.id + '\',false)">Remplaçants</button>')
           +   '<button class="btn btn-outline" style="padding:4px 10px;font-size:11px;" onclick="modifierConge(\'' + c.id + '\')">Modifier</button>'
           +   '<button class="btn btn-red" style="padding:4px 10px;font-size:11px;" onclick="supprimerConge(\'' + c.id + '\')">Supprimer</button>'
           + '</div>')
     + '</div>';
 }
 async function deciderConge(id, statut) {
+  if (statut === 'approuve') { ouvrirRemplacants(id, true); return; }   // v2.67 : choix des remplaçants
   var note = statut === 'refuse' ? prompt('Motif du refus (facultatif, visible par le ranger) :', '') : '';
   if (note === null) return;
   try {
@@ -2765,6 +2786,349 @@ async function deciderConge(id, statut) {
     loadConges();
   } catch (e) { showToast('Erreur : ' + ((e && e.message) || e), 'red'); }
 }
+// ══════════════════════════════════════════════════════════════
+//  REMPLAÇANTS D'UN CONGÉ (v2.67, migration v56)
+//  À l'approbation, chaque tournée habituelle du ranger absent
+//  (jour de la semaine × créneau) est confiée en bloc à un remplaçant.
+//  Suggestion : travaille ce jour et ce créneau, n'est pas en congé, a
+//  le moins de chiens. Contrôle : capacité de sa camionnette.
+//  Les réservations ne sont pas modifiées (fr-remplacements.js).
+// ══════════════════════════════════════════════════════════════
+var RP_JOURS = ['', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim'];
+var RP_JOURS_FR = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+var RP_JOURS_EN = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+var RP_CR = [['matin', 'Matin', '09h00'], ['midi', 'Midi', '12h00'], ['apmidi', 'Après-midi', '14h30']];
+var RP_CR_EN = { matin: 'morning', midi: 'midday', apmidi: 'afternoon' };
+var RP = null;
+
+function rpDe(nom) { return /^[aeiouyhàâéèêëîïôöûü]/i.test(String(nom || '')) ? 'd\'' : 'de '; }
+function rpIso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function rpDow(iso) { var w = new Date(iso + 'T00:00:00').getDay(); return w === 0 ? 7 : w; }
+function rpListe(v) { return String(v || '').toLowerCase().split(',').map(function(x) { return x.trim(); }).filter(Boolean); }
+function rpDateCourte(iso) { return new Date(iso + 'T00:00:00').toLocaleDateString('fr-LU', { day: 'numeric', month: 'long' }); }
+
+async function ouvrirRemplacants(congeId, approuver) {
+  try {
+    var rc = await db.from('conges').select('*').eq('id', congeId).limit(1);
+    if (rc.error) throw rc.error;
+    var c = (rc.data || [])[0];
+    if (!c) throw new Error('congé introuvable');
+    if (window.FR_CAL && !FR_CAL.estCharge()) { try { await FR_CAL.charger(db); } catch (e) {} }
+    var debut = String(c.date_debut).slice(0, 10), fin = String(c.date_fin).slice(0, 10);
+
+    var res = await Promise.all([
+      db.from('staff').select('*'),
+      db.from('reservations').select('id,service,creneau,statut,date_debut,date_fin,jours,jours_recurrence,date_fin_recurrence,dates_exclues,client_id,chien_id,ranger_id')
+        .eq('service', 'walking').neq('statut', 'annule').lte('date_debut', fin)
+        .or('date_fin.gte.' + debut + ',date_fin_recurrence.gte.' + debut + ',date_debut.gte.' + debut),
+      db.from('conges').select('id,staff_id,date_debut,date_fin').eq('statut', 'approuve').lte('date_debut', fin).gte('date_fin', debut),
+      db.from('camionnettes').select('ranger_defaut_id,capacite_totale,active'),
+      db.from('remplacements').select('jour,creneau,remplacant_id').eq('conge_id', congeId).not('jour', 'is', null)
+    ]);
+    if (res[0].error) throw res[0].error;
+    if (res[1].error) throw res[1].error;
+    var v56 = !res[4].error;
+    var staff = res[0].data || [], resas = res[1].data || [];
+    var absent = staff.filter(function(s) { return String(s.id) === String(c.staff_id); })[0] || { prenom: 'Ranger' };
+
+    var ids = []; resas.forEach(function(r) { if (r.client_id && ids.indexOf(r.client_id) === -1) ids.push(r.client_id); });
+    var chiens = [], clients = [];
+    if (ids.length) {
+      var rr = await Promise.all([
+        db.from('chiens').select('id,nom,client_id,actif').in('client_id', ids),
+        db.from('clients').select('id,prenom,nom,langue').in('id', ids)
+      ]);
+      chiens = rr[0].data || []; clients = rr[1].data || [];
+    }
+    var nomChien = {}, chiensClient = {}, clientDe = {};
+    chiens.forEach(function(x) { nomChien[x.id] = x.nom; if (x.actif !== false) (chiensClient[x.client_id] = chiensClient[x.client_id] || []).push(x.nom); });
+    clients.forEach(function(x) { clientDe[x.id] = x; });
+    function chiensDe(r) { return r.chien_id ? [nomChien[r.chien_id] || 'Chien'] : (chiensClient[r.client_id] || ['Chien']); }
+
+    // Dates du congé (lundi → vendredi)
+    var dates = [];
+    for (var d = new Date(debut + 'T00:00:00'); rpIso(d) <= fin; d.setDate(d.getDate() + 1)) {
+      var w = d.getDay(); if (w >= 1 && w <= 5) dates.push(rpIso(d));
+    }
+
+    // Tournées de l'absent, et charge des autres par (jour × créneau × date)
+    var tournees = {}, charge = {};
+    dates.forEach(function(ds) {
+      var dow = rpDow(ds);
+      resas.forEach(function(r) {
+        if (!FR_FACT.aSeanceLe(r, ds)) return;
+        var k = dow + '|' + (r.creneau || '');
+        var n = chiensDe(r).length;
+        if (String(r.ranger_id) === String(c.staff_id)) {
+          var t = tournees[k] = tournees[k] || { jour: dow, creneau: r.creneau || '', dates: {}, promenades: 0, chiens: {}, clients: {} };
+          t.dates[ds] = (t.dates[ds] || 0) + n;
+          t.promenades += n;
+          var cl = clientDe[r.client_id];
+          chiensDe(r).forEach(function(nm) { t.chiens[nm + (cl ? ' (' + cl.nom + ')' : '')] = 1; });
+          if (r.client_id) t.clients[r.client_id] = (t.clients[r.client_id] || []).concat(chiensDe(r));
+        } else if (r.ranger_id) {
+          var ch = (charge[r.ranger_id] = charge[r.ranger_id] || {});
+          var kk = ch[k] = ch[k] || {};
+          kk[ds] = (kk[ds] || 0) + n;
+        }
+      });
+    });
+    var cles = Object.keys(tournees);
+    if (!cles.length) {
+      if (approuver) await rpApprouver(congeId);
+      showToast(approuver ? '✓ Congé approuvé — aucune promenade à reprendre' : 'Aucune promenade à reprendre pendant ce congé', 'green');
+      loadConges();
+      return;
+    }
+    cles.forEach(function(k) { var t = tournees[k]; t.max = Math.max.apply(null, Object.keys(t.dates).map(function(x) { return t.dates[x]; })); });
+
+    var capa = {};
+    (res[3].data || []).forEach(function(v) { if (v.active !== false && v.ranger_defaut_id && v.capacite_totale) capa[v.ranger_defaut_id] = v.capacite_totale; });
+    var autresConges = (res[2].data || []).filter(function(x) { return String(x.id) !== String(congeId); });
+    var equipe = staff.filter(function(s) { return s.actif !== false && s.role !== 'admin' && String(s.id) !== String(c.staff_id); });
+
+    RP = { conge: c, absent: absent, approuver: approuver, v56: v56, tournees: tournees, charge: charge, capa: capa,
+           equipe: equipe, autresConges: autresConges, clientDe: clientDe, choix: {}, suggestion: {} };
+
+    cles.forEach(function(k) { RP.suggestion[k] = rpSuggerer(tournees[k]); });
+    var deja = {};
+    (res[4].data || []).forEach(function(x) { deja[x.jour + '|' + x.creneau] = x.remplacant_id || ''; });
+    cles.forEach(function(k) { RP.choix[k] = (k in deja) ? deja[k] : RP.suggestion[k]; });
+    rpRendre();
+    document.getElementById('modal-remplacants').classList.add('open');
+  } catch (e) {
+    showToast('Erreur : ' + ((e && e.message) || e), 'red');
+  }
+}
+
+function rpEnConge(staffId, t) {
+  return RP.autresConges.some(function(x) {
+    return String(x.staff_id) === String(staffId) && Object.keys(t.dates).some(function(ds) { return ds >= String(x.date_debut).slice(0, 10) && ds <= String(x.date_fin).slice(0, 10); });
+  });
+}
+function rpTravaille(s, t) {
+  var j = rpListe(s.jours_habituels), cr = rpListe(s.creneaux_habituels);
+  return (!j.length || j.indexOf(RP_JOURS[t.jour]) !== -1) && (!cr.length || cr.indexOf(t.creneau) !== -1);
+}
+function rpDejaChiens(staffId, k) {
+  var x = (RP.charge[staffId] || {})[k] || {};
+  var m = 0; Object.keys(x).forEach(function(ds) { if (x[ds] > m) m = x[ds]; });
+  // tournées de ce congé déjà confiées à cette personne sur le même créneau ? (une seule par clé)
+  return m;
+}
+function rpSuggerer(t) {
+  var k = t.jour + '|' + t.creneau;
+  var cands = RP.equipe.filter(function(s) { return rpTravaille(s, t) && !rpEnConge(s.id, t); });
+  cands.sort(function(a, b) {
+    var ca = RP.capa[a.id], cb = RP.capa[b.id];
+    var oa = ca ? (rpDejaChiens(a.id, k) + t.max <= ca) : true, ob = cb ? (rpDejaChiens(b.id, k) + t.max <= cb) : true;
+    if (oa !== ob) return oa ? -1 : 1;
+    return rpDejaChiens(a.id, k) - rpDejaChiens(b.id, k);
+  });
+  if (cands.length) return cands[0].id;
+  var care = RP.equipe.filter(function(s) { return s.role === 'caretaker'; })[0];
+  return care ? care.id : '';
+}
+function rpNom(id) {
+  if (!id) return null;
+  var s = RP.equipe.filter(function(x) { return String(x.id) === String(id); })[0];
+  return s ? s.prenom : null;
+}
+
+function rpCellule(k) {
+  var t = RP.tournees[k];
+  if (!t) return '<td class="rp-cell rp-vide">—</td>';
+  var id = RP.choix[k] || '';
+  var opts = RP.equipe.map(function(s) {
+    return '<option value="' + s.id + '"' + (String(s.id) === String(id) ? ' selected' : '') + '>' + echapper(s.prenom) + (rpEnConge(s.id, t) ? ' (en congé)' : '') + '</option>';
+  }).join('') + '<option value=""' + (!id ? ' selected' : '') + '>— Personne —</option>';
+  var nom = rpNom(id), total = t.max + (id ? rpDejaChiens(id, k) : 0), cap = id ? RP.capa[id] : null;
+  var s = id ? RP.equipe.filter(function(x) { return String(x.id) === String(id); })[0] : null;
+  var w = '';
+  if (!id) w = '<div class="rp-warn" style="color:var(--red);">⚠ Personne ne fera cette tournée</div>';
+  else {
+    if (cap && total > cap) w += '<div class="rp-warn">⚠ ' + echapper(nom) + ' aura ' + total + ' chiens (camionnette : ' + cap + ')</div>';
+    if (rpEnConge(id, t)) w += '<div class="rp-warn" style="color:var(--red);">⚠ ' + echapper(nom) + ' est aussi en congé</div>';
+    else if (s && !rpTravaille(s, t)) w += '<div class="rp-warn">ⓘ Ne travaille pas habituellement ce jour / ce créneau</div>';
+  }
+  return '<td class="rp-cell"><select onchange="RP.choix[\'' + k + '\']=this.value;rpRendre()">' + opts + '</select>'
+    + (String(id) === String(RP.suggestion[k]) && id ? '<span class="rp-sugg" title="Suggestion">●</span>' : '')
+    + '<div class="rp-n">' + t.max + ' chien' + (t.max > 1 ? 's' : '') + (id ? ' · ' + echapper(nom) + ' : ' + total + ' au total' : '') + '</div>'
+    + '<div class="rp-chiens">' + echapper(Object.keys(t.chiens).join(', ')) + '</div>' + w + '</td>';
+}
+
+function rpRendre() {
+  var cols = RP_CR.filter(function(cr) { return Object.keys(RP.tournees).some(function(k) { return RP.tournees[k].creneau === cr[0]; }); });
+  var autres = Object.keys(RP.tournees).filter(function(k) { return !RP_CR.some(function(cr) { return RP.tournees[k].creneau === cr[0]; }); });
+  if (autres.length) cols.push(['', 'Sans créneau', '']);
+  var c = RP.conge, nbCl = {};
+  Object.keys(RP.tournees).forEach(function(k) { Object.keys(RP.tournees[k].clients).forEach(function(x) { nbCl[x] = 1; }); });
+  var nbClients = Object.keys(nbCl).length;
+  var html = '<div class="rp-entete"><div class="modal-title" style="margin-bottom:4px;">' + (c.type && c.type !== 'conge' ? 'Absence' : 'Congé') + ' ' + rpDe(RP.absent.prenom) + echapper(RP.absent.prenom) + ' — qui reprend ses tournées ?</div>'
+    + '<button class="btn btn-outline" style="padding:4px 10px;" onclick="fermerRemplacants()">✕</button></div>'
+    + '<div style="font-size:12px;color:var(--text-dim);margin-bottom:12px;line-height:1.5;">Du ' + rpDateCourte(String(c.date_debut).slice(0, 10)) + ' au ' + rpDateCourte(String(c.date_fin).slice(0, 10))
+    + ' · chaque tournée est confiée en bloc, les mêmes jours pendant tout le congé. <span class="rp-sugg">●</span> = suggéré : travaille ce jour et ce créneau, a de la place.</div>'
+    + (RP.v56 ? '' : '<div class="info-box red" style="margin-bottom:12px;"><span>La migration <strong>v56</strong> n\'est pas encore passée : les remplaçants ne pourront pas être enregistrés.</span></div>')
+    + '<div style="overflow-x:auto;"><table class="rp-grid"><thead><tr><th></th>'
+    + cols.map(function(cr) { return '<th>' + cr[1] + (cr[2] ? ' · ' + cr[2] : '') + '</th>'; }).join('') + '</tr></thead><tbody>';
+  for (var j = 1; j <= 5; j++) {
+    var aDesTournees = cols.some(function(cr) { return RP.tournees[j + '|' + cr[0]]; });
+    if (!aDesTournees) {
+      html += '<tr><td class="rp-jour" style="color:var(--text-faint);">' + RP_JOURS_FR[j] + '</td><td class="rp-cell rp-vide" colspan="' + cols.length + '">Pas de tournée ce jour-là</td></tr>';
+      continue;
+    }
+    html += '<tr><td class="rp-jour">' + RP_JOURS_FR[j] + '</td>' + cols.map(function(cr) { return rpCellule(j + '|' + cr[0]); }).join('') + '</tr>';
+  }
+  html += '</tbody></table></div>';
+
+  var tot = {};
+  Object.keys(RP.tournees).forEach(function(k) { var n = rpNom(RP.choix[k]) || '— Personne —'; tot[n] = (tot[n] || 0) + RP.tournees[k].promenades; });
+  html += '<div class="rp-tot">' + Object.keys(tot).map(function(n) { return '<div>' + echapper(n) + '<br><b>' + tot[n] + '</b> <span style="color:var(--text-faint);font-size:11px;">promenade' + (tot[n] > 1 ? 's' : '') + ' sur le congé</span></div>'; }).join('') + '</div>';
+
+  var care = RP.equipe.filter(function(s) { return s.role === 'caretaker'; })[0];
+  html += '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">'
+    + (care ? '<button class="btn btn-outline" onclick="rpTout(\'' + care.id + '\')">Tout à ' + echapper(care.prenom) + '</button>' : '')
+    + '<button class="btn btn-outline" onclick="rpSuggestions()">Reprendre les suggestions</button></div>';
+
+  var exemple = rpExempleClient();
+  html += '<label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer;"><input type="checkbox" id="rp-prevenir"' + (RP.prevenir === false ? '' : ' checked') + ' onchange="RP.prevenir=this.checked;rpRendre()">'
+    + '<span><strong>Prévenir les ' + nbClients + ' client' + (nbClients > 1 ? 's' : '') + ' concerné' + (nbClients > 1 ? 's' : '') + '</strong><br><span style="font-size:11px;color:var(--text-faint);">Un message dans leur espace client, dans leur langue (FR / EN).</span></span></label>'
+    + (RP.prevenir === false || !exemple ? '' : '<div style="font-size:11px;color:var(--text-faint);margin-top:10px;">Aperçu — ' + echapper(exemple.libelle) + ' :</div>'
+      + '<div class="rp-msg">' + echapper(rpMessage(exemple.id, 'fr')).replace(/\n/g, '<br>') + '</div>');
+
+  html += '<div class="modal-foot" style="flex-wrap:wrap;"><button class="btn btn-outline" onclick="fermerRemplacants()">Annuler</button>'
+    + '<button class="btn btn-accent" id="rp-valider" onclick="validerRemplacants()">' + (RP.approuver ? 'Approuver le congé et enregistrer' : 'Enregistrer les remplaçants') + '</button></div>';
+  document.getElementById('rp-contenu').innerHTML = html;
+}
+function rpTout(id) { Object.keys(RP.tournees).forEach(function(k) { RP.choix[k] = id; }); rpRendre(); }
+function rpSuggestions() { Object.keys(RP.tournees).forEach(function(k) { RP.choix[k] = RP.suggestion[k]; }); rpRendre(); }
+function fermerRemplacants() { document.getElementById('modal-remplacants').classList.remove('open'); RP = null; }
+
+// Tournées d'un client pendant le congé → [{ jour, creneau, chiens[], remplacant }]
+function rpTourneesClient(clientId) {
+  var out = [];
+  Object.keys(RP.tournees).forEach(function(k) {
+    var t = RP.tournees[k];
+    if (t.clients[clientId]) out.push({ jour: t.jour, creneau: t.creneau, chiens: t.clients[clientId], remplacant: rpNom(RP.choix[k]) });
+  });
+  return out.sort(function(a, b) { return a.jour - b.jour; });
+}
+function rpExempleClient() {
+  var ids = {};
+  Object.keys(RP.tournees).forEach(function(k) { Object.keys(RP.tournees[k].clients).forEach(function(x) { ids[x] = 1; }); });
+  var liste = Object.keys(ids);
+  // de préférence un client qui a deux remplaçants différents (le cas à vérifier)
+  var choix = liste.filter(function(id) { var r = {}; rpTourneesClient(id).forEach(function(t) { r[t.remplacant || ''] = 1; }); return Object.keys(r).length > 1; })[0] || liste[0];
+  if (!choix) return null;
+  var cl = RP.clientDe[choix] || {}, tt = rpTourneesClient(choix);
+  var chiens = []; tt.forEach(function(t) { t.chiens.forEach(function(n) { if (chiens.indexOf(n) === -1) chiens.push(n); }); });
+  return { id: choix, libelle: 'client ' + ((cl.prenom || '') + ' ' + (cl.nom || '')).trim() + ' (' + chiens.join(', ') + ')' };
+}
+function rpJoindre(liste, et) { return liste.length < 2 ? liste.join('') : liste.slice(0, -1).join(', ') + ' ' + et + ' ' + liste[liste.length - 1]; }
+function rpMessage(clientId, langue) {
+  var en = langue === 'en';
+  var tt = rpTourneesClient(clientId);
+  var chiens = []; tt.forEach(function(t) { t.chiens.forEach(function(n) { if (chiens.indexOf(n) === -1) chiens.push(n); }); });
+  var parR = {};
+  tt.forEach(function(t) {
+    var r = t.remplacant || '';
+    var j = en ? RP_JOURS_EN[t.jour] + 's' : 'le ' + RP_JOURS_FR[t.jour].toLowerCase();
+    (parR[r] = parR[r] || []).indexOf(j) === -1 && parR[r].push(j);
+  });
+  var absent = RP.absent.prenom, c = RP.conge;
+  var du = String(c.date_debut).slice(0, 10), au = String(c.date_fin).slice(0, 10);
+  var noms = rpJoindre(chiens, en ? 'and' : 'et');
+  var rs = Object.keys(parR).filter(function(r) { return r; });
+  var sans = parR[''];
+  if (en) {
+    var fmtEn = function(x) { return new Date(x + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long' }); };
+    var t = 'Hello,\n' + absent + ' is on leave from ' + fmtEn(du) + ' to ' + fmtEn(au) + '. During this period, ';
+    if (rs.length === 1 && !sans) t += rs[0] + ' will walk ' + noms + ', at the usual times.';
+    else t += noms + ' will be walked ' + rs.map(function(r) { return 'on ' + rpJoindre(parR[r], 'and') + ' by ' + r; }).join(', and ') + ', at the usual times.';
+    if (sans) t += ' We will contact you about ' + rpJoindre(sans, 'and') + '.';
+    return t + ' Your bookings do not change. ' + absent + ' will be back afterwards as usual.\n— Forest Rangers';
+  }
+  var f = 'Bonjour,\n' + absent + ' est en congé du ' + rpDateCourte(du) + ' au ' + rpDateCourte(au) + '. Pendant cette période, ';
+  if (rs.length === 1 && !sans) f += 'c\'est ' + rs[0] + ' qui promènera ' + noms + ', aux mêmes horaires.';
+  else f += noms + (chiens.length > 1 ? ' seront promenés ' : ' sera promené ') + rs.map(function(r) { return rpJoindre(parR[r], 'et') + ' par ' + r; }).join(', et ') + ', aux mêmes horaires.';
+  if (sans) f += ' Nous vous recontactons pour ' + rpJoindre(sans, 'et') + '.';
+  return f + ' Vos réservations ne changent pas. ' + absent + ' reprend ensuite normalement.\n— Forest Rangers';
+}
+
+async function rpApprouver(congeId) {
+  var r = await db.from('conges').update({ statut: 'approuve' }).eq('id', congeId).select('id');
+  if (r.error) throw r.error;
+  if (!r.data || !r.data.length) throw new Error('aucune ligne modifiée (droits administrateur ?)');
+}
+async function validerRemplacants() {
+  if (!RP) return;
+  var btn = document.getElementById('rp-valider');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enregistrement…'; }
+  try {
+    var id = RP.conge.id;
+    var del = await db.from('remplacements').delete().eq('conge_id', id).not('jour', 'is', null);
+    if (del.error) throw del.error;
+    var lignes = Object.keys(RP.tournees).map(function(k) {
+      var t = RP.tournees[k];
+      return { conge_id: id, jour: t.jour, creneau: t.creneau, remplacant_id: RP.choix[k] || null };
+    });
+    var ins = await db.from('remplacements').insert(lignes).select('id');
+    if (ins.error) throw ins.error;
+    if (RP.approuver) await rpApprouver(id);
+
+    var prevenus = 0, echec = '';
+    if (RP.prevenir !== false) {
+      var ids = {};
+      Object.keys(RP.tournees).forEach(function(k) { Object.keys(RP.tournees[k].clients).forEach(function(x) { ids[x] = 1; }); });
+      var rows = Object.keys(ids).map(function(cid) {
+        var cl = RP.clientDe[cid] || {};
+        var lg = cl.langue && String(cl.langue).toLowerCase() !== 'fr' ? 'en' : 'fr';
+        return { client_id: cid, expediteur: 'admin', contenu: rpMessage(cid, lg), lu: false, type: 'notification' };
+      });
+      if (rows.length) {
+        var m = await db.from('messages').insert(rows);
+        if (m.error && /type/i.test(m.error.message || '')) m = await db.from('messages').insert(rows.map(function(x) { var o = Object.assign({}, x); delete o.type; return o; }));
+        if (m.error) echec = m.error.message || 'erreur'; else prevenus = rows.length;
+      }
+    }
+    // v2.68 : chaque remplaçant est prévenu dans sa messagerie ranger
+    var equipePrev = 0;
+    try {
+      var parR = {};
+      Object.keys(RP.tournees).forEach(function(k) {
+        var id2 = RP.choix[k]; if (!id2) return;
+        var s2 = RP.equipe.filter(function(x) { return String(x.id) === String(id2); })[0];
+        if (!s2 || s2.role === 'admin' || !s2.auth_id) return;          // pas de compte ranger (ex. Gabriel lui-même)
+        (parR[id2] = parR[id2] || []).push(RP.tournees[k]);
+      });
+      var lignesStaff = Object.keys(parR).map(function(sid) {
+        var tt = parR[sid].sort(function(a, b) { return a.jour - b.jour; });
+        var txt = 'Congé ' + rpDe(RP.absent.prenom) + RP.absent.prenom + ' du ' + rpDateCourte(String(RP.conge.date_debut).slice(0, 10)) + ' au ' + rpDateCourte(String(RP.conge.date_fin).slice(0, 10))
+          + ' : tu reprends ' + tt.map(function(t) { return RP_JOURS_FR[t.jour].toLowerCase() + ' ' + ({ matin: 'matin', midi: 'midi', apmidi: 'après-midi' }[t.creneau] || t.creneau)
+              + ' (' + Object.keys(t.chiens).join(', ') + ')'; }).join(' ; ')
+          + '. Les chiens apparaissent dans tes missions de chaque jour concerné. Merci !';
+        return { staff_id: sid, client_id: null, expediteur: 'admin', contenu: txt, lu: false, type: 'message' };
+      });
+      if (lignesStaff.length) {
+        var ms = await db.from('messages').insert(lignesStaff);
+        if (ms.error && /type/i.test(ms.error.message || '')) ms = await db.from('messages').insert(lignesStaff.map(function(x) { var o = Object.assign({}, x); delete o.type; return o; }));
+        if (!ms.error) equipePrev = lignesStaff.length;
+      }
+    } catch (eS) { console.log('message remplaçants:', eS); }
+    var nb = lignes.length;
+    showToast((RP.approuver ? '✓ Congé approuvé · ' : '✓ ') + nb + ' tournée' + (nb > 1 ? 's' : '') + ' confiée' + (nb > 1 ? 's' : '')
+      + (prevenus ? ' · ' + prevenus + ' client' + (prevenus > 1 ? 's' : '') + ' prévenu' + (prevenus > 1 ? 's' : '') : '')
+      + (equipePrev ? ' · ' + equipePrev + ' remplaçant' + (equipePrev > 1 ? 's' : '') + ' prévenu' + (equipePrev > 1 ? 's' : '') : '')
+      + (echec ? ' · clients non prévenus : ' + echec : ''), echec ? 'amber' : 'green');
+    fermerRemplacants();
+    loadConges();
+  } catch (e) {
+    var msg = (e && e.message) || String(e);
+    showToast('Erreur : ' + msg + (/remplacements/.test(msg) ? ' — exécutez la migration v56' : ''), 'red');
+    if (btn) { btn.disabled = false; btn.textContent = RP && RP.approuver ? 'Approuver le congé et enregistrer' : 'Enregistrer les remplaçants'; }
+  }
+}
+
 function majCompteurConges(n) {
   ['tab-badge-conges', 'conges-nb-attente'].forEach(function(id) {
     var el = document.getElementById(id);
@@ -2777,6 +3141,30 @@ function majCompteurConges(n) {
 .day-btn { padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; border: 1.5px solid var(--border2); background: var(--surface); color: var(--text-dim); transition: all 0.15s; display:inline-block; }
 .day-btn:hover { border-color: var(--accent); color: var(--accent); }
 .day-btn.on { background: var(--accent); border-color: var(--accent); color: white; }
+</style>
+
+<!-- Modal : remplaçants d'un congé (v2.67) -->
+<div class="modal-overlay" id="modal-remplacants" style="align-items:flex-start;overflow-y:auto;padding:24px 10px;">
+  <div class="modal" style="width:780px;max-height:none;" id="rp-contenu"></div>
+</div>
+<style>
+.rp-entete { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+.rp-grid { width:100%; border-collapse:separate; border-spacing:0 6px; }
+.rp-grid th { font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--text-faint); text-align:left; padding:0 8px; font-weight:700; }
+.rp-grid td { background:var(--surface2); padding:10px 8px; vertical-align:top; }
+.rp-grid td:first-child { border-radius:8px 0 0 8px; width:90px; }
+.rp-grid td:last-child { border-radius:0 8px 8px 0; }
+.rp-jour { font-family:'FRDisplay','Oswald','Arial Narrow',sans-serif; font-weight:800; font-size:13px; }
+.rp-cell select { background:var(--surface3); border:1px solid var(--border2); border-radius:6px; padding:6px 8px; color:var(--text); font-family:'Instrument Sans',sans-serif; font-size:12.5px; width:100%; max-width:170px; }
+.rp-vide { color:var(--text-faint); font-size:12px; }
+.rp-n { font-size:11px; color:var(--text-dim); margin-top:5px; }
+.rp-chiens { font-size:10.5px; color:var(--text-faint); margin-top:2px; line-height:1.4; }
+.rp-warn { font-size:10.5px; color:var(--amber); margin-top:4px; }
+.rp-sugg { font-size:10px; color:var(--green); margin-left:4px; }
+.rp-tot { display:flex; gap:10px; flex-wrap:wrap; margin:10px 0 14px; }
+.rp-tot div { background:var(--surface2); border-radius:8px; padding:8px 12px; font-size:12px; }
+.rp-tot b { font-size:15px; }
+.rp-msg { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px; font-size:12.5px; line-height:1.55; color:var(--text-dim); margin-top:6px; }
 </style>
 
 <!-- Modal : planning contractuel d'un membre de l'équipe (table staff) -->

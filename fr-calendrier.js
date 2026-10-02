@@ -7,6 +7,8 @@
 //    · les périodes de fermeture enregistrées par l'admin
 //      (table periodes_fermeture, migration v29), ponctuelles ou
 //      reconduites chaque année ;
+//    · les vacances scolaires de Noël (promenades suspendues),
+//      calculées elles aussi (v2.66) ;
 //    · la clôture estivale (paramètre cloture_estivale).
 //
 //  Chargé par l'admin, le formulaire de réservation, l'espace client
@@ -73,6 +75,35 @@
     return null;
   }
 
+  // ── Vacances scolaires de Noël (v2.66) ─────────────────────────
+  // Promenades suspendues pendant les deux semaines des vacances
+  // scolaires de Noël, sans rien saisir : comme les fériés, la période
+  // est calculée. Règle du ministère (MENJE) : du samedi qui précède la
+  // semaine de Noël au dimanche, quinze jours plus tard.
+  //   2025-26 : 20 déc. → 4 janv. · 2026-27 : 19 déc. → 3 janv.
+  //   2027-28 : 18 déc. → 2 janv.  (calendriers officiels publiés)
+  // La crèche du jour et la pension restent ouvertes.
+  var _noel = {};
+  function vacancesNoel(annee) {          // période qui commence en décembre de `annee`
+    annee = parseInt(annee, 10);
+    if (!_noel[annee]) {
+      var noel = new Date(annee, 11, 25);
+      var lundi = new Date(annee, 11, 25 - ((noel.getDay() + 6) % 7));
+      var debut = new Date(lundi); debut.setDate(lundi.getDate() - 2);
+      var fin = new Date(debut); fin.setDate(debut.getDate() + 15);
+      _noel[annee] = { nom: 'Vacances scolaires de Noël', type: 'promenades', debut: iso(debut), fin: iso(fin) };
+    }
+    return _noel[annee];
+  }
+  function vacancesNoelPour(dateISO) {
+    var d = jour(dateISO);
+    var annee = parseInt(d.slice(0, 4), 10);
+    if (!annee) return null;
+    var cands = [vacancesNoel(annee), vacancesNoel(annee - 1)];
+    for (var i = 0; i < cands.length; i++) if (d >= cands[i].debut && d <= cands[i].fin) return cands[i];
+    return null;
+  }
+
   // ── Périodes de fermeture ────────────────────────────────────────
   // debut / fin : 'YYYY-MM-DD' pour une période datée, 'MM-DD' quand
   // elle est reconduite chaque année (annuel = true). Une période
@@ -95,7 +126,7 @@
     try {
       var r = await db.from('periodes_fermeture').select('*').eq('actif', true).order('ordre');
       if (!r.error && r.data) _periodes = r.data;
-    } catch (e) { /* migration v29 pas encore passée */ }
+    } catch (e) { /* migration v29/v55 pas encore passée */ }
     try {
       var p = await db.from('parametres').select('valeur').eq('cle', 'cloture_estivale');
       var ligne = (p && p.data && p.data[0]) ? p.data[0].valeur : null;
@@ -123,6 +154,22 @@
     return null;
   }
 
+  var TOUS_SERVICES = ['walking', 'daycare', 'boarding'];
+  var NOMS_SERVICES = { walking: 'Dog Walking', daycare: 'Day Care', boarding: 'Boarding' };
+  function servicesFermes(p) {
+    if (p && p.services && p.services.length) return TOUS_SERVICES.filter(function (x) { return p.services.indexOf(x) !== -1; });
+    return (p && p.type === 'promenades') ? ['walking'] : TOUS_SERVICES.slice();
+  }
+  function periodesPour(dateISO) {
+    var out = [];
+    for (var i = 0; i < _periodes.length; i++) {
+      var p = _periodes[i];
+      if (p.actif === false) continue;
+      if (dansPeriode(dateISO, p.debut, p.fin, p.annuel)) out.push(p);
+    }
+    return out;
+  }
+
   function clotureEstivalePour(dateISO) {
     if (!_cloture || !_cloture.cloture_active) return null;
     if (!dansPeriode(dateISO, _cloture.cloture_debut, _cloture.cloture_fin, false)) return null;
@@ -144,21 +191,36 @@
       message: f.nom + ' — jour férié légal, Forest Rangers est fermé.'
     };
 
-    var p = periodePour(d);
-    if (p) {
-      if (p.type === 'promenades') {
-        var vise = (service === 'walking');
-        return {
-          type: 'promenades', nom: p.nom, bloque: vise,
-          message: p.nom + ' — les promenades sont suspendues sur cette période. '
-                 + (vise ? 'Choisissez une autre date, ou la crèche du jour / la pension.'
-                         : 'La crèche du jour et la pension restent disponibles.')
-        };
+    // Périodes saisies par l'admin, puis vacances de Noël. Chaque période
+    // ferme une liste de services (v2.67 : colonne services ; sinon
+    // fermeture = tout, promenades = Dog Walking).
+    var cands = periodesPour(d);
+    var noel = vacancesNoelPour(d);
+    if (noel) cands.push(noel);
+    if (cands.length) {
+      var p = null;
+      if (service) {
+        for (var k = 0; k < cands.length; k++) if (servicesFermes(cands[k]).indexOf(service) !== -1) { p = cands[k]; break; }
       }
-      return {
-        type: 'fermeture', nom: p.nom, bloque: true,
-        message: p.nom + ' — aucune prestation sur cette période.'
-      };
+      var bloque = !!p;
+      if (!p) {                                  // vue générale (admin) ou service resté ouvert
+        p = cands[0];
+        for (var m = 0; m < cands.length; m++) if (servicesFermes(cands[m]).length > servicesFermes(p).length) p = cands[m];
+        if (!service) bloque = servicesFermes(p).length === 3;
+      }
+      var sf = servicesFermes(p);
+      var type = sf.length === 3 ? 'fermeture' : (sf.length === 1 && sf[0] === 'walking') ? 'promenades' : 'partielle';
+      var ouverts = TOUS_SERVICES.filter(function (x) { return sf.indexOf(x) === -1; });
+      var msg;
+      if (type === 'fermeture') msg = p.nom + ' — aucune prestation sur cette période.';
+      else if (type === 'promenades') msg = p.nom + ' — les promenades sont suspendues sur cette période. '
+                 + (bloque && service === 'walking' ? 'Choisissez une autre date, ou la crèche du jour / la pension.'
+                                                   : 'La crèche du jour et la pension restent disponibles.');
+      else msg = p.nom + ' — ' + sf.map(function (x) { return NOMS_SERVICES[x]; }).join(' et ')
+                 + ' ' + (sf.length > 1 ? 'sont suspendus' : 'est suspendu') + ' sur cette période. '
+                 + (ouverts.length ? ouverts.map(function (x) { return NOMS_SERVICES[x]; }).join(' et ')
+                     + (ouverts.length > 1 ? ' restent disponibles.' : ' reste disponible.') : '');
+      return { type: type, nom: p.nom, bloque: bloque, services: sf, message: msg };
     }
 
     var c = clotureEstivalePour(d);
@@ -174,10 +236,14 @@
     iso: iso,
     feries: feries,
     estJourFerie: estJourFerie,
+    vacancesNoel: vacancesNoel,
+    vacancesNoelPour: vacancesNoelPour,
     charger: charger,
     periodes: periodes,
     estCharge: estCharge,
     periodePour: periodePour,
+    periodesPour: periodesPour,
+    servicesFermes: servicesFermes,
     clotureEstivalePour: clotureEstivalePour,
     dansPeriode: dansPeriode,
     verdict: verdict
