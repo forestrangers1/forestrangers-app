@@ -2596,9 +2596,19 @@ function majSuggestionAnnulation() {
 }
 
 // Prévient le client dans sa messagerie (même table que l'espace client)
-async function notifierClientAnnulation(clientId, texte) {
+// v2.69 : message rédigé dans la langue du client (fiche : « fr » → français,
+// toute autre langue → anglais), au lieu d'être traduit mot à mot à l'affichage.
+async function langueClient(clientId) {
+  try {
+    var r = await db.from('clients').select('langue').eq('id', clientId).maybeSingle();
+    var l = r && r.data && r.data.langue;
+    return l && String(l).toLowerCase() !== 'fr' ? 'en' : 'fr';
+  } catch (e) { return 'fr'; }
+}
+async function notifierClientAnnulation(clientId, texte, texteEn) {
   if (!clientId) return;
   try {
+    if (texteEn && (await langueClient(clientId)) === 'en') texte = texteEn;
     var { error } = await db.from('messages').insert({
       client_id: clientId, expediteur: 'admin', contenu: texte, lu: false
     });
@@ -2634,7 +2644,11 @@ async function confirmerAnnulationResa() {
         'Votre séance du ' + formatDateFR(dateRef) + ' a été annulée'
         + (qui === 'client' ? ' à votre demande.' : ' par Forest Rangers.')
         + (pct > 0 ? ' Elle reste facturée à ' + pct + ' % selon les conditions d\'annulation.' : ' Elle ne vous sera pas facturée.')
-        + ' Le reste de vos séances récurrentes est inchangé.');
+        + ' Le reste de vos séances récurrentes est inchangé.',
+        'Your session on ' + formatDateFR(dateRef) + ' has been cancelled'
+        + (qui === 'client' ? ' at your request.' : ' by Forest Rangers.')
+        + (pct > 0 ? ' It is still charged at ' + pct + '% under the cancellation terms.' : ' It will not be charged.')
+        + ' The rest of your recurring sessions is unchanged.');
       alert('✓ Séance du ' + formatDateFR(dateRef) + ' annulée. Le client a été prévenu.');
     } else if (estRecurrente && window.FR_FACT && FR_FACT.planArretSerie(r, FR_FACT.aujourdhui()).mode !== 'annuler') {
       // Série déjà commencée : arrêtée, pas effacée — les séances faites restent dues
@@ -2647,7 +2661,11 @@ async function confirmerAnnulationResa() {
         'Votre série ' + (SVC_NAMES[r.service] || r.service) + ' est arrêtée à partir du ' + formatDateFR(plan.date)
         + (qui === 'client' ? ', à votre demande.' : ', par Forest Rangers.')
         + (pct > 0 ? ' La séance du ' + formatDateFR(plan.date) + ' reste facturée à ' + pct + ' % selon les conditions d\'annulation.' : ' Aucune séance à venir ne vous sera facturée.')
-        + ' Les ' + plan.tenues + ' séance' + (plan.tenues > 1 ? 's' : '') + ' déjà effectuée' + (plan.tenues > 1 ? 's restent dues' : ' reste due') + '.');
+        + ' Les ' + plan.tenues + ' séance' + (plan.tenues > 1 ? 's' : '') + ' déjà effectuée' + (plan.tenues > 1 ? 's restent dues' : ' reste due') + '.',
+        'Your ' + (SVC_NAMES[r.service] || r.service) + ' series is stopped from ' + formatDateFR(plan.date)
+        + (qui === 'client' ? ', at your request.' : ', by Forest Rangers.')
+        + (pct > 0 ? ' The session on ' + formatDateFR(plan.date) + ' is still charged at ' + pct + '% under the cancellation terms.' : ' No upcoming session will be charged.')
+        + ' The ' + plan.tenues + ' session' + (plan.tenues > 1 ? 's' : '') + ' already done ' + (plan.tenues > 1 ? 'remain' : 'remains') + ' due.');
       alert('✓ Série arrêtée au ' + formatDateFR(plan.date) + ' (' + nA + ' ligne' + (nA > 1 ? 's' : '') + '). Le client a été prévenu.');
     } else {
       var n = await majLignesReservation(r, {
@@ -2659,7 +2677,10 @@ async function confirmerAnnulationResa() {
       await notifierClientAnnulation(r.client_id,
         'Votre réservation ' + (SVC_NAMES[r.service] || r.service) + ' du ' + formatDateFR(r.date_debut)
         + ' a été annulée' + (qui === 'client' ? ' à votre demande.' : ' par Forest Rangers.')
-        + (pct > 0 ? ' Facturation appliquée : ' + pct + ' %.' : ' Aucun montant ne vous sera facturé.'));
+        + (pct > 0 ? ' Facturation appliquée : ' + pct + ' %.' : ' Aucun montant ne vous sera facturé.'),
+        'Your ' + (SVC_NAMES[r.service] || r.service) + ' booking on ' + formatDateFR(r.date_debut)
+        + ' has been cancelled' + (qui === 'client' ? ' at your request.' : ' by Forest Rangers.')
+        + (pct > 0 ? ' Charge applied: ' + pct + '%.' : ' Nothing will be charged.'));
       alert('✓ Réservation annulée (' + n + ' ligne' + (n > 1 ? 's' : '') + '). Le client a été prévenu.');
     }
     document.getElementById('modal-annulation').classList.remove('open');

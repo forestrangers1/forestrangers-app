@@ -1404,6 +1404,12 @@ textarea.form-control { resize: vertical; }
             </div>
           </div>
 
+          <div class="form-group">
+            <label class="form-label">Titre affiché au client</label>
+            <input class="form-control" id="alerte-titre" maxlength="60" placeholder="Information">
+            <div style="font-size:10.5px;color:var(--text-faint);margin-top:5px;">Titre de la bannière dans l'espace client. Vide : « Information ».</div>
+          </div>
+
           <div id="alerte-note" style="display:none;font-size:11px;padding:8px 10px;border-radius:8px;margin-bottom:12px;"></div>
 
           <div class="form-group">
@@ -4250,6 +4256,19 @@ async function loadPlanning() {
 // la table periodes_fermeture. Rien à saisir chaque année.
 function bandeauCalendrier(ds, compact) {
   if (!window.FR_CAL) return '';
+  return bandeauFermeture(ds, compact) + bandeauVacancesScolaires(ds, compact);
+}
+// v2.69 : vacances scolaires (sauf Noël, déjà affiché comme fermeture) —
+// service normal, mais les familles partent : annulations, places libres, pension.
+function bandeauVacancesScolaires(ds, compact) {
+  var vs = FR_CAL.vacancesScolairesPour ? FR_CAL.vacancesScolairesPour(ds) : null;
+  if (!vs || vs.noel) return '';
+  var coul = 'var(--blue, #5a9ae0)';
+  if (compact) return '<div title="' + vs.nom + ' (vacances scolaires)" style="width:100%;height:3px;border-radius:2px;background:' + coul + ';opacity:.6;margin-top:2px;"></div>';
+  return '<div title="Vacances scolaires : service normal" style="font-size:10px;font-weight:600;color:' + coul + ';padding:3px 4px;text-align:center;'
+       + 'background:rgba(90,154,224,0.08);border-radius:4px;margin-bottom:4px;line-height:1.3;">🎒 ' + vs.nom + '</div>';
+}
+function bandeauFermeture(ds, compact) {
   var v = FR_CAL.verdict(ds);
   if (!v) return '';
   var coul = (v.type === 'ferie') ? '#d65c8c' : (v.type === 'fermeture' ? 'var(--red)' : 'var(--amber)');
@@ -4858,9 +4877,19 @@ async function insererMessages(rows, type) {
   return res;
 }
 
-async function notifierClientAnnulation(clientId, texte) {
+// v2.69 : message rédigé dans la langue du client (fiche : « fr » → français,
+// toute autre langue → anglais), au lieu d'être traduit mot à mot à l'affichage.
+async function langueClient(clientId) {
+  try {
+    var r = await db.from('clients').select('langue').eq('id', clientId).maybeSingle();
+    var l = r && r.data && r.data.langue;
+    return l && String(l).toLowerCase() !== 'fr' ? 'en' : 'fr';
+  } catch (e) { return 'fr'; }
+}
+async function notifierClientAnnulation(clientId, texte, texteEn) {
   if (!clientId) return;
   try {
+    if (texteEn && (await langueClient(clientId)) === 'en') texte = texteEn;
     var { error } = (await insererMessages(
       [{ client_id: clientId, expediteur: 'admin', contenu: texte, lu: false }], 'notification'));
     if (error) throw error;
@@ -4919,7 +4948,12 @@ async function confirmerAnnulationResa() {
         + (qui === 'client' ? ' à votre demande.' : ' par Forest Rangers.')
         + (pct > 0 ? ' Elle reste facturée à ' + pct + ' % selon les conditions d\'annulation.' : ' Elle ne vous sera pas facturée.')
         + (partielle ? ' Vos autres chiens sont maintenus sur cette séance.' : '')
-        + ' Le reste de vos séances récurrentes est inchangé.');
+        + ' Le reste de vos séances récurrentes est inchangé.',
+        'Your session on ' + formatDateFR(dateRef) + ' has been cancelled' + (partielle ? ' for ' + nomsCibles.join(' + ') : '')
+        + (qui === 'client' ? ' at your request.' : ' by Forest Rangers.')
+        + (pct > 0 ? ' It is still charged at ' + pct + '% under the cancellation terms.' : ' It will not be charged.')
+        + (partielle ? ' Your other dogs are kept on this session.' : '')
+        + ' The rest of your recurring sessions is unchanged.');
       showToastAdmin('✓ Occurrence du ' + formatDateFR(dateRef) + ' annulee' + mention, 'green');
     } else if (estRecurrente && window.FR_FACT && FR_FACT.planArretSerie(r, FR_FACT.aujourdhui()).mode !== 'annuler') {
       // Série déjà commencée : on l'ARRÊTE (fin avancée) au lieu de l'annuler
@@ -4934,7 +4968,11 @@ async function confirmerAnnulationResa() {
         'Votre série ' + (SVC_NAMES[r.service] || r.service) + mention + ' est arrêtée à partir du ' + formatDateFR(plan.date)
         + (qui === 'client' ? ', à votre demande.' : ', par Forest Rangers.')
         + (pct > 0 ? ' La séance du ' + formatDateFR(plan.date) + ' reste facturée à ' + pct + ' % selon les conditions d\'annulation.' : ' Aucune séance à venir ne vous sera facturée.')
-        + ' Les ' + plan.tenues + ' séance' + (plan.tenues > 1 ? 's' : '') + ' déjà effectuée' + (plan.tenues > 1 ? 's restent dues' : ' reste due') + '.');
+        + ' Les ' + plan.tenues + ' séance' + (plan.tenues > 1 ? 's' : '') + ' déjà effectuée' + (plan.tenues > 1 ? 's restent dues' : ' reste due') + '.',
+        'Your ' + (SVC_NAMES[r.service] || r.service) + ' series' + (partielle ? ' for ' + nomsCibles.join(' + ') : '') + ' is stopped from ' + formatDateFR(plan.date)
+        + (qui === 'client' ? ', at your request.' : ', by Forest Rangers.')
+        + (pct > 0 ? ' The session on ' + formatDateFR(plan.date) + ' is still charged at ' + pct + '% under the cancellation terms.' : ' No upcoming session will be charged.')
+        + ' The ' + plan.tenues + ' session' + (plan.tenues > 1 ? 's' : '') + ' already done ' + (plan.tenues > 1 ? 'remain' : 'remains') + ' due.');
       showToastAdmin('✓ Série arrêtée au ' + formatDateFR(plan.date) + ' (' + nA + ' ligne' + (nA > 1 ? 's' : '') + ')' + mention, 'green');
     } else {
       var payload = { statut: 'annule', annule_par: qui, annulation_tardive: sugg.tardive, facture_pourcentage: pct };
@@ -4951,7 +4989,11 @@ async function confirmerAnnulationResa() {
         'Votre réservation ' + (SVC_NAMES[r.service] || r.service) + ' du ' + formatDateFR(r.date_debut)
         + ' a été annulée' + mention + (qui === 'client' ? ' à votre demande.' : ' par Forest Rangers.')
         + (pct > 0 ? ' Facturation appliquée : ' + pct + ' %.' : ' Aucun montant ne vous sera facturé.')
-        + (partielle ? ' Vos autres chiens sont maintenus.' : ''));
+        + (partielle ? ' Vos autres chiens sont maintenus.' : ''),
+        'Your ' + (SVC_NAMES[r.service] || r.service) + ' booking on ' + formatDateFR(r.date_debut)
+        + ' has been cancelled' + (partielle ? ' for ' + nomsCibles.join(' + ') : '') + (qui === 'client' ? ' at your request.' : ' by Forest Rangers.')
+        + (pct > 0 ? ' Charge applied: ' + pct + '%.' : ' Nothing will be charged.')
+        + (partielle ? ' Your other dogs are kept.' : ''));
       showToastAdmin('✓ Réservation annulée (' + n + ' ligne' + (n>1?'s':'') + ')' + mention, 'green');
     }
     document.getElementById('modal-annulation').classList.remove('open');
@@ -5177,8 +5219,11 @@ function majBadgeMessages(n) {
   if (n > 0) { b.textContent = n; b.style.display = 'flex'; }
   else { b.style.display = 'none'; }
 }
-// Mobile : le bouton « Plus » additionne clients et messages
-function majBadgePlus() { majCompteurNav('mnav-count-plus', (window._nbNouveauxClients || 0) + (window._nbMsgNonLus || 0)); }
+// Mobile (v2.69) : Messages a son bouton dans la barre du bas ; « Plus » compte les nouveaux clients
+function majBadgePlus() {
+  majCompteurNav('mnav-count-plus', window._nbNouveauxClients || 0);
+  majCompteurNav('mnav-count-msg', window._nbMsgNonLus || 0);
+}
 
 // Regroupe par conversation : dernier message + nombre de non-lus
 function conversations() {
@@ -5392,7 +5437,7 @@ var alerteBanniereActive = null;
 //   annulation → notification + SMS, promenade annulee
 var MODELES_ALERTE = {
   'orange-chaleur': {
-    label: 'Orange — chaleur (+25 °C)', niveau: 'orange',
+    label: 'Orange — chaleur (+25 °C)', titre: 'Alerte orange — chaleur', niveau: 'orange',
     texte: "Alerte orange chaleur — {date}\n\n"
          + "Bonjour {prenom},\n\n"
          + "MétéoLux a émis une alerte orange chaleur pour aujourd'hui. Les promenades sont maintenues "
@@ -5402,7 +5447,7 @@ var MODELES_ALERTE = {
     sms: "Forest Rangers : MeteoLux alerte orange chaleur. Promenades maintenues, duree reduite. Laissez de l'eau fraiche a votre chien."
   },
   'orange-froid': {
-    label: 'Orange — froid / neige', niveau: 'orange',
+    label: 'Orange — froid / neige', titre: 'Alerte orange — froid / neige', niveau: 'orange',
     texte: "Alerte orange froid et neige — {date}\n\n"
          + "Bonjour {prenom},\n\n"
          + "MétéoLux a émis une alerte orange froid et neige pour aujourd'hui. Les promenades sont maintenues "
@@ -5412,7 +5457,7 @@ var MODELES_ALERTE = {
     sms: "Forest Rangers : MeteoLux alerte orange froid/neige. Promenades maintenues, duree adaptee. Manteau obligatoire pour les petits chiens (-5C)."
   },
   'orange-pluie': {
-    label: 'Orange — pluie / vent', niveau: 'orange',
+    label: 'Orange — pluie / vent', titre: 'Alerte orange — pluie / vent', niveau: 'orange',
     texte: "Alerte orange pluie et vent — {date}\n\n"
          + "Bonjour {prenom},\n\n"
          + "MétéoLux a émis une alerte orange pluie et vent pour aujourd'hui. Les promenades sont maintenues : "
@@ -5422,7 +5467,7 @@ var MODELES_ALERTE = {
     sms: "Forest Rangers : MeteoLux alerte orange pluie et vent. Promenades maintenues, zones boisees evitees. Veste impermeable conseillee."
   },
   'orange-grele': {
-    label: 'Orange — grêle / orages', niveau: 'orange',
+    label: 'Orange — grêle / orages', titre: 'Alerte orange — grêle / orages', niveau: 'orange',
     texte: "Alerte orange grêle et orages — {date}\n\n"
          + "Bonjour {prenom},\n\n"
          + "MétéoLux a émis une alerte orange grêle et orages pour aujourd'hui. Les promenades sont maintenues "
@@ -5432,7 +5477,7 @@ var MODELES_ALERTE = {
     sms: "Forest Rangers : MeteoLux alerte orange grele. Promenades maintenues mais ecourtees si besoin. Vos chiens seront mis a abri."
   },
   'rouge-canicule': {
-    label: 'Rouge — canicule (promenade adaptée)', niveau: 'canicule',
+    label: 'Rouge — canicule (promenade adaptée)', titre: 'Alerte rouge — canicule', niveau: 'canicule',
     texte: "Alerte rouge canicule — {date}\n\n"
          + "Bonjour {prenom},\n\n"
          + "MétéoLux a émis une alerte rouge canicule. La promenade est maintenue mais adaptée : "
@@ -5444,7 +5489,7 @@ var MODELES_ALERTE = {
     sms: "Forest Rangers : alerte rouge canicule. Promenade maintenue mais reduite a 30 min, pres d'un point d'eau. Hydratez bien votre chien."
   },
   'rouge-tempete': {
-    label: 'Rouge — tempête (annulation)', niveau: 'annulation',
+    label: 'Rouge — tempête (annulation)', titre: 'Alerte rouge — tempête', niveau: 'annulation',
     texte: "Alerte rouge tempête — promenades annulées — {date}\n\n"
          + "Bonjour {prenom},\n\n"
          + "MétéoLux a émis une alerte rouge tempête. Pour la sécurité de vos chiens et de notre équipe, "
@@ -5456,7 +5501,7 @@ var MODELES_ALERTE = {
     sms: "Forest Rangers : alerte rouge tempete. Toutes les promenades du jour sont annulees. Aucune facturation (force majeure)."
   },
   'rouge-verglas': {
-    label: 'Rouge — verglas (annulation)', niveau: 'annulation',
+    label: 'Rouge — verglas (annulation)', titre: 'Alerte rouge — verglas', niveau: 'annulation',
     texte: "Alerte rouge verglas — promenades annulées — {date}\n\n"
          + "Bonjour {prenom},\n\n"
          + "MétéoLux a émis une alerte rouge verglas. Les routes de notre secteur ne permettent pas de circuler "
@@ -5467,7 +5512,7 @@ var MODELES_ALERTE = {
     sms: "Forest Rangers : alerte rouge verglas. Routes dangereuses, toutes les promenades du jour sont annulees. Aucune facturation."
   },
   'rouge-inondation': {
-    label: 'Rouge — inondation (annulation)', niveau: 'annulation',
+    label: 'Rouge — inondation (annulation)', titre: 'Alerte rouge — inondation', niveau: 'annulation',
     texte: "Alerte rouge inondation — promenades annulées — {date}\n\n"
          + "Bonjour {prenom},\n\n"
          + "MétéoLux a émis une alerte rouge inondation et des zones de notre secteur sont impraticables : "
@@ -5478,7 +5523,7 @@ var MODELES_ALERTE = {
     sms: "Forest Rangers : alerte rouge inondation. Zones impraticables, toutes les promenades du jour sont annulees. Aucune facturation."
   },
   'retard': {
-    label: 'Retard de tournée', niveau: 'info',
+    label: 'Retard de tournée', titre: 'Retard de tournée', niveau: 'info',
     texte: "Retard sur la tournée — {date}\n\n"
          + "Bonjour {prenom},\n\n"
          + "Nous vous informons d'un retard sur notre tournée. La récupération de votre chien aura lieu vers "
@@ -5487,7 +5532,7 @@ var MODELES_ALERTE = {
          + "L'équipe Forest Rangers",
     sms: "Forest Rangers : retard sur la tournee du jour. Recuperation de votre chien vers [heure]. Merci de votre comprehension."
   },
-  'libre': { label: 'Message libre (annonce, congés…)', niveau: 'info', texte: '', sms: '' }
+  'libre': { label: 'Message libre (annonce, congés…)', titre: 'Information', niveau: 'info', texte: '', sms: '' }
 };
 
 var NIVEAU_INFO = {
@@ -5527,6 +5572,8 @@ function appliquerModeleAlerte() {
   if (ta) ta.value = alerteRemplacerDate(mod.texte);
   var sms = document.getElementById('alerte-sms');
   if (sms) sms.value = mod.sms || '';
+  var tit = document.getElementById('alerte-titre');
+  if (tit) tit.value = mod.titre || 'Information';   // v2.70 : titre vu par le client (plus le nom du modèle)
 
   // Le bouton d'annulation n'apparaît que pour une alerte rouge « annulation »
   var btnA = document.getElementById('alerte-btn-annuler');
@@ -5700,8 +5747,13 @@ async function annulerPromenadesJour() {
     var texte = 'Votre promenade du ' + jourFR + ' est annulée en raison de l\'alerte météo rouge. '
               + 'Conformément à nos conditions générales (force majeure), elle ne vous est pas facturée. '
               + 'Le Day Care et la pension sont assurés normalement.';
+    var texteEn = 'Your walk on ' + jourFR + ' is cancelled due to the red weather alert. '
+              + 'Under our terms and conditions (force majeure), it will not be charged. '
+              + 'Day Care and boarding are provided as usual.';
     try {
-      var rows = clients.map(function(id) { return { client_id: id, expediteur: 'admin', contenu: texte, lu: false }; });
+      var lgs = {};
+      try { var rl = await db.from('clients').select('id,langue').in('id', clients); (rl.data || []).forEach(function(c) { lgs[c.id] = c.langue && String(c.langue).toLowerCase() !== 'fr' ? 'en' : 'fr'; }); } catch (eL) {}
+      var rows = clients.map(function(id) { return { client_id: id, expediteur: 'admin', contenu: lgs[id] === 'en' ? texteEn : texte, lu: false }; });
       for (var k = 0; k < rows.length; k += 50) {
         var rm = await insererMessages(rows.slice(k, k + 50), 'notification');
         if (rm.error) throw rm.error;
@@ -5973,7 +6025,8 @@ async function publierBanniere() {
     await db.from('alertes_meteo').update({ actif: false }).eq('date_alerte', ds).eq('actif', true);
     var r = await db.from('alertes_meteo').insert({
       date_alerte: ds, niveau: mod.niveau || 'info',
-      titre: mod.label, message: alerteRemplacerDate(court), actif: true
+      titre: ((document.getElementById('alerte-titre') || {}).value || '').trim() || 'Information',
+      message: alerteRemplacerDate(court), actif: true
     });
     if (r.error) throw r.error;
     chargerBanniereActive();
@@ -6827,9 +6880,10 @@ if ('serviceWorker' in navigator) {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
     Planning
   </div>
-  <div class="mobile-nav-item" id="mnav-staff" onclick="nav('staff',this);setMobileNav(this)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-    Staff
+  <div class="mobile-nav-item" id="mnav-messages" onclick="nav('messages',this);setMobileNav(this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+    Messages
+    <span class="mobile-nav-badge" id="mnav-count-msg" style="display:none;">0</span>
   </div>
   <div class="mobile-nav-item" id="mnav-reservations" onclick="nav('reservations',this);setMobileNav(this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
@@ -6846,6 +6900,9 @@ if ('serviceWorker' in navigator) {
 <!-- MENU PLUS MOBILE -->
 <div id="mobile-more-menu" style="display:none;position:fixed;bottom:65px;left:0;right:0;background:var(--k800);border-top:1px solid var(--border);z-index:199;padding:12px 14px;">
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div onclick="nav('staff',this);toggleMobileMenu()" style="padding:12px;background:var(--k700);border-radius:10px;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text);">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Staff / Rangers
+    </div>
     <div onclick="nav('clients',this);toggleMobileMenu()" style="padding:12px;background:var(--k700);border-radius:10px;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text);">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Clients
     </div>
@@ -7411,7 +7468,7 @@ document.addEventListener('click', function(e) {
     <div style="font-size:12px;color:#9aa08c;margin:4px 0 22px;">Administration — connexion requise</div>
 
     <label style="display:block;font-size:11px;color:#9aa08c;margin-bottom:6px;">Email</label>
-    <input id="fr-login-email" type="email" autocomplete="username" placeholder="forestrangerslux@gmail.com"
+    <input id="fr-login-email" type="email" autocomplete="username" placeholder="votre@email.lu"
       style="width:100%;box-sizing:border-box;background:#22271a;border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:12px 14px;color:#eceee6;font-size:14px;margin-bottom:14px;outline:none;">
 
     <label style="display:block;font-size:11px;color:#9aa08c;margin-bottom:6px;">Mot de passe</label>

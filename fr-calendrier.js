@@ -75,23 +75,67 @@
     return null;
   }
 
-  // ── Vacances scolaires de Noël (v2.66) ─────────────────────────
+  // ── Vacances scolaires (v2.69) ─────────────────────────────────
+  // Calendrier officiel du ministère (MENJE, men.public.lu), publié
+  // jusqu'en 2028-2029. Seules les vacances de Noël changent le service
+  // (promenades suspendues) ; les autres sont affichées au planning admin
+  // pour anticiper les départs des familles (« service normal »).
+  var VACANCES_SCOLAIRES = [
+    ['2026-10-31', '2026-11-08', 'Toussaint'], ['2026-12-19', '2027-01-03', 'Noël'],
+    ['2027-02-06', '2027-02-14', 'Carnaval'],  ['2027-03-27', '2027-04-11', 'Pâques'],
+    ['2027-05-29', '2027-06-06', 'Pentecôte'], ['2027-07-16', '2027-09-14', 'été'],
+    ['2027-10-30', '2027-11-07', 'Toussaint'], ['2027-12-06', '2027-12-06', 'Saint-Nicolas (fondamental)'],
+    ['2027-12-18', '2028-01-02', 'Noël'],      ['2028-02-12', '2028-02-20', 'Carnaval'],
+    ['2028-04-01', '2028-04-16', 'Pâques'],    ['2028-05-27', '2028-06-04', 'Pentecôte'],
+    ['2028-07-14', '2028-09-14', 'été'],
+    ['2028-10-28', '2028-11-05', 'Toussaint'], ['2028-12-06', '2028-12-06', 'Saint-Nicolas (fondamental)'],
+    ['2028-12-16', '2028-12-31', 'Noël'],      ['2029-02-10', '2029-02-18', 'Carnaval'],
+    ['2029-03-31', '2029-04-15', 'Pâques'],    ['2029-05-19', '2029-05-27', 'Pentecôte'],
+    ['2029-07-13', '2029-09-16', 'été']
+  ];
+  function nomVacances(n) {
+    if (n === 'été') return 'Vacances d\'été';
+    if (/^Saint-Nicolas/.test(n)) return 'Saint-Nicolas (école fondamentale)';
+    return (n === 'Noël' || n === 'Pâques' ? 'Vacances de ' : 'Congé de ') + (n === 'Toussaint' || n === 'Pentecôte' ? 'la ' : '') + n;
+  }
+  function vacancesScolairesPour(dateISO) {
+    var d = jour(dateISO);
+    for (var i = 0; i < VACANCES_SCOLAIRES.length; i++) {
+      var v = VACANCES_SCOLAIRES[i];
+      if (d >= v[0] && d <= v[1]) return { nom: nomVacances(v[2]), cle: v[2], debut: v[0], fin: v[1], noel: v[2] === 'Noël' };
+    }
+    return null;
+  }
+
+  // ── Vacances scolaires de Noël (v2.66, corrigé v2.69) ───────────
   // Promenades suspendues pendant les deux semaines des vacances
-  // scolaires de Noël, sans rien saisir : comme les fériés, la période
-  // est calculée. Règle du ministère (MENJE) : du samedi qui précède la
-  // semaine de Noël au dimanche, quinze jours plus tard.
+  // scolaires de Noël, sans rien saisir. Dates officielles quand elles
+  // sont publiées (liste ci-dessus) ; au-delà, règle qui les retrouve
+  // toutes : les deux semaines (samedi → dimanche) qui finissent le
+  // dimanche le plus proche du 1er janvier.
   //   2025-26 : 20 déc. → 4 janv. · 2026-27 : 19 déc. → 3 janv.
-  //   2027-28 : 18 déc. → 2 janv.  (calendriers officiels publiés)
+  //   2027-28 : 18 déc. → 2 janv. · 2028-29 : 16 déc. → 31 déc.
+  // (l'ancienne règle donnait 23 déc. → 7 janv. pour 2028-29.)
   // La crèche du jour et la pension restent ouvertes.
   var _noel = {};
   function vacancesNoel(annee) {          // période qui commence en décembre de `annee`
     annee = parseInt(annee, 10);
     if (!_noel[annee]) {
-      var noel = new Date(annee, 11, 25);
-      var lundi = new Date(annee, 11, 25 - ((noel.getDay() + 6) % 7));
-      var debut = new Date(lundi); debut.setDate(lundi.getDate() - 2);
-      var fin = new Date(debut); fin.setDate(debut.getDate() + 15);
-      _noel[annee] = { nom: 'Vacances scolaires de Noël', type: 'promenades', debut: iso(debut), fin: iso(fin) };
+      var off = null;
+      for (var i = 0; i < VACANCES_SCOLAIRES.length; i++) {
+        var v = VACANCES_SCOLAIRES[i];
+        if (v[2] === 'Noël' && v[0].slice(0, 4) === String(annee)) off = v;
+      }
+      var debut, fin;
+      if (off) { debut = off[0]; fin = off[1]; }
+      else {
+        var nouvelAn = new Date(annee + 1, 0, 1), w = nouvelAn.getDay();      // 0 = dimanche
+        var f = new Date(nouvelAn);
+        f.setDate(1 + (w === 0 ? 0 : (7 - w <= w ? 7 - w : -w)));             // dimanche le plus proche
+        var dd = new Date(f); dd.setDate(f.getDate() - 15);
+        debut = iso(dd); fin = iso(f);
+      }
+      _noel[annee] = { nom: 'Vacances scolaires de Noël', type: 'promenades', debut: debut, fin: fin };
     }
     return _noel[annee];
   }
@@ -238,6 +282,7 @@
     estJourFerie: estJourFerie,
     vacancesNoel: vacancesNoel,
     vacancesNoelPour: vacancesNoelPour,
+    vacancesScolairesPour: vacancesScolairesPour,
     charger: charger,
     periodes: periodes,
     estCharge: estCharge,
