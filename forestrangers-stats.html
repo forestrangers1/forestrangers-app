@@ -144,6 +144,7 @@ html, body { min-height: 100vh; font-family: 'Instrument Sans', sans-serif; back
 /* ── TABLE ── */
 .tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
 .tbl th { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-faint); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 700; }
+.tbl th.num, .tbl td.num { text-align: right; white-space: nowrap; }
 .tbl td { padding: 9px 12px; border-bottom: 1px solid var(--border); color: var(--text-dim); vertical-align: middle; }
 .tbl tr:last-child td { border-bottom: none; }
 .tbl tr:hover td { background: var(--surface2); }
@@ -438,6 +439,21 @@ async function chargerDonnees(debut, fin) {
     suivi: {}, paiements: res[5].filter(function(p) { return okC[p.client_id] && !p.annule_le; }),
     staff: res[6], camionnettes: res[7], km: res[8], attributions: res[9] };
   res[4].forEach(function(s) { D.suivi[s.id] = s; });
+  // v2.71 : comptes test — hors de toutes les statistiques, résumés à part
+  var testeurs = res[0].filter(function(c) { return c.is_test; }), okT = {};
+  testeurs.forEach(function(c) { okT[c.id] = c; });
+  var resasT = res[2].filter(function(r) { return okT[r.client_id] && r.date_debut && String(r.date_fin_recurrence || r.date_fin || r.date_debut).slice(0, 10) >= debut; });
+  var annT = [], idsT = resasT.map(function(r) { return r.id; });
+  for (var k = 0; k < idsT.length; k += 150) {
+    try {
+      var at = await db.from('annulations_occurrences').select('reservation_id, date_occurrence, annule_par, annulation_tardive, facture_pourcentage')
+        .in('reservation_id', idsT.slice(k, k + 150)).gte('date_occurrence', debut).lte('date_occurrence', fin);
+      if (!at.error && at.data) annT = annT.concat(at.data);
+    } catch (e) {}
+  }
+  D.testeurs = { clients: testeurs, resas: resasT, annulations: annT,
+    chiens: res[1].filter(function(c) { return okT[c.client_id]; }),
+    factures: res[3].filter(function(f) { return okT[f.client_id]; }) };
   D.chiensParClient = {}; D.chiens.forEach(function(c) { (D.chiensParClient[c.client_id] = D.chiensParClient[c.client_id] || []).push(c); });
   D.resasParClient = {}; D.resas.forEach(function(r) { (D.resasParClient[r.client_id] = D.resasParClient[r.client_id] || []).push(r); });
   D.annParResa = {}; ann.forEach(function(a) { (D.annParResa[a.reservation_id] = D.annParResa[a.reservation_id] || []).push(a); });
@@ -580,9 +596,31 @@ function renderStats() {
   h += sectionClients(b, A, AP, EV, idxCourant);
   h += sectionEquipe(b);
   h += sectionCamionnettes(b, EV, idxCourant);
+  h += sectionTesteurs(b);
   document.getElementById('stats-content').innerHTML = h;
   dessiner(b, C, A, EV, idxCourant);
   majProj();
+}
+
+// ── COMPTES TEST (v2.71) : phase de test, jamais mélangés aux chiffres ──
+function sectionTesteurs(b) {
+  var T = ST.testeurs;
+  if (!T || !T.clients.length) return '';
+  var lignes = T.clients.map(function(c) {
+    var rs = T.resas.filter(function(r) { return r.client_id === c.id && String(r.date_debut).slice(0, 10) <= b.fin; });
+    var an = T.annulations.filter(function(a) { return rs.some(function(r) { return r.id === a.reservation_id; }); });
+    var res = rs.length ? FR_FACT.calculer({ client: c, chiens: T.chiens.filter(function(d) { return d.client_id === c.id; }), reservations: rs, annulations: an }, b.debut, b.fin, {}) : null;
+    var nbAnn = 0; if (res) res.seances.forEach(function(s) { nbAnn += s.annules.length; });
+    var fac = T.factures.filter(function(f) { return f.client_id === c.id && String(f.periode || '') >= b.debut.slice(0, 7) && String(f.periode || '') <= b.fin.slice(0, 7); });
+    return '<tr><td>' + esc((c.prenom || '') + ' ' + (c.nom || '')) + ' <span style="color:var(--text-faint);">#' + esc(c.numero_client || '—') + '</span></td>'
+      + '<td class="num">' + (res ? res.nb_seances : 0) + '</td><td class="num">' + nbAnn + '</td>'
+      + '<td class="num">' + eur(res ? res.total_ttc : 0) + '</td>'
+      + '<td class="num">' + fac.length + (fac.length ? ' · ' + eur(somme(fac, 'total_ttc')) : '') + '</td></tr>';
+  }).join('');
+  return '<div style="margin-top:10px;">' + carte('Comptes test — phase de test',
+      '<div style="overflow-x:auto;"><table class="tbl" style="width:100%;font-size:12.5px;"><thead><tr><th style="text-align:left;">Testeur</th><th class="num">Séances</th><th class="num">Annulations</th><th class="num">Valeur (fictive)</th><th class="num">Factures test</th></tr></thead><tbody>' + lignes + '</tbody></table></div>'
+      + '<div class="card-note">Ces comptes reçoivent tout (emails, factures marquées « test — à ne pas payer ») mais ne comptent dans aucun chiffre ci-dessus.</div>',
+      '<span class="badge b-muted">' + T.clients.length + ' compte' + (T.clients.length > 1 ? 's' : '') + '</span>') + '</div>';
 }
 
 // ── HTML : aides ──

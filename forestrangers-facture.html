@@ -9,7 +9,9 @@
 <script>
   try { if (window.self !== window.top || new URLSearchParams(location.search).get('embed') === '1') document.documentElement.classList.add('embed'); } catch (e) { document.documentElement.classList.add('embed'); }
 </script>
-<style>html.embed .sidebar { display: none !important; }</style>
+<style>html.embed .sidebar { display: none !important; }
+/* v2.71 : dans l'admin, le jour / nuit est celui de l'admin (relayé à la facture) */
+html.embed .theme-toggle { display: none !important; }</style>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <!-- Correctif police : FRDisplay etait appelee dans font-family sans jamais
      etre chargee. Elle ne s'affichait que sur les machines ou elle est
@@ -659,6 +661,11 @@ html.light .actions-bar  { background: #f6f7f2; border-top-color: rgba(0,0,0,0.0
                 <div class="inv-date-val" id="inv-periode">—</div>
               </div>
             </div>
+          </div>
+
+          <!-- Compte test (v2.71) -->
+          <div id="inv-test-banner" style="display:none;background:#c62828;color:#fff;text-align:center;font-family:'FRDisplay','Oswald','Arial Narrow',sans-serif;font-weight:800;font-size:13px;letter-spacing:0.06em;padding:8px 10px;">
+            FACTURE TEST — À NE PAS PAYER · compte de test Forest Rangers
           </div>
 
           <!-- Body -->
@@ -1440,6 +1447,14 @@ async function initFactureExistante(id) {
 function updateStatusPill() {
   var statut = document.getElementById('facture-statut-input').value;
   var pill = document.getElementById('inv-status-pill');
+  var estTest = !!(currentClient && currentClient.is_test);
+  var ban = document.getElementById('inv-test-banner');
+  if (ban) ban.style.display = estTest ? '' : 'none';
+  if (estTest && statut !== 'avoir' && statut !== 'annulee') {
+    pill.className = 'inv-status-pill late';
+    pill.innerHTML = '<div class="inv-status-dot"></div>Facture test — à ne pas payer';
+    return;
+  }
   var echeance = document.getElementById('facture-echeance-input').value;
   var today = new Date(); today.setHours(0, 0, 0, 0);
   if (statut === 'avoir') {

@@ -389,6 +389,23 @@ html.light .brand-name .rangers { color: var(--accent); }
 
 /* ─── GRID ─── */
 .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+/* v2.72 : messagerie sur mobile — la conversation s'ouvre en plein écran */
+.msg-retour { display: none; }
+@media (max-width: 768px) {
+  #page-messages.conv-ouverte { animation: none !important; transform: none !important; }   /* sinon « fixed » suit la page */
+  #page-messages.conv-ouverte #msg-inbox-card { display: none; }
+  #page-messages:not(.conv-ouverte) #msg-thread-card { display: none; }
+  #page-messages.conv-ouverte #msg-thread-card {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 65px; z-index: 150; margin: 0; border-radius: 0;
+    display: flex; flex-direction: column; background: var(--surface);
+  }
+  #page-messages.conv-ouverte #msg-thread-card .card-head { flex-shrink: 0; }
+  #page-messages.conv-ouverte #msg-thread-body { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 10px 12px; }
+  #page-messages.conv-ouverte #msg-thread { flex: 1; max-height: none !important; min-height: 0; }
+  #page-messages.conv-ouverte #msg-reply-box .form-label { display: none; }
+  #page-messages.conv-ouverte #msg-reply { min-height: 64px; }
+  #page-messages.conv-ouverte .msg-retour { display: inline-flex; }
+}
 .g31 { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; }
 .g5 { display: grid; grid-template-columns: repeat(5,1fr); gap: 12px; }
 
@@ -1192,7 +1209,7 @@ textarea.form-control { resize: vertical; }
         <div style="padding:12px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <input type="month" class="form-control" id="fm-periode" style="width:auto;padding:5px 10px;font-size:12px;">
           <label style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-dim);cursor:pointer;">
-            <input type="checkbox" id="fm-tests"> inclure les comptes test (emails vers info@)
+            <input type="checkbox" id="fm-tests" checked> inclure les comptes test (factures marquées « test — à ne pas payer », envoyées aux testeurs)
           </label>
           <span style="flex:1;"></span>
           <button class="rc-btn" onclick="facturationMensuelle('essai')">Aperçu — rien n'est envoyé</button>
@@ -1337,7 +1354,7 @@ textarea.form-control { resize: vertical; }
     <div class="page" id="page-messages">
 
       <div class="g2" style="margin-bottom:14px;">
-        <div class="card">
+        <div class="card" id="msg-inbox-card">
           <div class="card-head">
             <span class="card-title">Boite de reception</span>
             <div style="display:flex;gap:6px;">
@@ -1355,9 +1372,12 @@ textarea.form-control { resize: vertical; }
           </div>
         </div>
 
-        <div class="card">
-          <div class="card-head"><span class="card-title" id="msg-thread-title">Conversation</span></div>
-          <div class="card-body">
+        <div class="card" id="msg-thread-card">
+          <div class="card-head">
+            <button class="btn btn-outline msg-retour" onclick="fermerConversationMobile()" style="padding:5px 10px;font-size:11.5px;margin-right:8px;">← Messages</button>
+            <span class="card-title" id="msg-thread-title">Conversation</span>
+          </div>
+          <div class="card-body" id="msg-thread-body">
             <div id="msg-nouveau-box" style="display:none;margin-bottom:12px;">
               <div class="form-group" style="margin-bottom:0;">
                 <label class="form-label">Destinataire</label>
@@ -1577,9 +1597,13 @@ async function loadReservationsAdmin() {
     // Maps clients + chiens
     var clientsMap={}, chiensMap={};
     var cids=[...new Set(resas.filter(function(r){return r.client_id;}).map(function(r){return r.client_id;}))];
-    if (cids.length){ var rc=await db.from('clients').select('id,prenom,nom').in('id',cids); (rc.data||[]).forEach(function(c){clientsMap[c.id]=c;}); }
-    var dids=[...new Set(resas.filter(function(r){return r.chien_id;}).map(function(r){return r.chien_id;}))];
-    if (dids.length){ var rd=await db.from('chiens').select('id,nom').in('id',dids); (rd.data||[]).forEach(function(d){chiensMap[d.id]=d;}); }
+    // v2.72 : fiche complète (tarifs) et tous les chiens des clients — « tous les chiens » et montant calculé
+    var chiensClient={};
+    if (cids.length){
+      var rc=await db.from('clients').select('*').in('id',cids); (rc.data||[]).forEach(function(c){clientsMap[c.id]=c;});
+      var rd=await db.from('chiens').select('id,nom,client_id,actif').in('client_id',cids);
+      (rd.data||[]).forEach(function(d){ chiensMap[d.id]=d; (chiensClient[d.client_id]=chiensClient[d.client_id]||[]).push(d); });
+    }
 
     // Regrouper les lignes (1 par chien) en réservations
     var groups={};
@@ -1588,9 +1612,24 @@ async function loadReservationsAdmin() {
       if(!groups[key]) groups[key]={ id:r.id, client_id:r.client_id, service:r.service, creneau:r.creneau, statut:r.statut, date_debut:r.date_debut, date_fin:r.date_fin, ranger_nom:r.ranger_nom, dates_exclues:r.dates_exclues, created_at:r.created_at, cree_par:r.cree_par, montant:0, dogs:[] };
       var g=groups[key];
       g.montant += parseFloat(r.montant_ttc)||0;
+      (g._rows=g._rows||[]).push(r);
       if (r.chien_id && chiensMap[r.chien_id]) g.dogs.push(chiensMap[r.chien_id].nom);
+      else if (!r.chien_id) (chiensClient[r.client_id]||[]).forEach(function(d){ if (d.actif!==false && g.dogs.indexOf(d.nom)===-1) g.dogs.push(d.nom); });
     });
     var list=Object.keys(groups).map(function(k){return groups[k];});
+    // Montant absent (réservation créée par l'admin avant la v2.72) : calculé comme la facture
+    if (window.FR_FACT) {
+      try { await assurerCalendrier(); await FR_FACT.chargerTarifs(db); } catch(eT) {}
+      list.forEach(function(g){
+        if (g.montant > 0 || g.statut === 'annule' || !clientsMap[g.client_id]) return;
+        try {
+          var rows = g._rows || [], f0 = null;
+          rows.forEach(function(r){ var f = String(r.date_fin_recurrence||r.date_fin||r.date_debut).slice(0,10); if (!f0 || f > f0) f0 = f; });
+          var res = FR_FACT.calculer({ client: clientsMap[g.client_id], chiens: chiensClient[g.client_id]||[], reservations: rows, annulations: [] }, String(g.date_debut).slice(0,10), f0, {});
+          g.montant = res.total_ttc || 0; g._calcule = true;
+        } catch(eC) {}
+      });
+    }
     // Tri demande par Gabriel : ordre dans lequel les clients ont reserve,
     // la demande la plus recente en tete (et non la date de prestation).
     list.sort(function(a,b){
@@ -1763,6 +1802,12 @@ function rechargerPageActive() {
 }
 
 function nav(id, el) {
+  // v2.73 : page inconnue → on reste sur le tableau de bord (plus de page blanche)
+  if (!document.getElementById('page-' + id)) {
+    console.warn('nav : page inconnue « ' + id + ' »');
+    if (id === 'dashboard') return;
+    id = 'dashboard'; el = document.querySelector('.nav-item[onclick*="\'dashboard\'"]');
+  }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
@@ -2591,7 +2636,8 @@ function rcEur(n) { return (parseFloat(n) || 0).toLocaleString('fr-LU', { minimu
 function rcEur0(n) { return (parseFloat(n) || 0).toLocaleString('fr-LU', { maximumFractionDigits: 0 }) + ' €'; }
 function rcEsc(v) { return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function rcDate(d) { if (!d) return '—'; var x = String(d).slice(0,10).split('-'); return x.length === 3 ? x[2] + '/' + x[1] + '/' + x[0] : d; }
-function rcNomClient(id) { var c = RC.clients[id]; return c ? ((c.prenom || '') + ' ' + (c.nom || '')).trim() : '—'; }
+function rcNomClient(id) { var c = RC.clients[id]; return c ? ((c.prenom || '') + ' ' + (c.nom || '')).trim() + (c.is_test ? ' · test' : '') : '—'; }
+function rcReel(x) { var c = RC.clients[x.client_id]; return !(c && c.is_test); }   // hors comptes test (chiffres)
 var RC_ETAPES = { rappel_1: 'Rappel 1', rappel_2: 'Rappel 2 (+ frais)', mise_en_demeure: 'Mise en demeure' };
 
 // ── FACTURATION DU 1er (fonction Edge fr-facturation-mensuelle) ──
@@ -2619,7 +2665,7 @@ async function facturationMensuelle(mode) {
   var box = document.getElementById('fm-resultat');
   if (!periode) { showToastAdmin('Choisissez le mois', 'amber'); return; }
   if (mode === 'envoi' && !confirm('Facturer ' + periode + ' et envoyer les factures par email maintenant ?\n\n'
-      + 'Les clients déjà facturés pour ce mois sont sautés.' + (tests ? '\nComptes test inclus : leurs emails partent vers info@forestrangers.lu.' : ''))) return;
+      + 'Les clients déjà facturés pour ce mois sont sautés.' + (tests ? '\nComptes test inclus : facture « test — à ne pas payer » envoyée à chaque testeur.' : ''))) return;
   box.innerHTML = '<div style="padding:8px 0;">' + (mode === 'envoi' ? 'Facturation en cours… (environ 2 secondes par client)' : 'Calcul…') + '</div>';
   try {
     var res = await db.functions.invoke('fr-facturation-mensuelle', { body: { mode: mode, periode: periode, avec_tests: tests } });
@@ -2671,9 +2717,11 @@ async function loadFacturesAdmin() {
     var cl = await db.from('clients').select('id,prenom,nom,email,numero_client,is_test,langue');
     RC.clients = {};
     (cl.data || []).forEach(function(c) { RC.clients[c.id] = c; });
-    RC.factures = (v.data || []).filter(function(f) { var c = RC.clients[f.client_id]; return !(c && c.is_test); });
+    // v2.71 : les comptes test sont facturés comme les autres (phase de test) :
+    // visibles ici avec un badge « Test », exclus des chiffres (rcReel).
+    RC.factures = v.data || [];
     var sit = await db.from('v_clients_recouvrement').select('*');
-    RC.situation = (sit.data || []).filter(function(c) { var x = RC.clients[c.client_id]; return !(x && x.is_test); });
+    RC.situation = sit.data || [];
     var pa = await db.from('paiements').select('*').order('date_virement', { ascending: false }).order('created_at', { ascending: false }).limit(30);
     RC.paiements = pa.data || [];
     // Journal des emails (v32) : date d'envoi de chaque facture. Absent → on n'affiche rien.
@@ -2703,13 +2751,13 @@ function renderStatsFactures() {
   if (!el) return;
   var now = new Date();
   var mois = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-  var encaisse = RC.paiements.filter(function(p) { return !p.annule_le && String(p.date_virement).slice(0, 7) === mois; })
+  var encaisse = RC.paiements.filter(function(p) { return rcReel(p) && !p.annule_le && String(p.date_virement).slice(0, 7) === mois; })
                              .reduce(function(a, p) { return a + (parseFloat(p.montant) || 0); }, 0);
-  var ouvertes = RC.factures.filter(function(f) { return parseFloat(f.solde) > 0; });
+  var ouvertes = RC.factures.filter(function(f) { return rcReel(f) && parseFloat(f.solde) > 0; });
   var du = ouvertes.reduce(function(a, f) { return a + (parseFloat(f.solde) || 0); }, 0);
   var retard = ouvertes.filter(function(f) { return (f.jours_retard || 0) > 0; });
   var aTraiter = RC.factures.filter(function(f) { return f.etape_suggeree; });
-  var emises = RC.factures.filter(function(f) { return String(f.date_emission || '').slice(0, 7) === mois; });
+  var emises = RC.factures.filter(function(f) { return rcReel(f) && String(f.date_emission || '').slice(0, 7) === mois; });
   function card(cls, label, val, sub) {
     return '<div class="stat-card ' + cls + '"><div class="stat-accent-bar"></div><div class="stat-label">' + label
       + '</div><div class="stat-val">' + val + '</div>' + (sub ? '<div class="stat-sub">' + sub + '</div>' : '') + '</div>';
@@ -2793,8 +2841,7 @@ async function chargerRegularisations() {
   if (!card || !el || !window.FR_FACT || !FR_FACT.aRegulariser) return;
   try {
     var liste = await FR_FACT.aRegulariser(db, {});
-    liste = liste.filter(function(x) { return !(x.client && x.client.is_test); });
-    window._regul = liste;
+    window._regul = liste;   // v2.71 : comptes test inclus
     card.style.display = liste.length ? '' : 'none';
     el.innerHTML = liste.map(function(x, i) {
       var nom = x.client ? ((x.client.prenom || '') + ' ' + (x.client.nom || '')).trim() : '—';
@@ -2853,7 +2900,7 @@ function renderSituationClients() {
 function renderPaiements() {
   var card = document.getElementById('paiements-card'), el = document.getElementById('paiements-list');
   if (!card || !el) return;
-  var liste = RC.paiements.filter(function(p) { var c = RC.clients[p.client_id]; return !(c && c.is_test); });
+  var liste = RC.paiements;   // v2.71 : paiements des comptes test visibles (« · test »)
   card.style.display = liste.length ? '' : 'none';
   el.innerHTML = liste.map(function(p) {
     var annule = !!p.annule_le;
@@ -2891,7 +2938,7 @@ async function ouvrirPaiement(opts) {
     var cl = await db.from('clients').select('id,prenom,nom,email,numero_client,is_test,langue');
     (cl.data || []).forEach(function(c) { RC.clients[c.id] = c; });
   }
-  var ids = Object.keys(RC.clients).filter(function(id) { return !RC.clients[id].is_test; })
+  var ids = Object.keys(RC.clients)   // v2.71 : comptes test inclus (essai du pointage)
     .sort(function(a, b) { return rcNomClient(a).localeCompare(rcNomClient(b)); });
   sel.innerHTML = '<option value="">— Choisir —</option>' + ids.map(function(id) {
     var c = RC.clients[id];
@@ -4671,8 +4718,9 @@ async function openResaDetail(id, dateOccurrence) {
             + ' (' + euros(ht) + ' HT + ' + euros(totalTTC - ht) + ' TVA)'
             + (nbS > 0 ? ' · ' + nbS + (nbS > 1 ? ' séances' : ' séance') : '');
         } else {
-          montantEl.textContent = 'Montant non chiffré sur cette réservation';
+          montantEl.textContent = 'Calcul du montant…';
           montantEl.style.color = 'var(--text-faint)';
+          montantEl.setAttribute('data-a-chiffrer', '1');
         }
       } catch(em) { console.error('montant detail:', em); }
     }
@@ -4711,7 +4759,38 @@ async function openResaDetail(id, dateOccurrence) {
     else { annInfo.style.display = 'none'; }
 
     document.getElementById('modal-resa-detail').classList.add('open');
+    completerMontantsResaAdmin(r);
   } catch(e) { showToastAdmin('Erreur chargement réservation', 'red'); console.error(e); }
+}
+
+// v2.71 : montant prévu et coût de chaque annulation (moteur de la facture)
+async function completerMontantsResaAdmin(r) {
+  if (!window.FR_FACT || !FR_FACT.detailReservation) return;
+  var montantEl = document.getElementById('detail-montant-info');
+  try {
+    var q = db.from('reservations').select('*').eq('client_id', r.client_id).eq('service', r.service).eq('date_debut', r.date_debut).eq('statut', r.statut);
+    q = r.date_fin ? q.eq('date_fin', r.date_fin) : q.is('date_fin', null);
+    q = r.creneau ? q.eq('creneau', r.creneau) : q.is('creneau', null);
+    var rr = await Promise.all([q, db.from('clients').select('*').eq('id', r.client_id).maybeSingle(), db.from('chiens').select('id,nom,client_id,actif').eq('client_id', r.client_id)]);
+    var lignes = (rr[0].data && rr[0].data.length) ? rr[0].data : [r];
+    var d = await FR_FACT.detailReservation(db, lignes, rr[1].data, rr[2].data || []);
+    if (!d || currentResaDetail !== r) return;
+    if (montantEl && montantEl.getAttribute('data-a-chiffrer')) {
+      montantEl.removeAttribute('data-a-chiffrer');
+      montantEl.style.color = '';
+      montantEl.textContent = 'Montant prévu : ' + euros(d.prevu) + ' TTC (d\'après les tarifs)'
+        + (d.annulations.length ? ' · facturé après annulations : ' + euros(d.total) : '');
+    }
+    var html = FR_FACT.htmlAnnulations(d, formatDateFR);
+    if (html) {
+      var annInfo = document.getElementById('detail-annulation-info');
+      annInfo.style.display = 'block';
+      annInfo.innerHTML = html;
+    }
+  } catch (e) {
+    console.log('montants réservation:', e);
+    if (montantEl && montantEl.getAttribute('data-a-chiffrer')) montantEl.textContent = 'Montant non chiffré sur cette réservation';
+  }
 }
 
 // Applique une mise à jour à TOUTES les lignes d'une réservation (1 par chien).
@@ -5092,7 +5171,7 @@ async function chargerMessages(silencieux) {
     } catch(e) { console.log('staff indisponible:', e); }
 
     renderInbox();
-    if (msgClientSel) ouvrirConversation(msgClientSel, true);
+    if (msgClientSel) ouvrirConversation(msgClientSel, true, true);   // rafraîchissement : n'ouvre pas le plein écran
     majBadgeMessages(nbMessagesNonLus());
   } catch(e) { console.error('Messages:', e); }
 }
@@ -5272,7 +5351,7 @@ function renderInbox() {
   }).join('');
 }
 
-async function ouvrirConversation(cle, sansMarquer) {
+async function ouvrirConversation(cle, sansMarquer, rafraichir) {
   // Compatibilite : un ancien appel passait directement un client_id
   if (cle && cle.indexOf(':') === -1) cle = 'c:' + cle;
   msgClientSel = cle;
@@ -5289,6 +5368,7 @@ async function ouvrirConversation(cle, sansMarquer) {
   var champ = document.getElementById('msg-reply');
   if (champ) champ.placeholder = msgEstStaff(cle) ? 'Votre message au staff...' : 'Votre reponse au client...';
 
+  if (!rafraichir) ouvrirConversationMobile();
   document.getElementById('msg-thread').innerHTML = fil.map(function(m) {
     var moi = m.expediteur === 'admin';
     return '<div style="display:flex;justify-content:' + (moi ? 'flex-end' : 'flex-start') + ';margin-bottom:8px;">'
@@ -5316,6 +5396,19 @@ async function ouvrirConversation(cle, sansMarquer) {
 }
 
 // ── Nouveau message : choisir librement un client ou un membre du staff ──
+// v2.72 : sur mobile, la conversation passe en plein écran (« ← Messages » pour revenir)
+function ouvrirConversationMobile() {
+  var p = document.getElementById('page-messages');
+  if (p) p.classList.add('conv-ouverte');
+  setTimeout(function() { var t = document.getElementById('msg-thread'); if (t) t.scrollTop = t.scrollHeight; }, 30);
+}
+function fermerConversationMobile() {
+  var p = document.getElementById('page-messages');
+  if (p && p.classList.contains('conv-ouverte') && window.innerWidth <= 768) msgClientSel = null;
+  if (p) p.classList.remove('conv-ouverte');
+  try { renderInbox(); } catch (e) {}
+}
+
 async function nouveauMessage() {
   var box = document.getElementById('msg-nouveau-box');
   var sel = document.getElementById('msg-nouveau-dest');
@@ -5326,6 +5419,7 @@ async function nouveauMessage() {
     '<div style="text-align:center;padding:26px;color:var(--text-faint);font-size:12px;">Choisissez un destinataire.</div>';
   document.getElementById('msg-thread-title').textContent = 'Nouveau message';
   box.style.display = 'block';
+  ouvrirConversationMobile();
   sel.innerHTML = '<option value="">Chargement…</option>';
 
   // Clients (tous, pas seulement ceux qui ont deja ecrit)
@@ -5625,7 +5719,7 @@ async function chargerDestinatairesAlerte() {
   try {
     if (cible === 'tous') {
       var rt = await db.from('clients').select('id,prenom,nom,telephone')
-        .eq('actif', true).eq('is_test', false).order('nom');
+        .eq('actif', true).order('nom');   // v2.71 : comptes test inclus
       if (rt.error) throw rt.error;
       alerteDestinataires = rt.data || [];
     } else {
@@ -5639,7 +5733,7 @@ async function chargerDestinatairesAlerte() {
       duJour.forEach(function(r){ if (r.client_id && ids.indexOf(r.client_id) === -1) ids.push(r.client_id); });
       if (ids.length) {
         var rc = await db.from('clients').select('id,prenom,nom,telephone')
-          .in('id', ids).eq('is_test', false).order('nom');
+          .in('id', ids).order('nom');   // v2.71 : comptes test inclus
         if (rc.error) throw rc.error;
         alerteDestinataires = rc.data || [];
       }
@@ -6242,10 +6336,10 @@ async function chargerAlertes() {
         var bientot = inv.data.filter(function(x) { var t = new Date(x.expire_at).getTime(); return t > maint && t - maint <= 48 * 36e5; });
         var expirees = inv.data.filter(function(x) { var t = new Date(x.expire_at).getTime(); return t <= maint && maint - t <= 30 * 864e5; });
         var ligne = function(x) { return '<div style="font-size:11px;color:var(--text-dim);margin-top:4px;">' + msgEsc(x.prenom || x.email || '—') + ' · ' + msgEsc(x.email || '') + '</div>'; };
-        if (bientot.length) html += '<div class="alert alert-a" style="cursor:pointer;" onclick="navVers(\'invitations\')"><div class="alert-dot"></div><div class="alert-body">'
+        if (bientot.length) html += '<div class="alert alert-a" style="cursor:pointer;" onclick="navVers(\'invitation\')"><div class="alert-dot"></div><div class="alert-body">'
           + '<strong>' + bientot.length + ' invitation' + (bientot.length > 1 ? 's expirent' : ' expire') + ' dans moins de 48 h</strong>' + bientot.slice(0, 6).map(ligne).join('')
           + '<div class="alert-time">Pas encore utilisée' + (bientot.length > 1 ? 's' : '') + ' — une relance peut aider</div></div></div>';
-        if (expirees.length) html += '<div class="alert alert-r" style="cursor:pointer;" onclick="navVers(\'invitations\')"><div class="alert-dot"></div><div class="alert-body">'
+        if (expirees.length) html += '<div class="alert alert-r" style="cursor:pointer;" onclick="navVers(\'invitation\')"><div class="alert-dot"></div><div class="alert-body">'
           + '<strong>' + expirees.length + ' invitation' + (expirees.length > 1 ? 's expirées' : ' expirée') + ' sans inscription</strong>' + expirees.slice(0, 6).map(ligne).join('')
           + '<div class="alert-time">À renvoyer depuis Invitations (30 derniers jours)</div></div></div>';
       }
@@ -6255,7 +6349,7 @@ async function chargerAlertes() {
     // 1 mois (notification) et à 1 semaine (notification + email), à 8h
     try {
       var finR = await db.rpc('fr_fin_reservations', { p_jours: 30 });
-      var fins = (!finR.error && finR.data ? finR.data : []).filter(function(x) { return !x.is_test; });
+      var fins = (!finR.error && finR.data ? finR.data : []);   // v2.71 : comptes test inclus
       if (fins.length) {
         var urgF = fins.some(function(x) { return x.jours_restants <= 7; });
         html += '<div class="alert ' + (urgF ? 'alert-a' : 'alert-b') + '"><div class="alert-dot"></div><div class="alert-body">'
@@ -6277,10 +6371,8 @@ async function chargerAlertes() {
     var suivi = await db.from('v_factures_suivi').select('id,client_id,numero,solde,jours_retard,etape_suggeree').gt('solde', 0).limit(300);
     var impayees = null;
     if (!suivi.error) {
-      // Comptes de test exclus, comme partout ailleurs
-      var testsR = await db.from('clients').select('id').eq('is_test', true);
-      var idsTest = (testsR.data || []).map(function(c) { return c.id; });
-      var lignesS = (suivi.data || []).filter(function(f) { return idsTest.indexOf(f.client_id) === -1; });
+      // v2.71 : comptes test inclus — les testeurs doivent aussi vivre les rappels
+      var lignesS = suivi.data || [];
       var parEtape = { rappel_1: 0, rappel_2: 0, mise_en_demeure: 0 };
       lignesS.forEach(function(f) { if (f.etape_suggeree) parEtape[f.etape_suggeree]++; });
       var nbAT = parEtape.rappel_1 + parEtape.rappel_2 + parEtape.mise_en_demeure;
@@ -6724,6 +6816,8 @@ async function selectResaClient(id, nom, commune, fidele, chienId) {
     if (chienId) sel.value = chienId;
     document.getElementById('resa-chien-group').style.display = 'block';
   }
+  delete RESA_DONNEES[id];   // tarif sur mesure ou chien ajouté depuis : relu
+  apercuResaAdmin();
 }
 
 function resetResaClient() {
@@ -6749,6 +6843,7 @@ function updateResaFields() {
   } else {
     updateRecurrenceField();
   }
+  apercuResaAdmin();
 }
 
 function majTransportResaInfo() {
@@ -6785,6 +6880,7 @@ function joursFermesResaAdmin() {
     .filter(function(x) { return x && !(svc === 'boarding' && x.v.type === 'ferie'); });
 }
 function verifierCalendrierResa() {
+  apercuResaAdmin();
   var el = document.getElementById('resa-cal-alerte');
   if (!el) return;
   var f = joursFermesResaAdmin();
@@ -6795,9 +6891,74 @@ function verifierCalendrierResa() {
   el.style.display = 'block';
 }
 
+// ── v2.72 : réservation admin — lignes, contrôles, aperçu et montant ──
+// Même moteur que la facture (fr-facturation.js) : séances réelles (jours
+// cochés, week-end, fériés, fermetures) et prix (grille ou tarif sur mesure).
+var RESA_DONNEES = {};   // client_id -> { client, chiens }
+async function donneesClientResa(id) {
+  if (!id) return null;
+  if (!RESA_DONNEES[id]) {
+    var rr = await Promise.all([db.from('clients').select('*').eq('id', id).maybeSingle(),
+                                db.from('chiens').select('id,nom,client_id,actif').eq('client_id', id)]);
+    RESA_DONNEES[id] = { client: rr[0].data, chiens: rr[1].data || [] };
+  }
+  return RESA_DONNEES[id];
+}
+function ligneFormResaAdmin() {
+  var svc = document.getElementById('resa-service').value;
+  var debut = document.getElementById('resa-date-debut').value;
+  var jours = [];
+  document.querySelectorAll('#resa-jours-group input[type=checkbox]:checked').forEach(function(cb){ jours.push(cb.value); });
+  var finRec = (svc !== 'boarding' && jours.length) ? document.getElementById('resa-date-fin-recurrence').value : null;
+  var fin = svc === 'boarding' ? document.getElementById('resa-date-fin').value : (finRec || debut);
+  var err = null;
+  if (!debut) err = 'Choisissez la date.';
+  else if (svc === 'boarding' && !fin) err = 'Indiquez la date de départ.';
+  else if (svc === 'boarding' && fin <= debut) err = 'La date de départ doit être après l\'arrivée.';
+  else if (svc !== 'boarding' && jours.length && !finRec) err = 'Indiquez jusqu\'à quelle date (récurrence).';
+  else if (finRec && finRec < debut) err = 'La fin de récurrence (' + formatDateFR(finRec) + ') est avant la date de début (' + formatDateFR(debut) + ').';
+  return { err: err, svc: svc, debut: debut, fin: fin, finRec: finRec, jours: jours,
+    ligne: { id: 'apercu', client_id: resaClientId, chien_id: document.getElementById('resa-chien-id').value || null, service: svc,
+             creneau: svc === 'walking' ? document.getElementById('resa-creneau').value : null,
+             date_debut: debut, date_fin: fin || debut, date_fin_recurrence: finRec,
+             jours_recurrence: jours.length ? jours.join(',') : null, statut: 'confirme' } };
+}
+async function calculResaAdmin() {
+  var f = ligneFormResaAdmin();
+  if (f.err || !resaClientId || !window.FR_FACT) return f;
+  var d = await donneesClientResa(resaClientId);
+  if (!d || !d.client) return f;
+  await assurerCalendrier();
+  try { await FR_FACT.chargerTarifs(db); } catch (e) {}
+  var res = FR_FACT.calculer({ client: d.client, chiens: d.chiens, reservations: [f.ligne], annulations: [] }, f.debut, f.ligne.date_fin, {});
+  var dates = res.seances.filter(function(s) { return s.presents.length; }).map(function(s) { return s.date; }).sort();
+  f.nb = dates.length; f.total = res.total_ttc; f.premiere = dates[0]; f.derniere = dates[dates.length - 1];
+  return f;
+}
+async function apercuResaAdmin() {
+  var el = document.getElementById('resa-apercu');
+  if (!el) return;
+  var f = await calculResaAdmin();
+  if (!f.debut || !resaClientId) { el.style.display = 'none'; return; }
+  var rouge = 'background:var(--red-dim);border:1px solid rgba(224,90,90,0.35);color:var(--red);';
+  if (f.err) { el.style.cssText = 'font-size:12px;line-height:1.5;border-radius:8px;padding:8px 12px;margin-bottom:10px;' + rouge; el.innerHTML = '⚠ ' + f.err; el.style.display = 'block'; return; }
+  if (f.nb == null) { el.style.display = 'none'; return; }
+  if (!f.nb) {
+    el.style.cssText = 'font-size:12px;line-height:1.5;border-radius:8px;padding:8px 12px;margin-bottom:10px;' + rouge;
+    el.innerHTML = '⚠ Aucune séance entre ces dates : vérifiez la date de début (pas de service le week-end), les jours cochés et la fin de récurrence.';
+  } else {
+    el.style.cssText = 'font-size:12px;line-height:1.5;border-radius:8px;padding:8px 12px;margin-bottom:10px;background:var(--green-dim);border:1px solid rgba(94,201,122,0.35);color:var(--text);';
+    el.innerHTML = '<strong>' + f.nb + ' ' + (f.svc === 'boarding' ? (f.nb > 1 ? 'nuits' : 'nuit') : (f.nb > 1 ? 'séances' : 'séance')) + '</strong>'
+      + (f.nb > 1 ? ' · du ' + frJourLong(new Date(f.premiere + 'T00:00:00')).replace(/ \d{4}$/, '') + ' au ' + frJourLong(new Date(f.derniere + 'T00:00:00')) : ' · ' + frJourLong(new Date(f.premiere + 'T00:00:00')))
+      + ' · <strong style="color:var(--accent);">' + euros(f.total) + ' TTC</strong>';
+  }
+  el.style.display = 'block';
+}
+
 function updateRecurrenceField() {
   var anyChecked = document.querySelectorAll('#resa-jours-group input[type=checkbox]:checked').length > 0;
   document.getElementById('resa-fin-recurrence-group').style.display = anyChecked ? 'block' : 'none';
+  apercuResaAdmin();
 }
 
 async function sauvegarderResaAdmin() {
@@ -6820,6 +6981,10 @@ async function sauvegarderResaAdmin() {
     if (!finRecurrence) { showToastAdmin('Indiquez la date de fin de recurrence', 'amber'); return; }
     fin = finRecurrence;
   }
+  // v2.72 : dates cohérentes et au moins une séance réelle, montant calculé
+  var calc = await calculResaAdmin();
+  if (calc.err) { showToastAdmin(calc.err, 'red'); apercuResaAdmin(); return; }
+  if (calc.nb === 0) { showToastAdmin('Aucune séance entre ces dates : vérifiez la date de début, les jours cochés et la fin de récurrence', 'red'); apercuResaAdmin(); return; }
   var fermes = joursFermesResaAdmin();
   var nbDates = datesResaAdmin().length;
   if (fermes.length && fermes.length >= nbDates) { showToastAdmin('Toutes les dates tombent sur un jour fermé ou férié', 'amber'); return; }
@@ -6847,8 +7012,13 @@ async function sauvegarderResaAdmin() {
     ligne.transport_retour = tv === 'retour' || tv === 'les_deux';
     ligne.transport_statut = 'confirme';
   }
+  if (calc.nb != null) { ligne.montant_ttc = calc.total; ligne.nb_seances = calc.nb; }
   try {
     var { error } = await db.from('reservations').insert(ligne);
+    if (error && /montant_ttc|nb_seances/.test(error.message || '')) {   // colonnes absentes : sans montant
+      delete ligne.montant_ttc; delete ligne.nb_seances;
+      error = (await db.from('reservations').insert(ligne)).error;
+    }
     if (error && tv && /transport_/.test(error.message || '')) {
       throw new Error('Migration v39 à exécuter pour enregistrer le transport (sql/fr_migration_v39_acces_transport.sql)');
     }
@@ -6880,7 +7050,7 @@ if ('serviceWorker' in navigator) {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
     Planning
   </div>
-  <div class="mobile-nav-item" id="mnav-messages" onclick="nav('messages',this);setMobileNav(this)">
+  <div class="mobile-nav-item" id="mnav-messages" onclick="fermerConversationMobile();nav('messages',this);setMobileNav(this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
     Messages
     <span class="mobile-nav-badge" id="mnav-count-msg" style="display:none;">0</span>
@@ -6914,6 +7084,9 @@ if ('serviceWorker' in navigator) {
     </div>
     <div onclick="nav('invitation',this);toggleMobileMenu()" style="padding:12px;background:var(--k700);border-radius:10px;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text);">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/></svg>Invitations
+    </div>
+    <div onclick="if(confirm('Se déconnecter ?')) frLogout();" style="grid-column:1/-1;padding:12px;background:rgba(224,90,90,0.12);border:1px solid rgba(224,90,90,0.35);border-radius:10px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#e05a5a;order:99;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Se déconnecter
     </div>
     <div onclick="nav('parametres',this);toggleMobileMenu()" style="padding:12px;background:var(--k700);border-radius:10px;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text);">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Paramètres
@@ -7254,7 +7427,7 @@ document.addEventListener('click', function(e) {
     <!-- Chien -->
     <div class="form-group" id="resa-chien-group" style="margin-bottom:10px;display:none;">
       <label class="form-label">Chien</label>
-      <select class="form-control" id="resa-chien-id" style="width:100%;">
+      <select class="form-control" id="resa-chien-id" style="width:100%;" onchange="apercuResaAdmin()">
         <option value="">Tous les chiens du client</option>
       </select>
     </div>
@@ -7289,7 +7462,7 @@ document.addEventListener('click', function(e) {
       </div>
       <div class="form-group" id="resa-creneau-group">
         <label class="form-label">Créneau</label>
-        <select class="form-control" id="resa-creneau" style="width:100%;">
+        <select class="form-control" id="resa-creneau" style="width:100%;" onchange="apercuResaAdmin()">
           <option value="matin">Matin — 09h00</option>
           <option value="midi">Midi — 12h00</option>
           <option value="apmidi">Après-midi — 14h30</option>
@@ -7314,6 +7487,9 @@ document.addEventListener('click', function(e) {
       <label class="form-label">Jusqu'a quelle date ? (recurrence)</label>
       <input type="date" class="form-control" id="resa-date-fin-recurrence" style="width:100%;" onchange="verifierCalendrierResa()">
     </div>
+
+    <!-- v2.72 : aperçu calculé par le moteur de la facture -->
+    <div id="resa-apercu" style="display:none;font-size:12px;line-height:1.5;border-radius:8px;padding:8px 12px;margin-bottom:10px;"></div>
 
     <!-- Transport Day Care (v39) : 5 € HT par trajet, zone ou hors zone -->
     <div class="form-group" id="resa-transport-group" style="margin-bottom:10px;display:none;">

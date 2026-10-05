@@ -3073,10 +3073,13 @@ async function loadReservations(id) {
 // Pendant un congé, le prénom du remplaçant de la tournée (fr-remplacements.js).
 var _remplClientCharge = false;
 async function chargerRemplacementsClient() {
-  if (_remplClientCharge || !window.FR_REMPL) return;
+  if (_remplClientCharge) return;
+  if (!window.FR_REMPL) { _remplClientCharge = true; try { if (window.FR_FACT) await FR_FACT.chargerTarifs(db); } catch (e) {} return; }
   _remplClientCharge = true;
   var d0 = new Date(), d1 = new Date(); d1.setDate(d1.getDate() + 180);
   try { await FR_REMPL.charger(db, isoDate(d0), isoDate(d1)); } catch (e) {}
+  // v2.72 : grille de tarifs, pour les montants calculés à l'affichage (montantResa)
+  try { if (window.FR_FACT) await FR_FACT.chargerTarifs(db); } catch (e) {}
 }
 function rangerAffiche(r, dateISO) {
   if (window.FR_REMPL && dateISO && r) {
@@ -3165,8 +3168,18 @@ function nbChiensResa(r) {
 }
 
 function montantResa(r) {
-  var t = 0;
-  lignesMemeResa(r).forEach(function(x) { t += parseFloat(x.montant_ttc) || 0; });
+  var t = 0, lignes = lignesMemeResa(r);
+  lignes.forEach(function(x) { t += parseFloat(x.montant_ttc) || 0; });
+  // v2.72 : réservation saisie par Gabriel sans montant enregistré — calculée comme la facture
+  if (!t && r && r.statut !== 'annule' && window.FR_FACT && clientData) {
+    try {
+      var f0 = null;
+      lignes.forEach(function(x) { var f = String(x.date_fin_recurrence || x.date_fin || x.date_debut).slice(0, 10); if (!f0 || f > f0) f0 = f; });
+      var res = FR_FACT.calculer({ client: clientData, chiens: window.chiensData || [], reservations: lignes.length ? lignes : [r], annulations: [] },
+                                 String(r.date_debut).slice(0, 10), f0 || String(r.date_debut).slice(0, 10), {});
+      t = res.total_ttc || 0;
+    } catch (e) {}
+  }
   return t;
 }
 
@@ -4581,7 +4594,8 @@ function facturePdfHTML(f) {
   if (loc && String(c.adresse || '').indexOf(loc) === -1) adr.push(esc(loc));
   if (c.email) adr.push(esc(c.email));
   adr.push('<span style="color:#888;font-size:11px;">N° client : <strong style="color:#555;">' + esc(c.numero_client || '—') + '</strong></span>');
-  var pill = avoir ? ['paid', 'Note de crédit'] : solde <= 0.004 ? ['paid', 'Payée' + (f.date_paiement ? ' le ' + fr(f.date_paiement) : '')]
+  var test = !!c.is_test;   // v2.71 : compte de test — facture à ne pas payer
+  var pill = test && !avoir ? ['late', 'Facture test — à ne pas payer'] : avoir ? ['paid', 'Note de crédit'] : solde <= 0.004 ? ['paid', 'Payée' + (f.date_paiement ? ' le ' + fr(f.date_paiement) : '')]
            : retard > 0 ? ['late', 'En retard de paiement'] : ['pending', 'En attente de paiement'];
   var row = function(l, v, st) { return '<div class="px-tr"' + (st ? ' style="' + st + '"' : '') + '><span class="lbl">' + l + '</span><span class="val">' + v + '</span></div>'; };
   return '<div class="px-doc">'
@@ -4591,6 +4605,7 @@ function facturePdfHTML(f) {
     +     '<div class="px-dl">' + (avoir ? 'Note de crédit · date' : 'Date d\'émission') + '</div><div class="px-dv">' + fr(f.date_emission || f.created_at) + '</div>'
     +     (avoir ? '' : '<div class="px-dl">Échéance</div><div class="px-dv">' + fr(echeanceFacture(f)) + '</div>')
     +     '<div class="px-dl">Période</div><div class="px-dv">' + esc(periodeLabel(f)) + '</div></div></div>'
+    + (test ? '<div style="background:#c62828;color:#fff;text-align:center;font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-weight:800;font-size:13px;letter-spacing:.06em;padding:8px 10px;">FACTURE TEST — À NE PAS PAYER · compte de test Forest Rangers</div>' : '')
     + '<div class="px-body">'
     +   '<div class="px-addr"><div><div class="px-al">De</div><div class="px-an">Forest Rangers</div>'
     +     '<div class="px-ad">ARCANIN S.à r.l.<br>42 rue de Mersch<br>L-8181 Kopstal<br>TVA LU34907315<br>info@forestrangers.lu<br>+352 661 999 113</div></div>'

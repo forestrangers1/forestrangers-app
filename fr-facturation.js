@@ -359,7 +359,7 @@
       var du = prixPourChiens(base, m, t.reduction);
       var reste = prixPourChiens(base, n, t.reduction) - du;
       var part = s.annules.length ? reste / s.annules.length : 0;
-      s.annules.forEach(function (a) { a.montant = part * a.pct / 100; du += a.montant; });
+      s.annules.forEach(function (a) { a.plein = part; a.montant = part * a.pct / 100; du += a.montant; });
       s.base = base;
       s.reduction = t.reduction;
       s.prix_presents = prixPourChiens(base, m, t.reduction);
@@ -752,6 +752,72 @@
     if (w.error) throw w.error;
   }
 
+  // ══════════════════════════════════════════════════════════════
+  //  DÉTAIL D'UNE RÉSERVATION (v2.71) — montant prévu, annulations et
+  //  ce qu'elles coûtent, avec le moteur de la facture (mêmes chiffres).
+  //  rows : toutes les lignes de la réservation (une par chien).
+  //  Renvoie { prevu, factureAnnul, nonFacture, total, annulations[] }
+  //    annulations : { date, service, chien, pct, par, tardive, montant, plein }
+  // ══════════════════════════════════════════════════════════════
+  async function detailReservation(db, rows, client, chiens) {
+    rows = (rows || []).filter(Boolean);
+    if (!rows.length || !client) return null;
+    if (!_tarifsCharges) { try { await chargerTarifs(db); } catch (e) {} }
+    var ann = [];
+    try {
+      var a = await db.from('annulations_occurrences').select('reservation_id, date_occurrence, annule_par, annulation_tardive, facture_pourcentage')
+        .in('reservation_id', rows.map(function (r) { return r.id; }));
+      if (!a.error && a.data) ann = a.data;
+    } catch (e) { /* table absente */ }
+    var debut = null, fin = null;
+    rows.forEach(function (r) {
+      var d0 = jour(r.date_debut), d1 = jour(r.date_fin_recurrence || r.date_fin || r.date_debut);
+      if (!debut || d0 < debut) debut = d0;
+      if (!fin || d1 > fin) fin = d1;
+    });
+    var res = calculer({ client: client, chiens: chiens || [], reservations: rows, annulations: ann }, debut, fin, {});
+    var nomDe = {}; (chiens || []).forEach(function (c) { nomDe[c.id] = c.nom || 'Chien'; });
+    var out = { prevu: 0, factureAnnul: 0, nonFacture: 0, total: r2(res.total_ttc), annulations: [] };
+    res.seances.forEach(function (s) {
+      out.prevu += s.prix_presents || 0;
+      s.annules.forEach(function (a) {
+        out.prevu += a.plein || 0;
+        out.factureAnnul += a.montant || 0;
+        out.nonFacture += (a.plein || 0) - (a.montant || 0);
+        out.annulations.push({ date: s.date, service: s.service, chien: nomDe[a.chien_id] || 'Chien', pct: a.pct,
+          par: a.par, tardive: a.tardive, montant: r2(a.montant || 0), plein: r2(a.plein || 0) });
+      });
+    });
+    out.prevu = r2(out.prevu); out.factureAnnul = r2(out.factureAnnul); out.nonFacture = r2(out.nonFacture);
+    return out;
+  }
+
+  // Texte HTML des annulations (fiche client et planning de l'admin)
+  function htmlAnnulations(d, fmtDate) {
+    if (!d || !d.annulations.length) return '';
+    fmtDate = fmtDate || function (x) { return x; };
+    var par = function (p) { return p === 'client' ? 'le client' : p === 'chaleur' ? 'chaleurs' : 'Gabriel'; };
+    var groupes = {}, ordreG = [];
+    d.annulations.forEach(function (a) {
+      var k = a.pct + '|' + (a.par || '') + '|' + (a.tardive ? 1 : 0);
+      if (!groupes[k]) { groupes[k] = { pct: a.pct, par: a.par, tardive: a.tardive, dates: [], chiens: {}, montant: 0, plein: 0 }; ordreG.push(k); }
+      var g = groupes[k];
+      if (g.dates.indexOf(a.date) === -1) g.dates.push(a.date);
+      g.chiens[a.chien] = 1; g.montant += a.montant; g.plein += a.plein;
+    });
+    var lignes = ordreG.map(function (k) {
+      var g = groupes[k], n = g.dates.length;
+      g.dates.sort();
+      var quand = n <= 4 ? g.dates.map(fmtDate).join(', ') : n + ' séances (' + fmtDate(g.dates[0]) + ' → ' + fmtDate(g.dates[n - 1]) + ')';
+      return '<div style="margin-top:4px;">' + quand + ' · ' + Object.keys(g.chiens).join(' + ')
+        + ' · annulé par ' + par(g.par) + (g.tardive ? ' (tardive)' : '') + ' · <strong>' + g.pct + ' %</strong> → '
+        + '<strong>' + eur(r2(g.montant)) + '</strong>' + (g.pct < 100 ? ' <span style="opacity:.75;">au lieu de ' + eur(r2(g.plein)) + '</span>' : '') + '</div>';
+    }).join('');
+    return '<div style="font-weight:700;">Annulations</div>' + lignes
+      + '<div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(224,90,90,0.25);">'
+      + '<strong>' + eur(d.factureAnnul) + '</strong> facturé' + (d.factureAnnul > 0 ? 's' : '') + ' · ' + eur(d.nonFacture) + ' non facturé' + (d.nonFacture > 0 ? 's' : '') + '</div>';
+  }
+
   global.FR_FACT = {
     TVA_DEFAUT: TVA_DEFAUT,
     periodeMois: periodeMois,
@@ -766,6 +832,8 @@
     calculer: calculer,
     chargerDonnees: chargerDonnees,
     calculerClient: calculerClient,
+    detailReservation: detailReservation,
+    htmlAnnulations: htmlAnnulations,
     calculerTous: calculerTous,
     aujourdhui: aujourdhui,
     planArretSerie: planArretSerie,

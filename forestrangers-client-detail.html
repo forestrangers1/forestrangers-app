@@ -1478,7 +1478,9 @@ function loadChiens(chiens, fidele) {
   var html = '';
   chiens.forEach(function(d, i) {
     var emoji = (d.poids_kg && d.poids_kg >= 35) ? '🐕' : '🐩';
-    var reduction = (i === 1 && fidele) ? '−50%' : (i === 1 ? '−30%' : '');
+    // v2.72 : vraie remise du client (sur mesure, sinon grille de Paramètres), dès le 2e chien
+    var remise = currentClient ? getTarifValues(currentClient).reduction : (fidele ? 50 : 30);
+    var reduction = (i >= 1 && remise > 0) ? '−' + (Math.round(remise * 10) / 10) + '%' : '';
     var ageTxt = '';
     if (d.date_naissance) {
       var age = Math.floor((Date.now() - new Date(d.date_naissance).getTime()) / (365.25 * 86400000));
@@ -2358,7 +2360,7 @@ async function openResaDetail(id, dateOccurrence) {
         ? '<br><br><span style="color:var(--accent);font-weight:700;">Total : ' + euro(totalTTC) + ' TTC</span>'
           + ' <span style="color:var(--tf);font-size:11.5px;">(' + euro(totalTTC/1.17) + ' HT + ' + euro(totalTTC - totalTTC/1.17) + ' TVA 17 %'
           + (nbSeances > 0 ? ' · ' + nbSeances + (nbSeances > 1 ? ' séances' : ' séance') : '') + ')</span>'
-        : '<br><br><span style="color:var(--tf);">Montant non chiffré sur cette réservation</span>')
+        : '<br><br><span id="resa-detail-prevu" style="color:var(--tf);">Calcul du montant…</span>')
     + (r.notes ? '<br><br>Notes : ' + r.notes : '');
   document.getElementById('resa-detail-info').innerHTML = infoHtml;
 
@@ -2376,6 +2378,7 @@ async function openResaDetail(id, dateOccurrence) {
   }
   if (msgs.length) { annInfo.style.display = 'block'; annInfo.textContent = msgs.join(' · '); }
   else { annInfo.style.display = 'none'; }
+  completerMontantsResa(r, lignes);
 
   // Le formulaire d'édition reste masqué jusqu'au clic sur "Modifier"
   document.getElementById('resa-edit-form').style.display = 'none';
@@ -2593,6 +2596,32 @@ function majSuggestionAnnulation() {
   var selPct = document.getElementById('annulation-pourcentage');
   selPct.value = String(sugg.pourcentage);
   currentResaDetail._suggestion = sugg;
+}
+
+// v2.71 : montant prévu et coût de chaque annulation, calculés par le moteur
+// de la facture (fr-facturation.js) — mêmes chiffres que la facture du mois.
+async function completerMontantsResa(r, lignes) {
+  if (!window.FR_FACT || !FR_FACT.detailReservation || !currentClient) return;
+  try {
+    var d = await FR_FACT.detailReservation(db, lignes && lignes.length ? lignes : [r], currentClient, currentChiens || []);
+    if (!d || currentResaDetail !== r) return;
+    var eu = function(n) { return n.toLocaleString('fr-LU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; };
+    var prevuEl = document.getElementById('resa-detail-prevu');
+    if (prevuEl) {
+      prevuEl.style.color = 'var(--accent)'; prevuEl.style.fontWeight = '700';
+      prevuEl.innerHTML = 'Montant prévu : ' + eu(d.prevu) + ' TTC <span style="color:var(--tf);font-weight:400;font-size:11.5px;">(d\'après les tarifs'
+        + (d.annulations.length ? ' · facturé après annulations : ' + eu(d.total) : '') + ')</span>';
+    }
+    var html = FR_FACT.htmlAnnulations(d, formatDateFR);
+    if (html) {
+      var annInfo = document.getElementById('resa-detail-annulation-info');
+      annInfo.style.display = 'block';
+      annInfo.innerHTML = html;
+    }
+  } catch (e) {
+    console.log('montants réservation:', e);
+    var p = document.getElementById('resa-detail-prevu'); if (p) p.textContent = 'Montant non chiffré sur cette réservation';
+  }
 }
 
 // Prévient le client dans sa messagerie (même table que l'espace client)
