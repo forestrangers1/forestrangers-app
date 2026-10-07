@@ -549,6 +549,7 @@ input[type=range]::-webkit-slider-runnable-track {
 
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="fr-dialog.js"></script>
   <script src="fr-quartier.js"></script>
 <!-- Repli CDN : si jsDelivr n'a pas repondu, on tente unpkg avant d'abandonner. -->
 <script>if (!window.supabase) { document.write('<scr' + 'ipt src="https://unpkg.com/@supabase/supabase-js@2"><\/scr' + 'ipt>'); }</script>
@@ -613,6 +614,11 @@ input[type=range]::-webkit-slider-runnable-track {
   // ════════════════════════════════════════════════════════════════
   var FR_I18N = {
 "en": {
+"Informations manquantes": "Missing information",
+"Merci de compléter ces champs :": "Please fill in these fields:",
+"Conditions générales": "Terms and conditions",
+"Mot de passe": "Password",
+"Inscription non terminée": "Registration not completed",
 "Inscription client": "Client registration",
 "Lien d'invitation valable 7 jours": "Invitation link valid for 7 days",
 "Bienvenue chez": "Welcome to",
@@ -842,6 +848,11 @@ input[type=range]::-webkit-slider-runnable-track {
 "Télécharger les conditions générales (PDF)": "Download the terms and conditions (PDF)"
 },
 "lu": {
+"Informations manquantes": "Informatioune feelen",
+"Merci de compléter ces champs :": "Fëllt w.e.g. dës Felder aus:",
+"Conditions générales": "Allgemeng Konditiounen",
+"Mot de passe": "Passwuert",
+"Inscription non terminée": "Umeldung net ofgeschloss",
 "Inscription client": "Client-Umeldung",
 "Lien d'invitation valable 7 jours": "Invitatiounslink 7 Deeg gëlteg",
 "Bienvenue chez": "Wëllkomm bei",
@@ -2116,7 +2127,7 @@ function validerPage2() {
   }
 
   if (erreurs.length > 0) {
-    alert(t('Champs obligatoires manquants : ') + erreurs.map(t).join(', '));
+    frAlert({ type: 'attention', titre: t('Informations manquantes'), message: t('Merci de compléter ces champs :'), liste: erreurs.map(t), ok: 'OK' });
     return;
   }
   goPage(3);
@@ -2129,7 +2140,7 @@ function validerPage3() {
   if (!accepted) {
     box.style.borderColor = '#e05a5a';
     box.style.background = 'rgba(224,90,90,0.08)';
-    alert(t('Vous devez accepter les conditions générales pour continuer.'));
+    frAlert({ type: 'attention', titre: t('Conditions générales'), message: t('Vous devez accepter les conditions générales pour continuer.') });
     setTimeout(function() {
       box.style.borderColor = '';
       box.style.background = '';
@@ -2188,7 +2199,7 @@ function validerPage1() {
     erreurs.push('Personne autorisée à récupérer le chien');
   }
   if (erreurs.length > 0) {
-    alert(t('Champs obligatoires manquants : ') + erreurs.map(t).join(', '));
+    frAlert({ type: 'attention', titre: t('Informations manquantes'), message: t('Merci de compléter ces champs :'), liste: erreurs.map(t), ok: 'OK' });
     return;
   }
   goPage(2);
@@ -3010,12 +3021,12 @@ function validerMotDePasse() {
   if (cfmEl) cfmEl.style.borderColor = '';
   if (pwd.length < 8) {
     if (pwdEl) pwdEl.style.borderColor = '#e05a5a';
-    alert(t('Le mot de passe doit contenir au moins 8 caractères.'));
+    frAlert({ type: 'attention', titre: t('Mot de passe'), message: t('Le mot de passe doit contenir au moins 8 caractères.') });
     return;
   }
   if (pwd !== confirm) {
     if (cfmEl) cfmEl.style.borderColor = '#e05a5a';
-    alert(t('Les mots de passe ne correspondent pas.'));
+    frAlert({ type: 'attention', titre: t('Mot de passe'), message: t('Les mots de passe ne correspondent pas.') });
     return;
   }
   sauvegarderInscription(pwd);
@@ -3192,7 +3203,7 @@ async function sauvegarderInscription(motDePasse) {
     var quartier  = estLuxVille() ? ((document.getElementById('quartier') || {}).value || '') : '';
 
     if (!prenom || !nom || !email) {
-      alert(t('Veuillez remplir au minimum le prénom, le nom et l\'email.'));
+      frAlert({ type: 'attention', titre: t('Informations manquantes'), message: t('Veuillez remplir au minimum le prénom, le nom et l\'email.') });
       return;
     }
 
@@ -3373,7 +3384,7 @@ async function sauvegarderInscription(motDePasse) {
 
   } catch(e) {
     console.error('Erreur inscription:', e);
-    alert(messageErreurInscription(e));
+    frAlert({ type: 'erreur', titre: t('Inscription non terminée'), message: messageErreurInscription(e) });
   } finally {
     _inscriptionEnCours = false;
     if (btnFinal) { btnFinal.disabled = false; btnFinal.style.opacity = ''; btnFinal.innerHTML = btnTexte; }

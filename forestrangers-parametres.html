@@ -375,6 +375,7 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
     frErreurReseau();
   }
   </script>
+  <script src="fr-dialog.js"></script>
   <script src="fr-calendrier.js"></script>
   <script src="fr-facturation.js"></script>
   <script src="fr-remplacements.js"></script>
@@ -573,6 +574,21 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
 
       <!-- ══ RÈGLES & SAISONS ══ -->
       <div class="tab-pane" id="tab-regles">
+
+        <!-- Promenade de l'après-midi (v2.75 · migration v60) -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-head">
+            <span class="card-title">🌤️ Promenade de l'après-midi</span>
+            <div style="display:flex;align-items:center;gap:10px;margin-left:auto;">
+              <span id="apmidi-badge" class="badge b-muted">Fermée</span>
+              <div class="toggle" id="apmidi-toggle" onclick="toggleApmidi()" title="Ouvrir / fermer le créneau de 14h30 aux réservations"><div class="toggle-knob"></div></div>
+            </div>
+          </div>
+          <div style="padding:4px 16px 14px;font-size:12px;color:var(--text-dim);line-height:1.6;">
+            Ouverte : les clients peuvent réserver le créneau de <strong>14h30</strong>. Fermée : il disparaît du formulaire de réservation et le serveur refuse toute demande sur ce créneau.
+            <br><span style="color:var(--text-faint);">Les réservations déjà enregistrées ne sont pas modifiées. Depuis la fiche client, vous pouvez toujours placer un chien l'après-midi.</span>
+          </div>
+        </div>
 
         <!-- Clôture estivale -->
         <div class="card" style="margin-bottom:16px;">
@@ -1259,7 +1275,9 @@ async function basculerActifVan() {
   var c = camById(vanEnEdition);
   if (!c) return;
   var activer = c.active === false;
-  if (!activer && !confirm('Désactiver « ' + c.nom + ' » ?\n\nElle reste enregistrée mais n’apparaît plus dans l’attribution quotidienne. Vous pourrez la réactiver à tout moment.')) return;
+  if (!activer && !(await frConfirm({ titre: 'Désactiver la camionnette ?', icone: 'attention',
+      message: '**' + c.nom + '** reste enregistrée mais n’apparaît plus dans l’attribution quotidienne. Vous pourrez la réactiver à tout moment.',
+      ok: 'Désactiver' }))) return;
   var r = await db.from('camionnettes').update({ active: activer }).eq('id', c.id).select('id');
   if (r.error || !r.data || !r.data.length) {
     showToast(erreurV33(r.error) ? 'Migration v33 à exécuter' : 'Non enregistré', 'red');
@@ -1275,7 +1293,9 @@ async function basculerActifVan() {
 async function deleteVan() {
   var c = camById(vanEnEdition);
   if (!c) return;
-  if (!confirm('Supprimer définitivement « ' + c.nom + ' » ?\n\nSes attributions enregistrées sont supprimées aussi. Préférez « Désactiver » pour la mettre de côté.')) return;
+  if (!(await frConfirm({ titre: 'Supprimer la camionnette ?', danger: true,
+      message: '**' + c.nom + '** sera supprimée définitivement, avec ses attributions enregistrées.\n\nPour la mettre simplement de côté, préférez « Désactiver ».',
+      ok: 'Supprimer' }))) return;
   var r = await db.from('camionnettes').delete().eq('id', c.id).select('id');
   if (r.error || !r.data || !r.data.length) {
     console.log('deleteVan:', r.error);
@@ -1791,7 +1811,8 @@ async function enregistrerPeriode() {
 async function supprimerPeriode() {
   var id = getVal('periode-id');
   if (!id) return;
-  if (!confirm('Supprimer cette période ? Les dates concernées redeviennent réservables.')) return;
+  if (!(await frConfirm({ titre: 'Supprimer la période ?', danger: true,
+      message: 'Les dates concernées redeviennent réservables par les clients.', ok: 'Supprimer' }))) return;
   try {
     var r = await db.from('periodes_fermeture').delete().eq('id', id);
     if (r.error) throw r.error;
@@ -1917,12 +1938,35 @@ async function loadParametres() {
     setVal('max-grands-chiens',  p.max_grands_chiens_tournee || '3');
     setVal('capacite-pension',   p.capacite_max_pension      || '5');
 
+    // Promenade de l'après-midi (v60)
+    afficherApmidi(p.creneau_apmidi_actif === 'true');
+
     // Clôture estivale depuis Supabase
     if (p.cloture_debut) document.getElementById('cloture-debut').value = p.cloture_debut;
     if (p.cloture_fin)   document.getElementById('cloture-fin').value   = p.cloture_fin;
     updateCloturePreview();
 
   } catch(e) { console.log('Erreur loadParametres:', e); }
+}
+
+// ── PROMENADE DE L'APRÈS-MIDI (v2.75) ──
+var APMIDI_ACTIF = false;
+function afficherApmidi(actif) {
+  APMIDI_ACTIF = !!actif;
+  var t = document.getElementById('apmidi-toggle'), b = document.getElementById('apmidi-badge');
+  if (t) t.classList.toggle('on', APMIDI_ACTIF);
+  if (b) { b.textContent = APMIDI_ACTIF ? 'Ouverte' : 'Fermée'; b.className = 'badge ' + (APMIDI_ACTIF ? 'b-green' : 'b-muted'); }
+}
+async function toggleApmidi() {
+  var nouveau = !APMIDI_ACTIF;
+  afficherApmidi(nouveau);
+  var r = await db.from('parametres').upsert({ cle: 'creneau_apmidi_actif', valeur: String(nouveau), updated_at: new Date().toISOString() }, { onConflict: 'cle' });
+  if (r && r.error) {
+    afficherApmidi(!nouveau);
+    showToast('Erreur : créneau non modifié', 'red');
+    return;
+  }
+  showToast(nouveau ? '✓ Promenade de l\'après-midi ouverte aux réservations' : '✓ Promenade de l\'après-midi fermée aux réservations', 'green');
 }
 
 function setVal(id, val) {
@@ -2006,14 +2050,16 @@ async function programmerTarifs() {
   var mini = dansUnMois();
   var force = false;
   if (dateEffet < mini) {
-    force = confirm('Le préavis d\'un mois prévu par les conditions générales n\'est pas respecté '
-      + '(première date possible : ' + dateFr(mini) + ').\n\n'
-      + 'Appliquer quand même au ' + dateFr(dateEffet) + ' ?');
+    force = await frConfirm({ titre: 'Préavis non respecté', icone: 'attention',
+      message: 'Les conditions générales prévoient un préavis d’un mois : la première date possible est le **' + dateFr(mini) + '**.\n\nAppliquer quand même la nouvelle grille au **' + dateFr(dateEffet) + '** ?',
+      ok: 'Appliquer quand même' });
     if (!force) return;
   }
 
-  if (notifier && !confirm('Programmer la nouvelle grille au ' + dateFr(dateEffet)
-      + ' et notifier tous les clients actifs ?')) return;
+  if (notifier && !(await frConfirm({ titre: 'Programmer les nouveaux tarifs ?', icone: 'envoi',
+      message: 'La nouvelle grille s’appliquera à partir du **' + dateFr(dateEffet) + '**.',
+      liste: ['Tous les clients actifs reçoivent un message', 'Les prestations antérieures restent à l’ancien tarif'],
+      ok: 'Programmer et notifier' }))) return;
 
   try {
     var res = await db.rpc('fr_tarifs_programmer', {
@@ -2069,7 +2115,9 @@ async function chargerVersionsTarifs() {
 }
 
 async function annulerVersionTarif(id) {
-  if (!confirm('Annuler cette grille programmée ? Les clients déjà notifiés ne le seront pas automatiquement.')) return;
+  if (!(await frConfirm({ titre: 'Annuler la grille programmée ?', danger: true,
+      message: 'Les clients déjà notifiés ne recevront pas de message automatique : prévenez-les si nécessaire.',
+      ok: 'Annuler la grille', annuler: 'Retour' }))) return;
   try {
     await db.from('tarifs_versions').delete().eq('id', id);
     showToast('✓ Grille annulée', 'green');
@@ -2312,7 +2360,8 @@ async function enregistrerZone() {
 async function supprimerZone() {
   var id = getVal('zone-id');
   if (!id) return;
-  if (!confirm('Supprimer cette zone ? Les communes qu\'elle contient ne seront plus rattachées à un secteur.')) return;
+  if (!(await frConfirm({ titre: 'Supprimer la zone ?', danger: true,
+      message: 'Les communes qu’elle contient ne seront plus rattachées à aucun secteur.', ok: 'Supprimer' }))) return;
   try {
     var r = await db.from('zones').delete().eq('id', id);
     if (r.error) throw r.error;
@@ -2442,7 +2491,8 @@ async function dmListe() {
   }).join('') : '<div style="font-size:12.5px;color:var(--text-faint);">Aucune demande envoyée.</div>';
 }
 async function dmAnnuler(id) {
-  if (!confirm('Annuler cette demande ?')) return;
+  if (!(await frConfirm({ titre: 'Annuler la demande ?', danger: true,
+      message: 'La demande de mission envoyée au ranger sera retirée.', ok: 'Annuler la demande', annuler: 'Retour' }))) return;
   var r = await db.from('demandes_missions').update({ statut: 'annulee' }).eq('id', id).eq('statut', 'en_attente').select('id');
   if (r.error || !r.data || !r.data.length) { showToast('Annulation impossible (déjà répondue ?)', 'red'); } else showToast('Demande annulée', 'amber');
   dmListe();
@@ -2471,7 +2521,10 @@ function annulerModifConge() {
 }
 async function supprimerConge(id) {
   var c = CONGES_LISTE.find(function(x) { return String(x.id) === String(id); });
-  if (!confirm('Supprimer définitivement ' + (c ? ((c.type && c.type !== 'conge') ? 'cette absence' : 'ce congé') + ' (' + periodeConge(c) + ')' : 'cette ligne') + ' ?')) return;
+  var quoi = c ? ((c.type && c.type !== 'conge') ? 'cette absence' : 'ce congé') : 'cette ligne';
+  if (!(await frConfirm({ titre: 'Supprimer ' + quoi + ' ?', danger: true,
+      message: c ? 'Période : **' + periodeConge(c) + '**. La suppression est définitive.' : 'La suppression est définitive.',
+      ok: 'Supprimer' }))) return;
   var r = await db.from('conges').delete().eq('id', id).select('id');
   if (r.error || !r.data || !r.data.length) { showToast('Suppression impossible : ' + ((r.error && r.error.message) || 'droits administrateur ?'), 'red'); return; }
   if (CONGE_EDIT === id) annulerModifConge();
@@ -2774,7 +2827,9 @@ function congeHtml(c, enAttente, auj) {
 }
 async function deciderConge(id, statut) {
   if (statut === 'approuve') { ouvrirRemplacants(id, true); return; }   // v2.67 : choix des remplaçants
-  var note = statut === 'refuse' ? prompt('Motif du refus (facultatif, visible par le ranger) :', '') : '';
+  var note = statut === 'refuse' ? await frPrompt({ titre: 'Refuser la demande', icone: 'saisie',
+      message: 'Motif du refus (facultatif) : le ranger le verra dans son application.',
+      placeholder: 'Ex. : trop de demandes sur cette période', multiligne: true, ok: 'Refuser', annuler: 'Retour' }) : '';
   if (note === null) return;
   try {
     var maj = { statut: statut };

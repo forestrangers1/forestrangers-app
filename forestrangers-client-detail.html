@@ -36,6 +36,7 @@ try {
 } catch(e) {}
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="fr-dialog.js"></script>
 <script src="fr-calendrier.js"></script>
 <script src="fr-facturation.js"></script>
 <script src="fr-email.js"></script>
@@ -1205,7 +1206,7 @@ function trouverQuartierFiche(btn) {
   if (!window.FR_QUARTIER) return;
   var adr = (document.getElementById('edit-adresse') || {}).value || '';
   var cp = (document.getElementById('edit-cp') || {}).value || '';
-  if (!adr.trim()) { alert('Indiquez d\'abord l\'adresse (rue et numéro).'); return; }
+  if (!adr.trim()) { frAlert({ type: 'attention', titre: 'Adresse manquante', message: 'Indiquez d\'abord l\'adresse (rue et numéro).' }); return; }
   var txt = btn.textContent; btn.textContent = 'Recherche…'; btn.disabled = true;
   FR_QUARTIER.trouver(adr, cp).then(function (q) {
     btn.disabled = false;
@@ -1215,7 +1216,7 @@ function trouverQuartierFiche(btn) {
       btn.textContent = '✓ ' + q + ' — vérifiez puis enregistrez';
     } else {
       btn.textContent = txt;
-      alert('Quartier non trouvé automatiquement. Choisissez-le dans la liste.');
+      frAlert({ type: 'attention', titre: 'Quartier non trouvé', message: 'Le quartier n\'a pas pu être trouvé automatiquement. Choisissez-le dans la liste.' });
     }
   });
 }
@@ -1416,7 +1417,7 @@ async function saveInfos() {
       // v2.63 : Luxembourg-Ville sans quartier → la zone ne peut pas être vérifiée
       var cNorm = (update.commune || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
       if (!update.quartier && (cNorm === 'luxembourg' || cNorm === 'luxembourgville')) {
-        if (!confirm('Luxembourg-Ville sans quartier : la zone ne peut pas être vérifiée et reste telle quelle.\n\nChoisissez le quartier pour qu\'elle soit contrôlée. Enregistrer quand même ?')) { btn.textContent = orig; btn.disabled = false; return; }
+        if (!(await frConfirm({ titre: 'Quartier non renseigné', message: 'Luxembourg-Ville sans quartier : la zone ne peut pas être vérifiée et reste telle quelle.\n\nChoisissez le quartier pour qu\'elle soit contrôlée. Enregistrer quand même ?', ok: 'Enregistrer quand même', icone: 'attention' }))) { btn.textContent = orig; btn.disabled = false; return; }
       }
     }
     // Accès au domicile (v39)
@@ -1445,7 +1446,7 @@ async function saveInfos() {
 
     Object.assign(currentClient, update, apres || {});   // zone éventuellement recalculée par la base
     if (apres && ('hors_zone' in apres) && !!apres.hors_zone !== zoneAvant && update.hors_zone === zoneAvant) {
-      alert('Zone recalculée d\'après l\'adresse (Paramètres → Zones) : ' + (apres.hors_zone ? 'HORS ZONE (supplément par trajet)' : 'SANS FRAIS') + '.\n\nSi ce n\'est pas voulu, remettez le champ « Zone » à la main : votre choix est prioritaire.');
+      frAlert({ type: 'info', titre: 'Zone recalculée', message: 'Zone recalculée d\'après l\'adresse (Paramètres → Zones) : **' + (apres.hors_zone ? 'HORS ZONE (supplément par trajet)' : 'SANS FRAIS') + '**.\n\nSi ce n\'est pas voulu, remettez le champ « Zone » à la main : votre choix est prioritaire.' });
     }
     editMode = false;
     renderInfosDisplay(currentClient);
@@ -1457,7 +1458,7 @@ async function saveInfos() {
     document.getElementById('btn-add-personne').style.display = 'none';
   } catch(e) {
     console.error('Erreur sauvegarde infos client:', e);
-    alert("Erreur lors de l'enregistrement. Vérifiez que les colonnes client_depuis, tarif_walking, tarif_daycare, tarif_boarding, tarif_reduction et personnes_autorisees existent dans la table clients (migration SQL).");
+    frAlert({ type: 'erreur', titre: 'Enregistrement impossible', message: 'Les informations du client n\'ont pas été enregistrées.\n\nVérifiez que les colonnes client_depuis, tarif_walking, tarif_daycare, tarif_boarding, tarif_reduction et personnes_autorisees existent dans la table clients (migration SQL).\n\nDétail : ' + (e.message || 'inconnu') });
   } finally {
     btn.textContent = orig;
     btn.disabled = false;
@@ -2470,15 +2471,15 @@ async function saveResaEdit() {
   var statut = document.getElementById('resa-edit-statut').value;
   var notes = document.getElementById('resa-edit-notes').value;
 
-  if (!debut) { alert('La date est obligatoire.'); return; }
-  if (svc === 'boarding' && !fin) { alert('La date de fin est obligatoire pour le boarding.'); return; }
+  if (!debut) { frAlert({ type: 'attention', titre: 'Date manquante', message: 'La date est obligatoire.' }); return; }
+  if (svc === 'boarding' && !fin) { frAlert({ type: 'attention', titre: 'Date de fin manquante', message: 'La date de fin est obligatoire pour le boarding.' }); return; }
 
   var jours = [];
   document.querySelectorAll('#resa-edit-jours-group input[type=checkbox]:checked').forEach(function(cb) { jours.push(cb.value); });
   var finRecurrence = null;
   if (svc !== 'boarding' && jours.length > 0) {
     finRecurrence = document.getElementById('resa-edit-fin-recurrence').value;
-    if (!finRecurrence) { alert('Indiquez la date de fin de récurrence.'); return; }
+    if (!finRecurrence) { frAlert({ type: 'attention', titre: 'Fin de récurrence manquante', message: 'Indiquez la date de fin de récurrence.' }); return; }
     fin = finRecurrence;
   }
 
@@ -2501,10 +2502,10 @@ async function saveResaEdit() {
     var n = await majLignesReservation(r, update);
     document.getElementById('modal-resa-detail').classList.remove('open');
     loadReservations(currentReservationsList);
-    alert('✓ ' + n + ' ligne' + (n > 1 ? 's' : '') + ' mise' + (n > 1 ? 's' : '') + ' à jour.');
+    frToast(n + ' ligne' + (n > 1 ? 's' : '') + ' mise' + (n > 1 ? 's' : '') + ' à jour.');
   } catch(e) {
     console.error('Erreur sauvegarde réservation:', e);
-    alert("Erreur lors de l'enregistrement : " + (e.message || ''));
+    frAlert({ type: 'erreur', titre: 'Enregistrement impossible', message: 'La réservation n\'a pas été mise à jour.\n\nDétail : ' + (e.message || 'inconnu') });
   } finally {
     btn.textContent = orig;
     btn.disabled = false;
@@ -2642,7 +2643,8 @@ async function notifierClientAnnulation(clientId, texte, texteEn) {
       client_id: clientId, expediteur: 'admin', contenu: texte, lu: false
     });
     if (error) throw error;
-  } catch(e) { console.error('notification annulation:', e); alert('Annulation enregistrée, mais le client n\'a pas été notifié : ' + (e.message || '')); }
+    return true;
+  } catch(e) { console.error('notification annulation:', e); frAlert({ type: 'attention', titre: 'Client non prévenu', message: 'L\'annulation est enregistrée, mais le message au client n\'a pas pu être envoyé. Prévenez-le directement.\n\nDétail : ' + (e.message || 'inconnu') }); return false; }
 }
 
 async function confirmerAnnulationResa() {
@@ -2669,7 +2671,7 @@ async function confirmerAnnulationResa() {
       var exclues = (r.dates_exclues || '').split(',').map(function(x) { return x.trim(); }).filter(Boolean);
       if (exclues.indexOf(dateRef) === -1) exclues.push(dateRef);
       await majLignesReservation(r, { dates_exclues: exclues.join(',') });
-      await notifierClientAnnulation(r.client_id,
+      var prevenu = await notifierClientAnnulation(r.client_id,
         'Votre séance du ' + formatDateFR(dateRef) + ' a été annulée'
         + (qui === 'client' ? ' à votre demande.' : ' par Forest Rangers.')
         + (pct > 0 ? ' Elle reste facturée à ' + pct + ' % selon les conditions d\'annulation.' : ' Elle ne vous sera pas facturée.')
@@ -2678,15 +2680,15 @@ async function confirmerAnnulationResa() {
         + (qui === 'client' ? ' at your request.' : ' by Forest Rangers.')
         + (pct > 0 ? ' It is still charged at ' + pct + '% under the cancellation terms.' : ' It will not be charged.')
         + ' The rest of your recurring sessions is unchanged.');
-      alert('✓ Séance du ' + formatDateFR(dateRef) + ' annulée. Le client a été prévenu.');
+      frToast('Séance du ' + formatDateFR(dateRef) + ' annulée.' + (prevenu ? ' Le client a été prévenu.' : ''));
     } else if (estRecurrente && window.FR_FACT && FR_FACT.planArretSerie(r, FR_FACT.aujourdhui()).mode !== 'annuler') {
       // Série déjà commencée : arrêtée, pas effacée — les séances faites restent dues
       var plan = FR_FACT.planArretSerie(r, FR_FACT.aujourdhui());
-      if (plan.mode === 'rien') { alert('Cette série est déjà terminée : rien à annuler.'); return; }
+      if (plan.mode === 'rien') { frAlert({ type: 'info', titre: 'Série terminée', message: 'Cette série est déjà terminée : rien à annuler.' }); return; }
       var lignesSerie = await FR_FACT.lignesDeReservation(db, r);
       if (!lignesSerie.length) lignesSerie = [r];
       var nA = await FR_FACT.arreterSerie(db, lignesSerie, plan.date, { annule_par: qui, tardive: sugg.tardive, pct: pct });
-      await notifierClientAnnulation(r.client_id,
+      var prevenu = await notifierClientAnnulation(r.client_id,
         'Votre série ' + (SVC_NAMES[r.service] || r.service) + ' est arrêtée à partir du ' + formatDateFR(plan.date)
         + (qui === 'client' ? ', à votre demande.' : ', par Forest Rangers.')
         + (pct > 0 ? ' La séance du ' + formatDateFR(plan.date) + ' reste facturée à ' + pct + ' % selon les conditions d\'annulation.' : ' Aucune séance à venir ne vous sera facturée.')
@@ -2695,7 +2697,7 @@ async function confirmerAnnulationResa() {
         + (qui === 'client' ? ', at your request.' : ', by Forest Rangers.')
         + (pct > 0 ? ' The session on ' + formatDateFR(plan.date) + ' is still charged at ' + pct + '% under the cancellation terms.' : ' No upcoming session will be charged.')
         + ' The ' + plan.tenues + ' session' + (plan.tenues > 1 ? 's' : '') + ' already done ' + (plan.tenues > 1 ? 'remain' : 'remains') + ' due.');
-      alert('✓ Série arrêtée au ' + formatDateFR(plan.date) + ' (' + nA + ' ligne' + (nA > 1 ? 's' : '') + '). Le client a été prévenu.');
+      frToast('Série arrêtée au ' + formatDateFR(plan.date) + ' (' + nA + ' ligne' + (nA > 1 ? 's' : '') + ').' + (prevenu ? ' Le client a été prévenu.' : ''));
     } else {
       var n = await majLignesReservation(r, {
         statut: 'annule',
@@ -2703,14 +2705,14 @@ async function confirmerAnnulationResa() {
         annulation_tardive: sugg.tardive,
         facture_pourcentage: pct
       });
-      await notifierClientAnnulation(r.client_id,
+      var prevenu = await notifierClientAnnulation(r.client_id,
         'Votre réservation ' + (SVC_NAMES[r.service] || r.service) + ' du ' + formatDateFR(r.date_debut)
         + ' a été annulée' + (qui === 'client' ? ' à votre demande.' : ' par Forest Rangers.')
         + (pct > 0 ? ' Facturation appliquée : ' + pct + ' %.' : ' Aucun montant ne vous sera facturé.'),
         'Your ' + (SVC_NAMES[r.service] || r.service) + ' booking on ' + formatDateFR(r.date_debut)
         + ' has been cancelled' + (qui === 'client' ? ' at your request.' : ' by Forest Rangers.')
         + (pct > 0 ? ' Charge applied: ' + pct + '%.' : ' Nothing will be charged.'));
-      alert('✓ Réservation annulée (' + n + ' ligne' + (n > 1 ? 's' : '') + '). Le client a été prévenu.');
+      frToast('Réservation annulée (' + n + ' ligne' + (n > 1 ? 's' : '') + ').' + (prevenu ? ' Le client a été prévenu.' : ''));
     }
     document.getElementById('modal-annulation').classList.remove('open');
     document.getElementById('modal-resa-detail').classList.remove('open');
@@ -2723,7 +2725,7 @@ async function confirmerAnnulationResa() {
     loadAnnulationDetails(currentReservationsList);
   } catch(e) {
     console.error('Erreur annulation réservation:', e);
-    alert("Erreur lors de l'annulation : " + (e.message || ''));
+    frAlert({ type: 'erreur', titre: 'Annulation impossible', message: 'La réservation n\'a pas pu être annulée.\n\nDétail : ' + (e.message || 'inconnu') });
   }
 }
 
@@ -2740,10 +2742,10 @@ function openMessageModal() {
 }
 
 async function sendMessageClient() {
-  if (!currentClient || !currentClient.email) { alert('Aucune adresse email enregistrée pour ce client.'); return; }
+  if (!currentClient || !currentClient.email) { frAlert({ type: 'attention', titre: 'Email manquant', message: 'Aucune adresse email enregistrée pour ce client.' }); return; }
   var sujet = document.getElementById('message-sujet').value.trim();
   var corps = document.getElementById('message-corps').value.trim();
-  if (!sujet || !corps) { alert('Sujet et message sont nécessaires.'); return; }
+  if (!sujet || !corps) { frAlert({ type: 'attention', titre: 'Message incomplet', message: 'Indiquez un sujet et un message.' }); return; }
   var btn = document.getElementById('btn-send-message');
   var ancien = btn ? btn.innerHTML : '';
   if (btn) { btn.disabled = true; btn.innerHTML = 'Envoi…'; }
@@ -2752,23 +2754,23 @@ async function sendMessageClient() {
   if (r.ok) {
     document.getElementById('modal-message').classList.remove('open');
     if (typeof showToast === 'function') showToast('✓ Email envoyé à ' + (r.destinataire || currentClient.email));
-    else alert('Email envoyé à ' + (r.destinataire || currentClient.email));
+    else frToast('Email envoyé à ' + (r.destinataire || currentClient.email));
     loadJournalEmails();
     return;
   }
   if (r.indisponible) {
-    if (confirm('L\'envoi automatique ne répond pas (' + (r.erreur || '') + ').\n\nOuvrir votre messagerie à la place ?')) {
+    if (await frConfirm({ titre: 'Envoi automatique indisponible', message: 'L\'envoi automatique ne répond pas. Ouvrir votre messagerie à la place ?\n\nDétail : ' + (r.erreur || 'inconnu'), ok: 'Ouvrir la messagerie', icone: 'envoi' })) {
       FR_MAIL.ouvrirMessagerie(currentClient.email, sujet, corps);
       document.getElementById('modal-message').classList.remove('open');
     }
     return;
   }
-  alert('Email non envoyé.\n\n' + (r.erreur || 'Erreur inconnue'));
+  frAlert({ type: 'erreur', titre: 'Email non envoyé', message: 'L\'email n\'a pas pu être envoyé.\n\nDétail : ' + (r.erreur || 'erreur inconnue') });
   loadJournalEmails();
 }
 
 function contacterClient() {
-  if (!currentClient || !currentClient.telephone) { alert('Aucun numéro de téléphone enregistré pour ce client.'); return; }
+  if (!currentClient || !currentClient.telephone) { frAlert({ type: 'attention', titre: 'Téléphone manquant', message: 'Aucun numéro de téléphone enregistré pour ce client.' }); return; }
   window.location.href = 'tel:' + currentClient.telephone.replace(/\s+/g, '');
 }
 
@@ -2790,7 +2792,7 @@ function openAjoutChien() {
 
 async function saveNouveauChien() {
   var nom = document.getElementById('ac-nom').value.trim();
-  if (!nom) { alert('Le nom du chien est obligatoire.'); return; }
+  if (!nom) { frAlert({ type: 'attention', titre: 'Nom manquant', message: 'Le nom du chien est obligatoire.' }); return; }
   var poids = parseFloat(document.getElementById('ac-poids').value);
   if (isNaN(poids)) poids = null;
 
@@ -2820,7 +2822,7 @@ async function saveNouveauChien() {
     document.getElementById('modal-ajout-chien').classList.remove('open');
   } catch(e) {
     console.error('Erreur ajout chien:', e);
-    alert("Erreur lors de l'ajout du chien.");
+    frAlert({ type: 'erreur', titre: 'Ajout impossible', message: 'Le chien n\'a pas pu être ajouté.\n\nDétail : ' + (e.message || 'inconnu') });
   } finally {
     btn.textContent = orig; btn.disabled = false;
   }

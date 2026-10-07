@@ -456,6 +456,7 @@ textarea.input-field { resize: none; }
 .input-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-faint); font-weight: 600; margin-bottom: 5px; display: block; }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="fr-dialog.js"></script>
 <!-- Repli CDN : si jsDelivr n'a pas repondu, on tente unpkg avant d'abandonner. -->
 <script>if (!window.supabase) { document.write('<scr' + 'ipt src="https://unpkg.com/@supabase/supabase-js@2"><\/scr' + 'ipt>'); }</script>
   <script>
@@ -1810,7 +1811,7 @@ async function envoyerMessageStaff() {
     el.value = '';
     await chargerMessagesStaff();
   } catch(e) {
-    alert('Message non envoye.\n\n' + (e.message || e));
+    frAlert({ type: 'erreur', titre: 'Message non envoyé', message: 'Votre message n’est pas parti. Vérifiez votre connexion puis réessayez : le texte est resté dans le champ.\n\nDétail : ' + (e.message || e) });
     console.log('envoi message staff:', e);
   }
 }
@@ -1993,20 +1994,21 @@ function tagChien(c) {
 }
 
 async function signalerChaleurRanger(chienId, nom) {
-  if (!confirm('Signaler que ' + nom + ' semble etre en chaleur ?\n\n'
-             + 'Le planning n\'est PAS modifie et aucune promenade n\'est annulee. '
-             + 'Gabriel et le client recoivent un message — la decision leur revient.\n\n'
-             + 'A ne faire que si vous l\'avez constate sur le terrain.')) return;
+  if (!(await frConfirm({ titre: 'Chaleur — ' + nom, icone: 'chaleur',
+      message: 'Signaler que **' + nom + '** semble être en chaleur ?',
+      liste: ['Le planning n’est **pas** modifié, aucune promenade n’est annulée',
+              'Gabriel et le client reçoivent un message : la décision leur revient',
+              'À faire seulement si vous l’avez constaté sur le terrain'],
+      ok: 'Signaler' }))) return;
   try {
     var { error } = await db.rpc('fr_chaleur_signaler', { p_chien: chienId });
     if (error) {
-      alert('Signalement impossible : ' + String(error.message).replace(/^.*FR_CHALEUR:\s*/, ''));
+      frAlert({ type: 'attention', titre: 'Signalement impossible', message: String(error.message).replace(/^.*FR_CHALEUR:\s*/, '') });
       return;
     }
-    alert('✓ Signalement transmis. Gabriel et le client sont prevenus.\n\n'
-        + 'Continuez la promenade normalement : rien n\'a change au planning.');
+    frAlert({ type: 'succes', titre: 'Signalement transmis', message: 'Gabriel et le client sont prévenus.\n\nContinuez la promenade normalement : rien n’a changé au planning.' });
     loadMissionsJour();
-  } catch (e) { alert('Erreur : ' + e.message); }
+  } catch (e) { frAlert({ type: 'erreur', titre: 'Signalement non envoyé', message: 'Vérifiez votre connexion puis réessayez.\n\nDétail : ' + e.message }); }
 }
 
 function renderMissionsVides() {

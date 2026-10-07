@@ -820,6 +820,7 @@ textarea.form-control { resize: vertical; }
     frErreurReseau();
   }
   </script>
+  <script src="fr-dialog.js"></script>
   <script src="fr-calendrier.js"></script>
   <script src="fr-facturation.js"></script>
   <script src="fr-email.js"></script>
@@ -1777,12 +1778,12 @@ async function majStatutBooking(g, statut){
     q = g.date_fin ? q.eq('date_fin',g.date_fin) : q.is('date_fin',null);
     q = g.creneau ? q.eq('creneau',g.creneau) : q.is('creneau',null);
     var { error } = await q;
-    if (error){ alert('Erreur : '+(error.message||'')); return; }
+    if (error){ frAlert({ type:'erreur', titre:'Mise à jour impossible', message:'Le statut de la réservation n\'a pas été modifié.\n\nDétail : '+(error.message||'') }); return; }
     loadReservationsAdmin();
-  }catch(e){ console.error(e); alert('Erreur de mise à jour'); }
+  }catch(e){ console.error(e); frAlert({ type:'erreur', titre:'Mise à jour impossible', message:'Le statut de la réservation n\'a pas été modifié.\n\nDétail : '+((e && e.message)||e) }); }
 }
 async function validerResaAdmin(i){ var g=(window._resaPending||[])[i]; if(g) majStatutBooking(g,'confirme'); }
-async function refuserResaAdmin(i){ var g=(window._resaPending||[])[i]; if(!g) return; if(confirm('Refuser cette réservation ?')) majStatutBooking(g,'annule'); }
+async function refuserResaAdmin(i){ var g=(window._resaPending||[])[i]; if(!g) return; if(await frConfirm({ titre:'Refuser la réservation ?', message:'La demande en attente passera au statut « annulé ».', ok:'Refuser', danger:true })) majStatutBooking(g,'annule'); }
 
 // Recharge les données de l'écran affiché (retour d'onglet, session reprise)
 function rechargerPageActive() {
@@ -1926,7 +1927,7 @@ async function genererLien() {
   } catch(e) {
     console.error('Erreur génération invitation:', e);
     // Pas de lien affiché : un lien absent de la base serait refusé par la page d'inscription
-    alert('L\'invitation n\'a pas pu être enregistrée, aucun lien n\'a été créé.\n' + (e.message || e));
+    frAlert({ type: 'erreur', titre: 'Invitation non enregistrée', message: 'L\'invitation n\'a pas pu être enregistrée : aucun lien n\'a été créé.\n\nDétail : ' + (e.message || e) });
   }
 }
 
@@ -2018,7 +2019,7 @@ function copierLienInvitation(btn, lien) {
 }
 
 async function supprimerInvitation(btn, id) {
-  if (!confirm('Supprimer cette invitation ?')) return;
+  if (!(await frConfirm({ titre: 'Supprimer l\'invitation ?', message: 'Le lien envoyé ne fonctionnera plus. Vous pourrez en renvoyer une nouvelle.', ok: 'Supprimer', danger: true }))) return;
   try {
     await db.from('invitations').delete().eq('id', id);
     loadInvitations();
@@ -2506,7 +2507,7 @@ async function enregistrerStaff() {
 async function desactiverStaff() {
   var id = document.getElementById('staff-id').value;
   if (!id) return;
-  if (!confirm('Désactiver ce membre ? Sa fiche et son historique sont conservés, il n\'apparaîtra plus dans les plannings.')) return;
+  if (!(await frConfirm({ titre: 'Désactiver ce membre ?', message: 'Sa fiche et son historique sont conservés. Il n\'apparaîtra plus dans les plannings.', ok: 'Désactiver', danger: true }))) return;
   try {
     // .select() : sans ligne renvoyée, la base a refusé en silence (droits) —
     // avant la v2.61, le message « désactivé » s'affichait quand même.
@@ -2664,8 +2665,10 @@ async function facturationMensuelle(mode) {
   var tests = document.getElementById('fm-tests').checked;
   var box = document.getElementById('fm-resultat');
   if (!periode) { showToastAdmin('Choisissez le mois', 'amber'); return; }
-  if (mode === 'envoi' && !confirm('Facturer ' + periode + ' et envoyer les factures par email maintenant ?\n\n'
-      + 'Les clients déjà facturés pour ce mois sont sautés.' + (tests ? '\nComptes test inclus : facture « test — à ne pas payer » envoyée à chaque testeur.' : ''))) return;
+  if (mode === 'envoi' && !(await frConfirm({ titre: 'Facturer ' + periode + ' ?', icone: 'envoi',
+      message: 'Les factures de **' + periode + '** seront créées et envoyées par e-mail maintenant.',
+      liste: ['Les clients déjà facturés pour ce mois sont sautés', tests ? 'Comptes test inclus : facture « test — à ne pas payer » envoyée à chaque testeur' : null],
+      ok: 'Facturer et envoyer' }))) return;
   box.innerHTML = '<div style="padding:8px 0;">' + (mode === 'envoi' ? 'Facturation en cours… (environ 2 secondes par client)' : 'Calcul…') + '</div>';
   try {
     var res = await db.functions.invoke('fr-facturation-mensuelle', { body: { mode: mode, periode: periode, avec_tests: tests } });
@@ -2866,7 +2869,7 @@ async function chargerRegularisations() {
 async function ignorerRegularisation(i) {
   var x = (window._regul || [])[i];
   if (!x) return;
-  if (!confirm('Ne pas reporter l\'écart de ' + rcEur(x.reste) + ' sur la facture ' + (x.numero || '') + ' ?')) return;
+  if (!(await frConfirm({ titre: 'Ignorer l\'écart ?', message: 'L\'écart de **' + rcEur(x.reste) + '** ne sera pas reporté sur la facture **' + (x.numero || '') + '**.', ok: 'Ignorer l\'écart' }))) return;
   try {
     await FR_FACT.ignorerRegularisation(db, x.facture_id, x.reste);
     showToastAdmin('Écart ignoré', 'green');
@@ -2920,7 +2923,7 @@ function marquerPayee(factureId) {
   db.from('v_factures_suivi').select('*').eq('id', factureId).single().then(async function(r) {
     if (r.error || !r.data) {
       // Sans la migration v31 : ancien comportement (statut seul), avec confirmation
-      if (!confirm('La migration v31 n\'est pas appliquée : la facture sera simplement marquée payée, sans date de virement. Continuer ?')) return;
+      if (!(await frConfirm({ titre: 'Migration v31 non appliquée', icone: 'attention', message: 'La facture sera simplement marquée payée, sans date de virement.', ok: 'Marquer payée' }))) return;
       var u = await db.from('factures').update({ statut: 'payee' }).eq('id', factureId);
       if (u.error) { showToastAdmin('Erreur : ' + u.error.message, 'red'); return; }
       showToastAdmin('✓ Facture marquée payée', 'green'); loadDashboardStats(); loadFacturesAdmin();
@@ -3009,8 +3012,10 @@ async function validerPaiement() {
 async function annulerPaiement(id) {
   var p = RC.paiements.filter(function(x) { return x.id === id; })[0];
   if (!p) return;
-  var motif = prompt('Annuler le paiement de ' + rcEur(p.montant) + ' du ' + rcDate(p.date_virement) + ' (' + rcNomClient(p.client_id) + ') ?\n\n'
-    + 'À utiliser pour une erreur de saisie : les factures qu\'il soldait redeviendront ouvertes.\n\nMotif (facultatif) :', 'Erreur de saisie');
+  var motif = await frPrompt({ titre: 'Annuler le paiement ?',
+    message: 'Paiement de **' + rcEur(p.montant) + '** du ' + rcDate(p.date_virement) + ' (' + rcNomClient(p.client_id) + ').\n\n'
+      + 'À utiliser pour une erreur de saisie : les factures qu\'il soldait redeviendront ouvertes.\n\nMotif (facultatif) :',
+    valeur: 'Erreur de saisie', ok: 'Annuler le paiement', annuler: 'Retour', danger: true });
   if (motif === null) return;
   var r = await db.rpc('fr_paiement_annuler', { p_paiement: id, p_motif: motif || null });
   if (r.error) { showToastAdmin('Erreur : ' + r.error.message, 'red'); return; }
@@ -3098,7 +3103,7 @@ async function validerEtape(mode) {
     if (btn) { btn.disabled = false; btn.textContent = 'Envoyer et enregistrer'; }
     if (!r0.ok) {
       // Rien n'est enregistré tant que l'email n'est pas parti
-      if (r0.indisponible && confirm('L\'envoi automatique ne répond pas (' + (r0.erreur || '') + ').\n\nOuvrir votre messagerie avec ce texte, puis enregistrer l\'étape ?')) {
+      if (r0.indisponible && await frConfirm({ titre: 'Envoi automatique indisponible', icone: 'attention', message: 'L\'envoi automatique ne répond pas (' + (r0.erreur || '') + ').\n\nOuvrir votre messagerie avec ce texte, puis enregistrer l\'étape ?', ok: 'Ouvrir la messagerie' })) {
         mode = 'messagerie';
       } else {
         showToastAdmin('Email non envoyé : ' + (r0.erreur || 'erreur') + '. Étape non enregistrée.', 'red');
@@ -3124,10 +3129,13 @@ async function envoyerRappels1Groupes() {
   var sansEmail = liste.filter(function(f) { return !(RC.clients[f.client_id] || {}).email; });
   var avecEmail = liste.filter(function(f) { return (RC.clients[f.client_id] || {}).email; });
   if (!avecEmail.length) { showToastAdmin('Aucune de ces factures n\'a d\'adresse email client', 'amber'); return; }
-  var recap = avecEmail.map(function(f) { return '• ' + (f.numero || '') + ' — ' + rcNomClient(f.client_id) + ' — reste ' + rcEur(f.solde); }).join('\n');
-  if (!confirm('Envoyer le rappel 1 (courtois, sans frais) à ' + avecEmail.length + ' facture' + (avecEmail.length > 1 ? 's' : '') + ' ?\n\n' + recap
-    + (sansEmail.length ? '\n\nSans adresse email, ignorées : ' + sansEmail.map(function(f) { return f.numero; }).join(', ') : '')
-    + '\n\nAvez-vous pointé vos virements du jour ?')) return;
+  var recap = avecEmail.map(function(f) { return (f.numero || '') + ' — ' + rcNomClient(f.client_id) + ' — reste ' + rcEur(f.solde); });
+  if (!(await frConfirm({ titre: 'Envoyer le rappel 1 ?', icone: 'envoi',
+    message: 'Rappel courtois, sans frais, pour **' + avecEmail.length + ' facture' + (avecEmail.length > 1 ? 's' : '') + '** :',
+    liste: recap,
+    apres: (sansEmail.length ? 'Sans adresse e-mail, ignorées : ' + sansEmail.map(function(f) { return f.numero; }).join(', ') + '\n\n' : '')
+      + 'Avez-vous pointé vos virements du jour ?',
+    ok: 'Envoyer' }))) return;
 
   var btn = document.getElementById('btn-rappels-groupes');
   var ok = 0, echecs = [];
@@ -3145,7 +3153,7 @@ async function envoyerRappels1Groupes() {
     if (e2.error) echecs.push((f.numero || '') + ' : email parti, étape non enregistrée (' + e2.error.message + ')');
     else ok++;
   }
-  if (echecs.length) alert(ok + ' rappel' + (ok > 1 ? 's' : '') + ' envoyé' + (ok > 1 ? 's' : '') + '.\n\nProblèmes :\n' + echecs.join('\n'));
+  if (echecs.length) frAlert({ type: 'attention', titre: 'Rappels : envoi incomplet', message: ok + ' rappel' + (ok > 1 ? 's' : '') + ' envoyé' + (ok > 1 ? 's' : '') + '.\n\nProblèmes :', liste: echecs });
   else showToastAdmin('✓ ' + ok + ' rappel' + (ok > 1 ? 's' : '') + ' 1 envoyé' + (ok > 1 ? 's' : ''), 'green');
   await loadFacturesAdmin(); chargerAlertes();
 }
@@ -3154,16 +3162,19 @@ async function envoyerRappels1Groupes() {
 async function suspendreClient(clientId, suspendre) {
   var nom = rcNomClient(clientId);
   if (suspendre) {
-    if (!confirm('Suspendre les réservations de ' + nom + ' ?\n\n'
-      + 'Base : CGV article 8.5 (suspension pour impayé, version octobre 2026). Le client en est informé dans son espace client.\n\n'
-      + 'Le client ne pourra plus réserver lui-même ; vous pourrez toujours réserver pour lui.')) return;
-    var motif = prompt('Motif (visible dans l\'admin) :', 'Impayé — mise en demeure sans effet');
+    if (!(await frConfirm({ titre: 'Suspendre les réservations ?', icone: 'attention',
+      message: 'Suspendre les réservations de **' + nom + '** ?',
+      liste: ['Base : CGV article 8.5 (suspension pour impayé, version octobre 2026)',
+              'Le client en est informé dans son espace client',
+              'Le client ne pourra plus réserver lui-même ; vous pourrez toujours réserver pour lui'],
+      ok: 'Continuer' }))) return;
+    var motif = await frPrompt({ titre: 'Motif de la suspension', message: 'Motif (visible dans l\'admin) :', valeur: 'Impayé — mise en demeure sans effet', ok: 'Suspendre les réservations', danger: true });
     if (motif === null) return;
     var r = await db.rpc('fr_client_suspendre', { p_client: clientId, p_suspendre: true, p_motif: motif });
     if (r.error) { showToastAdmin('Erreur : ' + r.error.message, 'red'); return; }
     showToastAdmin('Réservations de ' + nom + ' suspendues', 'amber');
   } else {
-    if (!confirm('Rétablir les réservations de ' + nom + ' ?')) return;
+    if (!(await frConfirm({ titre: 'Rétablir les réservations ?', message: 'Rétablir les réservations de **' + nom + '** ?', ok: 'Rétablir' }))) return;
     var r2 = await db.rpc('fr_client_suspendre', { p_client: clientId, p_suspendre: false, p_motif: null });
     if (r2.error) { showToastAdmin('Erreur : ' + r2.error.message, 'red'); return; }
     showToastAdmin('✓ Réservations de ' + nom + ' rétablies', 'green');
@@ -3585,10 +3596,12 @@ async function chaleurAdminDeclarer(id, nom) {
   showToastAdmin('Calcul des séances…', 'amber');
   var apercu = await chaleurApercuTexte(id);
   if (apercu && apercu.erreur) { showToastAdmin(apercu.erreur, 'red'); return; }
-  if (!confirm('Activer le mode chaleur pour ' + nom + ' ?\n\n'
-             + 'Retrait du planning pendant ' + CHALEUR_JOURS + ' jours.\n\n'
-             + apercu + '\n\n'
-             + 'Le client voit l\'information dans son espace.')) return;
+  if (!(await frConfirm({ titre: 'Mode chaleur — ' + nom, icone: 'chaleur',
+             message: 'Activer le mode chaleur pour **' + nom + '** ?',
+             liste: ['Retrait du planning pendant ' + CHALEUR_JOURS + ' jours']
+               .concat(String(apercu).split('\n'))
+               .concat(['Le client voit l\'information dans son espace']),
+             ok: 'Activer le mode chaleur' }))) return;
   try {
     var { error } = await db.rpc('fr_chaleur_declarer', { p_chien: id, p_jours: CHALEUR_JOURS });
     if (error) { showToastAdmin(erreurServeurChaleur(error.message), 'red'); return; }
@@ -3599,7 +3612,7 @@ async function chaleurAdminDeclarer(id, nom) {
 }
 
 async function chaleurAdminEcarter(id, nom) {
-  if (!confirm('Écarter le signalement concernant ' + nom + ' ?\n\nRien ne change au planning.')) return;
+  if (!(await frConfirm({ titre: 'Écarter le signalement ?', icone: 'chaleur', message: 'Écarter le signalement concernant **' + nom + '** ?\n\nRien ne change au planning.', ok: 'Écarter' }))) return;
   try {
     var { error } = await db.rpc('fr_chaleur_ecarter', { p_chien: id });
     if (error) { showToastAdmin(erreurServeurChaleur(error.message), 'red'); return; }
@@ -3609,9 +3622,12 @@ async function chaleurAdminEcarter(id, nom) {
 }
 
 async function chaleurAdminAnnuler(id, nom) {
-  if (!confirm('Remettre ' + nom + ' au planning dès aujourd\'hui ?\n\n'
-             + 'Les séances à venir qui avaient été retirées sont restaurées et les frais '
-             + 'd\'annulation correspondants annulés. Celles déjà passées restent annulées.')) return;
+  if (!(await frConfirm({ titre: 'Fin du mode chaleur — ' + nom, icone: 'chaleur',
+             message: 'Remettre **' + nom + '** au planning dès aujourd\'hui ?',
+             liste: ['Les séances à venir qui avaient été retirées sont restaurées',
+                     'Les frais d\'annulation correspondants sont annulés',
+                     'Les séances déjà passées restent annulées'],
+             ok: 'Remettre au planning' }))) return;
   try {
     var { error } = await db.rpc('fr_chaleur_annuler', { p_chien: id });
     if (error) { showToastAdmin(erreurServeurChaleur(error.message), 'red'); return; }
@@ -3846,7 +3862,7 @@ async function archiverChien() {
   var id = document.getElementById('ch-id').value;
   var nom = document.getElementById('ch-nom').value.trim();
   if (!id) return;
-  if (!confirm('Archiver ' + (nom || 'ce chien') + ' ? Sa fiche et son historique sont conservés, il disparaît des listes et des plannings.')) return;
+  if (!(await frConfirm({ titre: 'Archiver ' + (nom || 'ce chien') + ' ?', message: 'Sa fiche et son historique sont conservés. Il disparaît des listes et des plannings.', ok: 'Archiver', danger: true }))) return;
   try {
     var r = await db.from('chiens').update({ actif: false }).eq('id', id);
     if (r.error) throw r.error;
@@ -5769,8 +5785,10 @@ async function envoyerAlerte() {
   if (!alerteDestinataires.length) { showToastAdmin('Aucun destinataire', 'amber'); return; }
   var n = alerteDestinataires.length;
   var avecBanniere = !!(document.getElementById('alerte-banniere') || {}).checked;
-  if (!confirm('Envoyer ce message a ' + n + ' client' + (n > 1 ? 's' : '') + ' ?'
-      + (avecBanniere ? '\n\nUne banniere sera aussi affichee dans l\'espace client.' : ''))) return;
+  if (!(await frConfirm({ titre: 'Envoyer l\'alerte ?', icone: 'envoi',
+      message: 'Envoyer ce message à **' + n + ' client' + (n > 1 ? 's' : '') + '** ?',
+      liste: avecBanniere ? ['Une bannière sera aussi affichée dans l\'espace client'] : null,
+      ok: 'Envoyer' }))) return;
 
   var btn = document.getElementById('alerte-btn-envoi');
   if (btn) { btn.disabled = true; btn.textContent = 'Envoi…'; }
@@ -5815,10 +5833,10 @@ async function annulerPromenadesJour() {
     var clients = [];
     duJour.forEach(function(r) { if (r.client_id && clients.indexOf(r.client_id) === -1) clients.push(r.client_id); });
     var jourFR = formatDateFR(ds);
-    if (!confirm('Annuler ' + duJour.length + ' promenade(s) du ' + jourFR + ' pour ' + clients.length + ' client(s) ?\n\n'
-      + '· 0 % facturé (force majeure)\n'
-      + '· Day Care et Boarding du jour sont conservés\n'
-      + '· Les clients concernés reçoivent un message')) return;
+    if (!(await frConfirm({ titre: 'Annuler les promenades ?',
+      message: 'Annuler **' + duJour.length + ' promenade(s)** du ' + jourFR + ' pour ' + clients.length + ' client(s) ?',
+      liste: ['0 % facturé (force majeure)', 'Day Care et Boarding du jour sont conservés', 'Les clients concernés reçoivent un message'],
+      ok: 'Annuler les promenades', annuler: 'Retour', danger: true }))) return;
 
     if (btn) { btn.disabled = true; btn.textContent = 'Annulation…'; }
     var faites = 0, erreurs = 0;
@@ -6184,8 +6202,12 @@ function copierTelephonesAlerte() {
 function copierPressePapier(txt, msg) {
   var ok = function(){ showToastAdmin('✓ ' + msg, 'green'); };
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(txt).then(ok).catch(function(){ alert(txt); });
-  } else { alert(txt); }
+    navigator.clipboard.writeText(txt).then(ok).catch(function(){ copieManuelle(txt); });
+  } else { copieManuelle(txt); }
+}
+// Copie impossible (navigateur) : texte présélectionné dans un champ, prêt pour Ctrl/Cmd + C
+function copieManuelle(txt) {
+  frPrompt({ titre: 'Copie manuelle', icone: 'info', message: 'Le navigateur a bloqué la copie automatique. Le texte est sélectionné : copiez-le avec Ctrl + C (Cmd + C sur Mac).', valeur: txt, multiligne: true, ok: 'Fermer', annuler: 'Annuler' });
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -6988,7 +7010,7 @@ async function sauvegarderResaAdmin() {
   var fermes = joursFermesResaAdmin();
   var nbDates = datesResaAdmin().length;
   if (fermes.length && fermes.length >= nbDates) { showToastAdmin('Toutes les dates tombent sur un jour fermé ou férié', 'amber'); return; }
-  if (fermes.length && !confirm(fermes.length + ' date(s) tombent sur un jour fermé ou férié : pas de séance ces jours-là. Créer quand même la réservation ?')) return;
+  if (fermes.length && !(await frConfirm({ titre: 'Jours fermés ou fériés', icone: 'attention', message: fermes.length + ' date(s) tombent sur un jour fermé ou férié : pas de séance ces jours-là.\n\nCréer quand même la réservation ?', ok: 'Créer la réservation' }))) return;
   var tv = svc === 'daycare' ? document.getElementById('resa-transport').value : '';
   var ligne = {
       client_id:  resaClientId,
@@ -7085,7 +7107,7 @@ if ('serviceWorker' in navigator) {
     <div onclick="nav('invitation',this);toggleMobileMenu()" style="padding:12px;background:var(--k700);border-radius:10px;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text);">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/></svg>Invitations
     </div>
-    <div onclick="if(confirm('Se déconnecter ?')) frLogout();" style="grid-column:1/-1;padding:12px;background:rgba(224,90,90,0.12);border:1px solid rgba(224,90,90,0.35);border-radius:10px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#e05a5a;order:99;">
+    <div onclick="confirmerDeconnexion()" style="grid-column:1/-1;padding:12px;background:rgba(224,90,90,0.12);border:1px solid rgba(224,90,90,0.35);border-radius:10px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#e05a5a;order:99;">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Se déconnecter
     </div>
     <div onclick="nav('parametres',this);toggleMobileMenu()" style="padding:12px;background:var(--k700);border-radius:10px;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text);">
@@ -7707,6 +7729,9 @@ async function frLogin() {
     errEl.style.display = 'block';
     btn.disabled = false; btn.textContent = 'SE CONNECTER';
   }
+}
+async function confirmerDeconnexion() {
+  if (await frConfirm({ titre: 'Se déconnecter ?', message: 'Vous devrez vous reconnecter pour accéder à l\'administration.', ok: 'Se déconnecter' })) frLogout();
 }
 async function frLogout() {
   try { await db.auth.signOut(); } catch (e) {}

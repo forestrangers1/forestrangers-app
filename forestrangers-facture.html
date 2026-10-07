@@ -372,6 +372,7 @@ html.light .total-block  { background: #ffffff; border-color: rgba(0,0,0,0.08); 
 html.light .actions-bar  { background: #f6f7f2; border-top-color: rgba(0,0,0,0.08); }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="fr-dialog.js"></script>
   <script src="fr-calendrier.js"></script>
   <script src="fr-facturation.js"></script>
   <script src="fr-email.js"></script>
@@ -1056,8 +1057,8 @@ function toggleAddLineForm() {
   if (!form) return;
   var isHidden = (form.style.display === 'none' || !form.style.display);
   if (isHidden) {
-    if (!currentClient) { alert('Sélectionnez d\'abord un client.'); return; }
-    if (!currentChiens.length) { alert('Ce client n\'a aucun chien enregistré.'); return; }
+    if (!currentClient) { frAlert({ type: 'attention', titre: 'Aucun client', message: 'Sélectionnez d\'abord un client.' }); return; }
+    if (!currentChiens.length) { frAlert({ type: 'attention', titre: 'Aucun chien', message: 'Ce client n\'a aucun chien enregistré.' }); return; }
     var sel = document.getElementById('add-line-chien');
     sel.innerHTML = '';
     currentChiens.forEach(function(c) {
@@ -1077,7 +1078,7 @@ function toggleAddLineForm() {
 }
 
 function confirmAddLine() {
-  if (!currentClient) { alert('Sélectionnez un client.'); return; }
+  if (!currentClient) { frAlert({ type: 'attention', titre: 'Aucun client', message: 'Sélectionnez un client.' }); return; }
   var service  = document.getElementById('add-line-service').value;
   var chienVal = document.getElementById('add-line-chien').value;
   var qte = parseNum(document.getElementById('add-line-qte').value);
@@ -1205,9 +1206,9 @@ async function factureDuMoisExistante(clientId, periode) {
 }
 
 async function chargerDepuisPlanning() {
-  if (!currentClient) { alert('Sélectionnez un client.'); return; }
+  if (!currentClient) { frAlert({ type: 'attention', titre: 'Aucun client', message: 'Sélectionnez un client.' }); return; }
   var periode = document.getElementById('facture-periode-input').value;
-  if (!periode) { alert('Sélectionnez une période.'); return; }
+  if (!periode) { frAlert({ type: 'attention', titre: 'Aucune période', message: 'Sélectionnez une période.' }); return; }
   var parts = periode.split('-');
   var annee = parseInt(parts[0], 10), mois = parseInt(parts[1], 10);
   var periodStart = new Date(annee, mois - 1, 1);
@@ -1217,9 +1218,10 @@ async function chargerDepuisPlanning() {
   // même par anticipation, ne se recharge pas.
   var deja = await factureDuMoisExistante(currentClient.id, periode);
   if (deja) {
-    alert('Le mois ' + periodeLabel(periode).toLowerCase() + ' est déjà facturé à ce client : facture '
-      + (deja.numero || '') + (deja.date ? ' du ' + formatDateLongFR(deja.date) : '') + '.\n\n'
-      + 'Pour un service ponctuel en plus, utilisez « Ajouter une ligne » sans passer par le planning.');
+    frAlert({ type: 'attention', titre: 'Mois déjà facturé',
+      message: 'Le mois ' + periodeLabel(periode).toLowerCase() + ' est déjà facturé à ce client : facture **'
+      + (deja.numero || '') + '**' + (deja.date ? ' du ' + formatDateLongFR(deja.date) : '') + '.\n\n'
+      + 'Pour un service ponctuel en plus, utilisez « Ajouter une ligne » sans passer par le planning.' });
     return;
   }
 
@@ -1230,7 +1232,7 @@ async function chargerDepuisPlanning() {
     await chargerLignesPourPeriode(periodStart, periodEnd, annee, mois);
   } catch(e) {
     console.error('Erreur chargement planning:', e);
-    alert('Erreur lors du chargement du planning.');
+    frAlert({ type: 'erreur', titre: 'Planning non chargé', message: 'Le planning n\'a pas pu être chargé. Réessayez dans un instant.\n\nDétail : ' + (e && e.message ? e.message : e) });
   } finally {
     btn.innerHTML = orig; btn.disabled = false;
   }
@@ -1254,7 +1256,7 @@ async function loadClientsList(preselect) {
 
 async function chargerClient(id) {
   var { data: c, error } = await db.from('clients').select('*').eq('id', id).single();
-  if (error || !c) { alert('Client introuvable.'); return; }
+  if (error || !c) { frAlert({ type: 'erreur', titre: 'Client introuvable', message: 'Ce client est introuvable.' + (error && error.message ? '\n\nDétail : ' + error.message : '') }); return; }
   currentClient = c;
 
   var { data: chiens } = await db.from('chiens').select('*').eq('client_id', id).eq('actif', true).order('created_at');
@@ -1370,7 +1372,7 @@ async function initNouvelleFacture(clientId) {
 
 async function initFactureExistante(id) {
   var { data: f, error } = await db.from('factures').select('*, clients(*)').eq('id', id).single();
-  if (error || !f) { alert('Facture introuvable.'); return; }
+  if (error || !f) { frAlert({ type: 'erreur', titre: 'Facture introuvable', message: 'Cette facture est introuvable.' + (error && error.message ? '\n\nDétail : ' + error.message : '') }); return; }
   currentFacture = f;
   currentClient = f.clients;
 
@@ -1501,8 +1503,8 @@ function updatePreview() {
 // ── ACTIONS (enregistrer / envoyer / payer / imprimer / retour) ──
 // ════════════════════════════════════════
 async function enregistrerFacture() {
-  if (!currentClient) { alert('Sélectionnez un client.'); return; }
-  if (!lineItemsData.length) { alert('Ajoutez au moins une prestation (bouton « Depuis planning »).'); return; }
+  if (!currentClient) { frAlert({ type: 'attention', titre: 'Aucun client', message: 'Sélectionnez un client.' }); return; }
+  if (!lineItemsData.length) { frAlert({ type: 'attention', titre: 'Facture vide', message: 'Ajoutez au moins une prestation (bouton « Depuis planning »).' }); return; }
 
   var totals  = recalculateTotals();
   var numero  = document.getElementById('facture-numero-input').value.trim();
@@ -1568,7 +1570,7 @@ async function enregistrerFacture() {
     btn.textContent = 'Erreur';
     var msg = (e && (e.message || e.details || e.hint)) ? (e.message || '') + (e.details ? ' · ' + e.details : '') + (e.hint ? ' · ' + e.hint : '') : 'Erreur inconnue';
     if (/factures_mensuelle_uniq/.test(msg)) msg = 'Ce mois est déjà facturé à ce client (une seule facture du mois). Pour un service ponctuel, créez une facture avec « Ajouter une ligne », sans « Depuis planning ».';
-    alert('Échec de l\'enregistrement.\n\n' + msg);
+    frAlert({ type: 'erreur', titre: 'Facture non enregistrée', message: /^Ce mois est déjà facturé/.test(msg) ? msg : 'La facture n\'a pas pu être enregistrée.\n\nDétail : ' + msg });
   } finally {
     setTimeout(function() { btn.textContent = orig; btn.disabled = false; }, 1800);
   }
@@ -1599,11 +1601,11 @@ function optionsPDF() {
 var _envoiEnCours = false;
 async function envoyerFacture() {
   if (_envoiEnCours) return;
-  if (!currentClient || !currentClient.email) { alert('Aucune adresse email enregistrée pour ce client.'); return; }
+  if (!currentClient || !currentClient.email) { frAlert({ type: 'attention', titre: 'Pas d\'adresse e-mail', message: 'Aucune adresse e-mail enregistrée pour ce client.' }); return; }
 
   // Une facture doit exister en base avant de partir (numéro, échéance, suivi)
   if (!currentFacture || !currentFacture.id) {
-    if (!confirm('La facture n\'est pas encore enregistrée. L\'enregistrer puis l\'envoyer ?')) return;
+    if (!(await frConfirm({ titre: 'Enregistrer et envoyer ?', message: 'La facture n\'est pas encore enregistrée. L\'enregistrer puis l\'envoyer ?', ok: 'Enregistrer et envoyer', icone: 'envoi' }))) return;
     await enregistrerFacture();
     if (!currentFacture || !currentFacture.id) return;
   }
@@ -1622,7 +1624,7 @@ async function envoyerFacture() {
       periode: periode ? periodeLabel(periode).toLowerCase() : '', montant: total.replace('-', '')
     });
   } else if (currentFacture.statut === 'annulee') {
-    alert('Cette facture est annulée : envoyez plutôt sa note de crédit.');
+    frAlert({ type: 'attention', titre: 'Facture annulée', message: 'Cette facture est annulée : envoyez plutôt sa note de crédit.' });
     return;
   } else {
     m = FR_MAIL.modeles.facture({
@@ -1637,10 +1639,12 @@ async function envoyerFacture() {
   try {
     var j = await db.from('emails_envoyes').select('created_at,destinataire').eq('facture_id', currentFacture.id)
       .eq('type', 'facture').eq('statut', 'envoye').order('created_at', { ascending: false }).limit(1);
-    if (!j.error && j.data && j.data.length) deja = '\n\nATTENTION : déjà envoyée le ' + new Date(j.data[0].created_at).toLocaleDateString('fr-LU') + ' à ' + j.data[0].destinataire + '.';
+    if (!j.error && j.data && j.data.length) deja = '\n\n**Attention : déjà envoyée le ' + new Date(j.data[0].created_at).toLocaleDateString('fr-LU') + ' à ' + j.data[0].destinataire + '.**';
   } catch (_) {}
 
-  if (!confirm('Envoyer ' + (estNC ? 'la note de crédit ' : 'la facture ') + numero + ' (' + total + ') à ' + currentClient.email + ' ?\n\nLe PDF est joint à l\'email, envoyé depuis info@forestrangers.lu.' + deja)) return;
+  if (!(await frConfirm({ titre: estNC ? 'Envoyer la note de crédit ?' : 'Envoyer la facture ?',
+    message: 'Envoyer ' + (estNC ? 'la note de crédit ' : 'la facture ') + '**' + numero + '** (' + total + ') à **' + currentClient.email + '** ?\n\nLe PDF est joint à l\'e-mail, envoyé depuis info@forestrangers.lu.' + deja,
+    ok: 'Envoyer', icone: 'envoi' }))) return;
 
   _envoiEnCours = true;
   var btns = [document.getElementById('btn-send'), document.getElementById('btn-send-invoice')];
@@ -1652,7 +1656,7 @@ async function envoyerFacture() {
       var b64 = await FR_MAIL.pdfBase64(document.getElementById('invoiceDoc'), optionsPDF());
       if (b64) pieces.push({ filename: optionsPDF().filename, content: b64 });
     } catch (e) { console.log('PDF non généré :', e); }
-    if (!pieces.length && !confirm('Le PDF n\'a pas pu être généré. Envoyer l\'email sans pièce jointe ?')) return;
+    if (!pieces.length && !(await frConfirm({ titre: 'PDF non généré', message: 'Le PDF n\'a pas pu être généré. Envoyer l\'e-mail sans pièce jointe ?', ok: 'Envoyer sans PDF', icone: 'attention' }))) return;
 
     var r = await FR_MAIL.envoyer(db, {
       type: 'facture', to: currentClient.email, subject: m.objet, text: m.texte, bouton: m.bouton,
@@ -1661,11 +1665,11 @@ async function envoyerFacture() {
     if (r.ok) {
       toastFacture('✓ ' + (estNC ? 'Note de crédit' : 'Facture') + ' envoyée à ' + (r.destinataire || currentClient.email) + (r.redirige_depuis ? ' (compte test)' : ''));
     } else if (r.indisponible) {
-      if (confirm('L\'envoi automatique ne répond pas (' + (r.erreur || '') + ').\n\nOuvrir votre messagerie à la place ? Pensez à joindre le PDF (bouton Télécharger PDF).')) {
+      if (await frConfirm({ titre: 'Envoi automatique indisponible', message: 'L\'envoi automatique ne répond pas.\n\nOuvrir votre messagerie à la place ? Pensez à joindre le PDF (bouton Télécharger PDF).\n\nDétail : ' + (r.erreur || ''), ok: 'Ouvrir la messagerie', icone: 'envoi' })) {
         FR_MAIL.ouvrirMessagerie(currentClient.email, m.objet, m.texte);
       }
     } else {
-      alert('La facture n\'a pas été envoyée.\n\n' + (r.erreur || 'Erreur inconnue'));
+      frAlert({ type: 'erreur', titre: 'Envoi impossible', message: 'La facture n\'a pas été envoyée.\n\nDétail : ' + (r.erreur || 'Erreur inconnue') });
     }
   } finally {
     _envoiEnCours = false;
@@ -1698,48 +1702,51 @@ async function afficherEtatNoteCredit(f) {
 async function annulerParNoteCredit() {
   if (!currentFacture || !currentFacture.id) return;
   var num = currentFacture.numero || '';
-  var motif = prompt('Annuler entièrement la facture ' + num + ' par la note de crédit NC-' + num + ' ?\n\n'
-    + '· La facture ne sera plus due ; un montant déjà payé sera déduit des prochaines factures.\n'
-    + '· Son mois redevient facturable (Depuis planning, ou Facturation du 1er).\n\n'
-    + 'Motif (facultatif, visible dans l\'admin) :', '');
+  var motif = await frPrompt({ titre: 'Annuler la facture ?',
+    message: 'Annuler entièrement la facture **' + num + '** par la note de crédit **NC-' + num + '** ?',
+    liste: ['La facture ne sera plus due ; un montant déjà payé sera déduit des prochaines factures.',
+            'Son mois redevient facturable (Depuis planning, ou Facturation du 1er).'],
+    apres: 'Motif (facultatif, visible dans l\'admin) :',
+    valeur: '', ok: 'Annuler la facture', annuler: 'Retour', danger: true, icone: 'danger' });
   if (motif === null) return;
   var r = await db.rpc('fr_facture_annuler', { p_facture: currentFacture.id, p_motif: motif || null });
   if (r.error) {
     var m = r.error.message || '';
-    alert(/deja_annulee/.test(m) ? 'Cette facture est déjà annulée.'
+    frAlert({ type: 'erreur', titre: 'Annulation impossible',
+      message: /deja_annulee/.test(m) ? 'Cette facture est déjà annulée.'
         : /est_une_nc/.test(m) ? 'Une note de crédit ne s\'annule pas.'
         : /interdit/.test(m) ? 'Réservé à l\'administrateur.'
         : /fr_facture_annuler|does not exist|schema cache/.test(m) ? 'Migration v38 à exécuter dans Supabase (sql/fr_migration_v38_note_credit.sql).'
-        : 'Annulation impossible : ' + m);
+        : 'La facture n\'a pas pu être annulée.\n\nDétail : ' + m });
     return;
   }
   var d = r.data || {};
-  var suite = confirm('✓ Note de crédit ' + d.numero + ' créée.\n\nL\'ouvrir et l\'envoyer au client maintenant ?');
+  var suite = await frConfirm({ titre: 'Note de crédit créée', message: 'Note de crédit **' + d.numero + '** créée.\n\nL\'ouvrir et l\'envoyer au client maintenant ?', ok: 'Ouvrir et envoyer', annuler: 'Ouvrir seulement', icone: 'succes' });
   var emb = new URLSearchParams(window.location.search).get('embed') === '1' ? '&embed=1' : '';
   window.location.href = window.location.pathname + '?id=' + encodeURIComponent(d.nc_id) + emb + (suite ? '&envoyer=1' : '');
 }
 
 async function marquerPayeeFacture() {
-  if (!currentFacture || !currentFacture.id) { alert("Enregistrez d'abord la facture (« Enregistrer brouillon »)."); return; }
+  if (!currentFacture || !currentFacture.id) { frAlert({ type: 'attention', titre: 'Facture non enregistrée', message: "Enregistrez d'abord la facture (« Enregistrer brouillon »)." }); return; }
   if (EDIT_V31) {
     // Le paiement est enregistré avec la date du virement et imputé (v31)
     var sv = await db.from('v_factures_suivi').select('solde,client_id,numero').eq('id', currentFacture.id).single();
     var solde = sv.data ? parseFloat(sv.data.solde) || 0 : 0;
-    if (solde <= 0) { alert('Cette facture est déjà soldée.'); return; }
+    if (solde <= 0) { frAlert({ type: 'info', titre: 'Facture soldée', message: 'Cette facture est déjà soldée.' }); return; }
     var auj = formatDateISO(new Date());
-    var d = prompt('Date du virement sur votre relevé (AAAA-MM-JJ) :', auj);
+    var d = await frPrompt({ titre: 'Date du virement', message: 'Date du virement sur votre relevé :', type: 'date', valeur: auj, ok: 'Continuer' });
     if (!d) return;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || d > auj) { alert('Date invalide ou dans le futur.'); return; }
-    var mt = prompt('Montant reçu (€) — solde de la facture : ' + eur(solde), String(solde));
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || d > auj) { frAlert({ type: 'attention', titre: 'Date invalide', message: 'Date invalide ou dans le futur.' }); return; }
+    var mt = await frPrompt({ titre: 'Montant reçu', message: 'Montant reçu (€) — solde de la facture : **' + eur(solde) + '**', type: 'number', step: '0.01', valeur: String(solde), ok: 'Enregistrer le paiement' });
     if (!mt) return;
     var r = await db.rpc('fr_paiement_enregistrer', { p_client: sv.data.client_id, p_date: d, p_montant: parseFloat(String(mt).replace(',', '.')), p_reference: sv.data.numero });
-    if (r.error) { alert('Erreur : ' + r.error.message); return; }
+    if (r.error) { frAlert({ type: 'erreur', titre: 'Paiement non enregistré', message: 'Le paiement n\'a pas pu être enregistré.\n\nDétail : ' + r.error.message }); return; }
     var sv2 = await db.from('v_factures_suivi').select('statut').eq('id', currentFacture.id).single();
     currentFacture.statut = (sv2.data && sv2.data.statut) || currentFacture.statut;
     document.getElementById('facture-statut-input').value = currentFacture.statut;
     updateStatusPill();
     document.getElementById('btn-mark-paid').style.display = currentFacture.statut === 'payee' ? 'none' : '';
-    alert(currentFacture.statut === 'payee' ? '✓ Paiement enregistré : facture soldée.' : '✓ Paiement enregistré : la facture reste partiellement due.');
+    frToast(currentFacture.statut === 'payee' ? 'Paiement enregistré : facture soldée.' : 'Paiement enregistré : la facture reste partiellement due.');
     return;
   }
   try {
@@ -1751,13 +1758,13 @@ async function marquerPayeeFacture() {
     document.getElementById('btn-mark-paid').style.display = 'none';
   } catch(e) {
     console.error('Erreur marquer payée:', e);
-    alert('Erreur lors de la mise à jour du statut.');
+    frAlert({ type: 'erreur', titre: 'Statut non mis à jour', message: 'Le statut de la facture n\'a pas pu être mis à jour.\n\nDétail : ' + (e && e.message ? e.message : e) });
   }
 }
 
 function telechargerPDF() {
   var inv = document.getElementById('invoiceDoc');
-  if (!inv) { alert('Aperçu non disponible'); return; }
+  if (!inv) { frAlert({ type: 'erreur', titre: 'Aperçu non disponible', message: 'L\'aperçu de la facture n\'est pas disponible.' }); return; }
   var btn = document.getElementById('btn-dl');
   var ancien = btn ? btn.innerHTML : '';
   if (btn) { btn.disabled = true; btn.innerHTML = 'Génération…'; }
@@ -1778,7 +1785,7 @@ function telechargerPDF() {
     if (btn) { btn.disabled = false; btn.innerHTML = ancien; }
   }).catch(function(e) {
     if (btn) { btn.disabled = false; btn.innerHTML = ancien; }
-    alert('Le téléchargement du PDF a échoué. Réessaie.');
+    frAlert({ type: 'erreur', titre: 'PDF non téléchargé', message: 'Le téléchargement du PDF a échoué. Réessayez.' + (e && e.message ? '\n\nDétail : ' + e.message : '') });
   });
 }
 
@@ -1831,7 +1838,7 @@ function toggleMobilePreview() {
   var existing = document.getElementById('preview-modal');
   if (existing) { existing.parentNode.removeChild(existing); return; }
   var inv = document.getElementById('invoiceDoc');
-  if (!inv) { alert('Apercu non disponible'); return; }
+  if (!inv) { frAlert({ type: 'erreur', titre: 'Aperçu non disponible', message: 'L\'aperçu de la facture n\'est pas disponible.' }); return; }
   var overlay = document.createElement('div');
   overlay.id = 'preview-modal';
   var ovBg = document.documentElement.classList.contains('light') ? '#dfe2d8' : '#1c1f14';
