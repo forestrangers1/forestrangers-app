@@ -3571,40 +3571,78 @@ function blocChaleurAdmin(d) {
 function erreurServeurChaleur(msg) {
   if (!msg) return 'Opération impossible';
   if (/schema cache|Could not find the function/i.test(msg)) {
-    return 'Mode chaleur inactif sur le serveur — migration v23 à passer';
+    return 'Mode chaleur à jour côté serveur manquant — exécuter la migration v61 (sql/fr_migration_v61_chaleur_tous_les_chiens.sql)';
   }
   return String(msg).replace(/^.*FR_CHALEUR:\s*/, '');
 }
 
-async function chaleurApercuTexte(id) {
+// v2.78 — Aperçu des séances retirées par le mode chaleur, à partir d'une date
+// (aujourd'hui, ou demain si la promenade du jour a déjà eu lieu).
+async function chaleurApercu(id, debutISO) {
   try {
-    var { data, error } = await db.rpc('fr_chaleur_apercu', { p_chien: id, p_jours: CHALEUR_JOURS });
+    var { data, error } = await db.rpc('fr_chaleur_apercu', { p_chien: id, p_jours: CHALEUR_JOURS, p_debut: debutISO });
     if (error) return { erreur: erreurServeurChaleur(error.message) };
-    if (!data) return { erreur: 'Détail des séances indisponible.' };
-    if (!data.length) return 'Aucune séance prévue sur les 3 prochaines semaines.';
-    var fact = data.filter(function(l) { return (l.pourcentage || 0) > 0; });
-    var total = fact.reduce(function(a, l) { return a + (parseFloat(l.montant_ligne) || 0); }, 0);
-    var t = data.length + ' séance(s) retirée(s) du planning.\n';
-    if (!fact.length) return t + 'Aucune n\'est facturable.';
-    t += fact.length + ' reste(nt) facturable(s) selon les CGV';
-    if (total > 0) t += ' — environ ' + total.toFixed(2) + ' € TTC';
-    return t + '.';
-  } catch (e) { return 'Détail des séances indisponible.'; }
+    return { lignes: data || [] };
+  } catch (e) { return { erreur: 'Détail des séances indisponible.' }; }
 }
+function chaleurIsoLocal(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function chaleurJourCourt(iso) {
+  var d = new Date(iso + 'T12:00:00');
+  return ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'][d.getDay()] + ' ' + iso.slice(8, 10) + '/' + iso.slice(5, 7);
+}
+var CHALEUR_SVC = { walking: 'promenade', daycare: 'Day Care', boarding: 'pension' };
 
 async function chaleurAdminDeclarer(id, nom) {
+  var maintenant = new Date();
+  var auj = chaleurIsoLocal(maintenant);
+  var dem = chaleurIsoLocal(new Date(maintenant.getFullYear(), maintenant.getMonth(), maintenant.getDate() + 1));
   showToastAdmin('Calcul des séances…', 'amber');
-  var apercu = await chaleurApercuTexte(id);
-  if (apercu && apercu.erreur) { showToastAdmin(apercu.erreur, 'red'); return; }
+  var ap = await chaleurApercu(id, auj);
+  if (ap.erreur) { frAlert({ type: 'erreur', titre: 'Mode chaleur', message: ap.erreur }); return; }
+
+  // Séance aujourd'hui : a-t-elle eu lieu ? Oui → la chaleur commence demain
+  var debut = auj;
+  var duJour = ap.lignes.filter(function(l) { return String(l.date_occurrence).slice(0, 10) === auj; });
+  if (duJour.length) {
+    var quoi = duJour.map(function(l) { return CHALEUR_SVC[l.service] || l.service; }).join(' + ');
+    var aEuLieu = await frConfirm({ titre: 'Séance d\'aujourd\'hui', icone: 'question',
+      message: '**' + nom + '** avait une ' + quoi + ' aujourd\'hui. A-t-elle eu lieu ?',
+      liste: ['**Elle a eu lieu** : elle reste au planning, facturée normalement ; le mode chaleur commence demain',
+              '**Elle n\'a pas eu lieu** : retirée du planning et facturée selon les CGV (annulation le jour même : 100 %)'],
+      ok: 'Elle a eu lieu', annuler: 'Elle n\'a pas eu lieu' });
+    if (aEuLieu) {
+      debut = dem;
+      ap = await chaleurApercu(id, debut);
+      if (ap.erreur) { frAlert({ type: 'erreur', titre: 'Mode chaleur', message: ap.erreur }); return; }
+    }
+  }
+
+  // Récapitulatif : aujourd'hui et demain en détail (facturation CGV), le reste en total
+  var proches = ap.lignes.filter(function(l) { var d = String(l.date_occurrence).slice(0, 10); return d === auj || d === dem; });
+  var autres = ap.lignes.length - proches.length;
+  var autresFact = ap.lignes.filter(function(l) { var d = String(l.date_occurrence).slice(0, 10); return d !== auj && d !== dem && (l.pourcentage || 0) > 0; }).length;
+  var fin = new Date(debut + 'T12:00:00'); fin.setDate(fin.getDate() + CHALEUR_JOURS - 1);
+  var liste = ['Retrait du planning du **' + chaleurJourCourt(debut) + '** au **' + chaleurJourCourt(chaleurIsoLocal(fin)) + '** (' + CHALEUR_JOURS + ' jours)'];
+  proches.forEach(function(l) {
+    var d = String(l.date_occurrence).slice(0, 10), p = l.pourcentage || 0;
+    liste.push('**' + chaleurJourCourt(d) + ' · ' + (CHALEUR_SVC[l.service] || l.service) + '** : retirée, '
+      + (p > 0 ? '**facturée ' + p + ' %** (CGV)' : 'sans frais'));
+  });
+  if (!ap.lignes.length) liste.push('Aucune séance prévue sur la période');
+  else if (autres > 0) liste.push(autres + ' autre(s) séance(s) retirée(s)' + (autresFact ? ', dont ' + autresFact + ' facturée(s) selon les CGV' : ', sans frais'));
+  liste.push('Le client voit l\'information dans son espace');
+
   if (!(await frConfirm({ titre: 'Mode chaleur — ' + nom, icone: 'chaleur',
-             message: 'Activer le mode chaleur pour **' + nom + '** ?',
-             liste: ['Retrait du planning pendant ' + CHALEUR_JOURS + ' jours']
-               .concat(String(apercu).split('\n'))
-               .concat(['Le client voit l\'information dans son espace']),
+             message: 'Activer le mode chaleur pour **' + nom + '** ?', liste: liste,
              ok: 'Activer le mode chaleur' }))) return;
   try {
-    var { error } = await db.rpc('fr_chaleur_declarer', { p_chien: id, p_jours: CHALEUR_JOURS });
-    if (error) { showToastAdmin(erreurServeurChaleur(error.message), 'red'); return; }
+    var { error } = await db.rpc('fr_chaleur_declarer', { p_chien: id, p_jours: CHALEUR_JOURS, p_debut: debut });
+    if (error) {
+      frAlert({ type: 'erreur', titre: 'Mode chaleur non activé', message: erreurServeurChaleur(error.message) });
+      return;
+    }
     showToastAdmin('✓ ' + nom + ' retirée du planning', 'green');
     loadChiens();
     if (typeof loadPlanning === 'function') loadPlanning();
@@ -4472,6 +4510,16 @@ function carteJourHtml(rows, clientsMap, chiensMap, clientDogsMap, dateStr) {
       + (al && re ? 'dépose le matin + retour le soir' : al ? 'dépose le matin' : 'retour le soir')
       + (ts === 'a_confirmer' ? ' — à confirmer' : '') + '</div>';
   }
+  if (r.service === 'boarding') {          // v2.79 : qui amène / qui reprend le chien
+    var bal = false, bre = false, bts = null;
+    rows.forEach(function(x){ if (x.transport_statut && x.transport_statut !== 'refuse') { bal = bal || !!x.transport_aller; bre = bre || !!x.transport_retour; bts = x.transport_statut; } });
+    var dj = r.date_debut ? r.date_debut.slice(0, 10) : '', fj = r.date_fin ? r.date_fin.slice(0, 10) : '';
+    var parts = [];
+    if (bal && (dateStr === dj || dateStr !== fj)) parts.push((dateStr === dj ? '🚐 Aller chercher le chien à domicile aujourd\'hui' : 'Arrivée : récupération à domicile'));
+    if (bre && (dateStr === fj || dateStr !== dj)) parts.push((dateStr === fj ? '🚐 Ramener le chien à domicile aujourd\'hui' : 'Départ : dépose à domicile'));
+    if (parts.length) tr += '<div style="font-size:11px;margin-top:5px;color:' + (bts === 'a_confirmer' ? '#f0b429' : 'var(--text-dim)') + ';">'
+      + parts.join(' · ') + (bts === 'a_confirmer' ? ' — à confirmer' : '') + '</div>';
+  }
   return '<div onclick="openResaDetail(\'' + r.id + '\',\'' + dateStr + '\')" style="background:var(--surface2);border:1px solid var(--border);border-left:3px solid ' + (annulee ? '#e05a5a' : color) + ';border-radius:10px;padding:10px 12px;margin-bottom:6px;cursor:pointer;' + (annulee ? 'opacity:0.75;' : '') + '">'
     + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">'
     +   '<div style="font-family:FRDisplay,Oswald,Arial Narrow,sans-serif;font-size:15px;font-weight:800;color:' + (annulee ? '#e05a5a' : 'var(--text)') + ';' + (annulee ? 'text-decoration:line-through;' : '') + '">'
@@ -4746,12 +4794,21 @@ async function openResaDetail(id, dateOccurrence) {
     // Transport Day Care (v39)
     var trBloc = document.getElementById('detail-transport-bloc');
     if (trBloc) {
-      var avecTr = r.service === 'daycare' && ('transport_aller' in r);
+      var avecTr = (r.service === 'daycare' || r.service === 'boarding') && ('transport_aller' in r);
       trBloc.style.display = avecTr ? '' : 'none';
       if (avecTr) {
+        var pens = r.service === 'boarding', opts = document.getElementById('detail-transport').options;
+        document.getElementById('detail-transport-label').textContent = pens ? 'Transport pension' : 'Transport Day Care';
+        opts[0].text = pens ? 'Aucun (le client amène et reprend le chien à Kopstal)' : 'Aucun (le client dépose)';
+        opts[1].text = pens ? 'Récupération à domicile (arrivée)' : 'Aller (le matin)';
+        opts[2].text = pens ? 'Dépose à domicile (départ)' : 'Retour (le soir)';
+        opts[3].text = pens ? 'Récupération + dépose à domicile' : 'Aller et retour';
+        document.getElementById('detail-transport-statut').options[0].text = pens ? 'Confirmé' : 'Confirmé (facturé)';
         document.getElementById('detail-transport').value = r.transport_aller && r.transport_retour ? 'les_deux' : r.transport_aller ? 'aller' : r.transport_retour ? 'retour' : '';
         document.getElementById('detail-transport-statut').value = r.transport_statut || 'confirme';
-        document.getElementById('detail-transport-note').textContent = r.transport_statut === 'a_confirmer'
+        document.getElementById('detail-transport-note').textContent = pens
+          ? (r.transport_statut === 'a_confirmer' ? 'Demande du client, en attente de votre confirmation. ' : '') + 'Pension : sur demande, sans frais automatiques.'
+          : r.transport_statut === 'a_confirmer'
           ? 'Client hors zone : transport en attente de votre confirmation. Il n\'est facturé qu\'une fois confirmé (' + euros(5.85) + ' TTC par trajet).'
           : euros(5.85) + ' TTC par trajet, facturé sur la facture du mois.';
       }
@@ -4776,7 +4833,134 @@ async function openResaDetail(id, dateOccurrence) {
 
     document.getElementById('modal-resa-detail').classList.add('open');
     completerMontantsResaAdmin(r);
+    completerLogistiqueResa(r);
   } catch(e) { showToastAdmin('Erreur chargement réservation', 'red'); console.error(e); }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  v2.79 — Détail Day Care / pension : qui amène et qui reprend le chien,
+//  à quelle heure, où, comment entrer, et la fiche de chaque chien.
+// ══════════════════════════════════════════════════════════════
+function lgEsc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function lgJour(iso) {
+  if (!iso) return '—';
+  var d = new Date(String(iso).slice(0, 10) + 'T12:00:00');
+  return ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'][d.getDay()] + ' ' + formatDateFR(String(iso).slice(0, 10));
+}
+function lgLigne(icone, titre, texte, couleur) {
+  return '<div style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--border);">'
+    + '<div style="width:22px;text-align:center;flex-shrink:0;font-size:15px;">' + icone + '</div>'
+    + '<div style="flex:1;min-width:0;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);font-weight:700;">' + titre + '</div>'
+    + '<div style="font-size:13px;line-height:1.5;color:' + (couleur || 'var(--text)') + ';">' + texte + '</div></div></div>';
+}
+function lgStatutTr(st) {
+  if (st === 'a_confirmer') return ' <span style="font-size:10px;background:rgba(240,180,41,0.22);color:#a86a00;padding:2px 7px;border-radius:8px;font-weight:700;">à confirmer</span>';
+  if (st === 'refuse') return ' <span style="font-size:10px;background:rgba(224,90,90,0.14);color:#e05a5a;padding:2px 7px;border-radius:8px;font-weight:700;">refusé</span>';
+  if (st === 'confirme') return ' <span style="font-size:10px;background:rgba(94,201,122,0.14);color:#5ec97a;padding:2px 7px;border-radius:8px;font-weight:700;">confirmé</span>';
+  return '';
+}
+function lgAge(iso) {
+  if (!iso) return '';
+  var n = new Date(iso + 'T12:00:00'), a = new Date(), ans = a.getFullYear() - n.getFullYear();
+  if (a.getMonth() < n.getMonth() || (a.getMonth() === n.getMonth() && a.getDate() < n.getDate())) ans--;
+  return ans < 1 ? 'moins d\'un an' : ans + ' an' + (ans > 1 ? 's' : '');
+}
+
+async function completerLogistiqueResa(r) {
+  var bloc = document.getElementById('detail-logistique'), blocCh = document.getElementById('detail-chiens-bloc');
+  if (!bloc || !blocCh) return;
+  bloc.style.display = 'none'; blocCh.style.display = 'none';
+  if (r.service !== 'daycare' && r.service !== 'boarding') return;
+  try {
+    // Toutes les lignes de la réservation (1 par chien), le client et ses chiens
+    var q = db.from('reservations').select('*').eq('client_id', r.client_id).eq('service', r.service).eq('date_debut', r.date_debut).eq('statut', r.statut);
+    q = r.date_fin ? q.eq('date_fin', r.date_fin) : q.is('date_fin', null);
+    q = r.creneau ? q.eq('creneau', r.creneau) : q.is('creneau', null);
+    var rr = await Promise.all([q, db.from('clients').select('*').eq('id', r.client_id).maybeSingle(), db.from('chiens').select('*').eq('client_id', r.client_id)]);
+    if (currentResaDetail !== r) return;
+    var lignes = (rr[0].data && rr[0].data.length) ? rr[0].data : [r];
+    var c = rr[1].data || {}, tous = rr[2].data || [];
+    var ids = lignes.filter(function(x) { return x.chien_id; }).map(function(x) { return x.chien_id; });
+    var chiens = lignes.some(function(x) { return !x.chien_id; }) ? tous.filter(function(d) { return d.actif !== false; })
+               : tous.filter(function(d) { return ids.indexOf(d.id) !== -1; });
+
+    // Transport : réuni sur les lignes (le statut d'une ligne vaut pour la réservation)
+    var al = false, re = false, st = null;
+    lignes.forEach(function(x) { if (x.transport_aller || x.transport_retour) { al = al || !!x.transport_aller; re = re || !!x.transport_retour; st = x.transport_statut || st; } });
+    var domicile = (al || re) && st !== 'refuse';
+
+    var h = '';
+    if (r.service === 'boarding') {
+      var nuits = r.date_fin ? Math.round((new Date(r.date_fin + 'T12:00:00') - new Date(r.date_debut + 'T12:00:00')) / 86400000) : 0;
+      h += lgLigne('🛬', 'Arrivée · ' + lgJour(r.date_debut),
+        al ? '<strong>Forest Rangers va chercher le chien à domicile</strong>' + lgStatutTr(st) : 'Le client <strong>amène le chien à Kopstal</strong>');
+      h += lgLigne('🛫', 'Départ · ' + lgJour(r.date_fin),
+        re ? '<strong>Forest Rangers ramène le chien à domicile</strong>' + lgStatutTr(st) : 'Le client <strong>vient reprendre le chien à Kopstal</strong>');
+      h += lgLigne('🌙', 'Séjour', nuits > 0 ? nuits + ' nuit' + (nuits > 1 ? 's' : '') + ' · ' + chiens.length + ' chien' + (chiens.length > 1 ? 's' : '') + ' · nourriture apportée par le client' : 'Dates à vérifier');
+    } else {
+      h += lgLigne('🌅', 'Dépôt' + (r.heure_depot ? ' · ' + heureCreneau(r.heure_depot) : ''),
+        al ? '<strong>Forest Rangers va chercher le chien à domicile</strong> (le matin)' + lgStatutTr(st) : 'Le client <strong>dépose le chien à Kopstal</strong>');
+      h += lgLigne('🌇', 'Récupération' + (r.heure_recuperation ? ' · ' + heureCreneau(r.heure_recuperation) : ''),
+        re ? '<strong>Forest Rangers ramène le chien à domicile</strong> (le soir)' + lgStatutTr(st) : 'Le client <strong>reprend le chien à Kopstal</strong>');
+    }
+    if (st === 'a_confirmer') {
+      h += '<div style="display:flex;gap:8px;padding:6px 0 4px 32px;">'
+        + '<button class="rc-btn pay" onclick="decisionTransport(\'' + r.client_id + '\',\'' + r.date_debut + '\',\'confirme\',\'' + r.service + '\').then(function(){openResaDetail(\'' + r.id + '\',\'' + (r._occurrenceDate || r.date_debut) + '\');})">Confirmer le transport</button>'
+        + '<button class="rc-btn red" onclick="decisionTransport(\'' + r.client_id + '\',\'' + r.date_debut + '\',\'refuse\',\'' + r.service + '\').then(function(){openResaDetail(\'' + r.id + '\',\'' + (r._occurrenceDate || r.date_debut) + '\');})">Refuser</button></div>';
+    }
+
+    // Contact, adresse et accès : toujours le téléphone ; le reste si on va au domicile
+    var tel = c.telephone ? '<a href="tel:' + lgEsc(String(c.telephone).replace(/\s+/g, '')) + '" style="color:var(--accent);font-weight:700;">' + lgEsc(c.telephone) + '</a>' : '<span style="color:var(--text-faint);">non renseigné</span>';
+    h += lgLigne('📞', 'Téléphone', tel);
+    if (domicile) {
+      var adr = [c.adresse, [c.code_postal ? 'L-' + c.code_postal : '', c.commune].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+      var adrQ = encodeURIComponent(adr + ', Luxembourg');
+      h += lgLigne('📍', 'Adresse', adr
+        ? lgEsc(adr) + '<div style="margin-top:5px;display:flex;gap:6px;"><a class="rc-btn" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=' + adrQ + '">Maps</a><a class="rc-btn" target="_blank" rel="noopener" href="https://waze.com/ul?q=' + adrQ + '&navigate=yes">Waze</a></div>'
+        : '<span style="color:var(--red);">Adresse manquante sur la fiche</span>');
+      var acces = [];
+      if (c.acces_cle) acces.push('🔑 Clés confiées à Forest Rangers');
+      if (c.acces_alarme) acces.push('🚨 Alarme' + (c.acces_code ? ' · code <strong>' + lgEsc(c.acces_code) + '</strong>' : ''));
+      else if (c.acces_code) acces.push('Code : <strong>' + lgEsc(c.acces_code) + '</strong>');
+      if (c.acces_particularites) acces.push(lgEsc(c.acces_particularites));
+      h += lgLigne('🚪', 'Accès au domicile', acces.length ? acces.join('<br>') : '<span style="color:#c27c0e;">Aucune consigne d\'accès enregistrée</span>');
+    }
+    var pers = Array.isArray(c.personnes_autorisees) ? c.personnes_autorisees : [];
+    if (pers.length) h += lgLigne('👥', 'Personnes autorisées à amener / reprendre le chien',
+      pers.map(function(p) { return '<strong>' + lgEsc(p.role || '—') + '</strong> : ' + lgEsc(p.details || '—'); }).join('<br>'));
+
+    bloc.innerHTML = '<div style="background:rgba(0,0,0,0.18);border-radius:10px;padding:8px 14px 6px;">'
+      + '<div style="font-family:FRDisplay,Oswald,Arial Narrow,sans-serif;font-size:13px;font-weight:800;letter-spacing:.04em;color:var(--accent);margin-bottom:2px;">'
+      + (r.service === 'boarding' ? 'Pension — qui amène, qui reprend' : 'Day Care — dépôt et récupération') + '</div>' + h + '</div>';
+    bloc.style.display = '';
+
+    // Fiche de chaque chien (santé, comportement, vétérinaire)
+    if (chiens.length) {
+      blocCh.innerHTML = chiens.map(function(d) {
+        var tags = [d.race, d.poids_kg ? d.poids_kg + ' kg' : '', lgAge(d.date_naissance), d.sexe === 'male' ? 'mâle' : d.sexe, d.sexe === 'femelle' || d.sexe === 'male' ? (d.sterilise ? 'stérilisé' + (d.sexe === 'femelle' ? 'e' : '') : 'non stérilisé' + (d.sexe === 'femelle' ? 'e' : '')) : ''].filter(Boolean);
+        var alertes = [];
+        if (d.chien_dangereux) alertes.push('⚠ Chien catégorisé');
+        if (d.chaleur_debut && d.chaleur_fin) alertes.push('♀ Mode chaleur jusqu\'au ' + formatDateFR(d.chaleur_fin));
+        if (d.vaccins_ok === false) alertes.push('Vaccins non à jour');
+        if (d.assurance_ok === false) alertes.push('Assurance non confirmée');
+        var lig = [];
+        if (d.allergies) lig.push(['Allergies', d.allergies]);
+        if (d.medicaments) lig.push(['Médicaments', d.medicaments]);
+        if (d.pathologies) lig.push(['Pathologies', d.pathologies]);
+        if (d.comportement) lig.push(['Comportement', d.comportement]);
+        if (d.notes_sante) lig.push(['Notes santé', d.notes_sante]);
+        if (d.veterinaire || d.veterinaire_tel) lig.push(['Vétérinaire', (d.veterinaire || '') + (d.veterinaire_tel ? ' · ' + d.veterinaire_tel : '')]);
+        return '<div style="background:rgba(0,0,0,0.18);border-radius:10px;padding:10px 14px;margin-bottom:8px;">'
+          + '<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;"><span style="font-family:FRDisplay,Oswald,Arial Narrow,sans-serif;font-size:15px;font-weight:800;">' + lgEsc(d.nom || 'Chien') + '</span>'
+          + '<span style="font-size:12px;color:var(--text-dim);">' + lgEsc(tags.join(' · ')) + '</span></div>'
+          + (alertes.length ? '<div style="font-size:12px;color:#c27c0e;margin-top:4px;">' + lgEsc(alertes.join(' · ')) + '</div>' : '')
+          + (lig.length ? lig.map(function(x) { return '<div style="font-size:12.5px;margin-top:4px;"><span style="color:var(--text-faint);">' + x[0] + ' :</span> ' + lgEsc(x[1]) + '</div>'; }).join('')
+                        : '<div style="font-size:12px;color:var(--text-faint);margin-top:4px;">Aucune information santé ou comportement sur la fiche.</div>')
+          + '</div>';
+      }).join('');
+      blocCh.style.display = '';
+    }
+  } catch (e) { console.log('logistique réservation:', e); }
 }
 
 // v2.71 : montant prévu et coût de chaque annulation (moteur de la facture)
@@ -4833,7 +5017,7 @@ async function sauvegarderResaDetail() {
   try {
     var maj = { statut: statut, notes: notes || null };
     var r0 = currentResaDetail;
-    if (r0.service === 'daycare' && ('transport_aller' in r0)) {
+    if ((r0.service === 'daycare' || r0.service === 'boarding') && ('transport_aller' in r0)) {
       var tv = document.getElementById('detail-transport').value;
       maj.transport_aller = tv === 'aller' || tv === 'les_deux';
       maj.transport_retour = tv === 'retour' || tv === 'les_deux';
@@ -6223,9 +6407,9 @@ function navVers(pageId) {
 }
 
 // Transport Day Care hors zone : décision de Gabriel (toutes les lignes de la réservation)
-async function decisionTransport(clientId, dateDebut, statut) {
+async function decisionTransport(clientId, dateDebut, statut, service) {
   var r = await db.from('reservations').update({ transport_statut: statut })
-    .eq('client_id', clientId).eq('date_debut', dateDebut).eq('service', 'daycare').eq('transport_statut', 'a_confirmer').select('id');
+    .eq('client_id', clientId).eq('date_debut', dateDebut).eq('service', service || 'daycare').eq('transport_statut', 'a_confirmer').select('id');
   if (r.error || !r.data || !r.data.length) { showToastAdmin('Non enregistré' + (r.error ? ' : ' + r.error.message : ''), 'red'); return; }
   showToastAdmin(statut === 'confirme' ? '✓ Transport confirmé' : 'Transport refusé', statut === 'confirme' ? 'green' : 'amber');
   chargerAlertes();
@@ -6309,26 +6493,28 @@ async function chargerAlertes() {
 
     // Transports Day Care à confirmer (clients hors zone, v39)
     try {
-      var trA = await db.from('reservations').select('client_id,date_debut,date_fin_recurrence,date_fin,transport_aller,transport_retour, clients(prenom, nom, commune)')
+      var trA = await db.from('reservations').select('client_id,service,date_debut,date_fin_recurrence,date_fin,transport_aller,transport_retour, clients(prenom, nom, commune)')
         .eq('transport_statut', 'a_confirmer').neq('statut', 'annule').limit(100);
       if (!trA.error && trA.data && trA.data.length) {
         var vusTr = {}, lignesTr = [];
         trA.data.forEach(function(x) {
-          var k = x.client_id + '|' + x.date_debut; if (vusTr[k]) return; vusTr[k] = true;
+          var k = x.client_id + '|' + x.date_debut + '|' + x.service; if (vusTr[k]) return; vusTr[k] = true;
           lignesTr.push(x);
         });
         html += '<div class="alert alert-a"><div class="alert-dot"></div><div class="alert-body">'
-          + '<strong>' + lignesTr.length + ' transport' + (lignesTr.length > 1 ? 's' : '') + ' Day Care à confirmer</strong>'
+          + '<strong>' + lignesTr.length + ' transport' + (lignesTr.length > 1 ? 's' : '') + ' à confirmer</strong>'
           + lignesTr.slice(0, 5).map(function(x) {
               var nomC = x.clients ? x.clients.prenom + ' ' + x.clients.nom + (x.clients.commune ? ' (' + x.clients.commune + ')' : '') : '—';
-              var sens = x.transport_aller && x.transport_retour ? 'aller + retour' : x.transport_aller ? 'aller' : 'retour';
+              var sens = x.service === 'boarding'
+                ? 'Pension · ' + (x.transport_aller && x.transport_retour ? 'récupération + dépose à domicile' : x.transport_aller ? 'récupération à domicile' : 'dépose à domicile')
+                : 'Day Care · ' + (x.transport_aller && x.transport_retour ? 'aller + retour' : x.transport_aller ? 'aller' : 'retour');
               var fin = x.date_fin_recurrence || x.date_fin;
               return '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--text-dim);margin-top:5px;">'
                 + msgEsc(nomC) + ' · ' + sens + ' · dès le ' + formatDateFR(x.date_debut) + (fin && fin !== x.date_debut ? ' → ' + formatDateFR(fin) : '')
-                + ' <button class="rc-btn pay" onclick="event.stopPropagation();decisionTransport(\'' + x.client_id + '\',\'' + x.date_debut + '\',\'confirme\')">Confirmer</button>'
-                + '<button class="rc-btn red" onclick="event.stopPropagation();decisionTransport(\'' + x.client_id + '\',\'' + x.date_debut + '\',\'refuse\')">Refuser</button></div>';
+                + ' <button class="rc-btn pay" onclick="event.stopPropagation();decisionTransport(\'' + x.client_id + '\',\'' + x.date_debut + '\',\'confirme\',\'' + x.service + '\')">Confirmer</button>'
+                + '<button class="rc-btn red" onclick="event.stopPropagation();decisionTransport(\'' + x.client_id + '\',\'' + x.date_debut + '\',\'refuse\',\'' + x.service + '\')">Refuser</button></div>';
             }).join('')
-          + '<div class="alert-time">Hors zone : 5,85 € TTC par trajet, facturé une fois confirmé</div>'
+          + '<div class="alert-time">Day Care hors zone : 5,85 € TTC par trajet, facturé une fois confirmé · Pension : sans frais automatiques</div>'
           + '</div></div>';
       }
     } catch (eTr) { /* v39 absente */ }
@@ -7035,11 +7221,22 @@ async function sauvegarderResaAdmin() {
     ligne.transport_statut = 'confirme';
   }
   if (calc.nb != null) { ligne.montant_ttc = calc.total; ligne.nb_seances = calc.nb; }
+  // v2.78 : « Tous les chiens » = une ligne par chien (comme l'espace client).
+  // Une ligne sans chien précis échappait au mode chaleur (v61). Le montant
+  // reste sur la 1re ligne ; la facture compte les chiens présents par sortie.
+  var idsChiens = Array.prototype.map.call(document.getElementById('resa-chien-id').options, function(o) { return o.value; }).filter(Boolean);
+  var lignes = (!ligne.chien_id && idsChiens.length)
+    ? idsChiens.map(function(id, i) {
+        var l = Object.assign({}, ligne, { chien_id: id });
+        if (i > 0 && 'montant_ttc' in ligne) { l.montant_ttc = 0; l.nb_seances = 0; }
+        return l;
+      })
+    : [ligne];
   try {
-    var { error } = await db.from('reservations').insert(ligne);
+    var { error } = await db.from('reservations').insert(lignes);
     if (error && /montant_ttc|nb_seances/.test(error.message || '')) {   // colonnes absentes : sans montant
-      delete ligne.montant_ttc; delete ligne.nb_seances;
-      error = (await db.from('reservations').insert(ligne)).error;
+      lignes.forEach(function(l) { delete l.montant_ttc; delete l.nb_seances; });
+      error = (await db.from('reservations').insert(lignes)).error;
     }
     if (error && tv && /transport_/.test(error.message || '')) {
       throw new Error('Migration v39 à exécuter pour enregistrer le transport (sql/fr_migration_v39_acces_transport.sql)');
@@ -7561,6 +7758,10 @@ document.addEventListener('click', function(e) {
       <div id="detail-montant-info" style="color:var(--accent);font-weight:700;margin-top:4px;"></div>
     </div>
 
+    <!-- v2.79 : logistique (dépôt, récupération, transport, accès) et fiches des chiens -->
+    <div id="detail-logistique" style="display:none;margin-bottom:14px;"></div>
+    <div id="detail-chiens-bloc" style="display:none;margin-bottom:14px;"></div>
+
     <div id="detail-annulation-info" style="display:none;background:rgba(224,90,90,0.12);border:1px solid rgba(224,90,90,0.3);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:var(--red);"></div>
 
     <div class="form-group">
@@ -7578,7 +7779,7 @@ document.addEventListener('click', function(e) {
     <div id="detail-transport-bloc" style="display:none;">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div class="form-group">
-          <label class="form-label">Transport Day Care</label>
+          <label class="form-label" id="detail-transport-label">Transport Day Care</label>
           <select class="form-control" id="detail-transport" style="width:100%;">
             <option value="">Aucun (le client dépose)</option>
             <option value="aller">Aller (le matin)</option>

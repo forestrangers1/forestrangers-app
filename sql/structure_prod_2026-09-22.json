@@ -1,0 +1,2955 @@
+{
+ "vues": {
+  "v_factures_suivi": " WITH p AS (\n         SELECT (fr_param_num('delai_rappel_1_jours'::text, (15)::numeric))::integer AS j1,\n            (fr_param_num('delai_rappel_2_jours'::text, (30)::numeric))::integer AS j2,\n            (fr_param_num('delai_mise_en_demeure_jours'::text, (37)::numeric))::integer AS j3,\n            fr_aujourdhui() AS auj\n        ), b AS (\n         SELECT f.id,\n            f.client_id,\n            f.numero_facture,\n            f.numero_client,\n            f.periode,\n            f.date_emission,\n            f.date_echeance,\n            f.sous_total_ht,\n            f.supplement_zone_ht,\n            f.total_ht,\n            f.tva_17,\n            f.frais_rappel,\n            f.total_ttc,\n            f.statut,\n            f.notes,\n            f.created_at,\n            f.numero,\n            f.montant_paye,\n            f.date_paiement,\n            f.frais_dossier,\n            f.rappel_1_le,\n            f.rappel_2_le,\n            f.mise_en_demeure_le,\n            (((COALESCE(f.total_ttc, (0)::double precision))::numeric + f.frais_dossier))::numeric(10,2) AS total_a_payer,\n            (\n                CASE\n                    WHEN (COALESCE(f.statut, 'impayee'::text) = 'payee'::text) THEN (0)::numeric\n                    ELSE GREATEST((((COALESCE(f.total_ttc, (0)::double precision))::numeric + f.frais_dossier) - f.montant_paye), (0)::numeric)\n                END)::numeric(10,2) AS solde,\n            (p.auj - f.date_emission) AS jours_depuis_emission,\n            GREATEST((p.auj - f.date_echeance), 0) AS jours_retard,\n            p.j1,\n            p.j2,\n            p.j3\n           FROM (factures f\n             CROSS JOIN p)\n        )\n SELECT id,\n    client_id,\n    numero_facture,\n    numero_client,\n    periode,\n    date_emission,\n    date_echeance,\n    sous_total_ht,\n    supplement_zone_ht,\n    total_ht,\n    tva_17,\n    frais_rappel,\n    total_ttc,\n    statut,\n    notes,\n    created_at,\n    numero,\n    montant_paye,\n    date_paiement,\n    frais_dossier,\n    rappel_1_le,\n    rappel_2_le,\n    mise_en_demeure_le,\n    total_a_payer,\n    solde,\n    jours_depuis_emission,\n    jours_retard,\n    j1,\n    j2,\n    j3,\n        CASE\n            WHEN (mise_en_demeure_le IS NOT NULL) THEN 'mise_en_demeure'::text\n            WHEN (rappel_2_le IS NOT NULL) THEN 'rappel_2'::text\n            WHEN (rappel_1_le IS NOT NULL) THEN 'rappel_1'::text\n            ELSE 'aucune'::text\n        END AS etape,\n        CASE\n            WHEN (solde <= (0)::numeric) THEN NULL::text\n            WHEN ((jours_depuis_emission >= j3) AND (rappel_2_le IS NOT NULL) AND (mise_en_demeure_le IS NULL)) THEN 'mise_en_demeure'::text\n            WHEN ((jours_depuis_emission >= j2) AND (rappel_1_le IS NOT NULL) AND (rappel_2_le IS NULL)) THEN 'rappel_2'::text\n            WHEN ((jours_depuis_emission >= j1) AND (rappel_1_le IS NULL)) THEN 'rappel_1'::text\n            ELSE NULL::text\n        END AS etape_suggeree\n   FROM b;",
+  "v_clients_recouvrement": " WITH ouv AS (\n         SELECT v_factures_suivi.client_id,\n            sum(v_factures_suivi.solde) AS solde_du,\n            count(*) AS nb_ouvertes,\n            min(v_factures_suivi.date_emission) AS plus_ancienne_emission,\n            max(v_factures_suivi.jours_depuis_emission) AS jours_plus_ancienne,\n            max(v_factures_suivi.rappel_2_le) AS dernier_rappel_2\n           FROM v_factures_suivi\n          WHERE (v_factures_suivi.solde > (0)::numeric)\n          GROUP BY v_factures_suivi.client_id\n        ), pay AS (\n         SELECT paiements.client_id,\n            max(paiements.date_virement) AS dernier_virement,\n            sum(paiements.montant) AS total_paye\n           FROM paiements\n          WHERE (paiements.annule_le IS NULL)\n          GROUP BY paiements.client_id\n        ), imp AS (\n         SELECT pa.client_id,\n            sum(i.montant) AS total_impute\n           FROM (paiements_imputations i\n             JOIN paiements pa ON ((pa.id = i.paiement_id)))\n          WHERE (pa.annule_le IS NULL)\n          GROUP BY pa.client_id\n        )\n SELECT c.id AS client_id,\n    c.numero_client,\n    c.prenom,\n    c.nom,\n    (COALESCE(ouv.solde_du, (0)::numeric))::numeric(10,2) AS solde_du,\n    COALESCE(ouv.nb_ouvertes, (0)::bigint) AS nb_factures_ouvertes,\n    ouv.plus_ancienne_emission,\n    ouv.jours_plus_ancienne,\n    ouv.dernier_rappel_2,\n    pay.dernier_virement,\n    (GREATEST((COALESCE(pay.total_paye, (0)::numeric) - COALESCE(imp.total_impute, (0)::numeric)), (0)::numeric))::numeric(10,2) AS avoir,\n    c.reservations_suspendues,\n    c.suspendu_le,\n    c.suspension_motif,\n    ((COALESCE(ouv.jours_plus_ancienne, 0) >= (fr_param_num('delai_mise_en_demeure_jours'::text, (37)::numeric))::integer) AND (ouv.dernier_rappel_2 IS NOT NULL) AND ((pay.dernier_virement IS NULL) OR (pay.dernier_virement < ((ouv.dernier_rappel_2 AT TIME ZONE 'Europe/Luxembourg'::text))::date))) AS suspension_possible\n   FROM (((clients c\n     LEFT JOIN ouv ON ((ouv.client_id = c.id)))\n     LEFT JOIN pay ON ((pay.client_id = c.id)))\n     LEFT JOIN imp ON ((imp.client_id = c.id)));"
+ },
+ "index": [
+  {
+   "table": "alertes_meteo",
+   "definition": "CREATE UNIQUE INDEX alertes_meteo_pkey ON public.alertes_meteo USING btree (id)"
+  },
+  {
+   "table": "alertes_meteo",
+   "definition": "CREATE INDEX idx_alertes_meteo_actif ON public.alertes_meteo USING btree (date_alerte) WHERE (actif = true)"
+  },
+  {
+   "table": "alertes_meteo",
+   "definition": "CREATE INDEX idx_alertes_meteo_date ON public.alertes_meteo USING btree (date_alerte DESC)"
+  },
+  {
+   "table": "annulations_occurrences",
+   "definition": "CREATE UNIQUE INDEX annulations_occurrences_pkey ON public.annulations_occurrences USING btree (id)"
+  },
+  {
+   "table": "annulations_occurrences",
+   "definition": "CREATE INDEX idx_annul_occ_date ON public.annulations_occurrences USING btree (date_occurrence)"
+  },
+  {
+   "table": "annulations_occurrences",
+   "definition": "CREATE INDEX idx_annul_occ_resa ON public.annulations_occurrences USING btree (reservation_id)"
+  },
+  {
+   "table": "camionnettes",
+   "definition": "CREATE UNIQUE INDEX camionnettes_immatriculation_key ON public.camionnettes USING btree (immatriculation)"
+  },
+  {
+   "table": "camionnettes",
+   "definition": "CREATE UNIQUE INDEX camionnettes_pkey ON public.camionnettes USING btree (id)"
+  },
+  {
+   "table": "chaleurs",
+   "definition": "CREATE UNIQUE INDEX chaleurs_pkey ON public.chaleurs USING btree (id)"
+  },
+  {
+   "table": "chaleurs",
+   "definition": "CREATE INDEX idx_chaleurs_chien ON public.chaleurs USING btree (chien_id, date_debut DESC)"
+  },
+  {
+   "table": "chaleurs",
+   "definition": "CREATE UNIQUE INDEX idx_chaleurs_ouverte ON public.chaleurs USING btree (chien_id) WHERE (statut = ANY (ARRAY['signale'::text, 'active'::text]))"
+  },
+  {
+   "table": "chiens",
+   "definition": "CREATE UNIQUE INDEX chiens_pkey ON public.chiens USING btree (id)"
+  },
+  {
+   "table": "clients",
+   "definition": "CREATE UNIQUE INDEX clients_email_key ON public.clients USING btree (email)"
+  },
+  {
+   "table": "clients",
+   "definition": "CREATE UNIQUE INDEX clients_numero_client_key ON public.clients USING btree (numero_client)"
+  },
+  {
+   "table": "clients",
+   "definition": "CREATE UNIQUE INDEX clients_pkey ON public.clients USING btree (id)"
+  },
+  {
+   "table": "conges",
+   "definition": "CREATE UNIQUE INDEX conges_pkey ON public.conges USING btree (id)"
+  },
+  {
+   "table": "emails_envoyes",
+   "definition": "CREATE INDEX emails_envoyes_client_idx ON public.emails_envoyes USING btree (client_id, created_at DESC)"
+  },
+  {
+   "table": "emails_envoyes",
+   "definition": "CREATE INDEX emails_envoyes_facture_idx ON public.emails_envoyes USING btree (facture_id, created_at DESC)"
+  },
+  {
+   "table": "emails_envoyes",
+   "definition": "CREATE UNIQUE INDEX emails_envoyes_pkey ON public.emails_envoyes USING btree (id)"
+  },
+  {
+   "table": "factures",
+   "definition": "CREATE UNIQUE INDEX factures_mensuelle_uniq ON public.factures USING btree (client_id, periode) WHERE mensuelle"
+  },
+  {
+   "table": "factures",
+   "definition": "CREATE UNIQUE INDEX factures_numero_facture_key ON public.factures USING btree (numero_facture)"
+  },
+  {
+   "table": "factures",
+   "definition": "CREATE UNIQUE INDEX factures_pkey ON public.factures USING btree (id)"
+  },
+  {
+   "table": "invitations",
+   "definition": "CREATE UNIQUE INDEX invitations_pkey ON public.invitations USING btree (id)"
+  },
+  {
+   "table": "invitations",
+   "definition": "CREATE UNIQUE INDEX invitations_token_key ON public.invitations USING btree (token)"
+  },
+  {
+   "table": "kilometrage",
+   "definition": "CREATE UNIQUE INDEX kilometrage_pkey ON public.kilometrage USING btree (id)"
+  },
+  {
+   "table": "lignes_facture",
+   "definition": "CREATE UNIQUE INDEX lignes_facture_pkey ON public.lignes_facture USING btree (id)"
+  },
+  {
+   "table": "messages",
+   "definition": "CREATE INDEX idx_messages_client ON public.messages USING btree (client_id, created_at DESC)"
+  },
+  {
+   "table": "messages",
+   "definition": "CREATE INDEX idx_messages_nonlus ON public.messages USING btree (lu) WHERE (lu = false)"
+  },
+  {
+   "table": "messages",
+   "definition": "CREATE INDEX idx_messages_staff ON public.messages USING btree (staff_id, created_at DESC)"
+  },
+  {
+   "table": "messages",
+   "definition": "CREATE INDEX idx_messages_type ON public.messages USING btree (client_id, type, created_at DESC)"
+  },
+  {
+   "table": "messages",
+   "definition": "CREATE UNIQUE INDEX messages_pkey ON public.messages USING btree (id)"
+  },
+  {
+   "table": "messages_envoyes",
+   "definition": "CREATE UNIQUE INDEX messages_envoyes_pkey ON public.messages_envoyes USING btree (id)"
+  },
+  {
+   "table": "notifications",
+   "definition": "CREATE UNIQUE INDEX notifications_pkey ON public.notifications USING btree (id)"
+  },
+  {
+   "table": "paiements",
+   "definition": "CREATE INDEX idx_paiements_client ON public.paiements USING btree (client_id, date_virement)"
+  },
+  {
+   "table": "paiements",
+   "definition": "CREATE UNIQUE INDEX paiements_pkey ON public.paiements USING btree (id)"
+  },
+  {
+   "table": "paiements_imputations",
+   "definition": "CREATE INDEX idx_imput_facture ON public.paiements_imputations USING btree (facture_id)"
+  },
+  {
+   "table": "paiements_imputations",
+   "definition": "CREATE INDEX idx_imput_paiement ON public.paiements_imputations USING btree (paiement_id)"
+  },
+  {
+   "table": "paiements_imputations",
+   "definition": "CREATE UNIQUE INDEX paiements_imputations_pkey ON public.paiements_imputations USING btree (id)"
+  },
+  {
+   "table": "parametres",
+   "definition": "CREATE UNIQUE INDEX parametres_pkey ON public.parametres USING btree (cle)"
+  },
+  {
+   "table": "promenades",
+   "definition": "CREATE UNIQUE INDEX promenades_pkey ON public.promenades USING btree (id)"
+  },
+  {
+   "table": "races",
+   "definition": "CREATE UNIQUE INDEX races_nom_key ON public.races USING btree (nom)"
+  },
+  {
+   "table": "races",
+   "definition": "CREATE UNIQUE INDEX races_pkey ON public.races USING btree (id)"
+  },
+  {
+   "table": "reservations",
+   "definition": "CREATE UNIQUE INDEX reservations_pkey ON public.reservations USING btree (id)"
+  },
+  {
+   "table": "staff",
+   "definition": "CREATE UNIQUE INDEX staff_email_key ON public.staff USING btree (email)"
+  },
+  {
+   "table": "staff",
+   "definition": "CREATE UNIQUE INDEX staff_pkey ON public.staff USING btree (id)"
+  },
+  {
+   "table": "user_roles",
+   "definition": "CREATE UNIQUE INDEX user_roles_pkey ON public.user_roles USING btree (id)"
+  },
+  {
+   "table": "zones",
+   "definition": "CREATE UNIQUE INDEX zones_pkey ON public.zones USING btree (id)"
+  }
+ ],
+ "tables": {
+  "races": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "id",
+     "type": "uuid(uuid)",
+     "defaut": "gen_random_uuid()",
+     "obligatoire": true
+    },
+    {
+     "nom": "nom",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "categorie",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "grand_gabarit",
+     "type": "boolean(bool)",
+     "defaut": "false",
+     "obligatoire": false
+    },
+    {
+     "nom": "actif",
+     "type": "boolean(bool)",
+     "defaut": "true",
+     "obligatoire": false
+    },
+    {
+     "nom": "created_at",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": "now()",
+     "obligatoire": false
+    }
+   ]
+  },
+  "staff": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "id",
+     "type": "uuid(uuid)",
+     "defaut": "gen_random_uuid()",
+     "obligatoire": true
+    },
+    {
+     "nom": "prenom",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "nom",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "email",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "telephone",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "role",
+     "type": "text(text)",
+     "defaut": "'ranger'::text",
+     "obligatoire": false
+    },
+    {
+     "nom": "type_ranger",
+     "type": "text(text)",
+     "defaut": "'A'::text",
+     "obligatoire": false
+    },
+    {
+     "nom": "heures_semaine",
+     "type": "integer(int4)",
+     "defaut": "20",
+     "obligatoire": false
+    },
+    {
+     "nom": "jours_habituels",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "creneaux_habituels",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "flexible",
+     "type": "boolean(bool)",
+     "defaut": "false",
+     "obligatoire": false
+    },
+    {
+     "nom": "actif",
+     "type": "boolean(bool)",
+     "defaut": "true",
+     "obligatoire": true
+    },
+    {
+     "nom": "created_at",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": "now()",
+     "obligatoire": false
+    },
+    {
+     "nom": "auth_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "type_contrat",
+     "type": "text(text)",
+     "defaut": "'CDI'::text",
+     "obligatoire": false
+    },
+    {
+     "nom": "notes",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    }
+   ]
+  },
+  "zones": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "id",
+     "type": "uuid(uuid)",
+     "defaut": "gen_random_uuid()",
+     "obligatoire": true
+    },
+    {
+     "nom": "nom",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "communes",
+     "type": "ARRAY(_text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "supplement_ht",
+     "type": "double precision(float8)",
+     "defaut": "0",
+     "obligatoire": false
+    },
+    {
+     "nom": "actif",
+     "type": "boolean(bool)",
+     "defaut": "true",
+     "obligatoire": false
+    }
+   ]
+  },
+  "chiens": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "id",
+     "type": "uuid(uuid)",
+     "defaut": "gen_random_uuid()",
+     "obligatoire": true
+    },
+    {
+     "nom": "client_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "nom",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "race",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "poids_kg",
+     "type": "double precision(float8)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "grand_chien",
+     "type": "boolean(bool)",
+     "defaut": "false",
+     "obligatoire": false
+    },
+    {
+     "nom": "date_naissance",
+     "type": "date(date)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "vaccins_ok",
+     "type": "boolean(bool)",
+     "defaut": "false",
+     "obligatoire": false
+    },
+    {
+     "nom": "assurance_ok",
+     "type": "boolean(bool)",
+     "defaut": "false",
+     "obligatoire": false
+    },
+    {
+     "nom": "en_chaleur",
+     "type": "boolean(bool)",
+     "defaut": "false",
+     "obligatoire": false
+    },
+    {
+     "nom": "chien_dangereux",
+     "type": "boolean(bool)",
+     "defaut": "false",
+     "obligatoire": false
+    },
+    {
+     "nom": "notes_sante",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "actif",
+     "type": "boolean(bool)",
+     "defaut": "true",
+     "obligatoire": true
+    },
+    {
+     "nom": "created_at",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": "now()",
+     "obligatoire": false
+    },
+    {
+     "nom": "sexe",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "numero_puce",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "comportement",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "sterilise",
+     "type": "boolean(bool)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "photo_url",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "chaleur_debut",
+     "type": "date(date)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "chaleur_fin",
+     "type": "date(date)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "chaleur_source",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "veterinaire",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "veterinaire_tel",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "allergies",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "medicaments",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "pathologies",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    }
+   ]
+  },
+  "conges": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "id",
+     "type": "uuid(uuid)",
+     "defaut": "gen_random_uuid()",
+     "obligatoire": true
+    },
+    {
+     "nom": "staff_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "date_debut",
+     "type": "date(date)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "date_fin",
+     "type": "date(date)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "motif",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "statut",
+     "type": "text(text)",
+     "defaut": "'en_attente'::text",
+     "obligatoire": false
+    },
+    {
+     "nom": "notes_gabriel",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "created_at",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": "now()",
+     "obligatoire": false
+    }
+   ]
+  },
+  "clients": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "id",
+     "type": "uuid(uuid)",
+     "defaut": "gen_random_uuid()",
+     "obligatoire": true
+    },
+    {
+     "nom": "numero_client",
+     "type": "integer(int4)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "prenom",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "nom",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "email",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "telephone",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "adresse",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "commune",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "hors_zone",
+     "type": "boolean(bool)",
+     "defaut": "false",
+     "obligatoire": false
+    },
+    {
+     "nom": "client_fidele",
+     "type": "boolean(bool)",
+     "defaut": "false",
+     "obligatoire": false
+    },
+    {
+     "nom": "date_inscription",
+     "type": "date(date)",
+     "defaut": "CURRENT_DATE",
+     "obligatoire": false
+    },
+    {
+     "nom": "notes_internes",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "actif",
+     "type": "boolean(bool)",
+     "defaut": "true",
+     "obligatoire": true
+    },
+    {
+     "nom": "created_at",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": "now()",
+     "obligatoire": false
+    },
+    {
+     "nom": "is_test",
+     "type": "boolean(bool)",
+     "defaut": "false",
+     "obligatoire": false
+    },
+    {
+     "nom": "auth_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "client_depuis",
+     "type": "date(date)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "tarif_walking",
+     "type": "numeric(numeric)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "tarif_daycare",
+     "type": "numeric(numeric)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "tarif_boarding",
+     "type": "numeric(numeric)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "tarif_reduction",
+     "type": "numeric(numeric)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "personnes_autorisees",
+     "type": "jsonb(jsonb)",
+     "defaut": "'[]'::jsonb",
+     "obligatoire": false
+    },
+    {
+     "nom": "langue",
+     "type": "text(text)",
+     "defaut": "'fr'::text",
+     "obligatoire": false
+    },
+    {
+     "nom": "cgv_version",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "cgv_acceptee_le",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "reservations_suspendues",
+     "type": "boolean(bool)",
+     "defaut": "false",
+     "obligatoire": true
+    },
+    {
+     "nom": "suspendu_le",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "suspension_motif",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    }
+   ]
+  },
+  "chaleurs": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "id",
+     "type": "uuid(uuid)",
+     "defaut": "gen_random_uuid()",
+     "obligatoire": true
+    },
+    {
+     "nom": "chien_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "statut",
+     "type": "text(text)",
+     "defaut": "'active'::text",
+     "obligatoire": true
+    },
+    {
+     "nom": "date_debut",
+     "type": "date(date)",
+     "defaut": "CURRENT_DATE",
+     "obligatoire": true
+    },
+    {
+     "nom": "date_fin",
+     "type": "date(date)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "declare_par",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "declare_auth_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "signale_par_nom",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "dates_retirees",
+     "type": "jsonb(jsonb)",
+     "defaut": "'[]'::jsonb",
+     "obligatoire": false
+    },
+    {
+     "nom": "annulee_le",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "annulee_par",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "created_at",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": "now()",
+     "obligatoire": false
+    }
+   ]
+  },
+  "factures": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "id",
+     "type": "uuid(uuid)",
+     "defaut": "gen_random_uuid()",
+     "obligatoire": true
+    },
+    {
+     "nom": "client_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "numero_facture",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "numero_client",
+     "type": "integer(int4)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "periode",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "date_emission",
+     "type": "date(date)",
+     "defaut": "CURRENT_DATE",
+     "obligatoire": false
+    },
+    {
+     "nom": "date_echeance",
+     "type": "date(date)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "sous_total_ht",
+     "type": "double precision(float8)",
+     "defaut": "0",
+     "obligatoire": false
+    },
+    {
+     "nom": "supplement_zone_ht",
+     "type": "double precision(float8)",
+     "defaut": "0",
+     "obligatoire": false
+    },
+    {
+     "nom": "total_ht",
+     "type": "double precision(float8)",
+     "defaut": "0",
+     "obligatoire": false
+    },
+    {
+     "nom": "tva_17",
+     "type": "double precision(float8)",
+     "defaut": "0",
+     "obligatoire": false
+    },
+    {
+     "nom": "frais_rappel",
+     "type": "double precision(float8)",
+     "defaut": "0",
+     "obligatoire": false
+    },
+    {
+     "nom": "total_ttc",
+     "type": "double precision(float8)",
+     "defaut": "0",
+     "obligatoire": false
+    },
+    {
+     "nom": "statut",
+     "type": "text(text)",
+     "defaut": "'brouillon'::text",
+     "obligatoire": false
+    },
+    {
+     "nom": "notes",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "created_at",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": "now()",
+     "obligatoire": false
+    },
+    {
+     "nom": "numero",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "montant_paye",
+     "type": "numeric(numeric)",
+     "defaut": "0",
+     "obligatoire": true
+    },
+    {
+     "nom": "date_paiement",
+     "type": "date(date)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "frais_dossier",
+     "type": "numeric(numeric)",
+     "defaut": "0",
+     "obligatoire": true
+    },
+    {
+     "nom": "rappel_1_le",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "rappel_2_le",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "mise_en_demeure_le",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "lignes",
+     "type": "jsonb(jsonb)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "mensuelle",
+     "type": "boolean(bool)",
+     "defaut": "false",
+     "obligatoire": true
+    }
+   ]
+  },
+  "messages": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "id",
+     "type": "uuid(uuid)",
+     "defaut": "gen_random_uuid()",
+     "obligatoire": true
+    },
+    {
+     "nom": "client_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "expediteur",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "contenu",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "lu",
+     "type": "boolean(bool)",
+     "defaut": "false",
+     "obligatoire": false
+    },
+    {
+     "nom": "created_at",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": "now()",
+     "obligatoire": false
+    },
+    {
+     "nom": "type",
+     "type": "text(text)",
+     "defaut": "'message'::text",
+     "obligatoire": true
+    },
+    {
+     "nom": "staff_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    }
+   ]
+  },
+  "paiements": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "id",
+     "type": "uuid(uuid)",
+     "defaut": "gen_random_uuid()",
+     "obligatoire": true
+    },
+    {
+     "nom": "client_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "date_virement",
+     "type": "date(date)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "montant",
+     "type": "numeric(numeric)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "reference",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "note",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "annule_le",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "created_at",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": "now()",
+     "obligatoire": true
+    },
+    {
+     "nom": "created_by",
+     "type": "uuid(uuid)",
+     "defaut": "auth.uid()",
+     "obligatoire": false
+    }
+   ]
+  },
+  "parametres": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "cle",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "valeur",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "updated_at",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": "now()",
+     "obligatoire": false
+    }
+   ]
+  },
+  "promenades": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "id",
+     "type": "uuid(uuid)",
+     "defaut": "gen_random_uuid()",
+     "obligatoire": true
+    },
+    {
+     "nom": "reservation_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "ranger_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "camionnette_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "date",
+     "type": "date(date)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "creneau",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "heure_debut",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "heure_fin",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "distance_km",
+     "type": "double precision(float8)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "duree_minutes",
+     "type": "integer(int4)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "foret",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "gps_trace",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "photo_url",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "statut",
+     "type": "text(text)",
+     "defaut": "'planifiee'::text",
+     "obligatoire": false
+    },
+    {
+     "nom": "chien_present",
+     "type": "boolean(bool)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "notes",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "created_at",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": "now()",
+     "obligatoire": false
+    }
+   ]
+  },
+  "user_roles": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "role",
+     "type": "text(text)",
+     "defaut": "'client'::text",
+     "obligatoire": true
+    },
+    {
+     "nom": "staff_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "client_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    }
+   ]
+  },
+  "invitations": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "id",
+     "type": "uuid(uuid)",
+     "defaut": "gen_random_uuid()",
+     "obligatoire": true
+    },
+    {
+     "nom": "prenom",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "email",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "token",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "expire_at",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "utilise",
+     "type": "boolean(bool)",
+     "defaut": "false",
+     "obligatoire": false
+    },
+    {
+     "nom": "note_interne",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "created_at",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": "now()",
+     "obligatoire": false
+    },
+    {
+     "nom": "langue",
+     "type": "text(text)",
+     "defaut": "'fr'::text",
+     "obligatoire": false
+    }
+   ]
+  },
+  "kilometrage": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "id",
+     "type": "uuid(uuid)",
+     "defaut": "gen_random_uuid()",
+     "obligatoire": true
+    },
+    {
+     "nom": "camionnette_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "staff_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "date",
+     "type": "date(date)",
+     "defaut": "CURRENT_DATE",
+     "obligatoire": false
+    },
+    {
+     "nom": "km_depart",
+     "type": "integer(int4)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "km_arrivee",
+     "type": "integer(int4)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "km_parcourus",
+     "type": "integer(int4)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "huile_statut",
+     "type": "text(text)",
+     "defaut": "'ok'::text",
+     "obligatoire": false
+    },
+    {
+     "nom": "adblue_statut",
+     "type": "text(text)",
+     "defaut": "'ok'::text",
+     "obligatoire": false
+    },
+    {
+     "nom": "remarques",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "created_at",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": "now()",
+     "obligatoire": false
+    }
+   ]
+  },
+  "camionnettes": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "id",
+     "type": "uuid(uuid)",
+     "defaut": "gen_random_uuid()",
+     "obligatoire": true
+    },
+    {
+     "nom": "nom",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "immatriculation",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "capacite_totale",
+     "type": "integer(int4)",
+     "defaut": "10",
+     "obligatoire": false
+    },
+    {
+     "nom": "max_grands_chiens",
+     "type": "integer(int4)",
+     "defaut": "3",
+     "obligatoire": false
+    },
+    {
+     "nom": "place_bonus",
+     "type": "boolean(bool)",
+     "defaut": "false",
+     "obligatoire": false
+    },
+    {
+     "nom": "ranger_defaut_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "km_actuel",
+     "type": "integer(int4)",
+     "defaut": "0",
+     "obligatoire": false
+    },
+    {
+     "nom": "km_prochaine_revision",
+     "type": "integer(int4)",
+     "defaut": "50000",
+     "obligatoire": false
+    },
+    {
+     "nom": "huile_statut",
+     "type": "text(text)",
+     "defaut": "'ok'::text",
+     "obligatoire": false
+    },
+    {
+     "nom": "adblue_statut",
+     "type": "text(text)",
+     "defaut": "'ok'::text",
+     "obligatoire": false
+    },
+    {
+     "nom": "active",
+     "type": "boolean(bool)",
+     "defaut": "true",
+     "obligatoire": false
+    },
+    {
+     "nom": "notes",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "created_at",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": "now()",
+     "obligatoire": false
+    }
+   ]
+  },
+  "reservations": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "id",
+     "type": "uuid(uuid)",
+     "defaut": "gen_random_uuid()",
+     "obligatoire": true
+    },
+    {
+     "nom": "client_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "chien_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "service",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "statut",
+     "type": "text(text)",
+     "defaut": "'en_attente'::text",
+     "obligatoire": false
+    },
+    {
+     "nom": "date_debut",
+     "type": "date(date)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "date_fin",
+     "type": "date(date)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "creneau",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "recurrente",
+     "type": "boolean(bool)",
+     "defaut": "false",
+     "obligatoire": false
+    },
+    {
+     "nom": "jours_recurrence",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "date_fin_recurrence",
+     "type": "date(date)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "hors_zone",
+     "type": "boolean(bool)",
+     "defaut": "false",
+     "obligatoire": false
+    },
+    {
+     "nom": "supplement_zone",
+     "type": "double precision(float8)",
+     "defaut": "0",
+     "obligatoire": false
+    },
+    {
+     "nom": "validation_manuelle",
+     "type": "boolean(bool)",
+     "defaut": "false",
+     "obligatoire": false
+    },
+    {
+     "nom": "notes",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "created_at",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": "now()",
+     "obligatoire": false
+    },
+    {
+     "nom": "annule_par",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "annulation_tardive",
+     "type": "boolean(bool)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "facture_pourcentage",
+     "type": "integer(int4)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "dates_exclues",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "ranger_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "ranger_nom",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "jours",
+     "type": "jsonb(jsonb)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "montant_ttc",
+     "type": "numeric(numeric)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "nb_seances",
+     "type": "integer(int4)",
+     "defaut": null,
+     "obligatoire": false
+    }
+   ]
+  },
+  "alertes_meteo": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "id",
+     "type": "uuid(uuid)",
+     "defaut": "gen_random_uuid()",
+     "obligatoire": true
+    },
+    {
+     "nom": "date_alerte",
+     "type": "date(date)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "niveau",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "titre",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "message",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "actif",
+     "type": "boolean(bool)",
+     "defaut": "true",
+     "obligatoire": false
+    },
+    {
+     "nom": "created_at",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": "now()",
+     "obligatoire": false
+    }
+   ]
+  },
+  "notifications": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "id",
+     "type": "uuid(uuid)",
+     "defaut": "gen_random_uuid()",
+     "obligatoire": true
+    },
+    {
+     "nom": "type",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "titre",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "message",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "client_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "staff_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "lu",
+     "type": "boolean(bool)",
+     "defaut": "false",
+     "obligatoire": false
+    },
+    {
+     "nom": "action_requise",
+     "type": "boolean(bool)",
+     "defaut": "false",
+     "obligatoire": false
+    },
+    {
+     "nom": "lien",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "created_at",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": "now()",
+     "obligatoire": false
+    }
+   ]
+  },
+  "emails_envoyes": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "id",
+     "type": "uuid(uuid)",
+     "defaut": "gen_random_uuid()",
+     "obligatoire": true
+    },
+    {
+     "nom": "created_at",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": "now()",
+     "obligatoire": true
+    },
+    {
+     "nom": "type",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "client_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "destinataire",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "destinataire_original",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "objet",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "statut",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "resend_id",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "erreur",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "created_by",
+     "type": "uuid(uuid)",
+     "defaut": "auth.uid()",
+     "obligatoire": false
+    },
+    {
+     "nom": "facture_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    }
+   ]
+  },
+  "lignes_facture": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "id",
+     "type": "uuid(uuid)",
+     "defaut": "gen_random_uuid()",
+     "obligatoire": true
+    },
+    {
+     "nom": "facture_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "description",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "chien_nom",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "quantite",
+     "type": "integer(int4)",
+     "defaut": "1",
+     "obligatoire": false
+    },
+    {
+     "nom": "prix_unitaire_ht",
+     "type": "double precision(float8)",
+     "defaut": "0",
+     "obligatoire": false
+    },
+    {
+     "nom": "total_ht",
+     "type": "double precision(float8)",
+     "defaut": "0",
+     "obligatoire": false
+    },
+    {
+     "nom": "type_ligne",
+     "type": "text(text)",
+     "defaut": "'prestation'::text",
+     "obligatoire": false
+    },
+    {
+     "nom": "created_at",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": "now()",
+     "obligatoire": false
+    }
+   ]
+  },
+  "messages_envoyes": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "id",
+     "type": "uuid(uuid)",
+     "defaut": "gen_random_uuid()",
+     "obligatoire": true
+    },
+    {
+     "nom": "modele",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "sujet",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "contenu",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "destinataires",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "nb_envoyes",
+     "type": "integer(int4)",
+     "defaut": "0",
+     "obligatoire": false
+    },
+    {
+     "nom": "envoye_par",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "created_at",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": "now()",
+     "obligatoire": false
+    }
+   ]
+  },
+  "paiements_imputations": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "id",
+     "type": "uuid(uuid)",
+     "defaut": "gen_random_uuid()",
+     "obligatoire": true
+    },
+    {
+     "nom": "paiement_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "facture_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "montant",
+     "type": "numeric(numeric)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "created_at",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": "now()",
+     "obligatoire": true
+    }
+   ]
+  },
+  "annulations_occurrences": {
+   "rls": true,
+   "colonnes": [
+    {
+     "nom": "id",
+     "type": "uuid(uuid)",
+     "defaut": "gen_random_uuid()",
+     "obligatoire": true
+    },
+    {
+     "nom": "reservation_id",
+     "type": "uuid(uuid)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "date_occurrence",
+     "type": "date(date)",
+     "defaut": null,
+     "obligatoire": true
+    },
+    {
+     "nom": "annule_par",
+     "type": "text(text)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "annulation_tardive",
+     "type": "boolean(bool)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "facture_pourcentage",
+     "type": "integer(int4)",
+     "defaut": null,
+     "obligatoire": false
+    },
+    {
+     "nom": "created_at",
+     "type": "timestamp with time zone(timestamptz)",
+     "defaut": "now()",
+     "obligatoire": false
+    }
+   ]
+  }
+ },
+ "triggers": [
+  {
+   "nom": "fr_facture_dates",
+   "table": "factures",
+   "definition": "CREATE TRIGGER fr_facture_dates BEFORE INSERT ON public.factures FOR EACH ROW EXECUTE FUNCTION fr_facture_dates()"
+  },
+  {
+   "nom": "fr_facture_imputer_avoir",
+   "table": "factures",
+   "definition": "CREATE TRIGGER fr_facture_imputer_avoir AFTER INSERT ON public.factures FOR EACH ROW EXECUTE FUNCTION fr_facture_imputer_avoir()"
+  },
+  {
+   "nom": "fr_chaleur_reservation",
+   "table": "reservations",
+   "definition": "CREATE TRIGGER fr_chaleur_reservation BEFORE INSERT ON public.reservations FOR EACH ROW EXECUTE FUNCTION fr_check_chaleur_reservation()"
+  },
+  {
+   "nom": "fr_cutoff_reservation",
+   "table": "reservations",
+   "definition": "CREATE TRIGGER fr_cutoff_reservation BEFORE INSERT ON public.reservations FOR EACH ROW EXECUTE FUNCTION fr_check_cutoff_reservation()"
+  },
+  {
+   "nom": "fr_suspension_reservation",
+   "table": "reservations",
+   "definition": "CREATE TRIGGER fr_suspension_reservation BEFORE INSERT ON public.reservations FOR EACH ROW EXECUTE FUNCTION fr_suspension_reservation()"
+  },
+  {
+   "nom": "trg_assign_ranger",
+   "table": "reservations",
+   "definition": "CREATE TRIGGER trg_assign_ranger BEFORE INSERT ON public.reservations FOR EACH ROW EXECUTE FUNCTION fr_assign_ranger()"
+  }
+ ],
+ "fonctions": {
+  "is_admin()": "CREATE OR REPLACE FUNCTION public.is_admin()\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\n  select exists (\n    select 1 from public.staff\n    where auth_id = auth.uid()\n      and coalesce(actif, true)\n      and role = 'admin'\n  );\n$function$\n",
+  "fr_est_admin()": "CREATE OR REPLACE FUNCTION public.fr_est_admin()\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\n  select exists (\n    select 1 from public.user_roles\n    where id = auth.uid() and role = 'admin'\n  );\n$function$\n",
+  "fr_est_staff()": "CREATE OR REPLACE FUNCTION public.fr_est_staff()\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\n  select exists (select 1 from public.staff      where auth_id = auth.uid() and coalesce(actif, true))\n      or exists (select 1 from public.user_roles where id      = auth.uid() and role in ('admin','staff'));\n$function$\n",
+  "my_client_id()": "CREATE OR REPLACE FUNCTION public.my_client_id()\n RETURNS uuid\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\n  select id from public.clients where auth_id = auth.uid() limit 1;\n$function$\n",
+  "fr_aujourdhui()": "CREATE OR REPLACE FUNCTION public.fr_aujourdhui()\n RETURNS date\n LANGUAGE sql\n STABLE\nAS $function$\n  select (now() at time zone 'Europe/Luxembourg')::date;\n$function$\n",
+  "fr_mon_staff_id()": "CREATE OR REPLACE FUNCTION public.fr_mon_staff_id()\n RETURNS uuid\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\n  select id from public.staff where auth_id = auth.uid() limit 1;\n$function$\n",
+  "fr_assign_ranger()": "CREATE OR REPLACE FUNCTION public.fr_assign_ranger()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_walker_id uuid; v_walker_nom text;\n  v_caretaker_id uuid; v_caretaker_nom text;\n  v_walker_load int := 0;\n  capacite_tournee constant int := 10;   -- §4.4, ajustable\nbegin\n  -- Assignation manuelle déjà fournie (ex. admin) : on ne touche pas\n  if NEW.ranger_id is not null then\n    return NEW;\n  end if;\n\n  select id, prenom into v_walker_id, v_walker_nom\n    from public.staff where role = 'walker' and coalesce(actif, true) order by id limit 1;\n  select id, prenom into v_caretaker_id, v_caretaker_nom\n    from public.staff where role = 'caretaker' and coalesce(actif, true) order by id limit 1;\n\n  if NEW.service = 'walking' then\n    if v_walker_id is not null then\n      select count(*) into v_walker_load\n        from public.reservations r\n       where r.ranger_id = v_walker_id\n         and r.service = 'walking'\n         and r.date_debut = NEW.date_debut\n         and coalesce(r.creneau, '') = coalesce(NEW.creneau, '')\n         and r.statut <> 'annule';\n    end if;\n\n    if v_walker_id is not null and v_walker_load < capacite_tournee then\n      NEW.ranger_id := v_walker_id;  NEW.ranger_nom := v_walker_nom;\n    elsif v_caretaker_id is not null then        -- overflow : tournée pleine\n      NEW.ranger_id := v_caretaker_id; NEW.ranger_nom := v_caretaker_nom;\n    end if;                                        -- sinon ranger_id null -> à traiter par l'admin\n  else\n    if v_caretaker_id is not null then            -- daycare + boarding\n      NEW.ranger_id := v_caretaker_id; NEW.ranger_nom := v_caretaker_nom;\n    end if;\n  end if;\n\n  return NEW;\nend;\n$function$\n",
+  "fr_facture_dates()": "CREATE OR REPLACE FUNCTION public.fr_facture_dates()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nbegin\n  if new.date_emission is null then\n    new.date_emission := (coalesce(new.created_at, now()) at time zone 'Europe/Luxembourg')::date;\n  end if;\n  if new.date_echeance is null then\n    new.date_echeance := new.date_emission + public.fr_param_num('delai_echeance_jours', 14)::int;\n  end if;\n  return new;\nend $function$\n",
+  "fr_mon_client_id()": "CREATE OR REPLACE FUNCTION public.fr_mon_client_id()\n RETURNS uuid\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\n  select id from public.clients where auth_id = auth.uid() limit 1;\n$function$\n",
+  "fr_facture_imputer_avoir()": "CREATE OR REPLACE FUNCTION public.fr_facture_imputer_avoir()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nbegin\n  perform public.fr_imputer_client(new.client_id);\n  return null;\nend $function$\n",
+  "fr_suspension_reservation()": "CREATE OR REPLACE FUNCTION public.fr_suspension_reservation()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nbegin\n  if public.fr_est_staff() then return new; end if;   -- l'admin réserve toujours\n  if exists (select 1 from public.clients\n              where id = new.client_id and reservations_suspendues) then\n    raise exception 'FR_RESA:suspendu'\n      using hint = 'Réservations suspendues pour impayé : le client doit contacter Forest Rangers.';\n  end if;\n  return new;\nend $function$\n",
+  "fr_check_cutoff_reservation()": "CREATE OR REPLACE FUNCTION public.fr_check_cutoff_reservation()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare\n  maintenant_lux timestamp := (now() at time zone 'Europe/Luxembourg');\n  jour_lux       date      := maintenant_lux::date;\n  heure_lux      int       := extract(hour from maintenant_lux);\n  cutoff         int       := 8;   -- heure de clôture\nbegin\n  -- Gabriel et les rangers passent outre : saisie manuelle, rattrapage,\n  -- réservation prise par téléphone.\n  if public.fr_est_staff() then\n    return new;\n  end if;\n\n  if new.date_debut is null then\n    return new;\n  end if;\n\n  if new.date_debut < jour_lux then\n    raise exception\n      'FR_CUTOFF: impossible de reserver une date passee (%).', new.date_debut\n      using errcode = 'check_violation';\n  end if;\n\n  if new.date_debut = jour_lux and heure_lux >= cutoff then\n    raise exception\n      'FR_CUTOFF: les demandes pour aujourd''hui sont closes depuis %h00. Appelez Gabriel.', cutoff\n      using errcode = 'check_violation';\n  end if;\n\n  return new;\nend;\n$function$\n",
+  "fr_check_chaleur_reservation()": "CREATE OR REPLACE FUNCTION public.fr_check_chaleur_reservation()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare v_deb date; v_fin date; v_nom text;\nbegin\n  if new.chien_id is null then return new; end if;\n  if public.fr_est_staff() then return new; end if;\n\n  select chaleur_debut, chaleur_fin, nom into v_deb, v_fin, v_nom\n    from public.chiens where id = new.chien_id;\n  if v_deb is null or v_fin is null then return new; end if;\n\n  if coalesce(new.date_fin, new.date_debut) >= v_deb and new.date_debut <= v_fin then\n    raise exception\n      'FR_CHALEUR: % est en mode chaleur jusqu''au %. Relancez les promenades ou choisissez une date ulterieure.',\n      coalesce(v_nom, 'cette chienne'), to_char(v_fin, 'DD/MM/YYYY')\n      using errcode = 'check_violation';\n  end if;\n  return new;\nend;\n$function$\n",
+  "fr_cgv_accepter(p_version text)": "CREATE OR REPLACE FUNCTION public.fr_cgv_accepter(p_version text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_client_id uuid;\nbegin\n  if p_version is null or length(trim(p_version)) = 0 then\n    raise exception 'FR_CGV:version_absente';\n  end if;\n\n  select id into v_client_id from public.clients where auth_id = auth.uid() limit 1;\n  if v_client_id is null then\n    raise exception 'FR_CGV:client_inconnu';\n  end if;\n\n  update public.clients\n  set cgv_version = trim(p_version), cgv_acceptee_le = now()\n  where id = v_client_id;\n\n  return jsonb_build_object('cgv_version', trim(p_version), 'cgv_acceptee_le', now());\nend $function$\n",
+  "fr_chaleur_annuler(p_chien uuid)": "CREATE OR REPLACE FUNCTION public.fr_chaleur_annuler(p_chien uuid)\n RETURNS chaleurs\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_client uuid; v_par text; v_row public.chaleurs;\n  v_resa uuid; v_dates text[]; v_exclues text[];\nbegin\n  select client_id into v_client from public.chiens where id = p_chien;\n  if v_client is null then raise exception 'FR_CHALEUR: chien introuvable.'; end if;\n\n  if v_client = public.fr_mon_client_id() then v_par := 'client';\n  elsif exists (select 1 from public.user_roles where id = auth.uid() and role = 'admin') then v_par := 'admin';\n  else raise exception 'FR_CHALEUR: seuls le client et Gabriel peuvent relancer les promenades.';\n  end if;\n\n  select * into v_row from public.chaleurs\n   where chien_id = p_chien and statut = 'active'\n   order by date_debut desc limit 1;\n  if v_row.id is null then\n    raise exception 'FR_CHALEUR: aucun mode chaleur actif pour cette chienne.';\n  end if;\n\n  for v_resa, v_dates in\n    select (e ->> 'reservation_id')::uuid, array_agg(e ->> 'date')\n      from jsonb_array_elements(v_row.dates_retirees) e\n     where (e ->> 'date')::date >= current_date\n     group by 1\n  loop\n    select array(\n             select trim(x)\n               from unnest(string_to_array(coalesce(dates_exclues, ''), ',')) x\n              where trim(x) <> '' and not (trim(x) = any(v_dates))\n           )\n      into v_exclues from public.reservations where id = v_resa;\n\n    update public.reservations set dates_exclues = array_to_string(v_exclues, ',')\n     where id = v_resa;\n\n    delete from public.annulations_occurrences\n     where reservation_id = v_resa\n       and annule_par = 'chaleur'\n       and to_char(date_occurrence, 'YYYY-MM-DD') = any(v_dates);\n  end loop;\n\n  update public.chaleurs\n     set statut = 'close', annulee_le = now(), annulee_par = v_par,\n         date_fin = least(date_fin, current_date - 1)\n   where id = v_row.id\n  returning * into v_row;\n\n  update public.chiens\n     set chaleur_debut = null, chaleur_fin = null, chaleur_source = null\n   where id = p_chien;\n\n  return v_row;\nend;\n$function$\n",
+  "fr_chaleur_ecarter(p_chien uuid)": "CREATE OR REPLACE FUNCTION public.fr_chaleur_ecarter(p_chien uuid)\n RETURNS chaleurs\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare v_client uuid; v_par text; v_row public.chaleurs;\nbegin\n  select client_id into v_client from public.chiens where id = p_chien;\n  if v_client is null then raise exception 'FR_CHALEUR: chien introuvable.'; end if;\n\n  if v_client = public.fr_mon_client_id() then v_par := 'client';\n  elsif exists (select 1 from public.user_roles where id = auth.uid() and role = 'admin') then v_par := 'admin';\n  else raise exception 'FR_CHALEUR: seuls le client et Gabriel peuvent ecarter un signalement.';\n  end if;\n\n  update public.chaleurs\n     set statut = 'close', annulee_le = now(), annulee_par = v_par\n   where chien_id = p_chien and statut = 'signale'\n  returning * into v_row;\n\n  if v_row.id is null then raise exception 'FR_CHALEUR: aucun signalement en cours.'; end if;\n  return v_row;\nend;\n$function$\n",
+  "fr_imputer_client(p_client uuid)": "CREATE OR REPLACE FUNCTION public.fr_imputer_client(p_client uuid)\n RETURNS numeric\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare\n  p        record;\n  f        record;\n  v_reste  numeric(10,2);\n  v_solde  numeric(10,2);\n  v_part   numeric(10,2);\n  v_avoir  numeric(10,2) := 0;\nbegin\n  for p in\n    select pa.id, pa.date_virement,\n           pa.montant - coalesce((select sum(i.montant) from public.paiements_imputations i\n                                   where i.paiement_id = pa.id), 0) as reste\n      from public.paiements pa\n     where pa.client_id = p_client and pa.annule_le is null\n     order by pa.date_virement, pa.created_at\n  loop\n    v_reste := p.reste;\n    continue when v_reste <= 0;\n    for f in\n      select fa.id, (coalesce(fa.total_ttc, 0)::numeric + fa.frais_dossier - fa.montant_paye) as solde\n        from public.factures fa\n       where fa.client_id = p_client and coalesce(fa.statut, 'impayee') <> 'payee'\n       order by fa.date_echeance nulls last, fa.date_emission nulls last, fa.created_at\n       for update\n    loop\n      exit when v_reste <= 0;\n      v_solde := f.solde;\n      continue when v_solde <= 0;\n      v_part := least(v_reste, v_solde);\n      insert into public.paiements_imputations (paiement_id, facture_id, montant)\n      values (p.id, f.id, v_part);\n      update public.factures\n         set montant_paye  = montant_paye + v_part,\n             statut        = case when v_solde - v_part <= 0.004 then 'payee' else statut end,\n             date_paiement = case when v_solde - v_part <= 0.004 then p.date_virement else date_paiement end\n       where id = f.id;\n      v_reste := v_reste - v_part;\n    end loop;\n    v_avoir := v_avoir + greatest(v_reste, 0);\n  end loop;\n  return v_avoir;   -- montant resté en avoir\nend $function$\n",
+  "fr_invitation_lire(p_token text)": "CREATE OR REPLACE FUNCTION public.fr_invitation_lire(p_token text)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare\n  inv public.invitations%rowtype;\nbegin\n  if p_token is null or length(trim(p_token)) = 0 then\n    return jsonb_build_object('statut', 'absente');\n  end if;\n\n  select * into inv from public.invitations\n  where token = trim(p_token)\n  order by created_at desc\n  limit 1;\n\n  if not found then\n    return jsonb_build_object('statut', 'introuvable');\n  elsif coalesce(inv.utilise, false) then\n    return jsonb_build_object('statut', 'utilisee');\n  elsif inv.expire_at is not null and inv.expire_at < now() then\n    return jsonb_build_object('statut', 'expiree');\n  end if;\n\n  return jsonb_build_object(\n    'statut', 'valide',\n    'prenom', inv.prenom,\n    'email',  lower(trim(inv.email)),\n    'langue', case when inv.langue in ('fr','en','lu') then inv.langue else 'fr' end\n  );\nend $function$\n",
+  "fr_chaleur_eligible(p_chien uuid)": "CREATE OR REPLACE FUNCTION public.fr_chaleur_eligible(p_chien uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\n  select exists (\n    select 1 from public.chiens\n    where id = p_chien\n      and lower(coalesce(sexe,'')) = 'femelle'\n      and sterilise is false\n  );\n$function$\n",
+  "fr_chaleur_signaler(p_chien uuid)": "CREATE OR REPLACE FUNCTION public.fr_chaleur_signaler(p_chien uuid)\n RETURNS chaleurs\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_client uuid; v_nom text; v_staff uuid; v_staff_nom text; v_row public.chaleurs;\nbegin\n  if not public.fr_est_staff() then\n    raise exception 'FR_CHALEUR: reserve au staff.';\n  end if;\n\n  select client_id, nom into v_client, v_nom from public.chiens where id = p_chien;\n  if v_client is null then raise exception 'FR_CHALEUR: chien introuvable.'; end if;\n\n  if not public.fr_chaleur_eligible(p_chien) then\n    raise exception\n      'FR_CHALEUR: option reservee aux femelles non sterilisees. Verifiez la fiche du chien.';\n  end if;\n\n  if exists (select 1 from public.chaleurs\n              where chien_id = p_chien and statut in ('signale','active')) then\n    raise exception 'FR_CHALEUR: un signalement est deja en cours pour cette chienne.';\n  end if;\n\n  select id, nullif(trim(coalesce(prenom,'') || ' ' || coalesce(nom,'')), '')\n    into v_staff, v_staff_nom\n    from public.staff where auth_id = auth.uid() limit 1;\n\n  insert into public.chaleurs (chien_id, statut, date_debut, date_fin,\n                               declare_par, declare_auth_id, signale_par_nom)\n  values (p_chien, 'signale', current_date, null, 'staff', auth.uid(), v_staff_nom)\n  returning * into v_row;\n\n  -- Message à Gabriel, dans le fil du ranger\n  if v_staff is not null then\n    begin\n      insert into public.messages (staff_id, expediteur, contenu, lu, type)\n      values (v_staff, 'staff',\n        coalesce(v_nom, 'Une chienne') || ' semble etre en chaleur — constate en promenade le '\n        || to_char(current_date, 'DD/MM') || '. Aucune modification du planning n''a ete faite : '\n        || 'a confirmer avec le client.',\n        false, 'message');\n    exception when others then null;  -- messagerie staff absente : le signalement reste valable\n    end;\n  end if;\n\n  -- Avis au client, dans son espace\n  begin\n    insert into public.messages (client_id, expediteur, contenu, lu, type)\n    values (v_client, 'admin',\n      'Lors de la promenade du ' || to_char(current_date, 'DD/MM') || ', '\n      || coalesce(v_staff_nom, 'notre ranger')\n      || ' a constate que ' || coalesce(v_nom, 'votre chienne') || ' semble etre en chaleur. '\n      || 'Rien n''a ete modifie a votre planning. Vous pouvez activer le mode chaleur depuis la '\n      || 'fiche de votre chienne, ou nous en parler ici.',\n      false, 'notification');\n  exception when others then null;\n  end;\n\n  return v_row;\nend;\n$function$\n",
+  "fr_param_num(p_cle text, p_defaut numeric)": "CREATE OR REPLACE FUNCTION public.fr_param_num(p_cle text, p_defaut numeric)\n RETURNS numeric\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare v text;\nbegin\n  select valeur into v from public.parametres where cle = p_cle limit 1;\n  if v is null or trim(v) = '' then return p_defaut; end if;\n  return replace(regexp_replace(v, '[^0-9.,-]', '', 'g'), ',', '.')::numeric;\nexception when others then\n  return p_defaut;\nend $function$\n",
+  "fr_est_en_chaleur(p_chien uuid, p_date date)": "CREATE OR REPLACE FUNCTION public.fr_est_en_chaleur(p_chien uuid, p_date date DEFAULT CURRENT_DATE)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\n  select exists (\n    select 1 from public.chiens\n    where id = p_chien\n      and chaleur_debut is not null and chaleur_fin is not null\n      and p_date between chaleur_debut and chaleur_fin\n  );\n$function$\n",
+  "fr_chaleur_apercu(p_chien uuid, p_jours integer)": "CREATE OR REPLACE FUNCTION public.fr_chaleur_apercu(p_chien uuid, p_jours integer DEFAULT 21)\n RETURNS TABLE(reservation_id uuid, date_occurrence date, service text, pourcentage integer, montant_ligne numeric)\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_client uuid; v_debut date := current_date; v_fin date;\n  r public.reservations; d date; v_exclues text[]; v_unit numeric;\nbegin\n  select client_id into v_client from public.chiens where id = p_chien;\n  if v_client is null then return; end if;\n  if not (public.fr_est_staff() or v_client = public.fr_mon_client_id()) then\n    raise exception 'FR_CHALEUR: acces refuse.';\n  end if;\n\n  v_fin := v_debut + (coalesce(p_jours, 21) - 1);\n\n  for r in\n    select * from public.reservations\n     where chien_id = p_chien\n       and coalesce(statut, '') <> 'annule'\n       and date_debut <= v_fin\n       and coalesce(date_fin_recurrence, date_fin, date_debut) >= v_debut\n  loop\n    v_exclues := array(\n      select trim(x) from unnest(string_to_array(coalesce(r.dates_exclues, ''), ',')) x\n       where trim(x) <> ''\n    );\n    -- Prix unitaire estimé : montant de la ligne / nombre de séances\n    v_unit := case when coalesce(r.nb_seances, 0) > 0\n                   then coalesce(r.montant_ttc, 0) / r.nb_seances\n                   else coalesce(r.montant_ttc, 0) end;\n\n    for d in select * from public.fr_occurrences_resa(r, v_debut, v_fin) loop\n      if not (to_char(d, 'YYYY-MM-DD') = any(v_exclues)) then\n        reservation_id  := r.id;\n        date_occurrence := d;\n        service         := r.service;\n        pourcentage     := public.fr_politique_annulation(r.service, d);\n        montant_ligne   := round(v_unit * pourcentage / 100.0, 2);\n        return next;\n      end if;\n    end loop;\n  end loop;\nend;\n$function$\n",
+  "fr_paiement_annuler(p_paiement uuid, p_motif text)": "CREATE OR REPLACE FUNCTION public.fr_paiement_annuler(p_paiement uuid, p_motif text DEFAULT NULL::text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_client uuid;\n  i        record;\nbegin\n  if not public.fr_est_admin() then raise exception 'FR_PAIEMENT:interdit'; end if;\n  select client_id into v_client from public.paiements\n   where id = p_paiement and annule_le is null for update;\n  if v_client is null then raise exception 'FR_PAIEMENT:introuvable_ou_deja_annule'; end if;\n\n  for i in select * from public.paiements_imputations where paiement_id = p_paiement loop\n    update public.factures\n       set montant_paye  = greatest(montant_paye - i.montant, 0),\n           statut        = 'impayee',\n           date_paiement = null\n     where id = i.facture_id;\n  end loop;\n  delete from public.paiements_imputations where paiement_id = p_paiement;\n\n  update public.paiements\n     set annule_le = now(),\n         note = concat_ws(' · ', note, 'Annulé' || coalesce(' : ' || nullif(trim(p_motif), ''), ''))\n   where id = p_paiement;\n\n  -- Les autres paiements du client peuvent couvrir ce qui vient de se rouvrir\n  perform public.fr_imputer_client(v_client);\n  -- Une facture couverte à nouveau retrouve le statut payé via l'imputation ;\n  -- celle qui ne l'est plus reste « impayee ».\n  return jsonb_build_object('paiement_id', p_paiement, 'client_id', v_client, 'annule', true);\nend $function$\n",
+  "fr_politique_annulation(p_service text, p_date date)": "CREATE OR REPLACE FUNCTION public.fr_politique_annulation(p_service text, p_date date)\n RETURNS integer\n LANGUAGE plpgsql\n STABLE\n SET search_path TO 'public'\nAS $function$\ndeclare\n  maintenant timestamp := (now() at time zone 'Europe/Luxembourg');\n  jours      int;\n  limite     timestamp;\nbegin\n  if p_date is null then return 100; end if;\n\n  -- Clôture estivale : juin, juillet, août\n  if extract(month from p_date)::int between 6 and 8 then\n    return 100;\n  end if;\n\n  if p_service = 'boarding' then\n    jours := p_date - maintenant::date;\n    if jours > 30 then return 0;   end if;\n    if jours >= 14 then return 50; end if;\n    return 100;\n  end if;\n\n  -- Walking / Day Care : gratuit jusqu'à 9h00 la veille\n  limite := (p_date - 1)::timestamp + interval '9 hours';\n  if maintenant < limite then return 0; end if;\n  return 100;\nend;\n$function$\n",
+  "fr_facture_etape(p_facture text, p_etape text, p_frais boolean)": "CREATE OR REPLACE FUNCTION public.fr_facture_etape(p_facture text, p_etape text, p_frais boolean DEFAULT true)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare\n  f        record;\n  v_frais  numeric(10,2) := 0;\nbegin\n  if not public.fr_est_admin() then raise exception 'FR_RECOUVREMENT:interdit'; end if;\n  select * into f from public.factures where id::text = p_facture for update;\n  if not found then raise exception 'FR_RECOUVREMENT:facture_introuvable'; end if;\n  if coalesce(f.statut, 'impayee') = 'payee' then raise exception 'FR_RECOUVREMENT:facture_payee'; end if;\n\n  if p_etape = 'rappel_1' then\n    update public.factures set rappel_1_le = coalesce(rappel_1_le, now()) where id = f.id;\n  elsif p_etape = 'rappel_2' then\n    if f.rappel_2_le is null and p_frais then\n      v_frais := public.fr_param_num('frais_rappel_impaye', 25);\n    end if;\n    update public.factures\n       set rappel_1_le   = coalesce(rappel_1_le, now()),\n           rappel_2_le   = coalesce(rappel_2_le, now()),\n           frais_dossier = frais_dossier + v_frais\n     where id = f.id;\n  elsif p_etape = 'mise_en_demeure' then\n    update public.factures set mise_en_demeure_le = coalesce(mise_en_demeure_le, now()) where id = f.id;\n  else\n    raise exception 'FR_RECOUVREMENT:etape_inconnue';\n  end if;\n\n  -- Un avoir éventuel couvre aussitôt les frais ajoutés\n  perform public.fr_imputer_client(f.client_id);\n  return jsonb_build_object('facture_id', f.id, 'etape', p_etape, 'frais_ajoutes', v_frais);\nend $function$\n",
+  "fr_chaleur_declarer(p_chien uuid, p_jours integer, p_source text)": "CREATE OR REPLACE FUNCTION public.fr_chaleur_declarer(p_chien uuid, p_jours integer DEFAULT 21, p_source text DEFAULT NULL::text)\n RETURNS chaleurs\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_client uuid; v_nom text; v_source text;\n  v_debut date := current_date; v_fin date;\n  v_retirees jsonb := '[]'::jsonb; v_row public.chaleurs;\n  r public.reservations; d date; v_exclues text[]; v_pct int; v_nb int := 0;\nbegin\n  if p_jours is null or p_jours < 1 or p_jours > 60 then\n    raise exception 'FR_CHALEUR: duree invalide (%). Attendu 1 a 60 jours.', p_jours;\n  end if;\n  v_fin := v_debut + (p_jours - 1);\n\n  select client_id, nom into v_client, v_nom from public.chiens where id = p_chien;\n  if v_client is null then raise exception 'FR_CHALEUR: chien introuvable.'; end if;\n\n  -- Retirer des seances du planning engage la facturation : seuls\n  -- Gabriel et le proprietaire peuvent le faire. Un ranger signale\n  -- (fr_chaleur_signaler), il ne declare pas.\n  if v_client = public.fr_mon_client_id() then\n    v_source := 'client';\n  elsif exists (select 1 from public.user_roles where id = auth.uid() and role = 'admin') then\n    v_source := 'admin';\n  elsif public.fr_est_staff() then\n    raise exception\n      'FR_CHALEUR: un ranger ne peut que signaler. La declaration revient au client ou a Gabriel.';\n  else\n    raise exception 'FR_CHALEUR: acces refuse.';\n  end if;\n\n  if not public.fr_chaleur_eligible(p_chien) then\n    raise exception\n      'FR_CHALEUR: option reservee aux femelles non sterilisees. Verifiez le sexe et la sterilisation sur la fiche.';\n  end if;\n\n  if exists (select 1 from public.chaleurs where chien_id = p_chien and statut = 'active') then\n    raise exception 'FR_CHALEUR: cette chienne est deja en mode chaleur.';\n  end if;\n\n  -- Un signalement ranger en cours devient la declaration\n  update public.chaleurs set statut = 'close', annulee_le = now(), annulee_par = v_source\n   where chien_id = p_chien and statut = 'signale';\n\n  for r in\n    select * from public.reservations\n     where chien_id = p_chien\n       and coalesce(statut, '') <> 'annule'\n       and date_debut <= v_fin\n       and coalesce(date_fin_recurrence, date_fin, date_debut) >= v_debut\n  loop\n    v_exclues := array(\n      select trim(x) from unnest(string_to_array(coalesce(r.dates_exclues, ''), ',')) x\n       where trim(x) <> ''\n    );\n\n    for d in select * from public.fr_occurrences_resa(r, v_debut, v_fin) loop\n      -- Deja annulee pour une autre raison : on n'y touche pas, et on\n      -- ne la remettra pas non plus a l'annulation.\n      if not (to_char(d, 'YYYY-MM-DD') = any(v_exclues)) then\n        v_pct := public.fr_politique_annulation(r.service, d);\n        v_exclues := v_exclues || to_char(d, 'YYYY-MM-DD');\n        v_nb := v_nb + 1;\n        v_retirees := v_retirees || jsonb_build_object(\n          'reservation_id', r.id, 'date', to_char(d, 'YYYY-MM-DD'), 'pourcentage', v_pct\n        );\n\n        insert into public.annulations_occurrences\n          (reservation_id, date_occurrence, annule_par, annulation_tardive, facture_pourcentage)\n        values (r.id, d, 'chaleur', v_pct > 0, v_pct);\n      end if;\n    end loop;\n\n    update public.reservations set dates_exclues = array_to_string(v_exclues, ',')\n     where id = r.id;\n  end loop;\n\n  insert into public.chaleurs (chien_id, statut, date_debut, date_fin,\n                               declare_par, declare_auth_id, dates_retirees)\n  values (p_chien, 'active', v_debut, v_fin, v_source, auth.uid(), v_retirees)\n  returning * into v_row;\n\n  update public.chiens\n     set chaleur_debut = v_debut, chaleur_fin = v_fin, chaleur_source = v_source\n   where id = p_chien;\n\n  -- Trace dans la messagerie : Gabriel voit passer la decision du client\n  if v_source = 'client' then\n    begin\n      insert into public.messages (client_id, expediteur, contenu, lu, type)\n      values (v_client, 'client',\n        'Mode chaleur active pour ' || coalesce(v_nom, 'ma chienne') || ' jusqu''au '\n        || to_char(v_fin, 'DD/MM') || ' (' || v_nb || ' seance(s) retiree(s) du planning).',\n        false, 'message');\n    exception when others then null;\n    end;\n  end if;\n\n  return v_row;\nend;\n$function$\n",
+  "fr_occurrences_resa(p_resa reservations, p_debut date, p_fin date)": "CREATE OR REPLACE FUNCTION public.fr_occurrences_resa(p_resa reservations, p_debut date, p_fin date)\n RETURNS SETOF date\n LANGUAGE plpgsql\n STABLE\n SET search_path TO 'public'\nAS $function$\ndeclare\n  jour_map constant jsonb := '{\"dim\":0,\"lun\":1,\"mar\":2,\"mer\":3,\"jeu\":4,\"ven\":5,\"sam\":6}'::jsonb;\n  d date; borne_deb date; borne_fin date; dows int[]; j text;\nbegin\n  if p_resa.date_debut is null then return; end if;\n\n  if p_resa.service = 'boarding' then                 -- chaque nuit\n    borne_deb := greatest(p_resa.date_debut, p_debut);\n    borne_fin := least(coalesce(p_resa.date_fin, p_resa.date_debut) - 1, p_fin);\n    d := borne_deb;\n    while d <= borne_fin loop return next d; d := d + 1; end loop;\n    return;\n  end if;\n\n  if coalesce(p_resa.jours_recurrence, '') <> '' then -- récurrence hebdomadaire\n    dows := '{}';\n    foreach j in array string_to_array(p_resa.jours_recurrence, ',') loop\n      if jour_map ? trim(j) then dows := dows || (jour_map ->> trim(j))::int; end if;\n    end loop;\n    if array_length(dows, 1) is null then return; end if;\n\n    borne_deb := greatest(p_resa.date_debut, p_debut);\n    borne_fin := least(coalesce(p_resa.date_fin_recurrence, p_resa.date_fin, p_fin), p_fin);\n    d := borne_deb;\n    while d <= borne_fin loop\n      if extract(dow from d)::int = any(dows) then return next d; end if;\n      d := d + 1;\n    end loop;\n    return;\n  end if;\n\n  if p_resa.date_debut between p_debut and p_fin then -- séance unique\n    return next p_resa.date_debut;\n  end if;\nend;\n$function$\n",
+  "fr_client_suspendre(p_client uuid, p_suspendre boolean, p_motif text)": "CREATE OR REPLACE FUNCTION public.fr_client_suspendre(p_client uuid, p_suspendre boolean, p_motif text DEFAULT NULL::text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nbegin\n  if not public.fr_est_admin() then raise exception 'FR_RECOUVREMENT:interdit'; end if;\n  update public.clients\n     set reservations_suspendues = p_suspendre,\n         suspendu_le      = case when p_suspendre then now() else null end,\n         suspension_motif = case when p_suspendre then nullif(trim(p_motif), '') else null end\n   where id = p_client;\n  if not found then raise exception 'FR_RECOUVREMENT:client_introuvable'; end if;\n  return jsonb_build_object('client_id', p_client, 'suspendu', p_suspendre);\nend $function$\n",
+  "fr_inscription_finaliser(p_token text, p_client jsonb, p_chiens jsonb, p_cgv_version text)": "CREATE OR REPLACE FUNCTION public.fr_inscription_finaliser(p_token text, p_client jsonb, p_chiens jsonb DEFAULT '[]'::jsonb, p_cgv_version text DEFAULT NULL::text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare\n  inv            public.invitations%rowtype;\n  v_email        text;\n  v_auth_id      uuid;\n  v_client_id    uuid;\n  v_numero       integer;\n  v_existant     boolean := false;\n  v_a_des_chiens boolean := false;\n  v_cols         text;\n  v_sets         text;\n  v_chien        jsonb;\n  v_nb_chiens    int := 0;\n  v_confirme     boolean := false;\n  c_cols_client  text[] := array['prenom','nom','telephone','adresse','commune',\n                                 'langue','hors_zone','personnes_autorisees'];\n  c_cols_chien   text[] := array['nom','race','poids_kg','sexe','sterilise',\n                                 'numero_puce','grand_chien','notes_sante','comportement','date_naissance','vaccins_ok','assurance_ok','veterinaire','veterinaire_tel','allergies','medicaments','pathologies'];\nbegin\n  -- ── 1. Invitation, verrouillée pour toute la transaction ──\n  if p_token is null or length(trim(p_token)) = 0 then\n    raise exception 'FR_INSCRIPTION:token_absent';\n  end if;\n\n  select * into inv from public.invitations\n  where token = trim(p_token)\n  order by created_at desc\n  limit 1\n  for update;\n\n  if not found then\n    raise exception 'FR_INSCRIPTION:token_introuvable';\n  elsif coalesce(inv.utilise, false) then\n    raise exception 'FR_INSCRIPTION:token_utilise';\n  elsif inv.expire_at is not null and inv.expire_at < now() then\n    raise exception 'FR_INSCRIPTION:token_expire';\n  end if;\n\n  v_email := lower(trim(inv.email));\n\n  if coalesce(trim(p_client->>'prenom'), '') = '' or coalesce(trim(p_client->>'nom'), '') = '' then\n    raise exception 'FR_INSCRIPTION:nom_obligatoire';\n  end if;\n\n  -- ── 2. Compte Auth créé par signUp() juste avant ──\n  select id into v_auth_id from auth.users\n  where lower(email) = v_email\n  order by created_at desc\n  limit 1;\n\n  if v_auth_id is null then\n    raise exception 'FR_INSCRIPTION:compte_auth_absent';\n  end if;\n\n  -- ── 3. Fiche client existante ? ──\n  select id, numero_client into v_client_id, v_numero\n  from public.clients\n  where lower(trim(email)) = v_email\n  order by numero_client nulls last\n  limit 1\n  for update;\n\n  v_existant := v_client_id is not null;\n\n  if exists (select 1 from public.clients\n             where auth_id = v_auth_id\n               and id is distinct from v_client_id) then\n    raise exception 'FR_INSCRIPTION:compte_deja_rattache';\n  end if;\n\n  select string_agg(quote_ident(c.column_name), ', ' order by c.ordinal_position),\n         string_agg(format('%1$I = r.%1$I', c.column_name), ', ' order by c.ordinal_position)\n    into v_cols, v_sets\n  from information_schema.columns c\n  where c.table_schema = 'public' and c.table_name = 'clients'\n    and c.column_name = any(c_cols_client)\n    and p_client ? c.column_name;\n\n  if v_existant then\n    execute format(\n      'update public.clients t set %s, auth_id = $1, actif = true\n         from jsonb_populate_record(null::public.clients, $2) r\n        where t.id = $3', v_sets)\n      using v_auth_id, p_client, v_client_id;\n  else\n    perform pg_advisory_xact_lock(hashtext('fr_numero_client'));\n    select coalesce(max(numero_client), 1000) + 1 into v_numero\n    from public.clients where numero_client < 9000;\n\n    execute format(\n      'insert into public.clients (numero_client, email, auth_id, actif, is_test, client_fidele, %1$s)\n       select $1, $2, $3, true, false, false, %1$s\n         from jsonb_populate_record(null::public.clients, $4)\n       returning id', v_cols)\n      into v_client_id\n      using v_numero, v_email, v_auth_id, p_client;\n  end if;\n\n  -- ── 3 bis. Acceptation des CGV (article 3.2) ──\n  if p_cgv_version is not null and length(trim(p_cgv_version)) > 0 then\n    update public.clients\n    set cgv_version = trim(p_cgv_version), cgv_acceptee_le = now()\n    where id = v_client_id;\n  end if;\n\n  -- ── 4. Chiens ──\n  select exists (select 1 from public.chiens where client_id = v_client_id)\n    into v_a_des_chiens;\n\n  if not v_a_des_chiens and jsonb_typeof(p_chiens) = 'array' then\n    for v_chien in select * from jsonb_array_elements(p_chiens) loop\n      continue when coalesce(trim(v_chien->>'nom'), '') = '';\n\n      select string_agg(quote_ident(c.column_name), ', ' order by c.ordinal_position)\n        into v_cols\n      from information_schema.columns c\n      where c.table_schema = 'public' and c.table_name = 'chiens'\n        and c.column_name = any(c_cols_chien)\n        and v_chien ? c.column_name;\n\n      execute format(\n        'insert into public.chiens (client_id, actif, %1$s)\n         select $1, true, %1$s\n           from jsonb_populate_record(null::public.chiens, $2)', v_cols)\n        using v_client_id, v_chien;\n\n      v_nb_chiens := v_nb_chiens + 1;\n    end loop;\n  end if;\n\n  -- ── 5. Invitation consommée ──\n  update public.invitations set utilise = true where id = inv.id;\n\n  -- ── 6. Email confirmé : le token reçu par le client en fait foi ──\n  begin\n    update auth.users set email_confirmed_at = now()\n    where id = v_auth_id and email_confirmed_at is null;\n    v_confirme := true;\n  exception when insufficient_privilege then\n    v_confirme := false;\n  end;\n\n  return jsonb_build_object(\n    'client_id',       v_client_id,\n    'numero_client',   v_numero,\n    'fiche_existante', v_existant,\n    'chiens_crees',    v_nb_chiens,\n    'email',           v_email,\n    'email_confirme',  v_confirme,\n    'cgv_version',     p_cgv_version\n  );\nend $function$\n",
+  "fr_paiement_enregistrer(p_client uuid, p_date date, p_montant numeric, p_reference text, p_note text)": "CREATE OR REPLACE FUNCTION public.fr_paiement_enregistrer(p_client uuid, p_date date, p_montant numeric, p_reference text DEFAULT NULL::text, p_note text DEFAULT NULL::text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_id     uuid;\n  v_avoir  numeric;\n  v_det    jsonb;\nbegin\n  if not public.fr_est_admin() then raise exception 'FR_PAIEMENT:interdit'; end if;\n  if p_client is null or p_date is null then raise exception 'FR_PAIEMENT:champs_obligatoires'; end if;\n  if p_montant is null or p_montant <= 0 then raise exception 'FR_PAIEMENT:montant_invalide'; end if;\n  if p_date > public.fr_aujourdhui() then raise exception 'FR_PAIEMENT:date_future'; end if;\n\n  insert into public.paiements (client_id, date_virement, montant, reference, note)\n  values (p_client, p_date, round(p_montant, 2), nullif(trim(p_reference), ''), nullif(trim(p_note), ''))\n  returning id into v_id;\n\n  v_avoir := public.fr_imputer_client(p_client);\n\n  select coalesce(jsonb_agg(jsonb_build_object(\n           'facture_id', f.id, 'numero', f.numero, 'montant', i.montant,\n           'soldee', f.statut = 'payee',\n           'reste_du', greatest(coalesce(f.total_ttc,0)::numeric + f.frais_dossier - f.montant_paye, 0))\n           order by f.date_echeance), '[]'::jsonb)\n    into v_det\n    from public.paiements_imputations i\n    join public.factures f on f.id = i.facture_id\n   where i.paiement_id = v_id;\n\n  return jsonb_build_object('paiement_id', v_id, 'imputations', v_det, 'avoir_client', v_avoir);\nend $function$\n"
+ },
+ "genere_le": "2026-09-22T14:46:20.165631+00:00",
+ "extensions": [
+  "pg_stat_statements",
+  "pgcrypto",
+  "plpgsql",
+  "supabase_vault",
+  "uuid-ossp"
+ ],
+ "contraintes": [
+  {
+   "nom": "alertes_meteo_niveau_check",
+   "table": "alertes_meteo",
+   "definition": "CHECK ((niveau = ANY (ARRAY['orange'::text, 'canicule'::text, 'annulation'::text, 'info'::text])))"
+  },
+  {
+   "nom": "alertes_meteo_pkey",
+   "table": "alertes_meteo",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "nom": "annulations_occurrences_pkey",
+   "table": "annulations_occurrences",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "nom": "annulations_occurrences_reservation_id_fkey",
+   "table": "annulations_occurrences",
+   "definition": "FOREIGN KEY (reservation_id) REFERENCES reservations(id)"
+  },
+  {
+   "nom": "camionnettes_immatriculation_key",
+   "table": "camionnettes",
+   "definition": "UNIQUE (immatriculation)"
+  },
+  {
+   "nom": "camionnettes_pkey",
+   "table": "camionnettes",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "nom": "camionnettes_ranger_defaut_id_fkey",
+   "table": "camionnettes",
+   "definition": "FOREIGN KEY (ranger_defaut_id) REFERENCES staff(id)"
+  },
+  {
+   "nom": "chaleurs_chien_id_fkey",
+   "table": "chaleurs",
+   "definition": "FOREIGN KEY (chien_id) REFERENCES chiens(id) ON DELETE CASCADE"
+  },
+  {
+   "nom": "chaleurs_pkey",
+   "table": "chaleurs",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "nom": "chaleurs_statut_check",
+   "table": "chaleurs",
+   "definition": "CHECK ((statut = ANY (ARRAY['signale'::text, 'active'::text, 'close'::text])))"
+  },
+  {
+   "nom": "chiens_client_id_fkey",
+   "table": "chiens",
+   "definition": "FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE"
+  },
+  {
+   "nom": "chiens_pkey",
+   "table": "chiens",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "nom": "clients_email_key",
+   "table": "clients",
+   "definition": "UNIQUE (email)"
+  },
+  {
+   "nom": "clients_numero_client_key",
+   "table": "clients",
+   "definition": "UNIQUE (numero_client)"
+  },
+  {
+   "nom": "clients_pkey",
+   "table": "clients",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "nom": "conges_pkey",
+   "table": "conges",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "nom": "conges_staff_id_fkey",
+   "table": "conges",
+   "definition": "FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE"
+  },
+  {
+   "nom": "emails_envoyes_client_id_fkey",
+   "table": "emails_envoyes",
+   "definition": "FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL"
+  },
+  {
+   "nom": "emails_envoyes_facture_id_fkey",
+   "table": "emails_envoyes",
+   "definition": "FOREIGN KEY (facture_id) REFERENCES factures(id) ON DELETE SET NULL"
+  },
+  {
+   "nom": "emails_envoyes_pkey",
+   "table": "emails_envoyes",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "nom": "emails_envoyes_statut_check",
+   "table": "emails_envoyes",
+   "definition": "CHECK ((statut = ANY (ARRAY['envoye'::text, 'echec'::text])))"
+  },
+  {
+   "nom": "emails_envoyes_type_check",
+   "table": "emails_envoyes",
+   "definition": "CHECK ((type = ANY (ARRAY['invitation'::text, 'facture'::text, 'rappel_1'::text, 'rappel_2'::text, 'mise_en_demeure'::text, 'message'::text])))"
+  },
+  {
+   "nom": "factures_client_id_fkey",
+   "table": "factures",
+   "definition": "FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE"
+  },
+  {
+   "nom": "factures_numero_facture_key",
+   "table": "factures",
+   "definition": "UNIQUE (numero_facture)"
+  },
+  {
+   "nom": "factures_pkey",
+   "table": "factures",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "nom": "invitations_pkey",
+   "table": "invitations",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "nom": "invitations_token_key",
+   "table": "invitations",
+   "definition": "UNIQUE (token)"
+  },
+  {
+   "nom": "kilometrage_camionnette_id_fkey",
+   "table": "kilometrage",
+   "definition": "FOREIGN KEY (camionnette_id) REFERENCES camionnettes(id) ON DELETE CASCADE"
+  },
+  {
+   "nom": "kilometrage_pkey",
+   "table": "kilometrage",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "nom": "kilometrage_staff_id_fkey",
+   "table": "kilometrage",
+   "definition": "FOREIGN KEY (staff_id) REFERENCES staff(id)"
+  },
+  {
+   "nom": "lignes_facture_facture_id_fkey",
+   "table": "lignes_facture",
+   "definition": "FOREIGN KEY (facture_id) REFERENCES factures(id) ON DELETE CASCADE"
+  },
+  {
+   "nom": "lignes_facture_pkey",
+   "table": "lignes_facture",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "nom": "messages_client_id_fkey",
+   "table": "messages",
+   "definition": "FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE"
+  },
+  {
+   "nom": "messages_destinataire_check",
+   "table": "messages",
+   "definition": "CHECK (((client_id IS NOT NULL) OR (staff_id IS NOT NULL)))"
+  },
+  {
+   "nom": "messages_expediteur_check",
+   "table": "messages",
+   "definition": "CHECK ((expediteur = ANY (ARRAY['client'::text, 'admin'::text, 'staff'::text])))"
+  },
+  {
+   "nom": "messages_pkey",
+   "table": "messages",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "nom": "messages_staff_id_fkey",
+   "table": "messages",
+   "definition": "FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE"
+  },
+  {
+   "nom": "messages_type_check",
+   "table": "messages",
+   "definition": "CHECK ((type = ANY (ARRAY['message'::text, 'notification'::text])))"
+  },
+  {
+   "nom": "messages_envoyes_envoye_par_fkey",
+   "table": "messages_envoyes",
+   "definition": "FOREIGN KEY (envoye_par) REFERENCES staff(id)"
+  },
+  {
+   "nom": "messages_envoyes_pkey",
+   "table": "messages_envoyes",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "nom": "notifications_client_id_fkey",
+   "table": "notifications",
+   "definition": "FOREIGN KEY (client_id) REFERENCES clients(id)"
+  },
+  {
+   "nom": "notifications_pkey",
+   "table": "notifications",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "nom": "notifications_staff_id_fkey",
+   "table": "notifications",
+   "definition": "FOREIGN KEY (staff_id) REFERENCES staff(id)"
+  },
+  {
+   "nom": "paiements_client_id_fkey",
+   "table": "paiements",
+   "definition": "FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE RESTRICT"
+  },
+  {
+   "nom": "paiements_montant_check",
+   "table": "paiements",
+   "definition": "CHECK ((montant > (0)::numeric))"
+  },
+  {
+   "nom": "paiements_pkey",
+   "table": "paiements",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "nom": "paiements_imputations_facture_id_fkey",
+   "table": "paiements_imputations",
+   "definition": "FOREIGN KEY (facture_id) REFERENCES factures(id) ON DELETE CASCADE"
+  },
+  {
+   "nom": "paiements_imputations_montant_check",
+   "table": "paiements_imputations",
+   "definition": "CHECK ((montant > (0)::numeric))"
+  },
+  {
+   "nom": "paiements_imputations_paiement_id_fkey",
+   "table": "paiements_imputations",
+   "definition": "FOREIGN KEY (paiement_id) REFERENCES paiements(id) ON DELETE CASCADE"
+  },
+  {
+   "nom": "paiements_imputations_pkey",
+   "table": "paiements_imputations",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "nom": "parametres_pkey",
+   "table": "parametres",
+   "definition": "PRIMARY KEY (cle)"
+  },
+  {
+   "nom": "promenades_camionnette_id_fkey",
+   "table": "promenades",
+   "definition": "FOREIGN KEY (camionnette_id) REFERENCES camionnettes(id)"
+  },
+  {
+   "nom": "promenades_pkey",
+   "table": "promenades",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "nom": "promenades_ranger_id_fkey",
+   "table": "promenades",
+   "definition": "FOREIGN KEY (ranger_id) REFERENCES staff(id)"
+  },
+  {
+   "nom": "promenades_reservation_id_fkey",
+   "table": "promenades",
+   "definition": "FOREIGN KEY (reservation_id) REFERENCES reservations(id)"
+  },
+  {
+   "nom": "races_nom_key",
+   "table": "races",
+   "definition": "UNIQUE (nom)"
+  },
+  {
+   "nom": "races_pkey",
+   "table": "races",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "nom": "reservations_chien_id_fkey",
+   "table": "reservations",
+   "definition": "FOREIGN KEY (chien_id) REFERENCES chiens(id)"
+  },
+  {
+   "nom": "reservations_client_id_fkey",
+   "table": "reservations",
+   "definition": "FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE"
+  },
+  {
+   "nom": "reservations_pkey",
+   "table": "reservations",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "nom": "reservations_ranger_id_fkey",
+   "table": "reservations",
+   "definition": "FOREIGN KEY (ranger_id) REFERENCES staff(id)"
+  },
+  {
+   "nom": "staff_email_key",
+   "table": "staff",
+   "definition": "UNIQUE (email)"
+  },
+  {
+   "nom": "staff_pkey",
+   "table": "staff",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "nom": "user_roles_id_fkey",
+   "table": "user_roles",
+   "definition": "FOREIGN KEY (id) REFERENCES auth.users(id)"
+  },
+  {
+   "nom": "user_roles_pkey",
+   "table": "user_roles",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "nom": "zones_pkey",
+   "table": "zones",
+   "definition": "PRIMARY KEY (id)"
+  }
+ ],
+ "politiques_rls": [
+  {
+   "nom": "alertes_meteo_delete",
+   "check": null,
+   "roles": [
+    "authenticated"
+   ],
+   "table": "alertes_meteo",
+   "using": "fr_est_staff()",
+   "commande": "DELETE"
+  },
+  {
+   "nom": "alertes_meteo_insert",
+   "check": "fr_est_staff()",
+   "roles": [
+    "authenticated"
+   ],
+   "table": "alertes_meteo",
+   "using": null,
+   "commande": "INSERT"
+  },
+  {
+   "nom": "alertes_meteo_select",
+   "check": null,
+   "roles": [
+    "authenticated"
+   ],
+   "table": "alertes_meteo",
+   "using": "true",
+   "commande": "SELECT"
+  },
+  {
+   "nom": "alertes_meteo_update",
+   "check": "fr_est_staff()",
+   "roles": [
+    "authenticated"
+   ],
+   "table": "alertes_meteo",
+   "using": "fr_est_staff()",
+   "commande": "UPDATE"
+  },
+  {
+   "nom": "annul_occ_insert",
+   "check": "(fr_est_staff() OR (EXISTS ( SELECT 1\n   FROM reservations r\n  WHERE ((r.id = annulations_occurrences.reservation_id) AND (r.client_id = fr_mon_client_id())))))",
+   "roles": [
+    "authenticated"
+   ],
+   "table": "annulations_occurrences",
+   "using": null,
+   "commande": "INSERT"
+  },
+  {
+   "nom": "annul_occ_select",
+   "check": null,
+   "roles": [
+    "authenticated"
+   ],
+   "table": "annulations_occurrences",
+   "using": "(fr_est_staff() OR (EXISTS ( SELECT 1\n   FROM reservations r\n  WHERE ((r.id = annulations_occurrences.reservation_id) AND (r.client_id = fr_mon_client_id())))))",
+   "commande": "SELECT"
+  },
+  {
+   "nom": "auth_full_access",
+   "check": "true",
+   "roles": [
+    "authenticated"
+   ],
+   "table": "annulations_occurrences",
+   "using": "true",
+   "commande": "ALL"
+  },
+  {
+   "nom": "auth_full_access",
+   "check": "true",
+   "roles": [
+    "authenticated"
+   ],
+   "table": "camionnettes",
+   "using": "true",
+   "commande": "ALL"
+  },
+  {
+   "nom": "chaleurs_client_select",
+   "check": null,
+   "roles": [
+    "authenticated"
+   ],
+   "table": "chaleurs",
+   "using": "(chien_id IN ( SELECT chiens.id\n   FROM chiens\n  WHERE (chiens.client_id = fr_mon_client_id())))",
+   "commande": "SELECT"
+  },
+  {
+   "nom": "chaleurs_staff_select",
+   "check": null,
+   "roles": [
+    "authenticated"
+   ],
+   "table": "chaleurs",
+   "using": "fr_est_staff()",
+   "commande": "SELECT"
+  },
+  {
+   "nom": "chiens_delete",
+   "check": null,
+   "roles": [
+    "public"
+   ],
+   "table": "chiens",
+   "using": "(is_admin() OR (client_id = my_client_id()))",
+   "commande": "DELETE"
+  },
+  {
+   "nom": "chiens_insert",
+   "check": "(is_admin() OR (client_id = my_client_id()))",
+   "roles": [
+    "public"
+   ],
+   "table": "chiens",
+   "using": null,
+   "commande": "INSERT"
+  },
+  {
+   "nom": "chiens_select",
+   "check": null,
+   "roles": [
+    "public"
+   ],
+   "table": "chiens",
+   "using": "(is_admin() OR (client_id = my_client_id()))",
+   "commande": "SELECT"
+  },
+  {
+   "nom": "chiens_update",
+   "check": "(is_admin() OR (client_id = my_client_id()))",
+   "roles": [
+    "public"
+   ],
+   "table": "chiens",
+   "using": "(is_admin() OR (client_id = my_client_id()))",
+   "commande": "UPDATE"
+  },
+  {
+   "nom": "client ajoute ses chiens",
+   "check": "(client_id IN ( SELECT clients.id\n   FROM clients\n  WHERE (clients.auth_id = auth.uid())))",
+   "roles": [
+    "public"
+   ],
+   "table": "chiens",
+   "using": null,
+   "commande": "INSERT"
+  },
+  {
+   "nom": "client peut ajouter ses chiens",
+   "check": "(client_id IN ( SELECT clients.id\n   FROM clients\n  WHERE (clients.auth_id = auth.uid())))",
+   "roles": [
+    "public"
+   ],
+   "table": "chiens",
+   "using": null,
+   "commande": "INSERT"
+  },
+  {
+   "nom": "client_update_own_chiens",
+   "check": "(client_id IN ( SELECT clients.id\n   FROM clients\n  WHERE (clients.auth_id = auth.uid())))",
+   "roles": [
+    "public"
+   ],
+   "table": "chiens",
+   "using": "(client_id IN ( SELECT clients.id\n   FROM clients\n  WHERE (clients.auth_id = auth.uid())))",
+   "commande": "UPDATE"
+  },
+  {
+   "nom": "clients_delete",
+   "check": null,
+   "roles": [
+    "public"
+   ],
+   "table": "clients",
+   "using": "is_admin()",
+   "commande": "DELETE"
+  },
+  {
+   "nom": "clients_insert",
+   "check": "(is_admin() OR (auth_id = auth.uid()))",
+   "roles": [
+    "public"
+   ],
+   "table": "clients",
+   "using": null,
+   "commande": "INSERT"
+  },
+  {
+   "nom": "clients_select",
+   "check": null,
+   "roles": [
+    "public"
+   ],
+   "table": "clients",
+   "using": "(is_admin() OR (auth_id = auth.uid()))",
+   "commande": "SELECT"
+  },
+  {
+   "nom": "clients_update",
+   "check": "(is_admin() OR (auth_id = auth.uid()))",
+   "roles": [
+    "public"
+   ],
+   "table": "clients",
+   "using": "(is_admin() OR (auth_id = auth.uid()))",
+   "commande": "UPDATE"
+  },
+  {
+   "nom": "auth_full_access",
+   "check": "true",
+   "roles": [
+    "authenticated"
+   ],
+   "table": "conges",
+   "using": "true",
+   "commande": "ALL"
+  },
+  {
+   "nom": "emails_envoyes_admin",
+   "check": "fr_est_admin()",
+   "roles": [
+    "authenticated"
+   ],
+   "table": "emails_envoyes",
+   "using": "fr_est_admin()",
+   "commande": "ALL"
+  },
+  {
+   "nom": "factures_admin_write",
+   "check": "is_admin()",
+   "roles": [
+    "public"
+   ],
+   "table": "factures",
+   "using": "is_admin()",
+   "commande": "ALL"
+  },
+  {
+   "nom": "factures_select",
+   "check": null,
+   "roles": [
+    "public"
+   ],
+   "table": "factures",
+   "using": "(is_admin() OR (client_id = my_client_id()))",
+   "commande": "SELECT"
+  },
+  {
+   "nom": "invitations_admin",
+   "check": "fr_est_admin()",
+   "roles": [
+    "authenticated"
+   ],
+   "table": "invitations",
+   "using": "fr_est_admin()",
+   "commande": "ALL"
+  },
+  {
+   "nom": "auth_full_access",
+   "check": "true",
+   "roles": [
+    "authenticated"
+   ],
+   "table": "kilometrage",
+   "using": "true",
+   "commande": "ALL"
+  },
+  {
+   "nom": "auth_full_access",
+   "check": "true",
+   "roles": [
+    "authenticated"
+   ],
+   "table": "lignes_facture",
+   "using": "true",
+   "commande": "ALL"
+  },
+  {
+   "nom": "messages_insert",
+   "check": "((fr_est_admin() AND (expediteur = 'admin'::text)) OR ((expediteur = 'staff'::text) AND (staff_id = fr_mon_staff_id())) OR ((expediteur = 'client'::text) AND (staff_id IS NULL) AND (client_id = fr_mon_client_id())))",
+   "roles": [
+    "authenticated"
+   ],
+   "table": "messages",
+   "using": null,
+   "commande": "INSERT"
+  },
+  {
+   "nom": "messages_select",
+   "check": null,
+   "roles": [
+    "authenticated"
+   ],
+   "table": "messages",
+   "using": "(fr_est_admin() OR ((staff_id IS NOT NULL) AND (staff_id = fr_mon_staff_id())) OR ((staff_id IS NULL) AND (client_id = fr_mon_client_id())))",
+   "commande": "SELECT"
+  },
+  {
+   "nom": "messages_update",
+   "check": "(fr_est_admin() OR ((staff_id IS NOT NULL) AND (staff_id = fr_mon_staff_id())) OR ((staff_id IS NULL) AND (client_id = fr_mon_client_id())))",
+   "roles": [
+    "authenticated"
+   ],
+   "table": "messages",
+   "using": "(fr_est_admin() OR ((staff_id IS NOT NULL) AND (staff_id = fr_mon_staff_id())) OR ((staff_id IS NULL) AND (client_id = fr_mon_client_id())))",
+   "commande": "UPDATE"
+  },
+  {
+   "nom": "auth_full_access",
+   "check": "true",
+   "roles": [
+    "authenticated"
+   ],
+   "table": "messages_envoyes",
+   "using": "true",
+   "commande": "ALL"
+  },
+  {
+   "nom": "auth_full_access",
+   "check": "true",
+   "roles": [
+    "authenticated"
+   ],
+   "table": "notifications",
+   "using": "true",
+   "commande": "ALL"
+  },
+  {
+   "nom": "paiements_admin_all",
+   "check": "fr_est_admin()",
+   "roles": [
+    "authenticated"
+   ],
+   "table": "paiements",
+   "using": "fr_est_admin()",
+   "commande": "ALL"
+  },
+  {
+   "nom": "paiements_client_select",
+   "check": null,
+   "roles": [
+    "authenticated"
+   ],
+   "table": "paiements",
+   "using": "(client_id = fr_mon_client_id())",
+   "commande": "SELECT"
+  },
+  {
+   "nom": "imputations_admin_all",
+   "check": "fr_est_admin()",
+   "roles": [
+    "authenticated"
+   ],
+   "table": "paiements_imputations",
+   "using": "fr_est_admin()",
+   "commande": "ALL"
+  },
+  {
+   "nom": "imputations_client_select",
+   "check": null,
+   "roles": [
+    "authenticated"
+   ],
+   "table": "paiements_imputations",
+   "using": "(EXISTS ( SELECT 1\n   FROM paiements p\n  WHERE ((p.id = paiements_imputations.paiement_id) AND (p.client_id = fr_mon_client_id()))))",
+   "commande": "SELECT"
+  },
+  {
+   "nom": "auth_full_access",
+   "check": "true",
+   "roles": [
+    "authenticated"
+   ],
+   "table": "parametres",
+   "using": "true",
+   "commande": "ALL"
+  },
+  {
+   "nom": "public_read_parametres",
+   "check": null,
+   "roles": [
+    "anon"
+   ],
+   "table": "parametres",
+   "using": "true",
+   "commande": "SELECT"
+  },
+  {
+   "nom": "auth_full_access",
+   "check": "true",
+   "roles": [
+    "authenticated"
+   ],
+   "table": "promenades",
+   "using": "true",
+   "commande": "ALL"
+  },
+  {
+   "nom": "auth_full_access",
+   "check": "true",
+   "roles": [
+    "authenticated"
+   ],
+   "table": "races",
+   "using": "true",
+   "commande": "ALL"
+  },
+  {
+   "nom": "public_read_races",
+   "check": null,
+   "roles": [
+    "anon"
+   ],
+   "table": "races",
+   "using": "true",
+   "commande": "SELECT"
+  },
+  {
+   "nom": "Client lit ses reservations",
+   "check": null,
+   "roles": [
+    "authenticated"
+   ],
+   "table": "reservations",
+   "using": "(client_id IN ( SELECT clients.id\n   FROM clients\n  WHERE (clients.auth_id = auth.uid())))",
+   "commande": "SELECT"
+  },
+  {
+   "nom": "ranger lit ses reservations",
+   "check": null,
+   "roles": [
+    "authenticated"
+   ],
+   "table": "reservations",
+   "using": "(ranger_id IN ( SELECT staff.id\n   FROM staff\n  WHERE ((staff.auth_id = auth.uid()) AND COALESCE(staff.actif, true))))",
+   "commande": "SELECT"
+  },
+  {
+   "nom": "reservations_delete",
+   "check": null,
+   "roles": [
+    "public"
+   ],
+   "table": "reservations",
+   "using": "is_admin()",
+   "commande": "DELETE"
+  },
+  {
+   "nom": "reservations_insert",
+   "check": "(is_admin() OR (client_id = my_client_id()))",
+   "roles": [
+    "public"
+   ],
+   "table": "reservations",
+   "using": null,
+   "commande": "INSERT"
+  },
+  {
+   "nom": "reservations_select",
+   "check": null,
+   "roles": [
+    "public"
+   ],
+   "table": "reservations",
+   "using": "(is_admin() OR (client_id = my_client_id()))",
+   "commande": "SELECT"
+  },
+  {
+   "nom": "reservations_update",
+   "check": "(is_admin() OR (client_id = my_client_id()))",
+   "roles": [
+    "public"
+   ],
+   "table": "reservations",
+   "using": "(is_admin() OR (client_id = my_client_id()))",
+   "commande": "UPDATE"
+  },
+  {
+   "nom": "staff lecture equipe",
+   "check": null,
+   "roles": [
+    "authenticated"
+   ],
+   "table": "staff",
+   "using": "true",
+   "commande": "SELECT"
+  },
+  {
+   "nom": "user_roles_admin_all",
+   "check": "is_admin()",
+   "roles": [
+    "public"
+   ],
+   "table": "user_roles",
+   "using": "is_admin()",
+   "commande": "ALL"
+  },
+  {
+   "nom": "auth_full_access",
+   "check": "true",
+   "roles": [
+    "authenticated"
+   ],
+   "table": "zones",
+   "using": "true",
+   "commande": "ALL"
+  },
+  {
+   "nom": "public_read_zones",
+   "check": null,
+   "roles": [
+    "anon"
+   ],
+   "table": "zones",
+   "using": "true",
+   "commande": "SELECT"
+  }
+ ]
+}
