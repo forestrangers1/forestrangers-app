@@ -25,12 +25,16 @@
 
   var EN = { 'Annuler': 'Cancel', 'OK': 'OK', 'Confirmer': 'Confirm', 'Fermer': 'Close', 'Valider': 'Confirm',
              'Champ obligatoire': 'Required field' };
+  var LU = { 'Annuler': 'Ofbriechen', 'OK': 'OK', 'Confirmer': 'Confirméieren', 'Fermer': 'Zoumaachen', 'Valider': 'Bestätegen',
+             'Retour': 'Zréck', 'Champ obligatoire': 'Pflichtfeld' };
   function t(s) {
     if (s == null) return '';
     s = String(s);
     try {
-      if (window.FR_LANG && window.FR_LANG.langue && window.FR_LANG.langue() === 'en') {
-        if (EN[s]) return EN[s];
+      var lg = window.FR_LANG && window.FR_LANG.langue ? window.FR_LANG.langue() : 'fr';
+      if (lg === 'en' || lg === 'lu') {
+        var BT = lg === 'lu' ? LU : EN;
+        if (BT[s]) return BT[s];
         // Ligne par ligne : le traducteur des pages client fusionne les espaces
         return s.split('\n').map(function (l) { return l.trim() ? window.FR_LANG.t(l) : l; }).join('\n');
       }

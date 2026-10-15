@@ -516,14 +516,25 @@ html.light .badge.b-red   { background: rgba(198,40,40,0.12) !important; color: 
   'use strict';
   var DICT = {"Connexion au serveur impossible": "Cannot connect to the server", "Votre reseau ne permet pas de charger l'application. Verifiez votre connexion,": "Your network cannot load the app. Check your connection,", "Votre reseau ne permet pas de charger l'application. Verifiez votre connexion, passez en wifi si possible, puis reessayez.": "Your network cannot load the app. Check your connection, switch to wifi if possible, then try again.", "passez en wifi si possible, puis reessayez.": "switch to wifi if possible, then try again.", "Reessayer": "Try again", "SDK Supabase indisponible": "Service unavailable", "Je me connecte en tant que": "I am logging in as", "Email ou mot de passe incorrect.": "Incorrect email or password.", "Adresse email": "Email address", "votre@email.com": "your@email.com", "Mot de passe": "Password", "Mot de passe oublié ?": "Forgot your password?", "Se connecter": "Log in", "Connexion Ranger": "Ranger login", "Accéder à mon espace": "Go to my area", "Première connexion ?": "First time here?", "Contactez Gabriel": "Contact Gabriel", "Veuillez remplir tous les champs.": "Please fill in all fields.", "Connexion au serveur indisponible. Verifiez votre reseau et reessayez.": "Server connection unavailable. Check your network and try again.", "Accès non autorisé pour ce profil.": "Access not allowed for this profile.", "Une erreur est survenue.": "An error occurred.", "Entrez votre email pour recevoir un lien de réinitialisation.": "Enter your email to receive a reset link.", "Envoi en cours…": "Sending…"};
   var FRAG = [["Impossible de determiner votre profil (", "Could not determine your profile ("], ["Email de réinitialisation envoyé à", "Reset email sent to"], ["reseau indisponible", "network unavailable"], ["Envoi impossible :", "Could not send:"]];
+  var DICT_LU = {"Connexion au serveur impossible": "Keng Verbindung mam Server méiglech", "Votre reseau ne permet pas de charger l'application. Verifiez votre connexion,": "Äert Netz léisst d'App net lueden. Kontrolléiert Är Verbindung,", "Votre reseau ne permet pas de charger l'application. Verifiez votre connexion, passez en wifi si possible, puis reessayez.": "Äert Netzwierk léisst d'App net lueden. Kontrolléiert Är Verbindung, wiesselt wa méiglech op Wifi a probéiert et dann nach eng Kéier.", "passez en wifi si possible, puis reessayez.": "wiesselt wa méiglech op WiFi, a probéiert dann nach eng Kéier.", "Reessayer": "Nach eng Kéier probéieren", "SDK Supabase indisponible": "Supabase-SDK net disponibel", "Je me connecte en tant que": "Ech logge mech an als", "Email ou mot de passe incorrect.": "E-Mail oder Passwuert falsch.", "Adresse email": "E-Mail-Adress", "votre@email.com": "numm@email.com", "Mot de passe": "Passwuert", "Mot de passe oublié ?": "Passwuert vergiess?", "Se connecter": "Aloggen", "Connexion Ranger": "Ranger-Umeldung", "Accéder à mon espace": "Mäi Clientsberäich opmaachen", "Première connexion ?": "Déi éischte Kéier hei?", "Contactez Gabriel": "Kontaktéiert de Gabriel", "Veuillez remplir tous les champs.": "Fëllt w.e.g. all d'Felder aus.", "Connexion au serveur indisponible. Verifiez votre reseau et reessayez.": "Keng Verbindung mam Server. Kontrolléiert Äert Netz a probéiert nach eng Kéier.", "Accès non autorisé pour ce profil.": "Keen Zougang fir dëse Profil.", "Une erreur est survenue.": "Et ass e Feeler opgetrueden.", "Entrez votre email pour recevoir un lien de réinitialisation.": "Gitt Är E-Mail-Adress an, fir e Link zum Zrécksetzen ze kréien.", "Envoi en cours…": "Gëtt geschéckt…"};
+  var FRAG_LU = [["Impossible de determiner votre profil (", "Äre Profil konnt net bestëmmt ginn ("], ["Email de réinitialisation envoyé à", "E-Mail zum Zrécksetze geschéckt un"], ["reseau indisponible", "Netz net disponibel"], ["Envoi impossible :", "Schécken net méiglech:"]];
   var LETTRE = /[A-Za-zÀ-ÖØ-öø-ÿ]/;
-  var lang = ((function () { try { var v = localStorage.getItem('fr-client-lang'); if (v === 'en' || v === 'fr') return v; } catch (e) {} return null; })() || ((navigator.language || 'fr').toLowerCase().indexOf('fr') === 0 ? 'fr' : 'en'));
+  var lang = ((function () { try { var v = localStorage.getItem('fr-client-lang'); if (v === 'en' || v === 'fr' || v === 'lu') return v; } catch (e) {} return null; })() || ((navigator.language || 'fr').toLowerCase().indexOf('fr') === 0 ? 'fr' : (navigator.language || '').toLowerCase().indexOf('lb') === 0 ? 'lu' : 'en'));
   var SKIP = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, INPUT: 1 };
   var occupe = false;
 
   function sa(s) { return String(s || '').normalize ? String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '') : String(s || ''); }
   function norm(s) { return String(s).replace(/\s+/g, ' ').trim(); }
   function esc(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+  // v2.80 — luxembourgeois : mêmes clés françaises, tables propres
+  function compilerFrag(liste) {
+    return liste.map(function (p) {
+      var a = p[0], deb = LETTRE.test(a.charAt(0)) ? '(^|[^A-Za-zÀ-ÖØ-öø-ÿ])' : '()', fin = LETTRE.test(a.charAt(a.length - 1)) ? '(?![A-Za-zÀ-ÖØ-öø-ÿ])' : '';
+      return { a: a, re: new RegExp(deb + esc(a) + fin, 'g'), b: p[1] };
+    });
+  }
+  var RX_LU = null;
   var RX = FRAG.map(function (p) {
     var a = p[0], deb = LETTRE.test(a.charAt(0)) ? '(^|[^A-Za-zÀ-ÖØ-öø-ÿ])' : '()', fin = LETTRE.test(a.charAt(a.length - 1)) ? '(?![A-Za-zÀ-ÖØ-öø-ÿ])' : '';
     return { a: a, re: new RegExp(deb + esc(a) + fin, 'g'), b: p[1] };
@@ -531,12 +542,22 @@ html.light .badge.b-red   { background: rgba(198,40,40,0.12) !important; color: 
   function traduire(fr) {
     var k = norm(fr);
     if (!k) return fr;
-    if (DICT[k] != null) return DICT[k];
+    var lb = lang === 'lu', TD = lb ? DICT_LU : DICT;
+    if (lb && !RX_LU) RX_LU = compilerFrag(FRAG_LU);
+    var TR = lb ? RX_LU : RX;
+    if (TD[k] != null) return TD[k];
     if (!/[a-zà-ÿ]{2}/i.test(k)) return k;
     var out = k;
-    for (var i = 0; i < RX.length; i++) {
-      if (out.indexOf(RX[i].a) === -1) continue;
-      out = out.replace(RX[i].re, function (m, avant) { return (avant || '') + RX[i].b; });
+    for (var i = 0; i < TR.length; i++) {
+      if (out.indexOf(TR[i].a) === -1) continue;
+      out = out.replace(TR[i].re, function (m, avant) { return (avant || '') + TR[i].b; });
+    }
+    if (lb) {   // prépositions devant une date ou un nombre (luxembourgeois)
+      return out.replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])avant le (?=\d)/g, '$1virum ')
+                .replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])le (?=\d)/g, '$1den ').replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])Le (?=\d)/g, '$1Den ')
+                .replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])du (?=\d)/g, '$1vum ').replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])Du (?=\d)/g, '$1Vum ')
+                .replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])au (?=\d)/g, '$1bis den ').replace(/(\d) h (\d)/g, '$1.$2')
+                .replace(/\b(\d{1,2}) (Januar|Februar|Mäerz|Abrëll|Mee|Juni|Juli|August|September|Oktober|November|Dezember)/g, '$1. $2');
     }
     // Prépositions devant une date ou un nombre
     out = out.replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])avant le (?=\d)/g, '$1before ')
@@ -545,7 +566,7 @@ html.light .badge.b-red   { background: rgba(198,40,40,0.12) !important; color: 
              .replace(/(^|[^A-Za-zÀ-ÖØ-öø-ÿ])au (?=\d)/g, '$1to ').replace(/(\d) h (\d)/g, '$1:$2');
     return out;
   }
-  function t(fr) { return lang === 'en' ? traduire(fr) : fr; }
+  function t(fr) { return lang !== 'fr' ? traduire(fr) : fr; }
   function exclu(n) { var p = n.parentElement; return !p || SKIP[p.nodeName] || !!p.closest('[data-i18n-off]'); }
 
   function noeud(n) {
@@ -555,7 +576,7 @@ html.light .badge.b-red   { background: rgba(198,40,40,0.12) !important; color: 
     if (n._fr == null) n._fr = v;
     else if (!(v === n._aff || v === sa(n._aff))) n._fr = v;     // le code a réécrit le texte
     var brut = n._fr, avant = (brut.match(/^\s*/) || [''])[0], apres = (brut.match(/\s*$/) || [''])[0];
-    var cible = lang === 'en' ? avant + traduire(brut) + apres : brut;
+    var cible = lang !== 'fr' ? avant + traduire(brut) + apres : brut;
     n._aff = cible;
     if (v !== cible && v !== sa(cible)) { occupe = true; n.nodeValue = cible; occupe = false; }
   }
@@ -564,7 +585,7 @@ html.light .badge.b-red   { background: rgba(198,40,40,0.12) !important; color: 
       if (!el.hasAttribute || !el.hasAttribute(a)) return;
       var k = 'i18n' + a.replace(/-/g, ''), v = el.getAttribute(a);
       if (el.dataset[k] == null || (v !== el.dataset[k + 'Aff'])) el.dataset[k] = v;
-      var cible = lang === 'en' ? traduire(el.dataset[k]) : el.dataset[k];
+      var cible = lang !== 'fr' ? traduire(el.dataset[k]) : el.dataset[k];
       el.dataset[k + 'Aff'] = cible;
       if (v !== cible) { occupe = true; el.setAttribute(a, cible); occupe = false; }
     });
@@ -580,7 +601,7 @@ html.light .badge.b-red   { background: rgba(198,40,40,0.12) !important; color: 
     for (var i = 0; i < els.length; i++) attrs(els[i]);
   }
   function demarrer() {
-    document.documentElement.setAttribute('lang', lang);
+    document.documentElement.setAttribute('lang', lang === 'lu' ? 'lb' : lang);
     scan(document.body);
     new MutationObserver(function (muts) {
       if (occupe) return;
@@ -592,11 +613,11 @@ html.light .badge.b-red   { background: rgba(198,40,40,0.12) !important; color: 
     }).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['placeholder', 'title', 'aria-label'] });
   }
   function choisir(l) {
-    l = l === 'en' ? 'en' : 'fr';
+    l = (l === 'en' || l === 'lu') ? l : 'fr';
     try { localStorage.setItem('fr-client-lang', l); } catch (e) {}
     if (l === lang) return;
     lang = l;
-    document.documentElement.setAttribute('lang', lang);
+    document.documentElement.setAttribute('lang', lang === 'lu' ? 'lb' : lang);
     scan(document.body);
   }
   // Boîtes de dialogue du navigateur (confirmations, alertes)
@@ -604,14 +625,14 @@ html.light .badge.b-red   { background: rgba(198,40,40,0.12) !important; color: 
     var orig = window[f];
     window[f] = function (msg) {
       var args = Array.prototype.slice.call(arguments);
-      if (lang === 'en' && typeof msg === 'string') args[0] = msg.split('\n').map(function (l) { return l.trim() ? traduire(l) : l; }).join('\n');
+      if (lang !== 'fr' && typeof msg === 'string') args[0] = msg.split('\n').map(function (l) { return l.trim() ? traduire(l) : l; }).join('\n');
       return orig.apply(window, args);
     };
   });
   window.FR_LANG = {
     t: t, choisir: choisir, langue: function () { return lang; },
     // Langue de la fiche client : « fr » → français, toute autre → anglais
-    depuisClient: function (langue) { choisir(langue && String(langue).toLowerCase() !== 'fr' ? 'en' : 'fr'); }
+    depuisClient: function (langue) { var x = String(langue || 'fr').toLowerCase(); choisir(x === 'fr' ? 'fr' : (x === 'lu' || x === 'lb') ? 'lu' : 'en'); }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', demarrer); else demarrer();
 })();
