@@ -8,7 +8,8 @@
 /* Theme partage (cle 'fr-theme'). Cette page est claire par defaut : on
    n'ajoute la classe 'dark' que si le mode sombre a ete choisi explicitement.
    Applique avant le CSS pour eviter le clignotement. */
-try { if (localStorage.getItem('fr-theme') === 'dark') document.documentElement.classList.add('dark'); } catch(e) {}
+/* v2.82 : page d'inscription TOUJOURS en clair (conçue pour). Le réglage sombre
+   de l'admin (même navigateur) ne s'y applique plus : il cassait les couleurs. */
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <!-- Correctif police : FRDisplay etait appelee dans font-family sans jamais
@@ -238,8 +239,8 @@ textarea.field-input { resize: vertical; min-height: 72px; }
   padding: 9px 12px; border-radius: 8px; margin-top: 6px;
   font-size: 12px; font-weight: 600;
 }
-.zone-result.free  { background: var(--green-dim); border: 1px solid rgba(46,125,50,0.2); color: var(--green); display: flex; }
-.zone-result.paid  { background: var(--accent-dim); border: 1px solid var(--accent-mid); color: var(--accent); display: flex; }
+.zone-result.free  { background: var(--green-dim); border: 1px solid rgba(46,125,50,0.2); color: var(--green); }   /* v2.82 : cachées jusqu'au résultat (majZone) */
+.zone-result.paid  { background: var(--accent-dim); border: 1px solid var(--accent-mid); color: var(--accent); }
 .zone-result svg   { width: 14px; height: 14px; flex-shrink: 0; }
 
 /* Toggle switch */
