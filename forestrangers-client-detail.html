@@ -41,6 +41,7 @@ try {
 <script src="fr-facturation.js"></script>
 <script src="fr-email.js"></script>
 <script src="fr-quartier.js"></script>
+<script src="fr-messages.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <!-- Repli CDN : si jsDelivr n'a pas repondu, on tente unpkg avant d'abandonner. -->
 <script>if (!window.supabase) { document.write('<scr' + 'ipt src="https://unpkg.com/@supabase/supabase-js@2"><\/scr' + 'ipt>'); }</script>
@@ -2632,16 +2633,18 @@ async function langueClient(clientId) {
   try {
     var r = await db.from('clients').select('langue').eq('id', clientId).maybeSingle();
     var l = r && r.data && r.data.langue;
-    return l && String(l).toLowerCase() !== 'fr' ? 'en' : 'fr';
+    return window.FR_MSG ? FR_MSG.langue(l) : (l && String(l).toLowerCase() !== 'fr' ? 'en' : 'fr');
   } catch (e) { return 'fr'; }
 }
-async function notifierClientAnnulation(clientId, texte, texteEn) {
+// v2.87 : 3 versions gardées (contenu_trad) — l'espace client suit la langue choisie
+async function notifierClientAnnulation(clientId, texte, texteEn, texteLu) {
   if (!clientId) return;
   try {
-    if (texteEn && (await langueClient(clientId)) === 'en') texte = texteEn;
-    var { error } = await db.from('messages').insert({
-      client_id: clientId, expediteur: 'admin', contenu: texte, lu: false
-    });
+    var lgC = await langueClient(clientId);
+    var base = { client_id: clientId, expediteur: 'admin', lu: false, type: 'notification' };
+    var { error } = window.FR_MSG
+      ? await FR_MSG.inserer(db, [FR_MSG.ligne(base, { fr: texte, en: texteEn, lu: texteLu }, lgC)])
+      : await db.from('messages').insert({ client_id: clientId, expediteur: 'admin', contenu: texteEn && lgC === 'en' ? texteEn : texte, lu: false });
     if (error) throw error;
     return true;
   } catch(e) { console.error('notification annulation:', e); frAlert({ type: 'attention', titre: 'Client non prévenu', message: 'L\'annulation est enregistrée, mais le message au client n\'a pas pu être envoyé. Prévenez-le directement.\n\nDétail : ' + (e.message || 'inconnu') }); return false; }
@@ -2679,7 +2682,11 @@ async function confirmerAnnulationResa() {
         'Your session on ' + formatDateFR(dateRef) + ' has been cancelled'
         + (qui === 'client' ? ' at your request.' : ' by Forest Rangers.')
         + (pct > 0 ? ' It is still charged at ' + pct + '% under the cancellation terms.' : ' It will not be charged.')
-        + ' The rest of your recurring sessions is unchanged.');
+        + ' The rest of your recurring sessions is unchanged.',
+        'Ären Termin vum ' + formatDateFR(dateRef) + ' gouf annuléiert'
+        + (qui === 'client' ? ', op Är Demande.' : ' vu Forest Rangers.')
+        + (pct > 0 ? ' En gëtt no den Annulatiounskonditiounen zu ' + pct + ' % verrechent.' : ' En gëtt Iech net verrechent.')
+        + ' Är aner widderhuelend Terminer bleiwen onverännert.');
       frToast('Séance du ' + formatDateFR(dateRef) + ' annulée.' + (prevenu ? ' Le client a été prévenu.' : ''));
     } else if (estRecurrente && window.FR_FACT && FR_FACT.planArretSerie(r, FR_FACT.aujourdhui()).mode !== 'annuler') {
       // Série déjà commencée : arrêtée, pas effacée — les séances faites restent dues
@@ -2696,7 +2703,11 @@ async function confirmerAnnulationResa() {
         'Your ' + (SVC_NAMES[r.service] || r.service) + ' series is stopped from ' + formatDateFR(plan.date)
         + (qui === 'client' ? ', at your request.' : ', by Forest Rangers.')
         + (pct > 0 ? ' The session on ' + formatDateFR(plan.date) + ' is still charged at ' + pct + '% under the cancellation terms.' : ' No upcoming session will be charged.')
-        + ' The ' + plan.tenues + ' session' + (plan.tenues > 1 ? 's' : '') + ' already done ' + (plan.tenues > 1 ? 'remain' : 'remains') + ' due.');
+        + ' The ' + plan.tenues + ' session' + (plan.tenues > 1 ? 's' : '') + ' already done ' + (plan.tenues > 1 ? 'remain' : 'remains') + ' due.',
+        'Är ' + (SVC_NAMES[r.service] || r.service) + '-Serie gëtt vum ' + formatDateFR(plan.date) + ' un gestoppt'
+        + (qui === 'client' ? ', op Är Demande.' : ', vu Forest Rangers.')
+        + (pct > 0 ? ' Den Termin vum ' + formatDateFR(plan.date) + ' gëtt no den Annulatiounskonditiounen zu ' + pct + ' % verrechent.' : ' Keen Termin, deen nach kënnt, gëtt Iech verrechent.')
+        + ' ' + (plan.tenues > 1 ? 'Déi ' + plan.tenues + ' Terminer, déi scho waren, bleiwen ze bezuelen.' : 'Deen Termin, dee scho war, bleift ze bezuelen.'));
       frToast('Série arrêtée au ' + formatDateFR(plan.date) + ' (' + nA + ' ligne' + (nA > 1 ? 's' : '') + ').' + (prevenu ? ' Le client a été prévenu.' : ''));
     } else {
       var n = await majLignesReservation(r, {
@@ -2711,7 +2722,10 @@ async function confirmerAnnulationResa() {
         + (pct > 0 ? ' Facturation appliquée : ' + pct + ' %.' : ' Aucun montant ne vous sera facturé.'),
         'Your ' + (SVC_NAMES[r.service] || r.service) + ' booking on ' + formatDateFR(r.date_debut)
         + ' has been cancelled' + (qui === 'client' ? ' at your request.' : ' by Forest Rangers.')
-        + (pct > 0 ? ' Charge applied: ' + pct + '%.' : ' Nothing will be charged.'));
+        + (pct > 0 ? ' Charge applied: ' + pct + '%.' : ' Nothing will be charged.'),
+        'Är ' + (SVC_NAMES[r.service] || r.service) + '-Reservatioun vum ' + formatDateFR(r.date_debut)
+        + ' gouf annuléiert' + (qui === 'client' ? ', op Är Demande.' : ' vu Forest Rangers.')
+        + (pct > 0 ? ' Verrechent: ' + pct + ' %.' : ' Et gëtt Iech näischt verrechent.'));
       frToast('Réservation annulée (' + n + ' ligne' + (n > 1 ? 's' : '') + ').' + (prevenu ? ' Le client a été prévenu.' : ''));
     }
     document.getElementById('modal-annulation').classList.remove('open');

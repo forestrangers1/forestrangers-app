@@ -379,6 +379,7 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
   <script src="fr-calendrier.js"></script>
   <script src="fr-facturation.js"></script>
   <script src="fr-remplacements.js"></script>
+  <script src="fr-messages.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
   <link rel="manifest" href="/manifest.json">
@@ -2852,6 +2853,7 @@ async function deciderConge(id, statut) {
 var RP_JOURS = ['', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim'];
 var RP_JOURS_FR = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 var RP_JOURS_EN = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+var RP_JOURS_LU = ['', 'méindes', 'dënschdes', 'mëttwochs', 'donneschdes', 'freides', 'samschdes', 'sonndes'];   // v2.87
 var RP_CR = [['matin', 'Matin', '09h00'], ['midi', 'Midi', '12h00'], ['apmidi', 'Après-midi', '14h30']];
 var RP_CR_EN = { matin: 'morning', midi: 'midday', apmidi: 'afternoon' };
 var RP = null;
@@ -3080,6 +3082,27 @@ function rpExempleClient() {
   return { id: choix, libelle: 'client ' + ((cl.prenom || '') + ' ' + (cl.nom || '')).trim() + ' (' + chiens.join(', ') + ')' };
 }
 function rpJoindre(liste, et) { return liste.length < 2 ? liste.join('') : liste.slice(0, -1).join(', ') + ' ' + et + ' ' + liste[liste.length - 1]; }
+// v2.87 : version luxembourgeoise de l'avis de remplacement
+function rpMessageLu(clientId) {
+  var tt = rpTourneesClient(clientId);
+  var chiens = []; tt.forEach(function(t) { t.chiens.forEach(function(n) { if (chiens.indexOf(n) === -1) chiens.push(n); }); });
+  var parR = {};
+  tt.forEach(function(t) {
+    var r = t.remplacant || '', j = RP_JOURS_LU[t.jour];
+    (parR[r] = parR[r] || []).indexOf(j) === -1 && parR[r].push(j);
+  });
+  var absent = RP.absent.prenom, c = RP.conge;
+  var fmt = function(x) { return FR_MSG.date(x, 'lu', { jour: false, annee: false }); };
+  var du = String(c.date_debut).slice(0, 10), au = String(c.date_fin).slice(0, 10);
+  var noms = rpJoindre(chiens, 'an');
+  var rs = Object.keys(parR).filter(function(r) { return r; });
+  var sans = parR[''];
+  var t = 'Moien,\n' + absent + ' ass vum ' + fmt(du) + ' bis den ' + fmt(au) + ' a Congé. An där Zäit ';
+  if (rs.length === 1 && !sans) t += 'geet ' + rs[0] + ' mat ' + noms + ' spadséieren, zu de gewéinten Zäiten.';
+  else t += 'geet een esou mat ' + noms + ' spadséieren: ' + rs.map(function(r) { return rpJoindre(parR[r], 'an') + ' ' + r; }).join(', ') + ', zu de gewéinten Zäiten.';
+  if (sans) t += ' Fir ' + rpJoindre(sans, 'an') + ' mellen mir eis nach bei Iech.';
+  return t + ' Är Reservatiounen änneren net. ' + absent + ' ass duerno erëm wéi gewinnt do.\n— Forest Rangers';
+}
 function rpMessage(clientId, langue) {
   var en = langue === 'en';
   var tt = rpTourneesClient(clientId);
@@ -3138,11 +3161,13 @@ async function validerRemplacants() {
       var rows = Object.keys(ids).map(function(cid) {
         var cl = RP.clientDe[cid] || {};
         var lg = cl.langue && String(cl.langue).toLowerCase() !== 'fr' ? 'en' : 'fr';
+        if (window.FR_MSG) return FR_MSG.ligne({ client_id: cid, expediteur: 'admin', lu: false, type: 'notification' },
+          { fr: rpMessage(cid, 'fr'), en: rpMessage(cid, 'en'), lu: rpMessageLu(cid) }, cl.langue);
         return { client_id: cid, expediteur: 'admin', contenu: rpMessage(cid, lg), lu: false, type: 'notification' };
       });
       if (rows.length) {
-        var m = await db.from('messages').insert(rows);
-        if (m.error && /type/i.test(m.error.message || '')) m = await db.from('messages').insert(rows.map(function(x) { var o = Object.assign({}, x); delete o.type; return o; }));
+        var m = window.FR_MSG ? await FR_MSG.inserer(db, rows) : await db.from('messages').insert(rows);
+        if (m.error && /type/i.test(m.error.message || '')) m = await db.from('messages').insert(rows.map(function(x) { var o = Object.assign({}, x); delete o.type; delete o.contenu_trad; return o; }));
         if (m.error) echec = m.error.message || 'erreur'; else prevenus = rows.length;
       }
     }

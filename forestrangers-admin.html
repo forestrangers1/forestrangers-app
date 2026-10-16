@@ -848,6 +848,7 @@ textarea.form-control { resize: vertical; }
   <script src="fr-session.js"></script>
   <script src="fr-quartier.js"></script>
   <script src="fr-remplacements.js"></script>
+  <script src="fr-messages.js"></script>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#ff5f1f">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1469,9 +1470,30 @@ textarea.form-control { resize: vertical; }
             </label>
             <textarea class="form-control" id="alerte-texte" rows="6" placeholder="Votre message..." oninput="majCompteurAlerte()"></textarea>
             <div style="font-size:10.5px;color:var(--text-faint);margin-top:5px;">
-              Variables : <code>{prenom}</code> · <code>{date}</code> — remplacees a l'envoi pour chaque client.
+              Variables : <code>{prenom}</code> · <code>{date}</code> · <code>{heure}</code> — remplacees a l'envoi pour chaque client.
             </div>
           </div>
+
+          <!-- v2.87 : heure du retard, reprise dans les 3 langues -->
+          <div class="form-group" id="alerte-heure-bloc" style="display:none;">
+            <label class="form-label">Heure estimée</label>
+            <input class="form-control" type="time" id="alerte-heure" style="max-width:160px;">
+            <div style="font-size:10.5px;color:var(--text-faint);margin-top:5px;">Remplace <code>{heure}</code> dans les 3 langues.</div>
+          </div>
+
+          <!-- v2.87 : chaque client reçoit la version de sa langue (fiche client) -->
+          <details id="alerte-trad" style="margin-bottom:14px;border:1px solid var(--border);border-radius:10px;padding:8px 12px;">
+            <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--text-dim);">Versions anglaise et luxembourgeoise <span id="alerte-trad-etat" style="font-weight:400;color:var(--text-faint);"></span></summary>
+            <div style="font-size:10.5px;color:var(--text-faint);margin:8px 0;">Chaque client reçoit la version de la langue de sa fiche, et l'espace client suit la langue qu'il choisit. Version vide : il reçoit le texte français.</div>
+            <div class="form-group">
+              <label class="form-label">English</label>
+              <textarea class="form-control" id="alerte-texte-en" rows="5" placeholder="Facultatif — vide : texte français" oninput="majCompteurAlerte()"></textarea>
+            </div>
+            <div class="form-group" style="margin-bottom:4px;">
+              <label class="form-label">Lëtzebuergesch</label>
+              <textarea class="form-control" id="alerte-texte-lu" rows="5" placeholder="Facultatif — vide : texte français" oninput="majCompteurAlerte()"></textarea>
+            </div>
+          </details>
 
           <div class="form-group">
             <label class="form-label" style="display:flex;justify-content:space-between;align-items:center;">
@@ -5232,12 +5254,14 @@ async function modifierFraisAnnul(kind, id, pct) {
     var quoiFr = kind === 'serie' ? 'de votre réservation ' + svc + ' du ' + faJour(date) : 'de la séance ' + svc + ' du ' + faJour(date) + (chien ? ' (' + chien + ')' : '');
     var quoiEn = kind === 'serie' ? 'for your ' + svc + ' booking on ' + faJour(date) : 'for the ' + svc + ' session on ' + faJour(date) + (chien ? ' (' + chien + ')' : '');
     var quoiLb = kind === 'serie' ? 'fir Är ' + svc + '-Reservatioun vum ' + faJour(date) : 'fir den ' + svc + '-Termin vum ' + faJour(date) + (chien ? ' (' + chien + ')' : '');
-    var txt = lg === 'fr'
-      ? 'Les frais d\'annulation ' + quoiFr + ' ont été modifiés : ' + ancien + ' % → ' + pct + ' %.' + (pct === 0 ? ' Elle ne vous sera pas facturée.' : '') + (motif ? ' Motif : ' + motif : '')
-      : (lg === 'lu' || lg === 'lb')
-      ? 'D\'Annulatiounskäschte ' + quoiLb + ' goufen ugepasst: ' + ancien + ' % → ' + pct + ' %.' + (pct === 0 ? ' Dat gëtt Iech net verrechent.' : '') + (motif ? ' Grond: ' + motif : '')
-      : 'The cancellation fee ' + quoiEn + ' has been changed: ' + ancien + '% → ' + pct + '%.' + (pct === 0 ? ' It will not be charged.' : '') + (motif ? ' Reason: ' + motif : '');
-    await insererMessages([{ client_id: r.client_id, expediteur: 'admin', contenu: txt, lu: false }], 'message');
+    var tradF = {
+      fr: 'Les frais d\'annulation ' + quoiFr + ' ont été modifiés : ' + ancien + ' % → ' + pct + ' %.' + (pct === 0 ? ' Elle ne vous sera pas facturée.' : '') + (motif ? ' Motif : ' + motif : ''),
+      lu: 'D\'Annulatiounskäschte ' + quoiLb + ' goufen ugepasst: ' + ancien + ' % → ' + pct + ' %.' + (pct === 0 ? ' Dat gëtt Iech net verrechent.' : '') + (motif ? ' Grond: ' + motif : ''),
+      en: 'The cancellation fee ' + quoiEn + ' has been changed: ' + ancien + '% → ' + pct + '%.' + (pct === 0 ? ' It will not be charged.' : '') + (motif ? ' Reason: ' + motif : '')
+    };
+    var baseF = { client_id: r.client_id, expediteur: 'admin', lu: false };
+    var ligneF = window.FR_MSG ? FR_MSG.ligne(baseF, tradF, lg) : Object.assign(baseF, { contenu: lg === 'fr' ? tradF.fr : (lg === 'lu' || lg === 'lb') ? tradF.lu : tradF.en });
+    await insererMessages([ligneF], 'message');
   } catch (e) { console.log('message frais:', e); }
 
   showToastAdmin('✓ Frais modifiés : ' + pct + ' % · client prévenu', 'green');
@@ -5431,6 +5455,7 @@ async function insererMessages(rows, type) {
   var avecType = rows.map(function(r) {
     var o = {}; for (var k in r) o[k] = r[k]; o.type = type || 'message'; return o;
   });
+  if (window.FR_MSG) return FR_MSG.inserer(db, avecType);   // v2.87 : repli si colonne contenu_trad absente
   var res = await db.from('messages').insert(avecType);
   if (res.error && /type/i.test(res.error.message || '')) {
     res = await db.from('messages').insert(rows);
@@ -5438,21 +5463,23 @@ async function insererMessages(rows, type) {
   return res;
 }
 
-// v2.69 : message rédigé dans la langue du client (fiche : « fr » → français,
-// toute autre langue → anglais), au lieu d'être traduit mot à mot à l'affichage.
+// v2.69 : message rédigé dans la langue du client. v2.87 : 'fr' | 'en' | 'lu',
+// et les 3 versions sont gardées (contenu_trad) : l'espace client suit la langue choisie.
 async function langueClient(clientId) {
   try {
     var r = await db.from('clients').select('langue').eq('id', clientId).maybeSingle();
     var l = r && r.data && r.data.langue;
-    return l && String(l).toLowerCase() !== 'fr' ? 'en' : 'fr';
+    return window.FR_MSG ? FR_MSG.langue(l) : (l && String(l).toLowerCase() !== 'fr' ? 'en' : 'fr');
   } catch (e) { return 'fr'; }
 }
-async function notifierClientAnnulation(clientId, texte, texteEn) {
+async function notifierClientAnnulation(clientId, texte, texteEn, texteLu) {
   if (!clientId) return;
   try {
-    if (texteEn && (await langueClient(clientId)) === 'en') texte = texteEn;
-    var { error } = (await insererMessages(
-      [{ client_id: clientId, expediteur: 'admin', contenu: texte, lu: false }], 'notification'));
+    var lgC = await langueClient(clientId);
+    var base = { client_id: clientId, expediteur: 'admin', lu: false };
+    var ligneN = window.FR_MSG ? FR_MSG.ligne(base, { fr: texte, en: texteEn, lu: texteLu }, lgC)
+               : Object.assign(base, { contenu: texteEn && lgC === 'en' ? texteEn : texte });
+    var { error } = (await insererMessages([ligneN], 'notification'));
     if (error) throw error;
   } catch(e) { console.error('notification annulation:', e); showToastAdmin('Client non notifie : ' + (e.message||''), 'amber'); }
 }
@@ -5514,7 +5541,12 @@ async function confirmerAnnulationResa() {
         + (qui === 'client' ? ' at your request.' : ' by Forest Rangers.')
         + (pct > 0 ? ' It is still charged at ' + pct + '% under the cancellation terms.' : ' It will not be charged.')
         + (partielle ? ' Your other dogs are kept on this session.' : '')
-        + ' The rest of your recurring sessions is unchanged.');
+        + ' The rest of your recurring sessions is unchanged.',
+        'Ären Termin vum ' + formatDateFR(dateRef) + ' gouf annuléiert' + (partielle ? ' fir ' + nomsCibles.join(' + ') : '')
+        + (qui === 'client' ? ', op Är Demande.' : ' vu Forest Rangers.')
+        + (pct > 0 ? ' En gëtt no den Annulatiounskonditiounen zu ' + pct + ' % verrechent.' : ' En gëtt Iech net verrechent.')
+        + (partielle ? ' Är aner Hënn bleiwen op dësem Termin.' : '')
+        + ' Är aner widderhuelend Terminer bleiwen onverännert.');
       showToastAdmin('✓ Occurrence du ' + formatDateFR(dateRef) + ' annulee' + mention, 'green');
     } else if (estRecurrente && window.FR_FACT && FR_FACT.planArretSerie(r, FR_FACT.aujourdhui()).mode !== 'annuler') {
       // Série déjà commencée : on l'ARRÊTE (fin avancée) au lieu de l'annuler
@@ -5533,7 +5565,11 @@ async function confirmerAnnulationResa() {
         'Your ' + (SVC_NAMES[r.service] || r.service) + ' series' + (partielle ? ' for ' + nomsCibles.join(' + ') : '') + ' is stopped from ' + formatDateFR(plan.date)
         + (qui === 'client' ? ', at your request.' : ', by Forest Rangers.')
         + (pct > 0 ? ' The session on ' + formatDateFR(plan.date) + ' is still charged at ' + pct + '% under the cancellation terms.' : ' No upcoming session will be charged.')
-        + ' The ' + plan.tenues + ' session' + (plan.tenues > 1 ? 's' : '') + ' already done ' + (plan.tenues > 1 ? 'remain' : 'remains') + ' due.');
+        + ' The ' + plan.tenues + ' session' + (plan.tenues > 1 ? 's' : '') + ' already done ' + (plan.tenues > 1 ? 'remain' : 'remains') + ' due.',
+        'Är ' + (SVC_NAMES[r.service] || r.service) + '-Serie' + (partielle ? ' fir ' + nomsCibles.join(' + ') : '') + ' gëtt vum ' + formatDateFR(plan.date) + ' un gestoppt'
+        + (qui === 'client' ? ', op Är Demande.' : ', vu Forest Rangers.')
+        + (pct > 0 ? ' Den Termin vum ' + formatDateFR(plan.date) + ' gëtt no den Annulatiounskonditiounen zu ' + pct + ' % verrechent.' : ' Keen Termin, deen nach kënnt, gëtt Iech verrechent.')
+        + ' ' + (plan.tenues > 1 ? 'Déi ' + plan.tenues + ' Terminer, déi scho waren, bleiwen ze bezuelen.' : 'Deen Termin, dee scho war, bleift ze bezuelen.'));
       showToastAdmin('✓ Série arrêtée au ' + formatDateFR(plan.date) + ' (' + nA + ' ligne' + (nA > 1 ? 's' : '') + ')' + mention, 'green');
     } else {
       var payload = { statut: 'annule', annule_par: qui, annulation_tardive: sugg.tardive, facture_pourcentage: pct };
@@ -5554,7 +5590,11 @@ async function confirmerAnnulationResa() {
         'Your ' + (SVC_NAMES[r.service] || r.service) + ' booking on ' + formatDateFR(r.date_debut)
         + ' has been cancelled' + (partielle ? ' for ' + nomsCibles.join(' + ') : '') + (qui === 'client' ? ' at your request.' : ' by Forest Rangers.')
         + (pct > 0 ? ' Charge applied: ' + pct + '%.' : ' Nothing will be charged.')
-        + (partielle ? ' Your other dogs are kept.' : ''));
+        + (partielle ? ' Your other dogs are kept.' : ''),
+        'Är ' + (SVC_NAMES[r.service] || r.service) + '-Reservatioun vum ' + formatDateFR(r.date_debut)
+        + ' gouf annuléiert' + (partielle ? ' fir ' + nomsCibles.join(' + ') : '') + (qui === 'client' ? ', op Är Demande.' : ' vu Forest Rangers.')
+        + (pct > 0 ? ' Verrechent: ' + pct + ' %.' : ' Et gëtt Iech näischt verrechent.')
+        + (partielle ? ' Är aner Hënn bleiwen ageplangt.' : ''));
       showToastAdmin('✓ Réservation annulée (' + n + ' ligne' + (n>1?'s':'') + ')' + mention, 'green');
     }
     document.getElementById('modal-annulation').classList.remove('open');
@@ -6020,6 +6060,8 @@ var MODELES_ALERTE = {
          + "mais la durée et la distance sont réduites, à l'ombre et à proximité d'un point d'eau.\n\n"
          + "Pensez à laisser de l'eau fraîche à disposition de votre chien.\n\n"
          + "L'équipe Forest Rangers",
+    texte_en: "Orange heat alert — {date}\n\nHello {prenom},\n\nMeteoLux has issued an orange heat alert for today. Walks go ahead, but duration and distance are reduced, in the shade and close to a water point.\n\nPlease leave fresh water available for your dog.\n\nThe Forest Rangers team",
+    texte_lu: "Orangen Hëtztalarm — {date}\n\nMoien {prenom},\n\nMeteoLux huet fir haut en orangen Hëtztalarm erausginn. D'Spadséiergäng fannen statt, mee méi kuerz a manner wäit, am Schied an no bei engem Waasserpunkt.\n\nDenkt w.e.g. drun, Ärem Hond frëscht Waasser ze stellen.\n\nD'Team vu Forest Rangers",
     sms: "Forest Rangers : MeteoLux alerte orange chaleur. Promenades maintenues, duree reduite. Laissez de l'eau fraiche a votre chien."
   },
   'orange-froid': {
@@ -6030,6 +6072,8 @@ var MODELES_ALERTE = {
          + "mais la durée est adaptée et les rangers évitent les surfaces glissantes.\n\n"
          + "En dessous de 5 °C, le manteau est obligatoire pour les petits chiens — merci de le prévoir.\n\n"
          + "L'équipe Forest Rangers",
+    texte_en: "Orange cold and snow alert — {date}\n\nHello {prenom},\n\nMeteoLux has issued an orange cold and snow alert for today. Walks go ahead, but their duration is adapted and the rangers avoid slippery surfaces.\n\nBelow 5 °C, a coat is required for small dogs — please have one ready.\n\nThe Forest Rangers team",
+    texte_lu: "Orangen Alarm Keelt a Schnéi — {date}\n\nMoien {prenom},\n\nMeteoLux huet fir haut en orangen Alarm fir Keelt a Schnéi erausginn. D'Spadséiergäng fannen statt, mee d'Dauer gëtt ugepasst an d'Rangeren evitéiere glat Uewerflächen.\n\nÜnner 5 °C ass e Mantel fir kleng Hënn obligatoresch — leet w.e.g. ee bereet.\n\nD'Team vu Forest Rangers",
     sms: "Forest Rangers : MeteoLux alerte orange froid/neige. Promenades maintenues, duree adaptee. Manteau obligatoire pour les petits chiens (-5C)."
   },
   'orange-pluie': {
@@ -6040,6 +6084,8 @@ var MODELES_ALERTE = {
          + "les rangers adaptent l'itinéraire et évitent les zones boisées exposées.\n\n"
          + "Une veste imperméable est conseillée pour votre chien.\n\n"
          + "L'équipe Forest Rangers",
+    texte_en: "Orange rain and wind alert — {date}\n\nHello {prenom},\n\nMeteoLux has issued an orange rain and wind alert for today. Walks go ahead: the rangers adapt the route and avoid exposed wooded areas.\n\nA waterproof jacket is recommended for your dog.\n\nThe Forest Rangers team",
+    texte_lu: "Orangen Alarm Reen a Wand — {date}\n\nMoien {prenom},\n\nMeteoLux huet fir haut en orangen Alarm fir Reen a Wand erausginn. D'Spadséiergäng fannen statt: d'Rangeren passen de Wee un a vermeiden exponéiert Bëschgebidder.\n\nEng waasserdicht Jackett gëtt fir Ären Hond ugeroden.\n\nD'Team vu Forest Rangers",
     sms: "Forest Rangers : MeteoLux alerte orange pluie et vent. Promenades maintenues, zones boisees evitees. Veste impermeable conseillee."
   },
   'orange-grele': {
@@ -6050,6 +6096,8 @@ var MODELES_ALERTE = {
          + "mais peuvent être écourtées ou décalées de quelques heures selon les conditions.\n\n"
          + "Vos chiens sont mis à l'abri immédiatement en cas d'averse de grêle.\n\n"
          + "L'équipe Forest Rangers",
+    texte_en: "Orange hail and thunderstorm alert — {date}\n\nHello {prenom},\n\nMeteoLux has issued an orange hail and thunderstorm alert for today. Walks go ahead but may be shortened or moved by a few hours depending on conditions.\n\nYour dogs are taken to shelter immediately in case of a hailstorm.\n\nThe Forest Rangers team",
+    texte_lu: "Orangen Alarm Hagel an Donnerwieder — {date}\n\nMoien {prenom},\n\nMeteoLux huet fir haut en orangen Alarm fir Hagel an Donnerwieder erausginn. D'Spadséiergäng fannen statt, kënnen awer, jee no de Konditiounen, verkierzt oder ëm e puer Stonne verréckelt ginn.\n\nBei engem Hagelschauer ginn Är Hënn direkt an d'Dréchent bruecht.\n\nD'Team vu Forest Rangers",
     sms: "Forest Rangers : MeteoLux alerte orange grele. Promenades maintenues mais ecourtees si besoin. Vos chiens seront mis a abri."
   },
   'rouge-canicule': {
@@ -6062,6 +6110,8 @@ var MODELES_ALERTE = {
          + "Pensez à bien hydrater votre chien avant et après la promenade, et laissez-lui de l'eau fraîche "
          + "à disposition.\n\n"
          + "L'équipe Forest Rangers",
+    texte_en: "Red heatwave alert — {date}\n\nHello {prenom},\n\nMeteoLux has issued a red heatwave alert. The walk goes ahead but is adapted: shortened to about 30 minutes, close to a water point, at the coolest hours. Walks on tarmac are cancelled.\n\nMake sure your dog drinks well before and after the walk, and leave fresh water available.\n\nThe Forest Rangers team",
+    texte_lu: "Rouden Alarm Hëtztwell — {date}\n\nMoien {prenom},\n\nMeteoLux huet e rouden Alarm fir eng Hëtztwell erausginn. De Spadséiergank fënnt statt, mee ugepasst: ongeféier 30 Minutten, no bei engem Waasserpunkt, zu de Stonnen, wou et am mannste waarm ass. Et gëtt net op Teer gaangen.\n\nGitt Ärem Hond virun an no dem Spadséiergank genuch ze drénken, a loosst him frëscht Waasser do.\n\nD'Team vu Forest Rangers",
     sms: "Forest Rangers : alerte rouge canicule. Promenade maintenue mais reduite a 30 min, pres d'un point d'eau. Hydratez bien votre chien."
   },
   'rouge-tempete': {
@@ -6085,6 +6135,8 @@ var MODELES_ALERTE = {
          + "Conformément à nos conditions générales (cas de force majeure), aucune facturation ne sera appliquée. "
          + "Nous reprenons le service dès la levée de l'alerte.\n\n"
          + "L'équipe Forest Rangers",
+    texte_en: "Red ice alert — walks cancelled — {date}\n\nHello {prenom},\n\nMeteoLux has issued a red ice alert. The roads in our area are not safe to drive on: all walks planned for today are cancelled.\n\nUnder our terms and conditions (force majeure), nothing will be charged. We resume the service as soon as the alert is lifted.\n\nThe Forest Rangers team",
+    texte_lu: "Rouden Alarm Glatäis — Spadséiergäng annuléiert — {date}\n\nMoien {prenom},\n\nMeteoLux huet e rouden Alarm fir Glatäis erausginn. Op de Stroossen an eiser Géigend kann een net sécher fueren: all Spadséiergäng, déi fir haut geplangt waren, sinn annuléiert.\n\nNo eisen Allgemenge Konditiounen (héich Gewalt) gëtt näischt verrechent. Mir fänke mam Service erëm un, soubal den Alarm opgehuewen ass.\n\nD'Team vu Forest Rangers",
     sms: "Forest Rangers : alerte rouge verglas. Routes dangereuses, toutes les promenades du jour sont annulees. Aucune facturation."
   },
   'rouge-inondation': {
@@ -6096,6 +6148,8 @@ var MODELES_ALERTE = {
          + "Conformément à nos conditions générales (cas de force majeure), aucune facturation ne sera appliquée. "
          + "Nous reprenons le service dès que les accès sont dégagés.\n\n"
          + "L'équipe Forest Rangers",
+    texte_en: "Red flood alert — walks cancelled — {date}\n\nHello {prenom},\n\nMeteoLux has issued a red flood alert and parts of our area are impassable: all walks planned for today are cancelled.\n\nUnder our terms and conditions (force majeure), nothing will be charged. We resume the service as soon as access is clear.\n\nThe Forest Rangers team",
+    texte_lu: "Rouden Alarm Iwwerschwemmung — Spadséiergäng annuléiert — {date}\n\nMoien {prenom},\n\nMeteoLux huet e rouden Alarm fir Iwwerschwemmungen erausginn, an Deeler vun eiser Géigend sinn net méi passéierbar: all Spadséiergäng, déi fir haut geplangt waren, sinn annuléiert.\n\nNo eisen Allgemenge Konditiounen (héich Gewalt) gëtt näischt verrechent. Mir fänke mam Service erëm un, soubal d'Zougäng fräi sinn.\n\nD'Team vu Forest Rangers",
     sms: "Forest Rangers : alerte rouge inondation. Zones impraticables, toutes les promenades du jour sont annulees. Aucune facturation."
   },
   'retard': {
@@ -6103,9 +6157,11 @@ var MODELES_ALERTE = {
     texte: "Retard sur la tournée — {date}\n\n"
          + "Bonjour {prenom},\n\n"
          + "Nous vous informons d'un retard sur notre tournée. La récupération de votre chien aura lieu vers "
-         + "[heure estimée] au lieu de l'horaire habituel.\n\n"
+         + "{heure} au lieu de l'horaire habituel.\n\n"
          + "Nous faisons au mieux pour limiter ce retard. Merci de votre compréhension.\n\n"
          + "L'équipe Forest Rangers",
+    texte_en: "Delay on our round — {date}\n\nHello {prenom},\n\nWe are running late on our round today. Your dog will be picked up at around {heure} instead of the usual time.\n\nWe are doing our best to keep the delay short. Thank you for your understanding.\n\nThe Forest Rangers team",
+    texte_lu: "Verspéidung op eiser Tournée — {date}\n\nMoien {prenom},\n\nMir hunn haut Verspéidung op eiser Tournée. Ären Hond gëtt géint {heure} ofgeholl, amplaz zur gewéinter Zäit.\n\nMir maachen eist Bescht, fir d'Verspéidung esou kuerz wéi méiglech ze halen. Merci fir Äert Versteesdemech.\n\nD'Team vu Forest Rangers",
     sms: "Forest Rangers : retard sur la tournee du jour. Recuperation de votre chien vers [heure]. Merci de votre comprehension."
   },
   'libre': { label: 'Message libre (annonce, congés…)', titre: 'Information', niveau: 'info', texte: '', sms: '' }
@@ -6146,6 +6202,12 @@ function appliquerModeleAlerte() {
   var mod = alerteModeleCourant();
   var ta = document.getElementById('alerte-texte');
   if (ta) ta.value = alerteRemplacerDate(mod.texte);
+  // v2.87 : versions anglaise et luxembourgeoise du modèle
+  var tEn = document.getElementById('alerte-texte-en'), tLu = document.getElementById('alerte-texte-lu');
+  if (tEn) tEn.value = mod.texte_en ? alerteRemplacerDate(mod.texte_en, 'en') : '';
+  if (tLu) tLu.value = mod.texte_lu ? alerteRemplacerDate(mod.texte_lu, 'lu') : '';
+  var hb = document.getElementById('alerte-heure-bloc');
+  if (hb) hb.style.display = /\{heure\}/.test(mod.texte || '') ? '' : 'none';
   var sms = document.getElementById('alerte-sms');
   if (sms) sms.value = mod.sms || '';
   var tit = document.getElementById('alerte-titre');
@@ -6168,11 +6230,17 @@ function appliquerModeleAlerte() {
   majCompteurAlerte();
 }
 
-function alerteRemplacerDate(txt) {
+function alerteRemplacerDate(txt, lg) {
   var ds = (document.getElementById('alerte-date') || {}).value || formatDateISO(new Date());
   var d = new Date(ds + 'T00:00:00');
-  var lbl = isNaN(d) ? ds : d.toLocaleDateString('fr-LU', { weekday:'long', day:'numeric', month:'long' });
+  var lbl = isNaN(d) ? ds
+    : (lg && lg !== 'fr' && window.FR_MSG) ? FR_MSG.date(ds, lg, { annee: false })
+    : d.toLocaleDateString('fr-LU', { weekday:'long', day:'numeric', month:'long' });
   return String(txt || '').replace(/\{date\}/g, lbl);
+}
+function alerteHeure() {
+  var v = ((document.getElementById('alerte-heure') || {}).value || '').trim();
+  return v ? v.replace(':', 'h') : '';
 }
 
 function majCompteurAlerte() {
@@ -6200,7 +6268,7 @@ async function chargerDestinatairesAlerte() {
   alerteDestinataires = [];
   try {
     if (cible === 'tous') {
-      var rt = await db.from('clients').select('id,prenom,nom,telephone,email')
+      var rt = await db.from('clients').select('id,prenom,nom,telephone,email,langue')
         .eq('actif', true).order('nom');   // v2.71 : comptes test inclus
       if (rt.error) throw rt.error;
       alerteDestinataires = rt.data || [];
@@ -6214,7 +6282,7 @@ async function chargerDestinatairesAlerte() {
       var ids = [];
       duJour.forEach(function(r){ if (r.client_id && ids.indexOf(r.client_id) === -1) ids.push(r.client_id); });
       if (ids.length) {
-        var rc = await db.from('clients').select('id,prenom,nom,telephone,email')
+        var rc = await db.from('clients').select('id,prenom,nom,telephone,email,langue')
           .in('id', ids).order('nom');   // v2.71 : comptes test inclus
         if (rc.error) throw rc.error;
         alerteDestinataires = rc.data || [];
@@ -6250,8 +6318,20 @@ async function chargerDestinatairesAlerte() {
   }).join('');
 }
 
-function personnaliserAlerte(txt, client) {
-  return alerteRemplacerDate(txt).replace(/\{prenom\}/g, client.prenom || '');
+function personnaliserAlerte(txt, client, lg) {
+  var h = alerteHeure();
+  if (h && lg === 'en') h = h.replace('h', ':');
+  if (h && lg === 'lu') h = h.replace('h', ':') + ' Auer';
+  return alerteRemplacerDate(txt, lg).replace(/\{prenom\}/g, client.prenom || '').replace(/\{heure\}/g, h || '{heure}');
+}
+// v2.87 : les 3 versions d'une alerte pour un client
+function alerteTrad(client) {
+  var fr = ((document.getElementById('alerte-texte') || {}).value || '').trim();
+  var en = ((document.getElementById('alerte-texte-en') || {}).value || '').trim();
+  var lu = ((document.getElementById('alerte-texte-lu') || {}).value || '').trim();
+  return { fr: personnaliserAlerte(fr, client, 'fr'),
+           en: en ? personnaliserAlerte(en, client, 'en') : '',
+           lu: lu ? personnaliserAlerte(lu, client, 'lu') : '' };
 }
 
 async function envoyerAlerte() {
@@ -6259,6 +6339,11 @@ async function envoyerAlerte() {
   var txt = ((ta || {}).value || '').trim();
   if (!txt) { showToastAdmin('Message vide', 'amber'); return; }
   if (!alerteDestinataires.length) { showToastAdmin('Aucun destinataire', 'amber'); return; }
+  var tousTextes = txt + ' ' + ((document.getElementById('alerte-texte-en') || {}).value || '') + ' ' + ((document.getElementById('alerte-texte-lu') || {}).value || '');
+  if (/\{heure\}/.test(tousTextes) && !alerteHeure()) {
+    frAlert({ type: 'attention', titre: 'Heure manquante', message: 'Indiquez l\'heure estimée : elle remplace {heure} dans le message.' });
+    return;
+  }
   var n = alerteDestinataires.length;
   var avecBanniere = !!(document.getElementById('alerte-banniere') || {}).checked;
   var avecMail = !!(document.getElementById('alerte-email') || {}).checked;
@@ -6275,9 +6360,13 @@ async function envoyerAlerte() {
   var btn = document.getElementById('alerte-btn-envoi');
   if (btn) { btn.disabled = true; btn.textContent = 'Envoi…'; }
   try {
+    // v2.87 : 3 versions par message ; contenu = langue de la fiche du client
     var rows = alerteDestinataires.map(function(c) {
-      return { client_id: c.id, expediteur: 'admin', contenu: personnaliserAlerte(txt, c), lu: false };
+      var base = { client_id: c.id, expediteur: 'admin', lu: false };
+      return window.FR_MSG ? FR_MSG.ligne(base, alerteTrad(c), c.langue) : Object.assign(base, { contenu: personnaliserAlerte(txt, c) });
     });
+    var texteParClient = {};
+    rows.forEach(function(r) { texteParClient[r.client_id] = r.contenu; });
     // Insertion par paquets de 50 : evite les requetes trop lourdes
     for (var i = 0; i < rows.length; i += 50) {
       var r = await insererMessages(rows.slice(i, i + 50), 'notification');
@@ -6285,7 +6374,7 @@ async function envoyerAlerte() {
     }
     showToastAdmin('✓ Alerte envoyee a ' + n + ' client' + (n > 1 ? 's' : ''), 'green');
     if (avecBanniere) await publierBanniere();
-    if (avecMail) await envoyerAlerteParEmail(avecAdresse, txt, n - avecAdresse.length, btn);
+    if (avecMail) await envoyerAlerteParEmail(avecAdresse, function(c) { return texteParClient[c.id] || personnaliserAlerte(txt, c); }, n - avecAdresse.length, btn);
     await chargerMessages(true);
   } catch(e) {
     showToastAdmin('Erreur : ' + (e.message || ''), 'red');
@@ -6305,7 +6394,7 @@ async function envoyerAlerteParEmail(liste, txt, sansAdresse, btn) {
   for (var i = 0; i < liste.length; i++) {
     var c = liste[i];
     if (btn) btn.textContent = 'E-mails ' + (i + 1) + '/' + liste.length + '…';
-    var r = await FR_MAIL.envoyer(db, { type: 'message', to: c.email, subject: objet, text: personnaliserAlerte(txt, c), client_id: c.id });
+    var r = await FR_MAIL.envoyer(db, { type: 'message', to: c.email, subject: objet, text: typeof txt === 'function' ? txt(c) : personnaliserAlerte(txt, c), client_id: c.id });
     if (r && r.ok) ok++;
     else {
       echecs.push(c.prenom + ' ' + c.nom + (r && r.erreur ? ' — ' + r.erreur : ''));
@@ -6374,10 +6463,16 @@ async function annulerPromenadesJour() {
     var texteEn = 'Your walk on ' + jourFR + ' is cancelled due to the red weather alert. '
               + 'Under our terms and conditions (force majeure), it will not be charged. '
               + 'Day Care and boarding are provided as usual.';
+    var texteLu = 'Äre Spadséiergank vum ' + jourFR + ' ass wéinst dem rouden Wiederalarm annuléiert. '
+              + 'No eisen Allgemenge Konditiounen (héich Gewalt) gëtt en Iech net verrechent. '
+              + 'Day Care an d\'Pensioun fanne ganz normal statt.';
     try {
       var lgs = {};
-      try { var rl = await db.from('clients').select('id,langue').in('id', clients); (rl.data || []).forEach(function(c) { lgs[c.id] = c.langue && String(c.langue).toLowerCase() !== 'fr' ? 'en' : 'fr'; }); } catch (eL) {}
-      var rows = clients.map(function(id) { return { client_id: id, expediteur: 'admin', contenu: lgs[id] === 'en' ? texteEn : texte, lu: false }; });
+      try { var rl = await db.from('clients').select('id,langue').in('id', clients); (rl.data || []).forEach(function(c) { lgs[c.id] = window.FR_MSG ? FR_MSG.langue(c.langue) : (c.langue && String(c.langue).toLowerCase() !== 'fr' ? 'en' : 'fr'); }); } catch (eL) {}
+      var rows = clients.map(function(id) {
+        var b = { client_id: id, expediteur: 'admin', lu: false };
+        return window.FR_MSG ? FR_MSG.ligne(b, { fr: texte, en: texteEn, lu: texteLu }, lgs[id]) : Object.assign(b, { contenu: lgs[id] === 'en' ? texteEn : texte });
+      });
       for (var k = 0; k < rows.length; k += 50) {
         var rm = await insererMessages(rows.slice(k, k + 50), 'notification');
         if (rm.error) throw rm.error;
@@ -6539,10 +6634,31 @@ async function feApercu() {
   }
 }
 
-function feMotif(P, en) {
-  if (P.motif === 'maladie') return en ? 'due to illness' : 'pour raison de santé';
-  if (P.motif === 'rdv') return en ? 'due to an appointment' : 'en raison d\'un rendez-vous';
-  return P.motifTxt ? (en ? '(' + P.motifTxt + ')' : '(' + P.motifTxt + ')') : '';
+function feMotif(P, en, lb) {
+  if (P.motif === 'maladie') return lb ? 'aus gesondheetleche Grënn' : en ? 'due to illness' : 'pour raison de santé';
+  if (P.motif === 'rdv') return lb ? 'wéinst engem Rendez-vous' : en ? 'due to an appointment' : 'en raison d\'un rendez-vous';
+  return P.motifTxt ? '(' + P.motifTxt + ')' : '';
+}
+var FE_CR_LU = { matin: 'Moien', midi: 'Mëtteg', apmidi: 'Nomëtteg' };
+// v2.87 : version luxembourgeoise de l'avis de fermeture exceptionnelle
+function feMessageLu(clientId) {
+  var P = feParams();
+  var mine = FE.seances.filter(function(s){ return String(s.r.client_id) === String(clientId); });
+  var lignes = {}, ordre = [];
+  mine.forEach(function(s) {
+    var k = s.date + '|' + s.r.service + '|' + (s.r.creneau || '');
+    if (!lignes[k]) { lignes[k] = []; ordre.push(k); }
+    dogNamesForRows([s.r], FE.chiensMap, FE.clientDogsMap).forEach(function(n){ if (lignes[k].indexOf(n) === -1) lignes[k].push(n); });
+  });
+  ordre.sort();
+  var fmt = function(ds) { return FR_MSG.date(ds, 'lu', { annee: false }); };
+  var liste = ordre.map(function(k) {
+    var p = k.split('|'), svc = FE_SVC[p[1]] + (p[1] === 'walking' && p[2] && FE_CR_LU[p[2]] ? ' (' + FE_CR_LU[p[2]] + ')' : '') + (p[1] === 'boarding' ? ' — de ganze Openthalt' : '');
+    return '· ' + fmt(p[0]) + ' — ' + svc + ': ' + lignes[k].join(' + ');
+  }).join('\n');
+  var periode = P.du === P.au ? 'den ' + fmt(P.du) : 'vum ' + fmt(P.du) + ' bis den ' + fmt(P.au);
+  var mot = feMotif(P, false, true);
+  return 'Moien,\nForest Rangers muss ' + periode + (mot ? ' ' + mot : '') + ' ausnamsweis zoumaachen. Dës Terminer sinn annuléiert a ginn Iech net verrechent:\n' + liste + '\nEntschëllegt w.e.g. d\'Ëmstänn.\n— Forest Rangers';
 }
 function feMessage(clientId, langue) {
   var en = langue === 'en', P = feParams();
@@ -6623,6 +6739,8 @@ async function validerFermeture() {
     var rows = Object.keys(ids).map(function(cid) {
       var c = FE.clientsMap[cid] || {};
       var lg = c.langue && String(c.langue).toLowerCase() !== 'fr' ? 'en' : 'fr';
+      if (window.FR_MSG) return FR_MSG.ligne({ client_id: cid, expediteur: 'admin', lu: false },
+        { fr: feMessage(cid, 'fr'), en: feMessage(cid, 'en'), lu: feMessageLu(cid) }, c.langue);
       return { client_id: cid, expediteur: 'admin', contenu: feMessage(cid, lg), lu: false };
     });
     for (var k = 0; k < rows.length; k += 50) {

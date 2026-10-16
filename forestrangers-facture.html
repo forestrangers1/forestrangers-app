@@ -376,6 +376,7 @@ html.light .actions-bar  { background: #f6f7f2; border-top-color: rgba(0,0,0,0.0
   <script src="fr-calendrier.js"></script>
   <script src="fr-facturation.js"></script>
   <script src="fr-email.js"></script>
+  <script src="fr-pdf.js"></script>
 <!-- Repli CDN : si jsDelivr n'a pas repondu, on tente unpkg avant d'abandonner. -->
 <script>if (!window.supabase) { document.write('<scr' + 'ipt src="https://unpkg.com/@supabase/supabase-js@2"><\/scr' + 'ipt>'); }</script>
   <script>
@@ -1653,7 +1654,9 @@ async function envoyerFacture() {
   try {
     var pieces = [];
     try {
-      var b64 = await FR_MAIL.pdfBase64(document.getElementById('invoiceDoc'), optionsPDF());
+      var b64 = window.FR_PDF   // v2.87 : pièce jointe au format A4 (fr-pdf.js)
+        ? await FR_PDF.base64(document.getElementById('invoiceDoc'), optionsPDF().filename)
+        : await FR_MAIL.pdfBase64(document.getElementById('invoiceDoc'), optionsPDF());
       if (b64) pieces.push({ filename: optionsPDF().filename, content: b64 });
     } catch (e) { console.log('PDF non généré :', e); }
     if (!pieces.length && !(await frConfirm({ titre: 'PDF non généré', message: 'Le PDF n\'a pas pu être généré. Envoyer l\'e-mail sans pièce jointe ?', ok: 'Envoyer sans PDF', icone: 'attention' }))) return;
@@ -1781,7 +1784,9 @@ function telechargerPDF() {
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
   };
 
-  html2pdf().set(options).from(inv).save().then(function() {
+  // v2.87 : page A4 pleine largeur, quel que soit l'écran ou le défilement (fr-pdf.js)
+  var gen = window.FR_PDF ? FR_PDF.telecharger(inv, options.filename) : html2pdf().set(options).from(inv).save();
+  gen.then(function() {
     if (btn) { btn.disabled = false; btn.innerHTML = ancien; }
   }).catch(function(e) {
     if (btn) { btn.disabled = false; btn.innerHTML = ancien; }
