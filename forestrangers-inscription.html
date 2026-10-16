@@ -2241,7 +2241,7 @@ var SVG_PATTE = '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round
   + 'C11.7 19.3 11.2 19.5 10.4 19.6C8.3 20 6.6 18.6 6.6 16.6C6.6 14.1 9.3 11.9 12.3 11.9Z"/></svg>';
 
 // Libelle francais du Nieme chien (num >= 2). Traduit via le dictionnaire.
-function libelleChien(num) { return num + 'e chien'; }
+function libelleChien(num) { return t(num + 'e chien'); }   // v2.84 : traduit (2nd dog · 2ten Hond)
 
 // Fermeture differee d'une liste deroulante de races (sans arrow function
 // dans un attribut genere, pour rester lisible dans le HTML inline).
@@ -3375,7 +3375,12 @@ async function sauvegarderInscription(motDePasse) {
         + '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-faint);">' + t('Client') + '</span><span style="font-weight:600;">' + prenom + ' ' + nom + '</span></div>'
         + '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-faint);">' + t('Email') + '</span><span>' + email + '</span></div>'
         + '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-faint);">' + t('Commune') + '</span><span>' + (commune || '—') + '</span></div>'
-        + (nomChien ? '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-faint);">' + t('Chien') + '</span><span>' + nomChien + (race ? ' · ' + race : '') + '</span></div>' : '')
+        + (chiens && chiens.length
+            ? chiens.map(function(ch, i) {   // v2.84 : tous les chiens inscrits, pas seulement le premier
+                return '<div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-faint);">'
+                  + (i === 0 ? t('Chien') : libelleChien(i + 1)) + '</span><span style="text-align:right;">' + frEchapper(ch.nom || '') + (ch.race ? ' · ' + frEchapper(ch.race) : '') + '</span></div>';
+              }).join('')
+            : (nomChien ? '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-faint);">' + t('Chien') + '</span><span>' + nomChien + (race ? ' · ' + race : '') + '</span></div>' : ''))
         + '<div style="display:flex;justify-content:space-between;padding:6px 0;"><span style="color:var(--text-faint);">' + t('N° client') + '</span><span style="color:var(--accent);font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:15px;font-weight:800;">#' + nextNum + '</span></div>'
         + '</div>';
     }

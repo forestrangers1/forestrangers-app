@@ -1019,7 +1019,8 @@ function dessiner(b, C, A, EV, ic) {
   ] }, options: optsBase(false, ' €') });
 
   // Services (empilé, mois futurs plus clairs)
-  var ds = [['walking', 'Dog Walking', acc, 'sorties'], ['daycare', 'Day Care', gr, 'sorties'], ['boarding', 'Boarding (nuits)', bl, 'chiens']].filter(function(s) { return !filters.service || filters.service === s[0]; });
+  var ds = [['walking', 'Dog Walking', gr, 'sorties'], ['daycare', 'Day Care', acc, 'sorties'],   /* v2.83 : vert Dog Walking, orange Day Care, bleu Boarding */
+             ['boarding', 'Boarding (nuits)', bl, 'chiens']].filter(function(s) { return !filters.service || filters.service === s[0]; });
   nouveauGraph('ch-svc', { type: 'bar', data: { labels: labels, datasets: ds.map(function(s) {
     return { label: s[1], data: EV.map(function(e) { return e.a[s[3]][s[0]]; }), backgroundColor: EV.map(function(e, i) { return futur(i) ? rgba(s[2], 0.35) : s[2]; }), borderRadius: 3, maxBarThickness: 26 };
   }) }, options: optsBase(true) });

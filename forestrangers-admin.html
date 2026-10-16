@@ -1096,6 +1096,14 @@ textarea.form-control { resize: vertical; }
     </div>
     <!-- ══════ RESERVATIONS ══════ -->
     <div class="page" id="page-reservations">
+      <!-- v2.83 : recherche (chien, client, commune) dans les réservations et les annulations -->
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+        <div style="position:relative;flex:1;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-faint);pointer-events:none;"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="resa-recherche" type="search" class="form-control" placeholder="Rechercher un chien, un client, une commune…" oninput="filtrerResas()" style="width:100%;padding-left:36px;font-size:14px;">
+        </div>
+      </div>
+      <div id="resa-recherche-bilan" style="display:none;font-size:12px;color:var(--text-dim);margin:-4px 2px 10px;"></div>
       <div class="card" style="margin-bottom:14px;">
         <div class="card-head">
           <span class="card-title">Demandes en attente</span>
@@ -1477,6 +1485,10 @@ textarea.form-control { resize: vertical; }
             <input type="checkbox" id="alerte-banniere" checked style="width:15px;height:15px;accent-color:#ff5f1f;">
             Afficher aussi la banniere dans l'espace client et sur la page de reservation
           </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--text-dim);margin-bottom:10px;cursor:pointer;">
+            <input type="checkbox" id="alerte-email" style="width:15px;height:15px;accent-color:#ff5f1f;" onchange="chargerDestinatairesAlerte()">
+            Envoyer aussi par e-mail (objet : le titre ci-dessus · même texte que dans l'espace client)
+          </label>
 
           <div id="alerte-banniere-etat" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:12px;"></div>
 
@@ -1677,7 +1689,8 @@ async function loadReservationsAdmin() {
         pendingList.innerHTML=pending.map(function(g,idx){
           var cren=g.service==='boarding'?'Pension':(CREN[g.creneau]||'');
           var desc=(SVC[g.service]||g.service)+' · '+fmtPlage(g.date_debut,g.date_fin)+(cren?' · '+cren:'')+(g.montant>0?' · '+euros(g.montant):'');
-          return '<div class="inv-row">'
+          var cp = clientsMap[g.client_id] || {};
+          return '<div class="inv-row" data-q="'+msgEsc([clientName(g), cp.commune || '', dogsName(g), desc].join(' '))+'">'
             +'<div style="width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;"></div>'
             +'<div style="flex:1;cursor:pointer;" title="Ouvrir le détail" onclick="openResaDetail(\''+g.id+'\',\''+g.date_debut+'\')"><div class="inv-client">'+clientName(g)+' — '+dogsName(g)+'</div>'
             +'<div class="inv-desc">'+desc+'</div></div>'
@@ -1699,7 +1712,9 @@ async function loadReservationsAdmin() {
         var badge={confirme:'<span class="badge b-green">Confirmé</span>',termine:'<span class="badge b-green">Terminé</span>',annule:'<span class="badge b-red">Annulé</span>'};
         histBody.innerHTML=hist.map(function(g){
           var crenTxt = g.service !== 'boarding' && CREN[g.creneau] ? ' · ' + CREN[g.creneau] : '';
-          return '<tr style="cursor:pointer;--rs-c:'+(SVC_COLORS[g.service]||'var(--accent)')+';" title="Ouvrir le détail" onclick="openResaDetail(\''+g.id+'\',\''+g.date_debut+'\')">'
+          var cq = clientsMap[g.client_id] || {};
+          var dq = [clientName(g), cq.commune || '', cq.quartier || '', dogsName(g), SVC[g.service] || '', fmtPlage(g.date_debut,g.date_fin)].join(' ');
+          return '<tr data-q="'+msgEsc(dq)+'" style="cursor:pointer;--rs-c:'+(SVC_COLORS[g.service]||'var(--accent)')+';" title="Ouvrir le détail" onclick="openResaDetail(\''+g.id+'\',\''+g.date_debut+'\')">'
             +'<td class="rs-resa" style="white-space:nowrap;color:var(--text-dim);"><span class="rs-lbl">Réservée le </span>'+fmtResaLe(g.created_at)+'</td>'
             +'<td class="rs-client">'+clientName(g)+(g.cree_par!=='equipe' && estNouveau('reservations',g.created_at)?' <span class="badge b-accent">Nouveau</span>':'')+'</td>'
             +'<td class="rs-chiens">'+dogsName(g)+'</td>'
@@ -1711,6 +1726,7 @@ async function loadReservationsAdmin() {
         }).join('');
       }
     }
+    filtrerResas();
   } catch(e){
     console.error('loadReservationsAdmin:', e);
     if (pendingList) pendingList.innerHTML='<div style="padding:16px;text-align:center;color:var(--text-faint);font-size:12px;">Erreur de chargement</div>';
@@ -1719,6 +1735,29 @@ async function loadReservationsAdmin() {
 
 // Dates retirées d'une récurrence — invisibles dans l'historique des réservations,
 // qui raisonne par série. Sans cette liste, une annulation à l'unité ne laisse aucune trace visible.
+// v2.83 — Recherche : chien, client, commune (sans tenir compte des accents ni des majuscules)
+function rsNorm(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+function filtrerResas() {
+  var el = document.getElementById('resa-recherche');
+  var q = rsNorm(el ? el.value : '').trim();
+  var mots = q ? q.split(/\s+/) : [];
+  var ok = function(node) { var t = rsNorm(node.getAttribute('data-q') || node.textContent); return mots.every(function(m) { return t.indexOf(m) !== -1; }); };
+  var nR = 0, nA = 0;
+  document.querySelectorAll('#resa-history-tbody tr[data-q], #resa-pending-list .inv-row[data-q]').forEach(function(n) {
+    var v = !mots.length || ok(n); n.style.display = v ? '' : 'none'; if (v && mots.length) nR++;
+  });
+  document.querySelectorAll('#resa-occ-list .annul-grp').forEach(function(n) {
+    var v = mots.length ? ok(n) : (+n.getAttribute('data-rang') < 60);
+    n.style.display = v ? '' : 'none'; if (v && mots.length) nA++;
+  });
+  var b = document.getElementById('resa-recherche-bilan');
+  if (b) {
+    b.style.display = mots.length ? '' : 'none';
+    b.innerHTML = mots.length ? '<strong>' + nR + '</strong> réservation' + (nR > 1 ? 's' : '') + ' · <strong>' + nA + '</strong> annulation' + (nA > 1 ? 's' : '')
+      + ' pour « ' + msgEsc(el.value.trim()) + ' » <a href="javascript:void(0)" onclick="var i=document.getElementById(\'resa-recherche\');i.value=\'\';filtrerResas();" style="color:var(--accent);margin-left:6px;">Effacer</a>' : '';
+  }
+}
+
 async function chargerAnnulationsOccurrences() {
   var box = document.getElementById('resa-occ-list');
   if (!box) return;
@@ -1739,7 +1778,7 @@ async function chargerAnnulationsOccurrences() {
     var tous = Object.keys(rMap).map(function(k){ return rMap[k]; });
     var cids = [...new Set(tous.map(function(r){ return r.client_id; }).filter(Boolean))];
     var dids = [...new Set(tous.map(function(r){ return r.chien_id; }).filter(Boolean))];
-    if (cids.length) { var rc = await db.from('clients').select('id,prenom,nom').in('id', cids); (rc.data || []).forEach(function(c){ cMap[c.id] = c; }); }
+    if (cids.length) { var rc = await db.from('clients').select('id,prenom,nom,commune').in('id', cids); (rc.data || []).forEach(function(c){ cMap[c.id] = c; }); }
     if (dids.length) { var rd = await db.from('chiens').select('id,nom').in('id', dids); (rd.data || []).forEach(function(d){ dMap[d.id] = d; }); }
 
     // Une ligne par demande : même client, même service, même auteur, même minute d'enregistrement
@@ -1753,7 +1792,7 @@ async function chargerAnnulationsOccurrences() {
     var SVCL = { walking:'Dog Walking', daycare:'Day Care', boarding:'Boarding' };
     window._annulGroupes = groupes;
     function jj(d) { var p = String(d).slice(0, 10).split('-'); return p[2] + '/' + p[1]; }
-    box.innerHTML = ordre.slice(0, 60).map(function(cle, idx) {
+    box.innerHTML = ordre.slice(0, 300).map(function(cle, idx) {
       var g = groupes[cle], r = g.r, c = r.client_id ? cMap[r.client_id] : null;
       var dates = [...new Set(g.lignes.map(function(o){ return String(o.date_occurrence).slice(0, 10); }))].sort();
       var chiens = [], tousChiens = false;
@@ -1779,7 +1818,8 @@ async function chargerAnnulationsOccurrences() {
           + '<span style="flex:1;color:var(--text-dim);">' + formatDateFR(d) + ' · ' + [...new Set(noms)].join(', ') + '</span>'
           + '<span class="badge ' + (pct > 0 ? 'b-accent' : 'b-green') + '">' + pct + ' %</span></div>';
       }).join('');
-      return '<div>'
+      var qAnn = [c ? c.prenom + ' ' + c.nom : '', c && c.commune ? c.commune : '', chiens.join(' '), SVCL[r.service] || '', periode].join(' ');
+      return '<div class="annul-grp" data-q="' + msgEsc(qAnn) + '" data-rang="' + idx + '"' + (idx >= 60 ? ' style="display:none;"' : '') + '>'
         + '<div class="inv-row" style="cursor:pointer;" onclick="var d=document.getElementById(\'annul-det-' + idx + '\');d.style.display=d.style.display===\'none\'?\'\':\'none\';">'
         +   '<div style="width:8px;height:8px;border-radius:50%;background:' + (tardives ? 'var(--red)' : 'var(--text-faint)') + ';flex-shrink:0;"></div>'
         +   '<div style="flex:1;min-width:0;">'
@@ -1793,6 +1833,7 @@ async function chargerAnnulationsOccurrences() {
         + '<div id="annul-det-' + idx + '" style="display:none;background:var(--k800,rgba(0,0,0,0.03));">' + detail + '</div>'
         + '</div>';
     }).join('');
+    filtrerResas();
   } catch(e) {
     console.error('annulations occurrences:', e);
     box.innerHTML = '<div style="padding:16px;color:var(--text-faint);font-size:12px;">Liste indisponible : ' + (e.message || '') + '</div>';
@@ -2268,7 +2309,8 @@ async function loadDashboardStats() {
       .neq('statut', 'annule')
       .order('creneau', { ascending: true });
 
-    loadPlanningToday(filterResasForDay(planRes.data || [], today), today);
+    var planJour = filterResasForDay(planRes.data || [], today);
+    loadPlanningToday(planJour, today, await chiensDesResas(planJour));
   } catch(e) { console.log('planning:', e); }
 
   try {
@@ -2284,7 +2326,34 @@ async function loadDashboardStats() {
   } catch(e) { console.log('recent-clients:', e); }
 }
 
-function loadPlanningToday(reservations, today) {
+// v2.86 — noms des chiens du jour (tableau de bord).
+// Une ligne = un chien (chien_id). Ancienne réservation « tous les chiens »
+// (chien_id vide) : tous les chiens actifs du client.
+function escNomsChiens(l) {
+  return (l || []).map(function(n) { return String(n).replace(/[&<>"]/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }).join(', ');
+}
+async function chiensDesResas(resas) {
+  var ids = {}, clients = {};
+  (resas || []).forEach(function(r) { if (r.client_id) clients[r.client_id] = 1; });
+  var out = { parId: {}, parClient: {} };
+  var cids = Object.keys(clients);
+  if (!cids.length) return out;
+  try {
+    var res = await db.from('chiens').select('id,nom,client_id,actif').in('client_id', cids);
+    (res.data || []).forEach(function(c) {
+      out.parId[c.id] = c.nom || 'Chien';
+      if (c.actif !== false) (out.parClient[c.client_id] = out.parClient[c.client_id] || []).push(c.nom || 'Chien');
+    });
+  } catch (e) { console.log('chiens du jour:', e); }
+  return out;
+}
+function nomsChiensResa(r, CH) {
+  if (r.chien_id) return [CH.parId[r.chien_id] || 'Chien'];
+  var l = (CH.parClient[r.client_id] || []).slice();
+  return l.length ? l : ['Chien'];
+}
+
+function loadPlanningToday(reservations, today, CH) {
   var body = document.getElementById('dash-planning-body');
   if (!body) return;
   var SVC  = { walking:'Dog Walking', daycare:'Day Care', boarding:'Pension' };
@@ -2300,17 +2369,20 @@ function loadPlanningToday(reservations, today) {
       ranger: r.ranger_nom || '',
       client: r.clients ? (r.clients.prenom + ' ' + r.clients.nom) : '—',
       test: !!(r.clients && r.clients.is_test),
-      dogs: 0, aller: false, retour: false, trStatut: null,
+      dogs: 0, noms: [], aller: false, retour: false, trStatut: null,
       heure_depot: r.heure_depot || null, heure_recuperation: r.heure_recuperation || null
     };
-    groups[key].dogs++;
+    nomsChiensResa(r, CH || { parId: {}, parClient: {} }).forEach(function(n) {
+      if (groups[key].noms.indexOf(n) === -1) groups[key].noms.push(n);
+    });
+    groups[key].dogs = groups[key].noms.length;
     if (r.service === 'daycare' && r.transport_statut && r.transport_statut !== 'refuse') {
       groups[key].aller = groups[key].aller || !!r.transport_aller;
       groups[key].retour = groups[key].retour || !!r.transport_retour;
       groups[key].trStatut = r.transport_statut;
     }
   });
-  var list = Object.keys(groups).map(function(k) { return groups[k]; });
+  var list = Object.keys(groups).map(function(k) { groups[k].noms.sort(function(x, y) { return x.localeCompare(y, 'fr'); }); return groups[k]; });
 
   if (!list.length) {
     body.innerHTML = '<div style="text-align:center;padding:22px;color:var(--text-faint);font-size:12px;">Aucune réservation aujourd\'hui</div>';
@@ -2327,7 +2399,7 @@ function loadPlanningToday(reservations, today) {
   list.sort(function(a, b) {
     var d = groupe(a)[2] - groupe(b)[2]; if (d) return d;
     if (a.service === 'daycare') { var x = a.heure_depot || '99', y = b.heure_depot || '99'; if (x !== y) return x < y ? -1 : 1; }
-    return a.client.localeCompare(b.client, 'fr');
+    return a.noms.join(', ').localeCompare(b.noms.join(', '), 'fr');
   });
 
   var html = '', lastCren = null;
@@ -2346,7 +2418,7 @@ function loadPlanningToday(reservations, today) {
     html += '<div class="slot" style="border-left:4px solid ' + (COUL[g.service] || 'var(--border)') + ';">'
       + (c[1] ? '<div class="slot-time">' + c[1] + '</div>' : '')
       + '<div class="slot-info">'
-      +   '<div class="slot-title">' + (SVC[g.service] || g.service) + ' — ' + g.client
+      +   '<div class="slot-title">' + (SVC[g.service] || g.service) + ' — ' + escNomsChiens(g.noms)
       +     (g.test ? ' <span class="badge b-muted" style="font-size:9px;vertical-align:middle;">Test</span>' : '') + '</div>'
       +   '<div class="slot-meta">' + meta + '</div>'
       + '</div>'
@@ -3444,7 +3516,7 @@ function renderServicesRepartition(resas) {
   resas.forEach(function(r) { if (counts[r.service] !== undefined) counts[r.service]++; });
   var total = resas.length;
   var labels = { walking: 'Dog Walking', daycare: 'Day Care', boarding: 'Boarding' };
-  var colors = { walking: 'var(--accent)', daycare: 'var(--green)', boarding: 'var(--blue)' };
+  var colors = { walking: 'var(--green)', daycare: 'var(--accent)', boarding: 'var(--blue)' };
   container.innerHTML = Object.keys(counts).map(function(svc) {
     var pct = total > 0 ? Math.round((counts[svc] / total) * 100) : 0;
     return '<div style="margin-bottom:12px;">'
@@ -3812,14 +3884,20 @@ async function enregistrerChien() {
   try {
     if (chPhotoEnAttente && ('photo_url' in d)) {
       try {
-        var ext = (chPhotoEnAttente.name.split('.').pop() || 'jpg').toLowerCase();
+        // v2.85 : photo réduite à 1200 px (JPEG) avant l'envoi
+        var fichierPh = await frPreparerPhoto(chPhotoEnAttente);
+        var jpegPh = fichierPh !== chPhotoEnAttente;
+        var ext = jpegPh ? 'jpg' : ((chPhotoEnAttente.name.split('.').pop() || 'jpg').toLowerCase());
         var path = (d.client_id || 'admin') + '/' + id + '-' + Date.now() + '.' + ext;
-        var up = await db.storage.from('chiens-photos').upload(path, chPhotoEnAttente, { upsert: true, contentType: chPhotoEnAttente.type });
+        var up = await db.storage.from('chiens-photos').upload(path, fichierPh,
+          { upsert: true, contentType: jpegPh ? 'image/jpeg' : (chPhotoEnAttente.type || 'image/jpeg') });
         if (up.error) throw up.error;
         ligne.photo_url = db.storage.from('chiens-photos').getPublicUrl(path).data.publicUrl;
       } catch(pe) {
         console.log('Photo chien (admin):', pe);
-        showToastAdmin('Photo non envoyée — le reste est enregistré', 'amber');
+        var mPh = String((pe && (pe.message || pe.error || pe.statusCode)) || pe || '');
+        frAlert({ type: 'attention', titre: 'Photo non envoyée',
+          message: 'Le reste de la fiche est enregistré, mais la photo n\'est pas partie.\n\nRaison donnée par le serveur : ' + (mPh || 'inconnue') });
       }
     }
     var r = await db.from('chiens').update(ligne).eq('id', id);
@@ -3838,6 +3916,35 @@ async function enregistrerChien() {
 
 // ── Fiche chien : photo, comportement, gabarit ──
 var CH_PHOTO_VIDE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
+// v2.85 — photo du chien : réduite à 1200 px (JPEG) avant l'envoi.
+// Une photo de téléphone pèse 3 à 10 Mo (parfois au format HEIC) et
+// n'arrivait pas dans le stockage ; réduite, elle fait 200 à 400 Ko.
+// Si le navigateur ne sait pas lire l'image, on envoie l'original.
+function frPreparerPhoto(file) {
+  return new Promise(function (resolve) {
+    if (!file) { resolve(file); return; }
+    var url;
+    try { url = URL.createObjectURL(file); } catch (e) { resolve(file); return; }
+    var img = new Image();
+    function fin(r) { try { URL.revokeObjectURL(url); } catch (e) {} resolve(r); }
+    img.onload = function () {
+      try {
+        var w = img.naturalWidth, h = img.naturalHeight;
+        if (!w || !h) { fin(file); return; }
+        var k = Math.min(1, 1200 / Math.max(w, h));
+        var c = document.createElement('canvas');
+        c.width = Math.round(w * k); c.height = Math.round(h * k);
+        var g = c.getContext('2d');
+        g.fillStyle = '#ffffff'; g.fillRect(0, 0, c.width, c.height);
+        g.drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob(function (b) { fin(b && b.size ? b : file); }, 'image/jpeg', 0.85);
+      } catch (e) { fin(file); }
+    };
+    img.onerror = function () { fin(file); };
+    img.src = url;
+  });
+}
+
 var chPhotoEnAttente = null;
 function onChienPhotoAdmin(e) {
   var f = e.target.files && e.target.files[0];
@@ -4864,6 +4971,7 @@ async function openResaDetail(id, dateOccurrence) {
     document.getElementById('modal-resa-detail').classList.add('open');
     completerMontantsResaAdmin(r);
     completerLogistiqueResa(r);
+    editeurFraisAnnul(r);
   } catch(e) { showToastAdmin('Erreur chargement réservation', 'red'); console.error(e); }
 }
 
@@ -4991,6 +5099,150 @@ async function completerLogistiqueResa(r) {
       blocCh.style.display = '';
     }
   } catch (e) { console.log('logistique réservation:', e); }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  v2.83 — Frais d'annulation modifiables (migration v63 pour la trace)
+//  Chaque séance annulée (et une série entière annulée) : 100 % · 50 % ·
+//  0 % · autre, motif facultatif. La facture du mois, calculée à son
+//  émission, suit ; une facture déjà émise reste figée (note de crédit).
+//  Le client reçoit un message dans sa langue.
+// ══════════════════════════════════════════════════════════════
+var FA = { r: null, lignes: [], occ: [], chiens: {} };
+function faJour(iso) { var p = String(iso).slice(0, 10).split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+function faBoutons(kind, id, pct) {
+  return [100, 50, 0].map(function(v) {
+    var actif = +pct === v;
+    return '<button class="rc-btn' + (v === 0 ? ' pay' : '') + '" ' + (actif ? 'disabled style="opacity:.45;cursor:default;"' : '')
+      + ' onclick="modifierFraisAnnul(\'' + kind + '\',\'' + id + '\',' + v + ')">' + (v === 0 ? 'Offrir (0 %)' : v + ' %') + '</button>';
+  }).join('') + '<button class="rc-btn" onclick="modifierFraisAnnul(\'' + kind + '\',\'' + id + '\',null)">Autre…</button>';
+}
+async function editeurFraisAnnul(r) {
+  var box = document.getElementById('detail-frais-annul');
+  if (!box) return;
+  box.style.display = 'none'; box.innerHTML = '';
+  try {
+    var q = db.from('reservations').select('*').eq('client_id', r.client_id).eq('service', r.service).eq('date_debut', r.date_debut).eq('statut', r.statut);
+    q = r.date_fin ? q.eq('date_fin', r.date_fin) : q.is('date_fin', null);
+    q = r.creneau ? q.eq('creneau', r.creneau) : q.is('creneau', null);
+    var rq = await q;
+    var lignes = (rq.data && rq.data.length) ? rq.data : [r];
+    var ra = await db.from('annulations_occurrences').select('*').in('reservation_id', lignes.map(function(x) { return x.id; })).order('date_occurrence');
+    var occ = (ra.data || []);
+    var rc = await db.from('chiens').select('id,nom').eq('client_id', r.client_id);
+    if (currentResaDetail !== r) return;
+    var nom = {}; (rc.data || []).forEach(function(d) { nom[d.id] = d.nom; });
+    FA = { r: r, lignes: lignes, occ: occ, chiens: nom };
+    var serie = r.statut === 'annule';
+    if (!occ.length && !serie) return;
+    var occSel = String(r._occurrenceDate || '').slice(0, 10);
+    var h = '';
+    if (serie) {
+      var p0 = +lignes[0].facture_pourcentage || 0;
+      h += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--border);">'
+        + '<div style="flex:1;min-width:150px;font-size:12.5px;"><strong>Toute la réservation annulée</strong>'
+        + (lignes[0].pct_initial != null && +lignes[0].pct_initial !== p0 ? '<div style="font-size:11px;color:var(--text-faint);">modifié : ' + lignes[0].pct_initial + ' % → ' + p0 + ' %' + (lignes[0].motif_modif ? ' · ' + msgEsc(lignes[0].motif_modif) : '') + '</div>' : '') + '</div>'
+        + '<span class="badge ' + (p0 > 0 ? 'b-accent' : 'b-green') + '">' + p0 + ' %</span>'
+        + '<div style="display:flex;gap:5px;flex-wrap:wrap;">' + faBoutons('serie', lignes[0].id, p0) + '</div></div>';
+    }
+    occ.forEach(function(o) {
+      var l = lignes.filter(function(x) { return x.id === o.reservation_id; })[0] || {};
+      var chien = l.chien_id ? (nom[l.chien_id] || 'Chien') : 'tous les chiens';
+      var d = String(o.date_occurrence).slice(0, 10), p = +o.facture_pourcentage || 0;
+      var qui = o.annule_par === 'client' ? 'par le client' : o.annule_par === 'chaleur' ? 'chaleurs' : 'par Gabriel';
+      h += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--border);' + (d === occSel ? 'background:rgba(255,95,31,0.07);margin:0 -8px;padding:8px;border-radius:8px;' : '') + '">'
+        + '<div style="flex:1;min-width:150px;font-size:12.5px;"><strong>' + faJour(d) + '</strong> · ' + msgEsc(chien)
+        + '<div style="font-size:11px;color:var(--text-faint);">annulée ' + qui + (o.annulation_tardive ? ' · tardive' : '')
+        + (o.pct_initial != null && +o.pct_initial !== p ? ' · modifié : ' + o.pct_initial + ' % → ' + p + ' %' + (o.motif_modif ? ' (' + msgEsc(o.motif_modif) + ')' : '') : '') + '</div></div>'
+        + '<span class="badge ' + (p > 0 ? 'b-accent' : 'b-green') + '">' + p + ' %</span>'
+        + '<div style="display:flex;gap:5px;flex-wrap:wrap;">' + faBoutons('seance', o.id, p) + '</div></div>';
+    });
+    box.innerHTML = '<div style="background:rgba(0,0,0,0.18);border-radius:10px;padding:8px 14px 4px;">'
+      + '<div style="font-family:FRDisplay,Oswald,Arial Narrow,sans-serif;font-size:13px;font-weight:800;letter-spacing:.04em;color:var(--accent);">Frais d\'annulation — modifiables</div>'
+      + '<div style="font-size:11px;color:var(--text-faint);margin-bottom:4px;">La facture du mois suit automatiquement tant qu\'elle n\'est pas émise. Le client est prévenu.</div>'
+      + h + '</div>';
+    box.style.display = '';
+  } catch (e) { console.log('frais annulation:', e); }
+}
+
+async function modifierFraisAnnul(kind, id, pct) {
+  var r = FA.r; if (!r) return;
+  var cible, ancien, date, chien;
+  if (kind === 'serie') {
+    cible = FA.lignes[0]; ancien = +cible.facture_pourcentage || 0; date = String(r.date_debut).slice(0, 10); chien = null;
+  } else {
+    cible = FA.occ.filter(function(o) { return o.id === id; })[0]; if (!cible) return;
+    ancien = +cible.facture_pourcentage || 0; date = String(cible.date_occurrence).slice(0, 10);
+    var l = FA.lignes.filter(function(x) { return x.id === cible.reservation_id; })[0] || {};
+    chien = l.chien_id ? (FA.chiens[l.chien_id] || 'Chien') : null;
+  }
+  if (pct === null) {
+    var v = await frPrompt({ titre: 'Pourcentage facturé', icone: 'saisie', message: 'Entre 0 et 100 %.', type: 'number', step: '1', valeur: String(ancien), ok: 'Continuer', annuler: 'Retour', obligatoire: true });
+    if (v === null) return;
+    pct = Math.round(parseFloat(String(v).replace(',', '.')));
+    if (isNaN(pct) || pct < 0 || pct > 100) { frAlert({ type: 'attention', titre: 'Pourcentage invalide', message: 'Indiquez un nombre entre 0 et 100.' }); return; }
+  }
+  if (pct === ancien) return;
+
+  // Facture du mois déjà émise ? Elle est figée : la modification ne la change pas.
+  try {
+    var mois = date.slice(0, 7);
+    var rf = await db.from('factures').select('id,numero_facture,numero,statut').eq('client_id', r.client_id).eq('periode', mois);
+    var emises = (rf.data || []).filter(function(f) { return f.statut !== 'annulee' && f.statut !== 'avoir'; });
+    if (emises.length) {
+      var num = emises[0].numero_facture || emises[0].numero || '';
+      if (!(await frConfirm({ titre: 'Facture déjà émise', icone: 'attention',
+          message: 'La facture de ce mois' + (num ? ' (**' + num + '**)' : '') + ' est déjà émise : elle **ne changera pas**.',
+          liste: ['La modification vaut pour l\'historique, l\'espace client et les factures futures', 'Pour corriger cette facture : note de crédit, puis nouvelle facture'],
+          ok: 'Modifier quand même', annuler: 'Retour' }))) return;
+    }
+  } catch (e) { /* lecture des factures impossible : on continue */ }
+
+  var motif = await frPrompt({ titre: ancien + ' % → ' + pct + ' %', icone: 'saisie',
+    message: (kind === 'serie' ? 'Réservation annulée' : 'Séance du **' + faJour(date) + '**' + (chien ? ' · ' + chien : '')) + '\n\nMotif (facultatif) : il figure dans le message envoyé au client.',
+    placeholder: 'Ex. : remplacée par une journée de Day Care', multiligne: true, ok: 'Appliquer', annuler: 'Retour' });
+  if (motif === null) return;
+  motif = motif.trim();
+
+  var maj = { facture_pourcentage: pct, annulation_tardive: pct > 0 ? !!cible.annulation_tardive : false };
+  var trace = { pct_initial: cible.pct_initial != null ? cible.pct_initial : ancien, modifie_le: new Date().toISOString(), motif_modif: motif || null };
+  try {
+    var res;
+    if (kind === 'serie') {
+      res = await majLignesReservation(r, Object.assign({}, maj, trace)).catch(async function(e) {
+        if (/pct_initial|modifie_le|motif_modif/.test(e.message || '')) return majLignesReservation(r, maj);
+        throw e;
+      });
+    } else {
+      var u = await db.from('annulations_occurrences').update(Object.assign({}, maj, trace)).eq('id', id).select('id');
+      if (u.error && /pct_initial|modifie_le|motif_modif/.test(u.error.message || '')) u = await db.from('annulations_occurrences').update(maj).eq('id', id).select('id');
+      if (u.error) throw u.error;
+      if (!u.data || !u.data.length) throw new Error('aucune ligne modifiée (droits administrateur ?)');
+    }
+  } catch (e) {
+    frAlert({ type: 'erreur', titre: 'Frais non modifiés', message: 'La modification n\'a pas été enregistrée.\n\nDétail : ' + (e.message || e) });
+    return;
+  }
+
+  // Message au client, dans sa langue
+  try {
+    var lg = 'fr';
+    try { var rl = await db.from('clients').select('langue').eq('id', r.client_id).maybeSingle(); lg = String((rl.data && rl.data.langue) || 'fr').toLowerCase(); } catch (e) {}
+    var svc = { walking: 'Dog Walking', daycare: 'Day Care', boarding: 'Boarding' }[r.service] || r.service;
+    var quoiFr = kind === 'serie' ? 'de votre réservation ' + svc + ' du ' + faJour(date) : 'de la séance ' + svc + ' du ' + faJour(date) + (chien ? ' (' + chien + ')' : '');
+    var quoiEn = kind === 'serie' ? 'for your ' + svc + ' booking on ' + faJour(date) : 'for the ' + svc + ' session on ' + faJour(date) + (chien ? ' (' + chien + ')' : '');
+    var quoiLb = kind === 'serie' ? 'fir Är ' + svc + '-Reservatioun vum ' + faJour(date) : 'fir den ' + svc + '-Termin vum ' + faJour(date) + (chien ? ' (' + chien + ')' : '');
+    var txt = lg === 'fr'
+      ? 'Les frais d\'annulation ' + quoiFr + ' ont été modifiés : ' + ancien + ' % → ' + pct + ' %.' + (pct === 0 ? ' Elle ne vous sera pas facturée.' : '') + (motif ? ' Motif : ' + motif : '')
+      : (lg === 'lu' || lg === 'lb')
+      ? 'D\'Annulatiounskäschte ' + quoiLb + ' goufen ugepasst: ' + ancien + ' % → ' + pct + ' %.' + (pct === 0 ? ' Dat gëtt Iech net verrechent.' : '') + (motif ? ' Grond: ' + motif : '')
+      : 'The cancellation fee ' + quoiEn + ' has been changed: ' + ancien + '% → ' + pct + '%.' + (pct === 0 ? ' It will not be charged.' : '') + (motif ? ' Reason: ' + motif : '');
+    await insererMessages([{ client_id: r.client_id, expediteur: 'admin', contenu: txt, lu: false }], 'message');
+  } catch (e) { console.log('message frais:', e); }
+
+  showToastAdmin('✓ Frais modifiés : ' + pct + ' % · client prévenu', 'green');
+  openResaDetail(r.id, r._occurrenceDate || r.date_debut);
+  if (typeof loadReservationsAdmin === 'function') loadReservationsAdmin();
 }
 
 // v2.71 : montant prévu et coût de chaque annulation (moteur de la facture)
@@ -5948,7 +6200,7 @@ async function chargerDestinatairesAlerte() {
   alerteDestinataires = [];
   try {
     if (cible === 'tous') {
-      var rt = await db.from('clients').select('id,prenom,nom,telephone')
+      var rt = await db.from('clients').select('id,prenom,nom,telephone,email')
         .eq('actif', true).order('nom');   // v2.71 : comptes test inclus
       if (rt.error) throw rt.error;
       alerteDestinataires = rt.data || [];
@@ -5962,7 +6214,7 @@ async function chargerDestinatairesAlerte() {
       var ids = [];
       duJour.forEach(function(r){ if (r.client_id && ids.indexOf(r.client_id) === -1) ids.push(r.client_id); });
       if (ids.length) {
-        var rc = await db.from('clients').select('id,prenom,nom,telephone')
+        var rc = await db.from('clients').select('id,prenom,nom,telephone,email')
           .in('id', ids).order('nom');   // v2.71 : comptes test inclus
         if (rc.error) throw rc.error;
         alerteDestinataires = rc.data || [];
@@ -5978,6 +6230,16 @@ async function chargerDestinatairesAlerte() {
   if (cpt) cpt.textContent = n + ' destinataire' + (n > 1 ? 's' : '');
   if (!n) {
     box.innerHTML = '<span style="font-size:11.5px;color:var(--text-faint);">Aucune prestation ce jour — personne a prevenir.</span>';
+    return;
+  }
+  var parMail = !!(document.getElementById('alerte-email') || {}).checked;
+  if (parMail) {   // v2.83 : avec l'e-mail coché, la pastille indique l'adresse e-mail
+    var sansMail = alerteDestinataires.filter(function(c) { return !c.email; }).length;
+    if (cpt) cpt.textContent = n + ' destinataire' + (n > 1 ? 's' : '') + (sansMail ? ' · ' + sansMail + ' sans e-mail' : '');
+    box.innerHTML = alerteDestinataires.map(function(c) {
+      return '<span class="badge ' + (c.email ? 'b-green' : 'b-muted') + '" style="font-size:10px;" title="'
+        + (c.email ? msgEsc(c.email) : 'Pas d\'adresse e-mail') + '">' + (c.email ? '✉ ' : '') + msgEsc(c.prenom + ' ' + c.nom) + '</span>';
+    }).join('');
     return;
   }
   box.innerHTML = alerteDestinataires.map(function(c) {
@@ -5999,9 +6261,15 @@ async function envoyerAlerte() {
   if (!alerteDestinataires.length) { showToastAdmin('Aucun destinataire', 'amber'); return; }
   var n = alerteDestinataires.length;
   var avecBanniere = !!(document.getElementById('alerte-banniere') || {}).checked;
+  var avecMail = !!(document.getElementById('alerte-email') || {}).checked;
+  var avecAdresse = alerteDestinataires.filter(function(c) { return c.email; });
+  var lst = [];
+  if (avecBanniere) lst.push('Une bannière sera aussi affichée dans l\'espace client');
+  if (avecMail) lst.push('Aussi par **e-mail** à ' + avecAdresse.length + ' client' + (avecAdresse.length > 1 ? 's' : '')
+    + (n - avecAdresse.length ? ' (' + (n - avecAdresse.length) + ' sans adresse : espace client seulement)' : ''));
   if (!(await frConfirm({ titre: 'Envoyer l\'alerte ?', icone: 'envoi',
       message: 'Envoyer ce message à **' + n + ' client' + (n > 1 ? 's' : '') + '** ?',
-      liste: avecBanniere ? ['Une bannière sera aussi affichée dans l\'espace client'] : null,
+      liste: lst.length ? lst : null,
       ok: 'Envoyer' }))) return;
 
   var btn = document.getElementById('alerte-btn-envoi');
@@ -6017,6 +6285,7 @@ async function envoyerAlerte() {
     }
     showToastAdmin('✓ Alerte envoyee a ' + n + ' client' + (n > 1 ? 's' : ''), 'green');
     if (avecBanniere) await publierBanniere();
+    if (avecMail) await envoyerAlerteParEmail(avecAdresse, txt, n - avecAdresse.length, btn);
     await chargerMessages(true);
   } catch(e) {
     showToastAdmin('Erreur : ' + (e.message || ''), 'red');
@@ -6024,6 +6293,35 @@ async function envoyerAlerte() {
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = "Envoyer l'alerte"; }
   }
+}
+
+// v2.83 — Diffusion par e-mail (fonction fr-envoyer-email, comme les factures) :
+// un e-mail par client, l'un après l'autre (limite d'envoi Resend), bilan à la fin.
+async function envoyerAlerteParEmail(liste, txt, sansAdresse, btn) {
+  if (!window.FR_MAIL) { frAlert({ type: 'erreur', titre: 'E-mails non envoyés', message: 'Module d\'envoi d\'e-mails absent de la page (fr-email.js).' }); return; }
+  var titre = ((document.getElementById('alerte-titre') || {}).value || '').trim() || 'Information';
+  var objet = 'Forest Rangers — ' + titre;
+  var ok = 0, echecs = [];
+  for (var i = 0; i < liste.length; i++) {
+    var c = liste[i];
+    if (btn) btn.textContent = 'E-mails ' + (i + 1) + '/' + liste.length + '…';
+    var r = await FR_MAIL.envoyer(db, { type: 'message', to: c.email, subject: objet, text: personnaliserAlerte(txt, c), client_id: c.id });
+    if (r && r.ok) ok++;
+    else {
+      echecs.push(c.prenom + ' ' + c.nom + (r && r.erreur ? ' — ' + r.erreur : ''));
+      if (r && r.indisponible) {   // fonction non déployée ou réseau coupé : inutile d'insister
+        for (var j = i + 1; j < liste.length; j++) echecs.push(liste[j].prenom + ' ' + liste[j].nom + ' — non tenté');
+        break;
+      }
+    }
+    if (i < liste.length - 1) await new Promise(function(res) { setTimeout(res, 600); });
+  }
+  if (!echecs.length && !sansAdresse) { showToastAdmin('✓ ' + ok + ' e-mail' + (ok > 1 ? 's' : '') + ' envoyé' + (ok > 1 ? 's' : ''), 'green'); return; }
+  var l = [];
+  if (ok) l.push('**' + ok + '** e-mail' + (ok > 1 ? 's' : '') + ' envoyé' + (ok > 1 ? 's' : ''));
+  if (sansAdresse) l.push(sansAdresse + ' client' + (sansAdresse > 1 ? 's' : '') + ' sans adresse e-mail (message dans l\'espace client seulement)');
+  if (echecs.length) l.push(echecs.length + ' échec' + (echecs.length > 1 ? 's' : '') + ' : ' + echecs.slice(0, 8).join(' · ') + (echecs.length > 8 ? ' …' : ''));
+  frAlert({ type: echecs.length ? 'attention' : 'info', titre: 'Envoi par e-mail', message: 'Le message est bien arrivé dans l\'espace client de tous les destinataires.', liste: l });
 }
 
 // ── Annulation des promenades du jour (alerte rouge, §19) ──
@@ -7579,15 +7877,36 @@ async function openStatDetail(type) {
   var mois  = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 7);
   try {
     if (type === 'promenades') {
-      title.textContent = 'Réservations du jour';
+      title.textContent = 'Chiens du jour';
       await assurerCalendrier();
-      var { data } = await db.from('reservations').select('id,service,creneau,statut,date_debut,date_fin,jours_recurrence,date_fin_recurrence,dates_exclues,client_id,chien_id, clients(prenom, nom, is_test)').lte('date_debut', today).gte('date_fin', today).neq('statut', 'annule').order('creneau');
+      var { data } = await db.from('reservations').select('*, clients(prenom, nom, is_test)').lte('date_debut', today).gte('date_fin', today).neq('statut', 'annule').order('creneau');
       data = filterResasForDay(data || [], today);
       if (!data || !data.length) { content.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-faint);">Aucune réservation aujourd\'hui</div>'; return; }
       var svc = { walking: 'Dog Walking', daycare: 'Day Care', boarding: 'Boarding' };
       var cr  = { matin: '09h00', midi: '12h00', apmidi: '14h30' };
-      content.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:1px solid var(--border);"><th style="padding:8px;text-align:left;color:var(--text-faint);font-size:10px;">Client</th><th style="padding:8px;text-align:left;color:var(--text-faint);font-size:10px;">Service</th><th style="padding:8px;text-align:left;color:var(--text-faint);font-size:10px;">Créneau</th><th style="padding:8px;text-align:left;color:var(--text-faint);font-size:10px;">Ranger</th></tr></thead><tbody>'
-        + data.map(function(r) { var cl = r.clients ? r.clients.prenom + ' ' + r.clients.nom : '—'; return '<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;color:var(--text);">' + cl + '</td><td style="padding:8px;color:var(--text-dim);">' + (svc[r.service]||r.service) + '</td><td style="padding:8px;color:var(--accent);font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;">' + (cr[r.creneau]||r.creneau||'—') + '</td><td style="padding:8px;color:var(--text-dim);">' + (r.ranger_nom||'—') + '</td></tr>'; }).join('') + '</tbody></table>';
+      var ordreSvc = { walking: 0, daycare: 1, boarding: 2 }, ordreCr = { matin: 0, midi: 1, apmidi: 2 };
+      // v2.86 : une ligne par chien, nom du chien (plus de nom de client)
+      var CHj = await chiensDesResas(data), lignes = [];
+      data.forEach(function(r) {
+        nomsChiensResa(r, CHj).forEach(function(n) { lignes.push({ nom: n, r: r }); });
+      });
+      lignes.sort(function(x, y) {
+        return ((ordreSvc[x.r.service] != null ? ordreSvc[x.r.service] : 9) - (ordreSvc[y.r.service] != null ? ordreSvc[y.r.service] : 9))
+          || ((ordreCr[x.r.creneau] != null ? ordreCr[x.r.creneau] : 9) - (ordreCr[y.r.creneau] != null ? ordreCr[y.r.creneau] : 9))
+          || x.nom.localeCompare(y.nom, 'fr');
+      });
+      var th = 'padding:8px;text-align:left;color:var(--text-faint);font-size:10px;';
+      content.innerHTML = '<div class="stat-detail-total"><span>' + lignes.length + ' chien' + (lignes.length > 1 ? 's' : '') + '</span></div>'
+        + '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:1px solid var(--border);"><th style="' + th + '">Chien</th><th style="' + th + '">Service</th><th style="' + th + '">Créneau</th><th style="' + th + '">Ranger</th></tr></thead><tbody>'
+        + lignes.map(function(x) {
+            var r = x.r, test = r.clients && r.clients.is_test;
+            var creneau = r.service === 'walking' ? (cr[r.creneau] || r.creneau || '—') : (r.service === 'daycare' ? 'Journée' : 'Séjour');
+            return '<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;color:var(--text);font-weight:600;">' + escNomsChiens([x.nom])
+              + (test ? ' <span class="badge b-muted" style="font-size:9px;vertical-align:middle;">Test</span>' : '') + '</td>'
+              + '<td style="padding:8px;color:var(--text-dim);">' + (svc[r.service] || r.service) + '</td>'
+              + '<td style="padding:8px;color:var(--accent);font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;">' + creneau + '</td>'
+              + '<td style="padding:8px;color:var(--text-dim);">' + (r.ranger_nom || '—') + '</td></tr>';
+          }).join('') + '</tbody></table>';
     } else if (type === 'facture_passe') {
       var perP = perMois(-1);
       title.textContent = 'Facturé — ' + MOIS_FR[parseInt(perP.slice(5, 7), 10) - 1].toLowerCase() + ' ' + perP.slice(0, 4);
@@ -7792,6 +8111,7 @@ document.addEventListener('click', function(e) {
     <div id="detail-logistique" style="display:none;margin-bottom:14px;"></div>
     <div id="detail-chiens-bloc" style="display:none;margin-bottom:14px;"></div>
 
+    <div id="detail-frais-annul" style="display:none;margin-bottom:12px;"></div>
     <div id="detail-annulation-info" style="display:none;background:rgba(224,90,90,0.12);border:1px solid rgba(224,90,90,0.3);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:var(--red);"></div>
 
     <div class="form-group">

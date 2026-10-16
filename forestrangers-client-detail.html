@@ -2053,8 +2053,8 @@ function dessinerHistoriqueClient(hist, factureParMois, realiseParMois, svcParMo
   _chartsClient.svc = new Chart(document.getElementById('hist-svc'), {
     type: 'bar',
     data: { labels: labels, datasets: [
-      { label: 'Dog Walking', data: svcParMois.walking, backgroundColor: acc, borderRadius: 3, maxBarThickness: 26 },
-      { label: 'Day Care', data: svcParMois.daycare, backgroundColor: gr, borderRadius: 3, maxBarThickness: 26 },
+      { label: 'Dog Walking', data: svcParMois.walking, backgroundColor: gr, borderRadius: 3, maxBarThickness: 26 },
+      { label: 'Day Care', data: svcParMois.daycare, backgroundColor: acc, borderRadius: 3, maxBarThickness: 26 },
       { label: 'Boarding (nuits)', data: svcParMois.boarding, backgroundColor: bl, borderRadius: 3, maxBarThickness: 26 }
     ] },
     options: { responsive: true, maintainAspectRatio: false, animation: { duration: 250 }, interaction: { mode: 'index', intersect: false },
