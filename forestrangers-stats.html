@@ -140,6 +140,10 @@ html, body { min-height: 100vh; font-family: 'Instrument Sans', sans-serif; back
 .bar-track { flex: 1; height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
 .bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
 .bar-val { font-size: 12px; font-weight: 700; width: 60px; text-align: right; flex-shrink: 0; }
+/* v2.89 : facturé par service — libellés et montants plus longs */
+.fac-svc .bar-label { width: 150px; }
+.fac-svc .bar-val { width: 120px; }
+@media (max-width: 600px) { .fac-svc .bar-label { width: 96px; } .fac-svc .bar-val { width: 104px; font-size: 11px; } }
 
 /* ── TABLE ── */
 .tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -408,13 +412,14 @@ async function chargerDonnees(debut, fin) {
     toutLire(function() { return db.from('clients').select('*').order('nom'); }),
     toutLire(function() { return db.from('chiens').select('id, nom, actif, client_id, poids_kg, created_at').order('created_at'); }),
     toutLire(function() { return db.from('reservations').select('*').lte('date_debut', fin).order('date_debut'); }),
-    toutLire(function() { return db.from('factures').select('id, client_id, numero, periode, total_ttc, montant_paye, statut, date_emission, date_paiement, mensuelle, notes').order('periode'); }),
+    toutLire(function() { return db.from('factures').select('id, client_id, numero, periode, total_ttc, montant_paye, statut, date_emission, date_paiement, mensuelle, notes, lignes').order('periode'); }),
     lireOuVide(function() { return db.from('v_factures_suivi').select('id, client_id, solde, jours_retard'); }),
     lireOuVide(function() { return db.from('paiements').select('id, client_id, date_virement, montant, annule_le').gte('date_virement', debut); }),
     lireOuVide(function() { return db.from('staff').select('id, prenom, nom, actif').order('prenom'); }),
     lireOuVide(function() { return db.from('camionnettes').select('*').order('nom'); }),
     lireOuVide(function() { return db.from('kilometrage').select('*').gte('date', debut); }),
-    lireOuVide(function() { return db.from('attributions_camionnettes').select('*').gte('date_jour', debut).lte('date_jour', fin); })
+    lireOuVide(function() { return db.from('attributions_camionnettes').select('*').gte('date_jour', debut).lte('date_jour', fin); }),
+    lireOuVide(function() { return db.from('factures_historique').select('*').order('periode'); })   // v2.89 : anciens clients sans fiche
   ]);
   var clients = res[0].filter(function(c) { return !c.is_test; });
   var okC = {}; clients.forEach(function(c) { okC[c.id] = c; });
@@ -439,6 +444,15 @@ async function chargerDonnees(debut, fin) {
     suivi: {}, paiements: res[5].filter(function(p) { return okC[p.client_id] && !p.annule_le; }),
     staff: res[6], camionnettes: res[7], km: res[8], attributions: res[9] };
   res[4].forEach(function(s) { D.suivi[s.id] = s; });
+  // v2.89 : factures d'anciens clients sans fiche (migration v65). Elles
+  // comptent dans le facturé, le graphique et le top clients, sous le nom
+  // de la facture ; jamais dans les listes de clients ni le planning.
+  (res[10] || []).forEach(function(h) {
+    var cid = 'ancien-' + h.numero_client;
+    if (!D.clientParId[cid]) D.clientParId[cid] = { id: cid, prenom: h.client_nom || ('Client ' + h.numero_client), nom: '', ancien: true, chiens: h.chiens };
+    D.factures.push({ id: 'hist-' + h.numero, client_id: cid, numero: h.numero, periode: h.periode, total_ttc: +h.total_ttc || 0,
+      montant_paye: +h.total_ttc || 0, statut: 'payee', date_emission: h.date_emission, mensuelle: false, lignes: h.lignes, ancien: true });
+  });
   // v2.71 : comptes test — hors de toutes les statistiques, résumés à part
   var testeurs = res[0].filter(function(c) { return c.is_test; }), okT = {};
   testeurs.forEach(function(c) { okT[c.id] = c; });
@@ -665,17 +679,19 @@ function sectionFinance(b, A, AP, EV, ic) {
   h += kpi('red', 'Reste à encaisser', eur(du), ouvertes.length + ' facture' + (ouvertes.length > 1 ? 's' : '') + ' ouverte' + (ouvertes.length > 1 ? 's' : '') + ' (toutes périodes)');
   h += '</div>';
   h += '<div style="margin-top:10px;">' + carte('Évolution — facturé, encaissé, prestations', '<div class="chart-box"><canvas id="ch-fin"></canvas></div><div class="card-note">Barres : facturé par mois de prestation et encaissé par mois de virement. Ligne : valeur des prestations d\'après le planning — en pointillés, la prévision jusqu\'à décembre (réservations connues).</div>') + '</div>';
+  h += '<div style="margin-top:10px;">' + carte('Facturé par service — ' + esc(b.label), factureParService(F), '<span class="badge b-muted">' + eur(fac) + '</span>') + '</div>';
 
   // Top clients + à relancer
   var parC = {};
   F.forEach(function(f) { parC[f.client_id] = (parC[f.client_id] || 0) + (+f.total_ttc || 0); });
-  var top = Object.keys(parC).map(function(id) { return { c: ST.clientParId[id], v: parC[id] }; }).sort(function(x, y) { return y.v - x.v; }).slice(0, 5);
+  var top = Object.keys(parC).filter(function(id) { return ST.clientParId[id]; })
+    .map(function(id) { return { c: ST.clientParId[id], v: parC[id] }; }).sort(function(x, y) { return y.v - x.v; }).slice(0, 5);
   if (!top.length) {
     top = Object.keys(calc(b.debut, b.fin).parClient).map(function(id) { return { c: ST.clientParId[id], v: calc(b.debut, b.fin).parClient[id].total_ttc, est: true }; })
       .sort(function(x, y) { return y.v - x.v; }).slice(0, 5);
   }
   var topH = top.length ? '<table class="tbl"><tbody>' + top.map(function(t, i) {
-      return '<tr><td class="main" style="color:var(--accent);width:28px;">' + pad(i + 1) + '</td><td class="main">' + esc(t.c.prenom + ' ' + t.c.nom) + '</td><td class="main" style="text-align:right;color:var(--green);">' + eur(t.v) + (t.est ? ' <span style="color:var(--text-faint);font-size:10px;">estim.</span>' : '') + '</td></tr>';
+      return '<tr><td class="main" style="color:var(--accent);width:28px;">' + pad(i + 1) + '</td><td class="main">' + esc((t.c.prenom + ' ' + t.c.nom).trim()) + (t.c.ancien ? ' <span class="badge b-muted" title="' + esc(t.c.chiens || '') + '">ancien client</span>' : '') + '</td><td class="main" style="text-align:right;color:var(--green);">' + eur(t.v) + (t.est ? ' <span style="color:var(--text-faint);font-size:10px;">estim.</span>' : '') + '</td></tr>';
     }).join('') + '</tbody></table>' : '<div class="empty">Aucune donnée</div>';
   var parCli = {};
   ouvertes.forEach(function(f) {
@@ -692,6 +708,38 @@ function sectionFinance(b, A, AP, EV, ic) {
     + '<div class="card"><div class="card-head"><span class="card-title">Clients à relancer</span><span class="badge b-red">' + rel.length + '</span></div>' + relH + '</div>'
     + '</div>';
   return h;
+}
+
+// ── FACTURÉ PAR SERVICE (v2.89) ──
+// D'après le détail figé des factures (lignes), donc aussi pour les mois
+// d'avant l'app, sans réservations. Montants TTC. Chien supplémentaire et
+// annulations comptent avec leur service ; une facture sans détail est
+// rangée dans « Non détaillé ».
+var FAC_SVC = [
+  ['walking', 'Dog Walking', '--green'], ['daycare', 'Day Care', '--accent'], ['boarding', 'Boarding', '--blue'],
+  ['frais_deplacement', 'Déplacements', '--amber'], ['education', 'Éducation canine', '--blue'],
+  ['produits', 'Nourriture et produits', '--text-dim'], ['regularisation', 'Régularisations', '--text-dim'],
+  ['autre', 'Autre', '--text-dim'], ['non_detaille', 'Non détaillé', '--text-faint']
+];
+function factureParService(F) {
+  var t = {}, total = 0;
+  F.forEach(function(f) {
+    var tot = +f.total_ttc || 0, vu = 0;
+    total += tot;
+    (Array.isArray(f.lignes) ? f.lignes : []).forEach(function(l) {
+      if (!l) return;
+      var k = l.type === 'regularisation' ? 'regularisation' : (l.service || 'autre');
+      if (!FAC_SVC.some(function(s) { return s[0] === k; })) k = 'autre';
+      t[k] = (t[k] || 0) + (+l.total || 0); vu += (+l.total || 0);
+    });
+    if (Math.abs(tot - vu) >= 0.01) t.non_detaille = (t.non_detaille || 0) + (tot - vu);
+  });
+  if (!total) return '<div class="empty">Aucune facture sur la période</div>';
+  var h = FAC_SVC.filter(function(s) { return Math.abs(t[s[0]] || 0) >= 0.5; }).map(function(s) {
+    var v = t[s[0]], c = 'var(' + s[2] + ')';
+    return barRow(s[1], eur(v) + ' · ' + Math.round(v / total * 100) + ' %', v / total * 100, c);
+  }).join('');
+  return '<div class="fac-svc">' + h + '</div><div class="card-note">D\'après le détail des factures, TTC — y compris les mois facturés avant l\'app. Chien supplémentaire et annulations sont comptés avec leur service.</div>';
 }
 
 // ── SECTION PROJECTIONS (v2.58) ──
