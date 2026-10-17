@@ -457,6 +457,7 @@ textarea.input-field { resize: none; }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="fr-dialog.js"></script>
+<script src="fr-icones.js"></script>
 <!-- Repli CDN : si jsDelivr n'a pas repondu, on tente unpkg avant d'abandonner. -->
 <script>if (!window.supabase) { document.write('<scr' + 'ipt src="https://unpkg.com/@supabase/supabase-js@2"><\/scr' + 'ipt>'); }</script>
   <script>
@@ -475,7 +476,6 @@ textarea.input-field { resize: none; }
       + 'background:#1c1f14;color:#eceee6;display:flex;align-items:center;justify-content:center;'
       + 'padding:24px;font-family:\'Instrument Sans\',system-ui,sans-serif;text-align:center;">'
       + '<div style="max-width:340px;">'
-      + '<div style="font-size:34px;margin-bottom:14px;">📡</div>'
       + '<div style="font-size:17px;font-weight:600;margin-bottom:10px;">Connexion au serveur impossible</div>'
       + '<div style="font-size:13.5px;line-height:1.6;color:rgba(236,238,230,0.6);margin-bottom:20px;">'
       + 'Votre reseau ne permet pas de charger l\'application. Verifiez votre connexion, '
@@ -624,7 +624,7 @@ textarea.input-field { resize: none; }
       <div class="screen-pad" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;">
         <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#c44010);display:flex;align-items:center;justify-content:center;font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:24px;font-weight:800;color:white;margin:0 auto 20px;box-shadow:0 8px 24px rgba(255,95,31,0.35);">G</div>
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:var(--text-faint);margin-bottom:8px;">Message de Gabriel</div>
-        <div id="message-gabriel-texte" style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:22px;font-weight:800;color:var(--text);line-height:1.4;margin-bottom:8px;padding:0 16px;">Merci <span id="msg-ranger-prenom">Sophie</span> ! 🐾</div>
+        <div id="message-gabriel-texte" style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:22px;font-weight:800;color:var(--text);line-height:1.4;margin-bottom:8px;padding:0 16px;">Merci <span id="msg-ranger-prenom">Sophie</span> !</div>
         <div style="font-size:15px;color:var(--text-dim);line-height:1.6;padding:0 24px;">
           Amusez-vous bien avec les chiens aujourd'hui.<br>
           <span style="color:var(--accent);">Bonne journee !</span>
@@ -643,7 +643,7 @@ textarea.input-field { resize: none; }
       <div class="screen-pad" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;">
         <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#c44010);display:flex;align-items:center;justify-content:center;font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:24px;font-weight:800;color:white;margin:0 auto 20px;box-shadow:0 8px 24px rgba(255,95,31,0.35);">G</div>
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:var(--text-faint);margin-bottom:8px;">Message de Gabriel</div>
-        <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:22px;font-weight:800;color:var(--text);line-height:1.4;margin-bottom:8px;padding:0 16px;">Merci <span id="msg-fin-prenom">Sophie</span> ! 🌙</div>
+        <div style="font-family:'Norwester', 'Oswald', 'Arial Narrow', sans-serif;font-size:22px;font-weight:800;color:var(--text);line-height:1.4;margin-bottom:8px;padding:0 16px;">Merci <span id="msg-fin-prenom">Sophie</span> !</div>
         <div style="font-size:15px;color:var(--text-dim);line-height:1.6;padding:0 24px;">
           Excellent travail aujourd'hui.<br>
           <span style="color:var(--accent);">Belle fin de journee !</span>
@@ -681,7 +681,7 @@ textarea.input-field { resize: none; }
 
         <div style="background:var(--accent-dim);border:1px solid rgba(255,95,31,0.2);border-radius:12px;padding:16px;text-align:center;margin-bottom:20px;">
           <div style="font-size:13px;color:var(--text-dim);line-height:1.6;">
-            Merci <strong style="color:var(--text);" id="recap-ranger-nom">Sophie</strong> pour votre travail aujourd'hui ! 🐾<br>
+            Merci <strong style="color:var(--text);" id="recap-ranger-nom">Sophie</strong> pour votre travail aujourd'hui !<br>
             <span style="color:var(--accent);">A demain !</span>
           </div>
         </div>
@@ -807,7 +807,7 @@ textarea.input-field { resize: none; }
           </div>
           <div class="photo-preview">
             <div style="text-align:center;">
-              <div style="font-size:40px;margin-bottom:8px;">📸</div>
+              <div style="margin-bottom:8px;opacity:.6;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
               <div style="font-size:12px;color:var(--text-dim);">Photo chargee</div>
             </div>
             <div class="photo-badge">Groupe · 2 chiens</div>
@@ -1918,7 +1918,7 @@ function renderMissions(resas, clientsMap, chiensMap) {
     html += '<span class="badge ' + badgeClass + '">' + badgeLabel + '</span>';
     html += '</div>';
     html += '<div class="mission-dogs">' + chiensHtml + '</div>';
-    if (r.notes) html += '<div class="mission-meta" style="margin-top:6px;color:var(--accent);">📌 ' + r.notes + '</div>';
+    if (r.notes) html += '<div class="mission-meta" style="margin-top:6px;color:var(--accent);">' + FR_ICO('note', 12) + ' ' + r.notes + '</div>';
     if (!isDone) {
       html += '<div class="mission-footer">';
       html += '<button class="btn-big btn-start" style="width:auto;padding:10px 18px;font-size:13px;margin-top:8px;" onclick="demarrerMission(\'' + r.id + '\')">';
@@ -1979,7 +1979,7 @@ function tagChien(c) {
 
   if (chaleurActive(c)) {
     return '<span class="dog-tag" style="background:rgba(214,92,140,0.16);color:#d65c8c;border-color:rgba(214,92,140,0.4);">'
-      + '♀ ' + nom + ' · en chaleur</span>';
+      + FR_ICO('femelle', 12) + ' ' + nom + ' · en chaleur</span>';
   }
   if (ouvert && ouvert.statut === 'signale') {
     return '<span class="dog-tag" style="background:rgba(240,180,41,0.14);color:#f0b429;border-color:rgba(240,180,41,0.35);">'
@@ -1988,7 +1988,7 @@ function tagChien(c) {
   if (chaleurEligible(c)) {
     return '<span class="dog-tag" onclick="signalerChaleurRanger(\'' + c.id + '\',\'' + nom.replace(/'/g, "\\'") + '\')" '
       + 'title="Signaler que cette chienne semble en chaleur" style="cursor:pointer;">'
-      + nom + ' <span style="color:#d65c8c;font-weight:800;margin-left:3px;">♀ signaler</span></span>';
+      + nom + ' <span style="color:#d65c8c;font-weight:800;margin-left:3px;">' + FR_ICO('femelle', 11) + ' signaler</span></span>';
   }
   return '<span class="dog-tag">' + nom + '</span>';
 }

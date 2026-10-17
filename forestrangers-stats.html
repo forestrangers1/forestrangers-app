@@ -100,6 +100,9 @@ html, body { min-height: 100vh; font-family: 'Instrument Sans', sans-serif; back
 .grid-4 { grid-template-columns: repeat(4, 1fr); }
 .grid-3 { grid-template-columns: repeat(3, 1fr); }
 .grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-5 { grid-template-columns: repeat(5, 1fr); }   /* v2.90 : vue rapide */
+@media (max-width: 1100px) { .grid-5 { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 600px) { .grid-5 { grid-template-columns: 1fr 1fr; } .grid-5 > :last-child:nth-child(odd) { grid-column: 1 / -1; } }
 @media (max-width: 900px) { .grid-4 { grid-template-columns: repeat(2, 1fr); } .grid-3 { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 600px) { .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; } .filters-bar { padding: 10px 14px; } .content { padding: 14px 14px 80px; } }
 
@@ -296,7 +299,6 @@ html, body { min-height: 100vh; font-family: 'Instrument Sans', sans-serif; back
       + 'background:#1c1f14;color:#eceee6;display:flex;align-items:center;justify-content:center;'
       + 'padding:24px;font-family:\'Instrument Sans\',system-ui,sans-serif;text-align:center;">'
       + '<div style="max-width:340px;">'
-      + '<div style="font-size:34px;margin-bottom:14px;">📡</div>'
       + '<div style="font-size:17px;font-weight:600;margin-bottom:10px;">Connexion au serveur impossible</div>'
       + '<div style="font-size:13.5px;line-height:1.6;color:rgba(236,238,230,0.6);margin-bottom:20px;">'
       + 'Votre reseau ne permet pas de charger l\'application. Verifiez votre connexion, '
@@ -603,6 +605,7 @@ function renderStats() {
   var EV = evo.map(function(per) { var bm = FR_FACT.periodeMois(per); var c = calc(bm.debut, bm.fin); return { per: per, debut: bm.debut, fin: bm.fin, c: c, a: agreger(c) }; });
 
   var h = '';
+  h += sectionVueRapide();   // v2.90
   h += sectionFinance(b, A, AP, EV, idxCourant);
   h += sectionProjection();
   h += sectionServices(b, C, A, AP, EV, idxCourant);
@@ -610,31 +613,44 @@ function renderStats() {
   h += sectionClients(b, A, AP, EV, idxCourant);
   h += sectionEquipe(b);
   h += sectionCamionnettes(b, EV, idxCourant);
-  h += sectionTesteurs(b);
+  h += sectionTesteurs();
   document.getElementById('stats-content').innerHTML = h;
   dessiner(b, C, A, EV, idxCourant);
   majProj();
 }
 
 // ── COMPTES TEST (v2.71) : phase de test, jamais mélangés aux chiffres ──
-function sectionTesteurs(b) {
-  var T = ST.testeurs;
-  if (!T || !T.clients.length) return '';
-  var lignes = T.clients.map(function(c) {
-    var rs = T.resas.filter(function(r) { return r.client_id === c.id && String(r.date_debut).slice(0, 10) <= b.fin; });
-    var an = T.annulations.filter(function(a) { return rs.some(function(r) { return r.id === a.reservation_id; }); });
-    var res = rs.length ? FR_FACT.calculer({ client: c, chiens: T.chiens.filter(function(d) { return d.client_id === c.id; }), reservations: rs, annulations: an }, b.debut, b.fin, {}) : null;
-    var nbAnn = 0; if (res) res.seances.forEach(function(s) { nbAnn += s.annules.length; });
-    var fac = T.factures.filter(function(f) { return f.client_id === c.id && String(f.periode || '') >= b.debut.slice(0, 7) && String(f.periode || '') <= b.fin.slice(0, 7); });
-    return '<tr><td>' + esc((c.prenom || '') + ' ' + (c.nom || '')) + ' <span style="color:var(--text-faint);">#' + esc(c.numero_client || '—') + '</span></td>'
-      + '<td class="num">' + (res ? res.nb_seances : 0) + '</td><td class="num">' + nbAnn + '</td>'
-      + '<td class="num">' + eur(res ? res.total_ttc : 0) + '</td>'
-      + '<td class="num">' + fac.length + (fac.length ? ' · ' + eur(somme(fac, 'total_ttc')) : '') + '</td></tr>';
+function sectionTesteurs() {
+  // v2.90 : plus de détail par testeur. Par mois depuis septembre : facturé
+  // aux clients actifs, valeur des comptes test, combiné. Mois en cours :
+  // estimation d'après le planning.
+  var L = testeursSuivis();
+  if (!L.length) return '';
+  var n = new Date(), p0 = perDe(n.getFullYear(), n.getMonth()), R = [];
+  for (var p = TEST_DEBUT; p <= p0; p = perSuivant(p)) {
+    var cli = p === p0 ? valeurMois(p).total : somme(facturesMois(p), 'total_ttc');
+    R.push({ per: p, cli: cli, tst: testeursMois(p), enCours: p === p0 });
+  }
+  window._TEST_ROWS = R;
+  if (!R.length) return '';
+  var tc = somme(R, 'cli'), tt = somme(R, 'tst');
+  var rows = R.map(function(r) {
+    return '<tr><td>' + esc(moisNom(r.per).charAt(0).toUpperCase() + moisNom(r.per).slice(1)) + (r.enCours ? ' <span class="badge b-muted">en cours</span>' : '') + '</td>'
+      + '<td class="num">' + eur(r.cli) + '</td><td class="num">' + eur(r.tst) + '</td><td class="num main">' + eur(r.cli + r.tst) + '</td></tr>';
   }).join('');
-  return '<div style="margin-top:10px;">' + carte('Comptes test — phase de test',
-      '<div style="overflow-x:auto;"><table class="tbl" style="width:100%;font-size:12.5px;"><thead><tr><th style="text-align:left;">Testeur</th><th class="num">Séances</th><th class="num">Annulations</th><th class="num">Valeur (fictive)</th><th class="num">Factures test</th></tr></thead><tbody>' + lignes + '</tbody></table></div>'
-      + '<div class="card-note">Ces comptes reçoivent tout (emails, factures marquées « test — à ne pas payer ») mais ne comptent dans aucun chiffre ci-dessus.</div>',
-      '<span class="badge b-muted">' + T.clients.length + ' compte' + (T.clients.length > 1 ? 's' : '') + '</span>') + '</div>';
+  var depuis = moisLong(TEST_DEBUT);
+  var h = '<div class="section-title">Comptes test — phase de test</div>';
+  h += carte('Facturé par mois — clients et testeurs',
+    '<div style="overflow-x:auto;"><table class="tbl"><thead><tr><th>Mois</th><th class="num">Clients actifs</th><th class="num">Testeurs</th><th class="num">Combiné</th></tr></thead><tbody>' + rows + '</tbody></table></div>',
+    '<span class="badge b-muted">depuis ' + esc(depuis) + '</span>');
+  h += '<div style="margin-top:10px;">' + carte('Clients actifs et testeurs par mois', '<div class="chart-box small"><canvas id="ch-test"></canvas></div><div class="card-note">Au-dessus de chaque barre : le combiné. Survol : clients et testeurs séparément. Mois en cours : estimation d\'après le planning.</div>') + '</div>';
+  h += '<div class="grid grid-3" style="margin-top:10px;">'
+    + kpi('green', 'Clients actifs · depuis ' + esc(depuis), eur(tc), 'Facturé' + (R[R.length - 1].enCours ? ' (mois en cours estimé)' : ''))
+    + kpi('amber', 'Testeurs · depuis ' + esc(depuis), eur(tt), L.map(function(c) { return esc(c.prenom); }).join(', ') + ' · factures de test, sinon planning')
+    + kpi('accent', 'Combiné', eur(tc + tt), 'Clients actifs + testeurs')
+    + '</div>';
+  h += '<div class="card-note" style="margin-top:8px;">Les testeurs ne comptent dans aucun autre chiffre de la page : ils n\'apparaissent qu\'ici et dans la dernière case de la vue rapide.</div>';
+  return h;
 }
 
 // ── HTML : aides ──
@@ -667,19 +683,36 @@ function sectionFinance(b, A, AP, EV, ic) {
   var enc = encaisse(b.debut, b.fin), encP = encaisse(b.prevDebut, b.prevFin);
   var ouvertes = ST.factures.filter(function(f) { return factureValide(f) && soldeF(f) > 0; });
   var du = somme(ouvertes, soldeF);
-  var h = '<div class="section-title">💶 Finances — ' + esc(b.label) + '</div><div class="grid grid-4">';
+  var h = '<div class="section-title">Finances — ' + esc(b.label) + '</div><div class="grid grid-4">';
   var moisP = moisEntre(b.debut, b.fin);
   var enCours = moisP.indexOf(perDe(new Date().getFullYear(), new Date().getMonth())) !== -1;
   var subFac = F.length ? F.length + ' facture' + (F.length > 1 ? 's' : '') + (moisP.length > 1 ? ' · ' + moisP.length + ' mois' : '')
     : (enCours ? 'Le mois en cours est facturé le 1er du mois suivant' : 'Aucune facture');
   var horsFiltre = (filters.service || filters.ranger) ? ' · tous services et employés' : '';
-  h += kpi('green', 'Facturé', eur(fac), subFac + horsFiltre, delta(fac, facP, b.labelPrev));
-  h += kpi('blue', 'Encaissé', eur(enc), 'Virements reçus sur la période' + horsFiltre, delta(enc, encP, b.labelPrev));
+  // v2.90 : « Ce mois » n'est facturé que le 1er du mois suivant → la case
+  // « Facturé » montre le dernier mois facturé (choix de Gabriel, 17/10/2026).
+  var facLabel = 'Facturé', facV = fac, facPV = facP, facLabelPrev = b.labelPrev, facSub = subFac;
+  if (filters.periode === 'mois' && !F.length) {
+    var n0 = new Date(), pp = perDe(n0.getFullYear(), n0.getMonth() - 1), pp2 = perDe(n0.getFullYear(), n0.getMonth() - 2);
+    var bp = FR_FACT.periodeMois(pp), bp2 = FR_FACT.periodeMois(pp2);
+    var Fx = facturesPeriode(bp.debut, bp.fin), Fx2 = facturesPeriode(bp2.debut, bp2.fin);
+    facLabel = 'Facturé — ' + moisNom(pp); facV = somme(Fx, 'total_ttc'); facPV = somme(Fx2, 'total_ttc'); facLabelPrev = moisNom(pp2);
+    facSub = Fx.length + ' facture' + (Fx.length > 1 ? 's' : '') + ' · ' + moisNom(perDe(n0.getFullYear(), n0.getMonth())) + ' sera facturé le 1er ' + moisNom(perDe(n0.getFullYear(), n0.getMonth() + 1));
+  }
   h += kpi('accent', 'Valeur des prestations', eur(A.valeur), eur(A.realise) + ' réalisés · ' + eur(A.aVenir) + ' à venir', delta(A.valeur, AP.valeur, b.labelPrev));
+  h += kpi('green', facLabel, eur(facV), facSub + horsFiltre, delta(facV, facPV, facLabelPrev));
+  h += kpi('blue', 'Encaissé', eur(enc), 'Virements reçus sur la période' + horsFiltre, delta(enc, encP, b.labelPrev));
   h += kpi('red', 'Reste à encaisser', eur(du), ouvertes.length + ' facture' + (ouvertes.length > 1 ? 's' : '') + ' ouverte' + (ouvertes.length > 1 ? 's' : '') + ' (toutes périodes)');
   h += '</div>';
   h += '<div style="margin-top:10px;">' + carte('Évolution — facturé, encaissé, prestations', '<div class="chart-box"><canvas id="ch-fin"></canvas></div><div class="card-note">Barres : facturé par mois de prestation et encaissé par mois de virement. Ligne : valeur des prestations d\'après le planning — en pointillés, la prévision jusqu\'à décembre (réservations connues).</div>') + '</div>';
-  h += '<div style="margin-top:10px;">' + carte('Facturé par service — ' + esc(b.label), factureParService(F), '<span class="badge b-muted">' + eur(fac) + '</span>') + '</div>';
+  if (!F.length && enCours) {
+    var Cx = calc(b.debut, b.fin, TOUS);
+    h += '<div style="margin-top:10px;">' + carte('Prestations par service — ' + esc(b.label) + ' · estimation',
+      factureParService([{ total_ttc: Cx.total, lignes: Cx.lignes }], 'Mois pas encore facturé : répartition d\'après le planning, TTC. Pour un mois déjà facturé, la carte devient « Facturé par service », d\'après les factures.'),
+      '<span class="badge b-muted">' + eur(Cx.total) + '</span>') + '</div>';
+  } else {
+    h += '<div style="margin-top:10px;">' + carte('Facturé par service — ' + esc(b.label), factureParService(F), '<span class="badge b-muted">' + eur(fac) + '</span>') + '</div>';
+  }
 
   // Top clients + à relancer
   var parC = {};
@@ -710,6 +743,68 @@ function sectionFinance(b, A, AP, EV, ic) {
   return h;
 }
 
+// ── v2.90 : VUE RAPIDE, SAISONNALITÉ D'APRÈS LES FACTURES, COMPTES TEST ──
+var TOUS = { service: '', ranger: '' };          // ces blocs ignorent les filtres Service / Employé
+var TEST_DEBUT = '2026-09';                      // comptes test suivis à partir de septembre (Gabriel, 17/10/2026)
+function moisNom(per) { return MOIS_L[+String(per).split('-')[1] - 1]; }
+function moisLong(per) { return moisNom(per) + ' ' + String(per).split('-')[0]; }
+function perSuivant(per) { var p = String(per).split('-'); return perDe(+p[0], +p[1]); }
+function facturesMois(per) { return ST.factures.filter(function(f) { return factureValide(f) && f.periode === per; }); }
+function valeurMois(per) { var bm = FR_FACT.periodeMois(per); return calc(bm.debut, bm.fin, TOUS); }
+// Testeurs suivis : comptes test sous 9000 (le compte personnel de Gabriel, 9004, n'est pas un testeur)
+function testeursSuivis() { var T = ST.testeurs; return T ? T.clients.filter(function(c) { return (+c.numero_client || 0) < 9000; }) : []; }
+// Comptes test d'un mois : leurs factures de test s'il y en a, sinon la valeur d'après leurs réservations
+function testeursMois(per) {
+  var T = ST.testeurs, L = testeursSuivis();
+  if (!L.length) return 0;
+  var bm = FR_FACT.periodeMois(per), tot = 0;
+  L.forEach(function(c) {
+    var fx = T.factures.filter(function(f) { return f.client_id === c.id && f.periode === per && factureValide(f); });
+    if (fx.length) { tot += somme(fx, 'total_ttc'); return; }
+    var rs = T.resas.filter(function(r) {
+      return r.client_id === c.id && String(r.date_debut).slice(0, 10) <= bm.fin
+        && String(r.date_fin_recurrence || r.date_fin || r.date_debut).slice(0, 10) >= bm.debut;
+    });
+    if (!rs.length) return;
+    var an = T.annulations.filter(function(a) { return rs.some(function(r) { return r.id === a.reservation_id; }); });
+    var res = FR_FACT.calculer({ client: c, chiens: T.chiens.filter(function(d) { return d.client_id === c.id; }), reservations: rs, annulations: an }, bm.debut, bm.fin, {});
+    tot += +res.total_ttc || 0;
+  });
+  return tot;
+}
+// Chiens d'un mois d'après le détail des factures (mois sans planning). null si aucun détail.
+function chiensFactures(per) {
+  var r = { walking: 0, daycare: 0, boarding: 0 }, vu = false;
+  facturesMois(per).forEach(function(f) {
+    (Array.isArray(f.lignes) ? f.lignes : []).forEach(function(l) {
+      if (!l || r[l.service] == null) return;
+      if (l.type === 'annulation' || l.type === 'regularisation' || /annulation/i.test(l.label || '')) return;
+      var n = +l.qte || 0;
+      if (Array.isArray(l.chiens) && l.chiens.length) n *= l.chiens.length;   // lignes de l'app : séances × chiens
+      r[l.service] += n; vu = true;
+    });
+  });
+  return vu ? r : null;
+}
+
+// En tête de page : 2 derniers mois facturés, mois en cours, prévision, combiné clients + testeurs
+function sectionVueRapide() {
+  var n = new Date(), an = n.getFullYear(), m = n.getMonth();
+  var pM2 = perDe(an, m - 2), pM1 = perDe(an, m - 1), p0 = perDe(an, m), p1 = perDe(an, m + 1);
+  var F2 = facturesMois(pM2), F1 = facturesMois(pM1);
+  var f2 = somme(F2, 'total_ttc'), f1 = somme(F1, 'total_ttc');
+  var C0 = valeurMois(p0), A0 = agreger(C0), C1 = valeurMois(p1);
+  var t1 = testeursMois(pM1);
+  var nf = function(F, per) { return F.length + ' facture' + (F.length > 1 ? 's' : '') + ' · émises le 1er ' + moisNom(perSuivant(per)); };
+  var h = '<div class="section-title">Chiffre facturé — vue rapide</div><div class="grid grid-5">';
+  h += kpi('green', esc(moisLong(pM2)) + ' · facturé', eur(f2), nf(F2, pM2));
+  h += kpi('green', esc(moisLong(pM1)) + ' · facturé', eur(f1), nf(F1, pM1), delta(f1, f2, moisNom(pM2)));
+  h += kpi('accent', esc(moisLong(p0)) + ' · en cours', eur(C0.total), eur(A0.realise) + ' réalisés · ' + eur(A0.aVenir) + ' à venir (planning)', delta(C0.total, f1, moisNom(pM1)));
+  h += kpi('blue', esc(moisLong(p1)) + ' · prévision', eur(C1.total), 'D\'après les réservations déjà connues', delta(C1.total, C0.total, moisNom(p0)));
+  h += kpi('amber', esc(moisNom(pM1)) + ' · clients + testeurs', eur(f1 + t1), eur(f1) + ' clients · ' + eur(t1) + ' testeurs');
+  return h + '</div>';
+}
+
 // ── FACTURÉ PAR SERVICE (v2.89) ──
 // D'après le détail figé des factures (lignes), donc aussi pour les mois
 // d'avant l'app, sans réservations. Montants TTC. Chien supplémentaire et
@@ -721,7 +816,7 @@ var FAC_SVC = [
   ['produits', 'Nourriture et produits', '--text-dim'], ['regularisation', 'Régularisations', '--text-dim'],
   ['autre', 'Autre', '--text-dim'], ['non_detaille', 'Non détaillé', '--text-faint']
 ];
-function factureParService(F) {
+function factureParService(F, note) {
   var t = {}, total = 0;
   F.forEach(function(f) {
     var tot = +f.total_ttc || 0, vu = 0;
@@ -739,7 +834,7 @@ function factureParService(F) {
     var v = t[s[0]], c = 'var(' + s[2] + ')';
     return barRow(s[1], eur(v) + ' · ' + Math.round(v / total * 100) + ' %', v / total * 100, c);
   }).join('');
-  return '<div class="fac-svc">' + h + '</div><div class="card-note">D\'après le détail des factures, TTC — y compris les mois facturés avant l\'app. Chien supplémentaire et annulations sont comptés avec leur service.</div>';
+  return '<div class="fac-svc">' + h + '</div><div class="card-note">' + (note || 'D\'après le détail des factures, TTC — y compris les mois facturés avant l\'app. Chien supplémentaire et annulations sont comptés avec leur service.') + '</div>';
 }
 
 // ── SECTION PROJECTIONS (v2.58) ──
@@ -782,7 +877,7 @@ function sectionProjection() {
       + '<span style="color:var(--text-faint);">' + unite + '</span></span>'
       + '<span style="font-size:10.5px;color:var(--text-faint);">' + aide + '</span></label>';
   }
-  var h = '<div class="section-title">📈 Projections — 3 mois, 6 mois, 1 an</div>';
+  var h = '<div class="section-title">Projections — 3 mois, 6 mois, 1 an</div>';
   h += carte('Hypothèses de tendance',
     '<div style="display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start;">'
     + champ('proj-nouveaux', 'Nouveaux clients par mois', H.nouveaux, 'clients', 'Calculé : ' + H.nbNouveaux + ' sur les 6 derniers mois')
@@ -838,7 +933,7 @@ function majProj() {
 
 // ── SECTION SERVICES ──
 function sectionServices(b, C, A, AP, EV, ic) {
-  var h = '<div class="section-title">🐾 Services — ' + esc(b.label) + '</div><div class="grid grid-4">';
+  var h = '<div class="section-title">Services — ' + esc(b.label) + '</div><div class="grid grid-4">';
   var valSvc = { walking: 0, daycare: 0, boarding: 0 };
   C.seances.forEach(function(s) { if (s.presents.length) valSvc[s.service] += (+s.montant || 0); });
   h += kpi('accent', 'Dog Walking', fmt(A.sorties.walking), fmt(A.chiens.walking) + ' chiens promenés · ' + eur(valSvc.walking), delta(A.sorties.walking, AP.sorties.walking, b.labelPrev));
@@ -921,11 +1016,11 @@ function sectionAffluence(b, C, EV) {
       var det = SVCS.filter(function(s) { return j[s]; }).map(function(s) { return SVC_NOMS[s] + ' ' + j[s]; }).join(' · ');
       return '<div class="row"><span><b>' + JOURS_C[(parseISO(j.date).getDay() + 6) % 7] + ' ' + dateFr(j.date, true) + '</b>' + (j.date > j0 ? ' <span class="badge b-muted">prévu</span>' : '') + '<br><span style="font-size:11px;">' + det + '</span></span><span style="font-family:FRDisplay,Oswald,sans-serif;font-size:18px;color:var(--accent);">' + j.total + '</span></div>';
     }).join('') + '</div>' : '<div class="empty">Aucune séance</div>';
-  var h = '<div class="section-title">🔥 Périodes les plus chargées — ' + esc(b.label) + '</div>';
+  var h = '<div class="section-title">Périodes les plus chargées — ' + esc(b.label) + '</div>';
   h += '<div class="grid grid-21">'
     + carte('Chiens par jour et créneau', '<div class="tbl-wrap">' + heat + '</div><div class="card-note">Nombre de chiens accueillis sur la période, par jour de la semaine. Plus la case est foncée, plus le créneau est chargé.</div>', seg)
     + carte('Jours les plus chargés', topH) + '</div>';
-  h += '<div style="margin-top:10px;">' + carte('Saisonnalité — chiens par jour ouvré, en moyenne', '<div class="chart-box small"><canvas id="ch-saison"></canvas></div><div class="card-note">Moyenne de chiens accueillis par jour ouvré, mois par mois, pour chaque service. Pension : chiens présents la nuit.</div>') + '</div>';
+  h += '<div style="margin-top:10px;">' + carte('Saisonnalité — chiens par jour ouvré, en moyenne', '<div class="chart-box small"><canvas id="ch-saison"></canvas></div><div class="card-note">Moyenne de chiens accueillis par jour ouvré, mois par mois, pour chaque service. Pension : chiens présents la nuit. Losanges et pointillés : mois sans planning, complétés par le détail des factures (chiens × séances).</div>') + '</div>';
   return h;
 }
 function choisirHeat(s) { HEAT_SVC = s; renderStats(); }
@@ -940,7 +1035,7 @@ function sectionClients(b, A, AP, EV, ic) {
   var chiensActifs = ST.chiens.filter(function(c) { return c.actif !== false; });
   var grands = chiensActifs.filter(function(c) { return +c.poids_kg >= 35; }).length;
   var nvChiens = ST.chiens.filter(function(c) { var d = String(c.created_at || '').slice(0, 10); return d >= b.debut && d <= b.fin; }).length;
-  var h = '<div class="section-title">👥 Clients et chiens — ' + esc(b.label) + '</div><div class="grid grid-4">';
+  var h = '<div class="section-title">Clients et chiens — ' + esc(b.label) + '</div><div class="grid grid-4">';
   h += kpi('green', 'Clients servis', A.nbClients, 'Au moins une séance · ' + fid + ' fidèle' + (fid > 1 ? 's' : ''), delta(A.nbClients, AP.nbClients, b.labelPrev));
   h += kpi('accent', 'Nouveaux clients', nouveaux.length, nouveaux.slice(0, 3).map(function(c) { return esc(c.prenom); }).join(', ') || 'Inscrits sur la période');
   h += kpi('red', 'Sans séance', perdus.length, perdus.length ? 'Servis en ' + b.labelPrev + ', pas sur la période' : 'Aucune perte vs ' + b.labelPrev);
@@ -971,7 +1066,7 @@ function sectionEquipe(b) {
   var max = Math.max.apply(null, rows.map(function(r) { return r.chiens; }).concat([1]));
   var corps = rows.map(function(r) { return barRow(esc(r.nom), r.chiens + ' chiens', r.chiens / max * 100, r.na ? 'var(--text-faint)' : 'var(--accent)'); }).join('')
     + '<div class="card-note">Chiens pris en charge sur la période, d\'après le ranger inscrit sur chaque réservation.</div>';
-  return '<div class="section-title">👷 Équipe — ' + esc(b.label) + '</div>' + carte('Répartition du travail', corps);
+  return '<div class="section-title">Équipe — ' + esc(b.label) + '</div>' + carte('Répartition du travail', corps);
 }
 
 // ── SECTION CAMIONNETTES ──
@@ -991,7 +1086,7 @@ function chiensAttribution(att) {
 }
 function sectionCamionnettes(b, EV, ic) {
   var vans = (ST.camionnettes || []);
-  var h = '<div class="section-title">🚐 Camionnettes — ' + esc(b.label) + '</div>';
+  var h = '<div class="section-title">Camionnettes — ' + esc(b.label) + '</div>';
   if (!vans.length) return h + '<div class="info-note">Aucune camionnette enregistrée. Ajoutez-les dans Paramètres → Camionnettes.</div>';
   var kmP = ST.km.filter(function(k) { var d = String(k.date).slice(0, 10); return d >= b.debut && d <= b.fin; });
   if (!ST.km.length) h += '<div class="info-note" style="margin-bottom:10px;">Aucun relevé kilométrique enregistré pour l\'instant : les km sont saisis par les rangers dans leur app (« Démarrer » / « Terminer la journée »).</div>';
@@ -1073,10 +1168,40 @@ function dessiner(b, C, A, EV, ic) {
     return { label: s[1], data: EV.map(function(e) { return e.a[s[3]][s[0]]; }), backgroundColor: EV.map(function(e, i) { return futur(i) ? rgba(s[2], 0.35) : s[2]; }), borderRadius: 3, maxBarThickness: 26 };
   }) }, options: optsBase(true) });
 
-  // Saisonnalité : chiens par jour ouvré
+  // Saisonnalité : chiens par jour ouvré. v2.90 : un mois passé sans planning
+  // est complété par le détail de ses factures (pointillés, losange).
+  var parFact = EV.map(function(e, i) { return (!futur(i) && !e.a.totalSorties) ? chiensFactures(e.per) : null; });
+  var tiret = { borderDash: function(ctx) { return (ctx.p1DataIndex > ic || parFact[ctx.p0DataIndex] || parFact[ctx.p1DataIndex]) ? [5, 4] : undefined; } };
   nouveauGraph('ch-saison', { type: 'line', data: { labels: labels, datasets: ds.map(function(s) {
-    return { label: s[1], data: EV.map(function(e) { return Math.round(e.a.chiens[s[0]] / joursOuvres(e.debut, e.fin) * 10) / 10; }), borderColor: s[2], backgroundColor: s[2], pointRadius: 2, borderWidth: 2, tension: 0.25, cubicInterpolationMode: 'monotone', segment: pointille };
-  }) }, options: (function() { var o = optsBase(false); o.plugins.tooltip.callbacks.label = function(c) { return c.dataset.label + ' : ' + String(c.parsed.y).replace('.', ',') + ' chiens/jour'; }; return o; })() });
+    return { label: s[1], data: EV.map(function(e, i) { var src = parFact[i] || e.a.chiens; return Math.round(src[s[0]] / joursOuvres(e.debut, e.fin) * 10) / 10; }),
+      borderColor: s[2], backgroundColor: s[2], borderWidth: 2, tension: 0.25, cubicInterpolationMode: 'monotone', segment: tiret,
+      pointRadius: EV.map(function(e, i) { return parFact[i] ? 3 : 2; }), pointStyle: EV.map(function(e, i) { return parFact[i] ? 'rectRot' : 'circle'; }) };
+  }) }, options: (function() { var o = optsBase(false); o.plugins.tooltip.callbacks.label = function(c) { return c.dataset.label + ' : ' + String(c.parsed.y).replace('.', ',') + ' chiens/jour' + (parFact[c.dataIndex] ? ' (factures)' : ''); }; return o; })() });
+
+  // Comptes test (v2.90) : barres empilées, combiné écrit au-dessus, détail au survol
+  var R = window._TEST_ROWS || [];
+  if (R.length && document.getElementById('ch-test')) {
+    var oT = optsBase(true, ' €');
+    oT.layout = { padding: { top: 20 } };
+    oT.plugins.tooltip.callbacks.footer = function(items) { var t = 0; items.forEach(function(it) { t += it.parsed.y; }); return 'Combiné : ' + eur(t); };
+    var txtCol = couleur('--text', '#333');
+    nouveauGraph('ch-test', { type: 'bar', data: { labels: R.map(function(r) { return moisCourt(r.per) + (r.enCours ? ' *' : ''); }), datasets: [
+      { label: 'Clients actifs', data: R.map(function(r) { return Math.round(r.cli); }), backgroundColor: gr, borderRadius: 3, maxBarThickness: 40 },
+      { label: 'Testeurs', data: R.map(function(r) { return Math.round(r.tst); }), backgroundColor: am, borderRadius: 3, maxBarThickness: 40 }
+    ] }, options: oT, plugins: [{ id: 'frTotaux', afterDatasetsDraw: function(ch) {
+      var c = ch.ctx; c.save(); c.fillStyle = txtCol; c.font = '700 11px Instrument Sans, Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'bottom';
+      ch.data.labels.forEach(function(_, i) {
+        var tot = 0, y = null, x = null;
+        ch.data.datasets.forEach(function(d, k) {
+          if (!ch.isDatasetVisible(k)) return;
+          var el = ch.getDatasetMeta(k).data[i]; if (!el) return;
+          tot += +d.data[i] || 0; x = el.x; y = y == null ? el.y : Math.min(y, el.y);
+        });
+        if (x != null && tot) c.fillText(eur(tot), x, y - 4);
+      });
+      c.restore();
+    } }] });
+  }
 
   // Clients servis par mois
   nouveauGraph('ch-cli', { type: 'line', data: { labels: labels, datasets: [

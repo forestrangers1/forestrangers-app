@@ -936,6 +936,7 @@ html, body {
   <script src="fr-remplacements.js"></script>
   <script src="fr-pdf.js"></script>
   <script src="fr-messages.js"></script>
+<script src="fr-icones.js"></script>
 <!-- Repli CDN : si jsDelivr n'a pas repondu, on tente unpkg avant d'abandonner. -->
 <script>if (!window.supabase) { document.write('<scr' + 'ipt src="https://unpkg.com/@supabase/supabase-js@2"><\/scr' + 'ipt>'); }</script>
   <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
@@ -955,7 +956,6 @@ html, body {
       + 'background:#1c1f14;color:#eceee6;display:flex;align-items:center;justify-content:center;'
       + 'padding:24px;font-family:\'Instrument Sans\',system-ui,sans-serif;text-align:center;">'
       + '<div style="max-width:340px;">'
-      + '<div style="font-size:34px;margin-bottom:14px;">📡</div>'
       + '<div style="font-size:17px;font-weight:600;margin-bottom:10px;">Connexion au serveur impossible</div>'
       + '<div style="font-size:13.5px;line-height:1.6;color:rgba(236,238,230,0.6);margin-bottom:20px;">'
       + 'Votre reseau ne permet pas de charger l\'application. Verifiez votre connexion, '
@@ -2192,7 +2192,7 @@ function frDemandeReconnexion() {
     + 'align-items:center;justify-content:center;padding:24px;text-align:center;'
     + 'font-family:\'Instrument Sans\',system-ui,sans-serif;color:#eceee6;">'
     + '<div style="max-width:330px;">'
-    + '<div style="font-size:34px;margin-bottom:14px;">🔒</div>'
+    + '<div style="margin-bottom:14px;opacity:.7;">' + FR_ICO('cadenas', 34) + '</div>'
     + '<div style="font-size:17px;font-weight:600;margin-bottom:10px;">Session expirée</div>'
     + '<div style="font-size:13.5px;line-height:1.6;color:rgba(236,238,230,0.6);margin-bottom:20px;">'
     + 'Pour votre sécurité, la connexion se coupe après un certain temps. '
@@ -4733,7 +4733,7 @@ function updateDogScreen(chiens) {
   // Aucun chien : état vide explicite (au lieu de la fiche démo)
   if (!chiens || !chiens.length) {
     container.innerHTML = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;text-align:center;">'
-      + '<div style="font-size:30px;margin-bottom:8px;">🐾</div>'
+      + '<div style="margin-bottom:8px;color:var(--accent);">' + FR_ICO('patte', 30) + '</div>'
       + '<div style="font-size:14px;font-weight:600;margin-bottom:4px;">Aucun chien enregistré</div>'
       + '<div style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">Ajoutez votre chien pour pouvoir réserver une promenade.</div>'
       + '<a href="javascript:void(0)" onclick="openDogAdd()" style="display:inline-block;background:var(--accent);color:#fff;padding:9px 16px;border-radius:9px;font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-size:12px;font-weight:800;text-decoration:none;cursor:pointer;">Ajouter mon chien</a>'
@@ -4764,13 +4764,13 @@ function updateDogScreen(chiens) {
 
   container.innerHTML = chiens.map(function(d, idx) {
     var name = d.nom || 'Chien';
-    var emoji = (d.poids_kg && d.poids_kg >= 25) ? '🐕' : '🐩';
+    var emoji = FR_ICO('patte', 22);   // v2.91 : icône au lieu d'un emoji
     var sub = (d.race || '—') + (d.poids_kg ? ' · ' + d.poids_kg + ' kg' : '');
 
-    // Avatar : photo si dispo, sinon emoji
+    // Avatar : photo si dispo, sinon icône
     var avatar = d.photo_url
       ? '<img class="dog-photo" src="' + d.photo_url + '" alt="' + name + '">'
-      : '<div style="width:46px;height:46px;border-radius:50%;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-size:23px;flex-shrink:0;">' + emoji + '</div>';
+      : '<div style="width:46px;height:46px;border-radius:50%;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;color:var(--accent);flex-shrink:0;">' + emoji + '</div>';
 
     // Lignes de détail : tous les champs connus, non vides
     var rows = '';

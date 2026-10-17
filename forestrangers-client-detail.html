@@ -42,6 +42,7 @@ try {
 <script src="fr-email.js"></script>
 <script src="fr-quartier.js"></script>
 <script src="fr-messages.js"></script>
+<script src="fr-icones.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <!-- Repli CDN : si jsDelivr n'a pas repondu, on tente unpkg avant d'abandonner. -->
 <script>if (!window.supabase) { document.write('<scr' + 'ipt src="https://unpkg.com/@supabase/supabase-js@2"><\/scr' + 'ipt>'); }</script>
@@ -61,7 +62,6 @@ try {
       + 'background:#1c1f14;color:#eceee6;display:flex;align-items:center;justify-content:center;'
       + 'padding:24px;font-family:\'Instrument Sans\',system-ui,sans-serif;text-align:center;">'
       + '<div style="max-width:340px;">'
-      + '<div style="font-size:34px;margin-bottom:14px;">📡</div>'
       + '<div style="font-size:17px;font-weight:600;margin-bottom:10px;">Connexion au serveur impossible</div>'
       + '<div style="font-size:13.5px;line-height:1.6;color:rgba(236,238,230,0.6);margin-bottom:20px;">'
       + 'Votre reseau ne permet pas de charger l\'application. Verifiez votre connexion, '
@@ -991,7 +991,7 @@ async function loadClient(id) {
     loadChiens(chiens || [], c.client_fidele);
     var nbChiens = chiens ? chiens.length : 0;
     tags.innerHTML += '<span class="tag tag-accent">' + nbChiens + ' chien' + (nbChiens > 1 ? 's' : '') + '</span>';
-    if (c && c.acces_cle) tags.innerHTML += '<span class="tag" title="Clés confiées à Forest Rangers" style="font-size:14px;padding:2px 8px;">🔑</span>';
+    if (c && c.acces_cle) tags.innerHTML += '<span class="tag" title="Clés confiées à Forest Rangers" style="padding:2px 8px;color:var(--accent);">' + FR_ICO('cle', 13) + '</span>';
 
     // 3. Réservations
     var { data: resas } = await db.from('reservations')
@@ -1256,7 +1256,7 @@ function renderInfosEdit(c) {
         '<div class="info-item"><div class="info-label">Quartier (Luxembourg-Ville)</div><select class="edit-select" id="edit-quartier">'
         + '<option value="">— hors Luxembourg-Ville —</option>'
         + QUARTIERS_LUX.map(function (q) { return '<option value="' + escapeAttr(q) + '"' + (c.quartier === q ? ' selected' : '') + '>' + q + '</option>'; }).join('')
-        + '</select><button type="button" onclick="trouverQuartierFiche(this)" style="margin-top:6px;background:none;border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:11.5px;color:var(--accent);cursor:pointer;">📍 Trouver le quartier d\'après l\'adresse</button></div>'
+        + '</select><button type="button" onclick="trouverQuartierFiche(this)" style="margin-top:6px;background:none;border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:11.5px;color:var(--accent);cursor:pointer;">' + FR_ICO('epingle', 12) + ' Trouver le quartier d\'après l\'adresse</button></div>'
       : '') +
     '<div class="info-item"><div class="info-label">N° client</div><div class="info-value" style="color:var(--accent);font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;">#' + c.numero_client + '</div></div>' +
     '<div class="info-item"><div class="info-label">Date inscription</div><div class="info-value">' + (c.created_at ? new Date(c.created_at).toLocaleDateString('fr-LU', { day: '2-digit', month: 'long', year: 'numeric' }) : '—') + '</div></div>' +
@@ -1479,7 +1479,7 @@ function loadChiens(chiens, fidele) {
 
   var html = '';
   chiens.forEach(function(d, i) {
-    var emoji = (d.poids_kg && d.poids_kg >= 35) ? '🐕' : '🐩';
+    var emoji = FR_ICO('patte', 22);   // v2.91 : icône au lieu d'un emoji
     // v2.72 : vraie remise du client (sur mesure, sinon grille de Paramètres), dès le 2e chien
     var remise = currentClient ? getTarifValues(currentClient).reduction : (fidele ? 50 : 30);
     var reduction = (i >= 1 && remise > 0) ? '−' + (Math.round(remise * 10) / 10) + '%' : '';
@@ -1499,7 +1499,7 @@ function loadChiens(chiens, fidele) {
       + '<div class="dog-stat"><div class="dog-stat-val" style="color:' + (d.assurance_ok ? 'var(--green)' : 'var(--amber)') + ';">' + (d.assurance_ok ? '✓' : '!') + '</div><div class="dog-stat-label">Assurance</div></div>'
       + '</div>'
       + (reduction ? '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);font-size:12px;color:var(--green);">Réduction 2e chien ' + reduction + '</div>' : '')
-      + (d.chien_dangereux ? '<div style="margin-top:8px;font-size:12px;color:var(--red);">⚠ Chien dangereux — vigilance requise</div>' : '')
+      + (d.chien_dangereux ? '<div style="margin-top:8px;font-size:12px;color:var(--red);">' + FR_ICO('alerte', 13) + ' Chien dangereux — vigilance requise</div>' : '')
       + (d.notes_sante ? '<div style="margin-top:8px;font-size:12px;color:var(--td);">' + d.notes_sante + '</div>' : '')
       + '</div>';
   });
@@ -2192,7 +2192,7 @@ function openChienDetail(chienId) {
     + '<strong>Sexe</strong> ' + (d.sexe || '—') + '<br>'
     + '<strong>Âge</strong> ' + ageTxt + '<br>'
     + '<strong>Gabarit</strong> ' + (d.grand_chien ? 'Grand chien (35kg et +)' : 'Petit / moyen gabarit')
-    + (d.chien_dangereux ? '<br><span style="color:var(--red);">⚠ Désigné comme chien dangereux</span>' : '');
+    + (d.chien_dangereux ? '<br><span style="color:var(--red);">' + FR_ICO('alerte', 12) + ' Désigné comme chien dangereux</span>' : '');
   // Santé et comportement (migration v30) — mêmes informations que l'inscription
   function h(v) { return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function ligne(lbl, v) { return v ? '<br><strong>' + lbl + '</strong> ' + h(v) : ''; }

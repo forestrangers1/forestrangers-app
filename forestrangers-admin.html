@@ -810,7 +810,6 @@ textarea.form-control { resize: vertical; }
       + 'background:#1c1f14;color:#eceee6;display:flex;align-items:center;justify-content:center;'
       + 'padding:24px;font-family:\'Instrument Sans\',system-ui,sans-serif;text-align:center;">'
       + '<div style="max-width:340px;">'
-      + '<div style="font-size:34px;margin-bottom:14px;">📡</div>'
       + '<div style="font-size:17px;font-weight:600;margin-bottom:10px;">Connexion au serveur impossible</div>'
       + '<div style="font-size:13.5px;line-height:1.6;color:rgba(236,238,230,0.6);margin-bottom:20px;">'
       + 'Votre reseau ne permet pas de charger l\'application. Verifiez votre connexion, '
@@ -849,6 +848,7 @@ textarea.form-control { resize: vertical; }
   <script src="fr-quartier.js"></script>
   <script src="fr-remplacements.js"></script>
   <script src="fr-messages.js"></script>
+  <script src="fr-icones.js"></script>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#ff5f1f">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1030,7 +1030,7 @@ textarea.form-control { resize: vertical; }
 
       <div class="g2">
         <div class="card">
-          <div class="card-head"><span class="card-title">Prestations — 7 derniers jours</span></div>
+          <div class="card-head"><span class="card-title">Prestations — 3 jours avant et après</span></div>
           <div class="card-body">
             <div style="font-family:FRDisplay,Oswald,Arial Narrow,sans-serif;font-size:22px;font-weight:800;color:var(--green);margin-bottom:3px;" id="sem-total">—</div>
             <div style="font-size:11px;color:var(--text-faint);margin-bottom:14px;" id="sem-sub">Chargement…</div>
@@ -1144,7 +1144,7 @@ textarea.form-control { resize: vertical; }
       <div class="search-row">
         <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" id="clients-search" placeholder="Rechercher un client..." oninput="filterClients(this.value)">
-        <button class="btn btn-outline" style="padding:6px 12px;" onclick="completerQuartiers()" title="Luxembourg-Ville : quartiers manquants, trouvés d'après l'adresse">📍 Quartiers</button>
+        <button class="btn btn-outline" style="padding:6px 12px;" onclick="completerQuartiers()" title="Luxembourg-Ville : quartiers manquants, trouvés d'après l'adresse">Quartiers</button>
         <button class="btn btn-accent" style="padding:6px 12px;" onclick="nav('invitation',document.querySelector('[onclick*=invitation]'))">+ Nouveau client</button>
       </div>
       <div class="card">
@@ -2080,8 +2080,8 @@ async function loadInvitations() {
         extra = '<span style="font-size:10px;color:var(--text-faint);">Expire dans ' + joursRestants + ' jour' + (joursRestants > 1 ? 's' : '') + '</span>';
       }
 
-      var btnCopier = !inv.utilise ? '<button onclick="copierLienInvitation(this,\'' + lien + '\')" style="font-size:10px;background:var(--accent-dim);border:1px solid var(--accent-mid);border-radius:6px;padding:4px 10px;color:var(--accent);cursor:pointer;font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-weight:700;margin-top:4px;">📋 Copier lien</button>' : '';
-      if (!inv.utilise && !expired) btnCopier += '<button onclick="renvoyerEmailInvitation(this,\'' + inv.id + '\')" style="font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--text-dim);cursor:pointer;font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-weight:700;margin-top:4px;">✉ Renvoyer</button>';
+      var btnCopier = !inv.utilise ? '<button onclick="copierLienInvitation(this,\'' + lien + '\')" style="font-size:10px;background:var(--accent-dim);border:1px solid var(--accent-mid);border-radius:6px;padding:4px 10px;color:var(--accent);cursor:pointer;font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-weight:700;margin-top:4px;">' + FR_ICO('copier',11) + ' Copier lien</button>' : '';
+      if (!inv.utilise && !expired) btnCopier += '<button onclick="renvoyerEmailInvitation(this,\'' + inv.id + '\')" style="font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--text-dim);cursor:pointer;font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-weight:700;margin-top:4px;">' + FR_ICO('mail',11) + ' Renvoyer</button>';
       var btnSupprimer = '<button onclick="supprimerInvitation(this,\'' + inv.id + '\')" style="font-size:10px;background:transparent;border:none;color:var(--red);cursor:pointer;margin-top:4px;padding:2px 6px;">✕</button>';
 
       var opacity = expired && !inv.utilise ? '0.6' : '1';
@@ -2143,7 +2143,7 @@ async function renvoyerEmailInvitation(btn, id) {
   btn.textContent = r.ok ? '✓ Envoyé' : '✗ Échec';
   btn.style.color = r.ok ? 'var(--green)' : 'var(--red)';
   if (!r.ok) showToastAdmin('Email non envoyé : ' + (r.erreur || 'erreur'), 'red');
-  setTimeout(function() { btn.disabled = false; btn.textContent = '✉ Renvoyer'; btn.style.color = ''; }, 2500);
+  setTimeout(function() { btn.disabled = false; btn.innerHTML = FR_ICO('mail', 11) + ' Renvoyer'; btn.style.color = ''; }, 2500);
 }
 
 async function renvoyerInvitation(btn, email, prenom, langue) {
@@ -2240,7 +2240,7 @@ async function chargerCartesFacturation() {
 }
 
 // ── CHARGEMENT DONNEES SUPABASE ──
-// Bulle au survol d'un jour (Prestations — 7 derniers jours), v2.52
+// Bulle au survol d'un jour (Prestations — 3 jours avant et après), v2.52
 function bulleJour(ev, idx) {
   var j = (window._joursPrestations || [])[idx]; if (!j) return;
   var b = document.getElementById('bulle-jour');
@@ -2913,7 +2913,7 @@ function rcLigneFacture(f, avecSuggestion) {
   if (parseFloat(f.montant_paye) > 0 && reste > 0) detail.push('payé ' + rcEur(f.montant_paye));
   if (RC.envois) detail.push(RC.envois[f.id] ? 'envoyée le ' + rcDate(RC.envois[f.id]) : 'pas encore envoyée par email');
   var actions = '';
-  if (RC.envois && !RC.envois[f.id]) actions += '<button class="rc-btn" title="Ouvre la facture et l\'envoie au client avec le PDF" onclick="ouvrirFactureAdmin(\'id=' + encodeURIComponent(f.id) + '&envoyer=1\')">✉ Envoyer</button>';
+  if (RC.envois && !RC.envois[f.id]) actions += '<button class="rc-btn" title="Ouvre la facture et l\'envoie au client avec le PDF" onclick="ouvrirFactureAdmin(\'id=' + encodeURIComponent(f.id) + '&envoyer=1\')">' + FR_ICO('mail', 11) + ' Envoyer</button>';
   if (reste > 0) {
     actions += '<button class="rc-btn pay" onclick="ouvrirPaiement({ clientId: \'' + f.client_id + '\', montant: ' + reste + ', reference: \'' + rcEsc(f.numero || '') + '\' })">Paiement reçu</button>';
     var sug = f.etape_suggeree;
@@ -3363,7 +3363,7 @@ async function loadFacturesAdminAncien() {
       if (f.statut === 'impayee' && email) {
         actions += '<a href="mailto:' + email + '?subject=' + encodeURIComponent('Rappel facture ' + (f.numero || ''))
           + '&body=' + encodeURIComponent('Bonjour,\nVotre facture ' + (f.numero || '') + ' de ' + mt + ' est en attente de règlement.\nMerci,\nForest Rangers')
-          + '" style="font-size:11px;background:var(--accent-dim);border:1px solid var(--accent-mid);border-radius:6px;padding:5px 10px;color:var(--accent);cursor:pointer;font-family:FRDisplay,Oswald,Arial Narrow,sans-serif;font-weight:700;text-decoration:none;">✉ Rappel</a>';
+          + '" style="font-size:11px;background:var(--accent-dim);border:1px solid var(--accent-mid);border-radius:6px;padding:5px 10px;color:var(--accent);cursor:pointer;font-family:FRDisplay,Oswald,Arial Narrow,sans-serif;font-weight:700;text-decoration:none;">' + FR_ICO('mail', 11) + ' Rappel</a>';
       }
       return '<div class="inv-row">'
         + '<span class="inv-num">' + (f.numero || '—') + '</span>'
@@ -4174,7 +4174,7 @@ function renderClients(clients) {
       + '<div class="c-detail">' + chiensLabel + ' · ' + (c.commune || '—') + ' · ' + typeBadge + zoneBadge + testBadge + '</div>'
       + '</div>'
       + '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">'
-      + (c.acces_cle ? '<span title="Clés confiées à Forest Rangers" style="font-size:13px;">🔑</span>' : '')
+      + (c.acces_cle ? '<span title="Clés confiées à Forest Rangers" style="color:var(--accent);">' + FR_ICO('cle', 13) + '</span>' : '')
       + '<span style="font-size:11px;color:var(--text-faint);">' + nbChiens + ' chien' + (nbChiens > 1 ? 's' : '') + '</span>'
       + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text-faint);"><polyline points="9 18 15 12 9 6"/></svg>'
       + '</div>'
@@ -4370,10 +4370,10 @@ function slotHtml(rows, clientsMap, chiensMap, clientDogsMap, dateStr) {
   var sc = r.statut==='en_attente'?'#f0b429':color;
   return '<div class="week-slot'+(r.service==='boarding'?' boarding':'')+'" style="border-left:2px solid '+sc+';cursor:pointer;" onclick="openResaDetail(\''+r.id+'\',\''+dateStr+'\')">'
     +'<div class="ws-time" style="color:'+color+';">'+cr+'</div>'
-    +'<div class="ws-title" style="font-weight:800;">'+dogsTxt+(dogs.length>1?' <span style="font-weight:400;opacity:0.6;">('+dogs.length+')</span>':'')+(c&&c.acces_cle?' <span title="Clés confiées à Forest Rangers">🔑</span>':'')+(isTest?' <span style="font-size:8px;opacity:0.5;">TEST</span>':'')+'</div>'
+    +'<div class="ws-title" style="font-weight:800;">'+dogsTxt+(dogs.length>1?' <span style="font-weight:400;opacity:0.6;">('+dogs.length+')</span>':'')+(c&&c.acces_cle?' <span title="Clés confiées à Forest Rangers" style="color:var(--accent);">'+FR_ICO('cle',12)+'</span>':'')+(isTest?' <span style="font-size:8px;opacity:0.5;">TEST</span>':'')+'</div>'
     +'<div class="ws-meta">'+svc+' · '+client+(function(){ if (r.service!=='walking') return ''; var e=rangerSeance(r,dateStr);
         return ' · <span style="color:'+(e.cle==='__aucun__'?'var(--red)':e.remplace?'var(--accent)':'inherit')+';">'+(e.cle==='__aucun__'?'non attribué':msgEsc(e.prenom))+'</span>'; })()+'</div>'
-    +(r.statut==='en_attente'?'<span style="font-size:9px;color:#f0b429;">⚠ À valider</span>':'')
+    +(r.statut==='en_attente'?'<span style="font-size:9px;color:#f0b429;">'+FR_ICO('alerte',10)+' À valider</span>':'')
     +'</div>';
 }
 
@@ -4526,7 +4526,7 @@ function bandeauVacancesScolaires(ds, compact) {
   var coul = 'var(--blue, #5a9ae0)';
   if (compact) return '<div title="' + vs.nom + ' (vacances scolaires)" style="width:100%;height:3px;border-radius:2px;background:' + coul + ';opacity:.6;margin-top:2px;"></div>';
   return '<div title="Vacances scolaires : service normal" style="font-size:10px;font-weight:600;color:' + coul + ';padding:3px 4px;text-align:center;'
-       + 'background:rgba(90,154,224,0.08);border-radius:4px;margin-bottom:4px;line-height:1.3;">🎒 ' + vs.nom + '</div>';
+       + 'background:rgba(90,154,224,0.08);border-radius:4px;margin-bottom:4px;line-height:1.3;">' + vs.nom + '</div>';
 }
 function bandeauFermeture(ds, compact) {
   var v = FR_CAL.verdict(ds);
@@ -4674,8 +4674,8 @@ function carteJourHtml(rows, clientsMap, chiensMap, clientDogsMap, dateStr) {
     rows.forEach(function(x){ if (x.transport_statut && x.transport_statut !== 'refuse') { bal = bal || !!x.transport_aller; bre = bre || !!x.transport_retour; bts = x.transport_statut; } });
     var dj = r.date_debut ? r.date_debut.slice(0, 10) : '', fj = r.date_fin ? r.date_fin.slice(0, 10) : '';
     var parts = [];
-    if (bal && (dateStr === dj || dateStr !== fj)) parts.push((dateStr === dj ? '🚐 Aller chercher le chien à domicile aujourd\'hui' : 'Arrivée : récupération à domicile'));
-    if (bre && (dateStr === fj || dateStr !== dj)) parts.push((dateStr === fj ? '🚐 Ramener le chien à domicile aujourd\'hui' : 'Départ : dépose à domicile'));
+    if (bal && (dateStr === dj || dateStr !== fj)) parts.push((dateStr === dj ? FR_ICO('camionnette', 12) + ' Aller chercher le chien à domicile aujourd\'hui' : 'Arrivée : récupération à domicile'));
+    if (bre && (dateStr === fj || dateStr !== dj)) parts.push((dateStr === fj ? FR_ICO('camionnette', 12) + ' Ramener le chien à domicile aujourd\'hui' : 'Départ : dépose à domicile'));
     if (parts.length) tr += '<div style="font-size:11px;margin-top:5px;color:' + (bts === 'a_confirmer' ? '#f0b429' : 'var(--text-dim)') + ';">'
       + parts.join(' · ') + (bts === 'a_confirmer' ? ' — à confirmer' : '') + '</div>';
   }
@@ -4683,7 +4683,7 @@ function carteJourHtml(rows, clientsMap, chiensMap, clientDogsMap, dateStr) {
     + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">'
     +   '<div style="font-family:FRDisplay,Oswald,Arial Narrow,sans-serif;font-size:15px;font-weight:800;color:' + (annulee ? '#e05a5a' : 'var(--text)') + ';' + (annulee ? 'text-decoration:line-through;' : '') + '">'
     +     dogsTxt + (dogs.length > 1 ? ' <span style="font-weight:400;font-size:11px;color:var(--text-faint);">· ' + dogs.length + ' chiens</span>' : '')
-    +     (c && c.acces_cle ? ' <span title="Clés confiées à Forest Rangers" style="font-size:13px;">🔑</span>' : '')
+    +     (c && c.acces_cle ? ' <span title="Clés confiées à Forest Rangers" style="color:var(--accent);">' + FR_ICO('cle', 13) + '</span>' : '')
     +     (c && c.is_test ? ' <span class="badge b-muted" style="font-size:9px;vertical-align:middle;">Test</span>' : '') + '</div>'
     +   '<span style="flex-shrink:0;font-size:10px;background:' + st[0] + ';color:' + st[1] + ';padding:3px 8px;border-radius:10px;font-family:FRDisplay,Oswald,Arial Narrow,sans-serif;font-weight:800;">' + st[2] + '</span>'
     + '</div>'
@@ -4794,7 +4794,7 @@ function renderPlanningJour(resas, clientsMap, chiensMap, clientDogsMap, dateStr
       n += nb;
       var rouge = k === '__aucun__';
       html += '<div style="display:flex;justify-content:space-between;align-items:baseline;margin:' + (html ? '12px' : '2px') + ' 2px 6px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:' + (rouge ? 'var(--red)' : 'var(--text-dim)') + ';">'
-        + '<span>' + (rouge ? '⚠ Non attribué' : msgEsc(k)) + '</span><span style="font-weight:400;letter-spacing:0;text-transform:none;">' + (nb ? nb + ' chien' + (nb > 1 ? 's' : '') : '') + '</span></div>'
+        + '<span>' + (rouge ? FR_ICO('alerte', 12) + ' Non attribué' : msgEsc(k)) + '</span><span style="font-weight:400;letter-spacing:0;text-transform:none;">' + (nb ? nb + ' chien' + (nb > 1 ? 's' : '') : '') + '</span></div>'
         + ok.concat(ko).map(function(g){ return carteJourHtml(g, clientsMap, chiensMap, clientDogsMap, dateStr); }).join('');
     });
     Object.keys(absents).forEach(function(a) {
@@ -4894,7 +4894,7 @@ async function openResaDetail(id, dateOccurrence) {
     dogList = [...new Set(dogList)];
 
     document.getElementById('detail-client-info').textContent = client
-      ? (client.prenom+' '+client.nom+' · '+(client.commune||'—')+' · '+(client.client_fidele?'⭐ Fidèle':'Nouveau client'))
+      ? (client.prenom+' '+client.nom+' · '+(client.commune||'—')+' · '+(client.client_fidele?'Client fidèle':'Nouveau client'))
       : '—';
     document.getElementById('detail-chien-info').textContent = dogList.length
       ? dogList.join(', ')
@@ -5009,7 +5009,7 @@ function lgJour(iso) {
 }
 function lgLigne(icone, titre, texte, couleur) {
   return '<div style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--border);">'
-    + '<div style="width:22px;text-align:center;flex-shrink:0;font-size:15px;">' + icone + '</div>'
+    + '<div style="width:22px;text-align:center;flex-shrink:0;padding-top:2px;color:var(--text-dim);">' + icone + '</div>'
     + '<div style="flex:1;min-width:0;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);font-weight:700;">' + titre + '</div>'
     + '<div style="font-size:13px;line-height:1.5;color:' + (couleur || 'var(--text)') + ';">' + texte + '</div></div></div>';
 }
@@ -5052,15 +5052,15 @@ async function completerLogistiqueResa(r) {
     var h = '';
     if (r.service === 'boarding') {
       var nuits = r.date_fin ? Math.round((new Date(r.date_fin + 'T12:00:00') - new Date(r.date_debut + 'T12:00:00')) / 86400000) : 0;
-      h += lgLigne('🛬', 'Arrivée · ' + lgJour(r.date_debut),
+      h += lgLigne(FR_ICO('arrivee', 17), 'Arrivée · ' + lgJour(r.date_debut),
         al ? '<strong>Forest Rangers va chercher le chien à domicile</strong>' + lgStatutTr(st) : 'Le client <strong>amène le chien à Kopstal</strong>');
-      h += lgLigne('🛫', 'Départ · ' + lgJour(r.date_fin),
+      h += lgLigne(FR_ICO('depart', 17), 'Départ · ' + lgJour(r.date_fin),
         re ? '<strong>Forest Rangers ramène le chien à domicile</strong>' + lgStatutTr(st) : 'Le client <strong>vient reprendre le chien à Kopstal</strong>');
-      h += lgLigne('🌙', 'Séjour', nuits > 0 ? nuits + ' nuit' + (nuits > 1 ? 's' : '') + ' · ' + chiens.length + ' chien' + (chiens.length > 1 ? 's' : '') + ' · nourriture apportée par le client' : 'Dates à vérifier');
+      h += lgLigne(FR_ICO('lune', 17), 'Séjour', nuits > 0 ? nuits + ' nuit' + (nuits > 1 ? 's' : '') + ' · ' + chiens.length + ' chien' + (chiens.length > 1 ? 's' : '') + ' · nourriture apportée par le client' : 'Dates à vérifier');
     } else {
-      h += lgLigne('🌅', 'Dépôt' + (r.heure_depot ? ' · ' + heureCreneau(r.heure_depot) : ''),
+      h += lgLigne(FR_ICO('lever', 17), 'Dépôt' + (r.heure_depot ? ' · ' + heureCreneau(r.heure_depot) : ''),
         al ? '<strong>Forest Rangers va chercher le chien à domicile</strong> (le matin)' + lgStatutTr(st) : 'Le client <strong>dépose le chien à Kopstal</strong>');
-      h += lgLigne('🌇', 'Récupération' + (r.heure_recuperation ? ' · ' + heureCreneau(r.heure_recuperation) : ''),
+      h += lgLigne(FR_ICO('coucher', 17), 'Récupération' + (r.heure_recuperation ? ' · ' + heureCreneau(r.heure_recuperation) : ''),
         re ? '<strong>Forest Rangers ramène le chien à domicile</strong> (le soir)' + lgStatutTr(st) : 'Le client <strong>reprend le chien à Kopstal</strong>');
     }
     if (st === 'a_confirmer') {
@@ -5071,22 +5071,22 @@ async function completerLogistiqueResa(r) {
 
     // Contact, adresse et accès : toujours le téléphone ; le reste si on va au domicile
     var tel = c.telephone ? '<a href="tel:' + lgEsc(String(c.telephone).replace(/\s+/g, '')) + '" style="color:var(--accent);font-weight:700;">' + lgEsc(c.telephone) + '</a>' : '<span style="color:var(--text-faint);">non renseigné</span>';
-    h += lgLigne('📞', 'Téléphone', tel);
+    h += lgLigne(FR_ICO('telephone', 17), 'Téléphone', tel);
     if (domicile) {
       var adr = [c.adresse, [c.code_postal ? 'L-' + c.code_postal : '', c.commune].filter(Boolean).join(' ')].filter(Boolean).join(', ');
       var adrQ = encodeURIComponent(adr + ', Luxembourg');
-      h += lgLigne('📍', 'Adresse', adr
+      h += lgLigne(FR_ICO('epingle', 17), 'Adresse', adr
         ? lgEsc(adr) + '<div style="margin-top:5px;display:flex;gap:6px;"><a class="rc-btn" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=' + adrQ + '">Maps</a><a class="rc-btn" target="_blank" rel="noopener" href="https://waze.com/ul?q=' + adrQ + '&navigate=yes">Waze</a></div>'
         : '<span style="color:var(--red);">Adresse manquante sur la fiche</span>');
       var acces = [];
-      if (c.acces_cle) acces.push('🔑 Clés confiées à Forest Rangers');
-      if (c.acces_alarme) acces.push('🚨 Alarme' + (c.acces_code ? ' · code <strong>' + lgEsc(c.acces_code) + '</strong>' : ''));
+      if (c.acces_cle) acces.push(FR_ICO('cle', 13) + ' Clés confiées à Forest Rangers');
+      if (c.acces_alarme) acces.push(FR_ICO('alarme', 13) + ' Alarme' + (c.acces_code ? ' · code <strong>' + lgEsc(c.acces_code) + '</strong>' : ''));
       else if (c.acces_code) acces.push('Code : <strong>' + lgEsc(c.acces_code) + '</strong>');
       if (c.acces_particularites) acces.push(lgEsc(c.acces_particularites));
-      h += lgLigne('🚪', 'Accès au domicile', acces.length ? acces.join('<br>') : '<span style="color:#c27c0e;">Aucune consigne d\'accès enregistrée</span>');
+      h += lgLigne(FR_ICO('maison', 17), 'Accès au domicile', acces.length ? acces.join('<br>') : '<span style="color:#c27c0e;">Aucune consigne d\'accès enregistrée</span>');
     }
     var pers = Array.isArray(c.personnes_autorisees) ? c.personnes_autorisees : [];
-    if (pers.length) h += lgLigne('👥', 'Personnes autorisées à amener / reprendre le chien',
+    if (pers.length) h += lgLigne(FR_ICO('personnes', 17), 'Personnes autorisées à amener / reprendre le chien',
       pers.map(function(p) { return '<strong>' + lgEsc(p.role || '—') + '</strong> : ' + lgEsc(p.details || '—'); }).join('<br>'));
 
     bloc.innerHTML = '<div style="background:rgba(0,0,0,0.18);border-radius:10px;padding:8px 14px 6px;">'
@@ -5099,8 +5099,8 @@ async function completerLogistiqueResa(r) {
       blocCh.innerHTML = chiens.map(function(d) {
         var tags = [d.race, d.poids_kg ? d.poids_kg + ' kg' : '', lgAge(d.date_naissance), d.sexe === 'male' ? 'mâle' : d.sexe, d.sexe === 'femelle' || d.sexe === 'male' ? (d.sterilise ? 'stérilisé' + (d.sexe === 'femelle' ? 'e' : '') : 'non stérilisé' + (d.sexe === 'femelle' ? 'e' : '')) : ''].filter(Boolean);
         var alertes = [];
-        if (d.chien_dangereux) alertes.push('⚠ Chien catégorisé');
-        if (d.chaleur_debut && d.chaleur_fin) alertes.push('♀ Mode chaleur jusqu\'au ' + formatDateFR(d.chaleur_fin));
+        if (d.chien_dangereux) alertes.push({ ico: 'alerte', t: 'Chien catégorisé' });
+        if (d.chaleur_debut && d.chaleur_fin) alertes.push({ ico: 'femelle', t: 'Mode chaleur jusqu\'au ' + formatDateFR(d.chaleur_fin) });
         if (d.vaccins_ok === false) alertes.push('Vaccins non à jour');
         if (d.assurance_ok === false) alertes.push('Assurance non confirmée');
         var lig = [];
@@ -5113,7 +5113,7 @@ async function completerLogistiqueResa(r) {
         return '<div style="background:rgba(0,0,0,0.18);border-radius:10px;padding:10px 14px;margin-bottom:8px;">'
           + '<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;"><span style="font-family:FRDisplay,Oswald,Arial Narrow,sans-serif;font-size:15px;font-weight:800;">' + lgEsc(d.nom || 'Chien') + '</span>'
           + '<span style="font-size:12px;color:var(--text-dim);">' + lgEsc(tags.join(' · ')) + '</span></div>'
-          + (alertes.length ? '<div style="font-size:12px;color:#c27c0e;margin-top:4px;">' + lgEsc(alertes.join(' · ')) + '</div>' : '')
+          + (alertes.length ? '<div style="font-size:12px;color:#c27c0e;margin-top:4px;">' + alertes.map(function(a) { return typeof a === 'string' ? lgEsc(a) : FR_ICO(a.ico, 12) + ' ' + lgEsc(a.t); }).join(' · ') + '</div>' : '')
           + (lig.length ? lig.map(function(x) { return '<div style="font-size:12.5px;margin-top:4px;"><span style="color:var(--text-faint);">' + x[0] + ' :</span> ' + lgEsc(x[1]) + '</div>'; }).join('')
                         : '<div style="font-size:12px;color:var(--text-faint);margin-top:4px;">Aucune information santé ou comportement sur la fiche.</div>')
           + '</div>';
@@ -6306,7 +6306,7 @@ async function chargerDestinatairesAlerte() {
     if (cpt) cpt.textContent = n + ' destinataire' + (n > 1 ? 's' : '') + (sansMail ? ' · ' + sansMail + ' sans e-mail' : '');
     box.innerHTML = alerteDestinataires.map(function(c) {
       return '<span class="badge ' + (c.email ? 'b-green' : 'b-muted') + '" style="font-size:10px;" title="'
-        + (c.email ? msgEsc(c.email) : 'Pas d\'adresse e-mail') + '">' + (c.email ? '✉ ' : '') + msgEsc(c.prenom + ' ' + c.nom) + '</span>';
+        + (c.email ? msgEsc(c.email) : 'Pas d\'adresse e-mail') + '">' + (c.email ? FR_ICO('mail', 11) + ' ' : '') + msgEsc(c.prenom + ' ' + c.nom) + '</span>';
     }).join('');
     return;
   }
@@ -6604,7 +6604,7 @@ async function feApercu() {
     var html = '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">'
       + '<div style="background:var(--surface2);border-radius:8px;padding:8px 12px;font-size:12px;"><b style="font-size:16px;">' + cles.length + '</b> séance' + (cles.length > 1 ? 's' : '') + '</div>'
       + '<div style="background:var(--surface2);border-radius:8px;padding:8px 12px;font-size:12px;"><b style="font-size:16px;">' + nbC + '</b> client' + (nbC > 1 ? 's' : '') + ' prévenu' + (nbC > 1 ? 's' : '') + '</div></div>';
-    if (pensionsEnCours.length) html += '<div style="background:var(--amber-dim);color:var(--amber);border-radius:8px;padding:9px 12px;font-size:12px;margin-bottom:10px;">⚠ '
+    if (pensionsEnCours.length) html += '<div style="background:var(--amber-dim);color:var(--amber);border-radius:8px;padding:9px 12px;font-size:12px;margin-bottom:10px;">' + FR_ICO('alerte', 13) + ' '
       + pensionsEnCours.length + ' pension' + (pensionsEnCours.length > 1 ? 's' : '') + ' déjà commencée' + (pensionsEnCours.length > 1 ? 's' : '') + ' (chien déjà chez vous), non annulée' + (pensionsEnCours.length > 1 ? 's' : '') + ' : '
       + pensionsEnCours.map(function(r){ var c = clientsMap[r.client_id]; return msgEsc((dogNamesForRows([r], chiensMap, clientDogsMap).join(' + ') || 'chien') + (c ? ' (' + c.nom + ')' : '') + ' jusqu\'au ' + formatDateFR(r.date_fin)); }).join(', ') + '</div>';
     html += '<div style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;">'
@@ -7097,7 +7097,7 @@ function alerterMessagesNonLus() {
   majBadgeMessages(n);
   if (n > 0 && !_alerteMsgAffichee) {
     _alerteMsgAffichee = true;
-    showToastAdmin('📩 ' + n + ' nouveau' + (n>1?'x':'') + ' message' + (n>1?'s':'') + ' client', 'red');
+    showToastAdmin(n + ' nouveau' + (n>1?'x':'') + ' message' + (n>1?'s':'') + ' client', 'red');
   }
 }
 
@@ -7182,10 +7182,11 @@ async function chargerBlocsDashboard() {
     }
   } catch(e) { console.error('pension ce soir:', e); }
 
-  // ── Prestations des 7 derniers jours ──
+  // ── Prestations sur 7 jours, aujourd'hui au milieu (v2.91 : J-3 → J+3) ──
   try {
-    var fin7 = new Date(); fin7.setHours(0,0,0,0);
-    var deb7 = new Date(fin7); deb7.setDate(deb7.getDate() - 6);
+    var auj7 = new Date(); auj7.setHours(0,0,0,0);
+    var deb7 = new Date(auj7); deb7.setDate(deb7.getDate() - 3);
+    var fin7 = new Date(auj7); fin7.setDate(fin7.getDate() + 3);
     await assurerCalendrier();
     var testsCA = await idsClientsTest();   // exclus du chiffre d'affaires, pas du nombre de séances
     var { data: r7 } = await db.from('reservations')
@@ -7212,18 +7213,18 @@ async function chargerBlocsDashboard() {
     if (bars) {
       bars.innerHTML = jours.map(function(j, idx) {
         var h = maxN > 0 ? Math.max(6, Math.round(j.n / maxN * 100)) : 4;
-        var hi = (idx === 6) ? ' hi' : '';
-        return '<div class="bar-col' + hi + '" style="height:' + h + '%;cursor:pointer;" onmouseenter="bulleJour(event,' + idx + ')" onmouseleave="cacherBulleJour()" onclick="cacherBulleJour();navVers(\'planning\');ouvrirJourPlanning(' + (idx - 6) + ')"></div>';
+        var hi = (idx === 3) ? ' hi' : '';
+        return '<div class="bar-col' + hi + '" style="height:' + h + '%;cursor:pointer;" onmouseenter="bulleJour(event,' + idx + ')" onmouseleave="cacherBulleJour()" onclick="cacherBulleJour();navVers(\'planning\');ouvrirJourPlanning(' + (idx - 3) + ')"></div>';
       }).join('');
       window._joursPrestations = jours;
     }
-    if (labels) labels.innerHTML = jours.map(function(j){ return '<div class="bar-lbl">' + j.label + '</div>'; }).join('');
+    if (labels) labels.innerHTML = jours.map(function(j, idx){ return '<div class="bar-lbl"' + (idx === 3 ? ' style="color:var(--accent);font-weight:700;"' : '') + '>' + (idx === 3 ? 'Auj.' : j.label) + '</div>'; }).join('');
     var st = document.getElementById('sem-total');
     if (st) st.textContent = totalN + (totalN > 1 ? ' prestations' : ' prestation');
     var ss = document.getElementById('sem-sub');
     if (ss) ss.textContent = totalEur > 0
-      ? 'Sur 7 jours · ' + euroAdmin(totalEur) + ' estimés (TTC)'
-      : 'Sur 7 jours · montants non chiffrés';
+      ? '3 jours passés, aujourd\'hui, 3 jours à venir · ' + euroAdmin(totalEur) + ' estimés (TTC)'
+      : '3 jours passés, aujourd\'hui, 3 jours à venir · montants non chiffrés';
   } catch(e) { console.error('activite 7 jours:', e); }
 
   // ── Répartition des services (mois en cours) ──
@@ -7440,7 +7441,7 @@ async function searchResaClient(val) {
     if (!ch.clients) return;
     var c = ch.clients;
     html += '<div onclick="choisirResaClient('+choix(c, ch.id)+')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;" onmouseover="this.style.background=\'var(--surface3)\'" onmouseout="this.style.background=\'\'">';
-    html += '<div style="width:28px;height:28px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:14px;">🐾</div>';
+    html += '<div style="width:28px;height:28px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;color:#fff;">' + FR_ICO('patte', 15) + '</div>';
     html += '<div><div style="font-size:13px;font-weight:600;color:var(--text);">'+ch.nom+'<span style="font-size:11px;color:var(--text-faint);margin-left:8px;">'+ch.race+'</span></div><div style="font-size:11px;color:var(--text-faint);">Propriétaire : '+c.prenom+' '+c.nom+'</div></div></div>';
   });
   results.innerHTML = html;
@@ -7460,7 +7461,7 @@ async function selectResaClient(id, nom, commune, fidele, chienId) {
   document.getElementById('resa-search-results').style.display = 'none';
   document.getElementById('resa-client-selected').style.display = 'block';
   document.getElementById('resa-client-nom').textContent = nom;
-  document.getElementById('resa-client-info').textContent = commune + ' · ' + (fidele ? '⭐ Fidèle' : 'Nouveau client') + (window._resaClientHZ ? ' · hors zone' : '');
+  document.getElementById('resa-client-info').textContent = commune + ' · ' + (fidele ? 'Client fidèle' : 'Nouveau client') + (window._resaClientHZ ? ' · hors zone' : '');
   // Charger chiens du client
   var {data:chiens} = await db.from('chiens').select('id,nom,race').eq('client_id',id).eq('actif',true);
   var sel = document.getElementById('resa-chien-id');
@@ -7539,7 +7540,7 @@ function verifierCalendrierResa() {
   if (!el) return;
   var f = joursFermesResaAdmin();
   if (!f.length) { el.style.display = 'none'; return; }
-  el.innerHTML = '⚠ ' + f.length + ' date' + (f.length > 1 ? 's' : '') + ' fermée' + (f.length > 1 ? 's' : '') + ' : '
+  el.innerHTML = FR_ICO('alerte', 13) + ' ' + f.length + ' date' + (f.length > 1 ? 's' : '') + ' fermée' + (f.length > 1 ? 's' : '') + ' : '
     + f.slice(0, 6).map(function(x) { return formatDateFR(x.date) + ' (' + x.v.nom + ')'; }).join(', ') + (f.length > 6 ? '…' : '')
     + '<br><span style="color:var(--text-faint);">Pas de séance ces jours-là, rien n\'est facturé.</span>';
   el.style.display = 'block';
@@ -7595,11 +7596,11 @@ async function apercuResaAdmin() {
   var f = await calculResaAdmin();
   if (!f.debut || !resaClientId) { el.style.display = 'none'; return; }
   var rouge = 'background:var(--red-dim);border:1px solid rgba(224,90,90,0.35);color:var(--red);';
-  if (f.err) { el.style.cssText = 'font-size:12px;line-height:1.5;border-radius:8px;padding:8px 12px;margin-bottom:10px;' + rouge; el.innerHTML = '⚠ ' + f.err; el.style.display = 'block'; return; }
+  if (f.err) { el.style.cssText = 'font-size:12px;line-height:1.5;border-radius:8px;padding:8px 12px;margin-bottom:10px;' + rouge; el.innerHTML = FR_ICO('alerte', 13) + ' ' + f.err; el.style.display = 'block'; return; }
   if (f.nb == null) { el.style.display = 'none'; return; }
   if (!f.nb) {
     el.style.cssText = 'font-size:12px;line-height:1.5;border-radius:8px;padding:8px 12px;margin-bottom:10px;' + rouge;
-    el.innerHTML = '⚠ Aucune séance entre ces dates : vérifiez la date de début (pas de service le week-end), les jours cochés et la fin de récurrence.';
+    el.innerHTML = FR_ICO('alerte', 13) + ' Aucune séance entre ces dates : vérifiez la date de début (pas de service le week-end), les jours cochés et la fin de récurrence.';
   } else {
     el.style.cssText = 'font-size:12px;line-height:1.5;border-radius:8px;padding:8px 12px;margin-bottom:10px;background:var(--green-dim);border:1px solid rgba(94,201,122,0.35);color:var(--text);';
     el.innerHTML = '<strong>' + f.nb + ' ' + (f.svc === 'boarding' ? (f.nb > 1 ? 'nuits' : 'nuit') : (f.nb > 1 ? 'séances' : 'séance')) + '</strong>'
@@ -8063,7 +8064,7 @@ async function openStatDetail(type) {
       if (!data || !data.length) { content.innerHTML = '<div style="padding:20px;text-align:center;color:var(--green);">✓ Aucun impayé !</div>'; return; }
       var total = data.reduce(function(s,f) { return s + (parseFloat(f.total_ttc)||0); }, 0);
       content.innerHTML = '<div class="stat-detail-total"><span>' + data.length + ' facture' + (data.length > 1 ? 's' : '') + ' impayée' + (data.length > 1 ? 's' : '') + '</span><strong style="color:var(--red);">' + total.toLocaleString('fr-LU',{minimumFractionDigits:2}) + ' €</strong></div>'
-        + data.map(function(f) { var cl = f.clients ? f.clients.prenom + ' ' + f.clients.nom : '—'; var email = f.clients ? f.clients.email : ''; var mt = parseFloat(f.total_ttc||0).toLocaleString('fr-LU',{minimumFractionDigits:2}); var emis = f.created_at ? new Date(f.created_at).toLocaleDateString('fr-LU',{day:'2-digit',month:'short',year:'numeric'}) : '—'; return '<div style="padding:12px;border-bottom:1px solid var(--border);"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div><span style="font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;color:var(--accent);font-size:11px;">' + (f.numero||'—') + '</span> · <strong style="color:var(--text);">' + cl + '</strong></div><span style="color:var(--red);font-weight:700;">' + mt + ' €</span></div><div style="font-size:11px;color:var(--text-faint);">' + (f.periode||'') + ' · Emise le ' + emis + '</div><div style="display:flex;gap:6px;margin-top:8px;"><button onclick="marquerPayee(\'' + f.id + '\')" style="font-size:11px;background:var(--green-dim);border:1px solid rgba(94,201,122,0.3);border-radius:6px;padding:5px 10px;color:var(--green);cursor:pointer;font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-weight:700;">✓ Payee</button>' + (email ? '<a href="mailto:' + email + '?subject=Rappel%20facture&body=Bonjour%2C%0AVotre%20facture%20' + (f.numero||'') + '%20de%20' + mt + '%20%E2%82%AC%20est%20en%20attente." style="font-size:11px;background:var(--accent-dim);border:1px solid var(--accent-mid);border-radius:6px;padding:5px 10px;color:var(--accent);cursor:pointer;font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-weight:700;text-decoration:none;">✉ Rappel</a>' : '') + '</div></div>'; }).join('');
+        + data.map(function(f) { var cl = f.clients ? f.clients.prenom + ' ' + f.clients.nom : '—'; var email = f.clients ? f.clients.email : ''; var mt = parseFloat(f.total_ttc||0).toLocaleString('fr-LU',{minimumFractionDigits:2}); var emis = f.created_at ? new Date(f.created_at).toLocaleDateString('fr-LU',{day:'2-digit',month:'short',year:'numeric'}) : '—'; return '<div style="padding:12px;border-bottom:1px solid var(--border);"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div><span style="font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;color:var(--accent);font-size:11px;">' + (f.numero||'—') + '</span> · <strong style="color:var(--text);">' + cl + '</strong></div><span style="color:var(--red);font-weight:700;">' + mt + ' €</span></div><div style="font-size:11px;color:var(--text-faint);">' + (f.periode||'') + ' · Emise le ' + emis + '</div><div style="display:flex;gap:6px;margin-top:8px;"><button onclick="marquerPayee(\'' + f.id + '\')" style="font-size:11px;background:var(--green-dim);border:1px solid rgba(94,201,122,0.3);border-radius:6px;padding:5px 10px;color:var(--green);cursor:pointer;font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-weight:700;">✓ Payee</button>' + (email ? '<a href="mailto:' + email + '?subject=Rappel%20facture&body=Bonjour%2C%0AVotre%20facture%20' + (f.numero||'') + '%20de%20' + mt + '%20%E2%82%AC%20est%20en%20attente." style="font-size:11px;background:var(--accent-dim);border:1px solid var(--accent-mid);border-radius:6px;padding:5px 10px;color:var(--accent);cursor:pointer;font-family:\'FRDisplay\',\'Oswald\',\'Arial Narrow\',sans-serif;font-weight:700;text-decoration:none;">' + FR_ICO('mail', 11) + ' Rappel</a>' : '') + '</div></div>'; }).join('');
     }
   } catch(e) { content.innerHTML = '<div style="padding:20px;text-align:center;color:var(--red);">Erreur : ' + (e.message||e) + '</div>'; }
 }

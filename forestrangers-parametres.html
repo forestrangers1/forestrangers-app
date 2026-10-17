@@ -344,7 +344,6 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
       + 'background:#1c1f14;color:#eceee6;display:flex;align-items:center;justify-content:center;'
       + 'padding:24px;font-family:\'Instrument Sans\',system-ui,sans-serif;text-align:center;">'
       + '<div style="max-width:340px;">'
-      + '<div style="font-size:34px;margin-bottom:14px;">📡</div>'
       + '<div style="font-size:17px;font-weight:600;margin-bottom:10px;">Connexion au serveur impossible</div>'
       + '<div style="font-size:13.5px;line-height:1.6;color:rgba(236,238,230,0.6);margin-bottom:20px;">'
       + 'Votre reseau ne permet pas de charger l\'application. Verifiez votre connexion, '
@@ -380,6 +379,7 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
   <script src="fr-facturation.js"></script>
   <script src="fr-remplacements.js"></script>
   <script src="fr-messages.js"></script>
+<script src="fr-icones.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
   <link rel="manifest" href="/manifest.json">
@@ -579,7 +579,7 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
         <!-- Promenade de l'après-midi (v2.75 · migration v60) -->
         <div class="card" style="margin-bottom:16px;">
           <div class="card-head">
-            <span class="card-title">🌤️ Promenade de l'après-midi</span>
+            <span class="card-title">Promenade de l'après-midi</span>
             <div style="display:flex;align-items:center;gap:10px;margin-left:auto;">
               <span id="apmidi-badge" class="badge b-muted">Fermée</span>
               <div class="toggle" id="apmidi-toggle" onclick="toggleApmidi()" title="Ouvrir / fermer le créneau de 14h30 aux réservations"><div class="toggle-knob"></div></div>
@@ -594,7 +594,7 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
         <!-- Clôture estivale -->
         <div class="card" style="margin-bottom:16px;">
           <div class="card-head">
-            <span class="card-title">🌞 Clôture estivale</span>
+            <span class="card-title">Clôture estivale</span>
             <div style="display:flex;align-items:center;gap:10px;">
               <span id="cloture-status-badge" class="badge b-muted">Inactif</span>
               <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
@@ -639,7 +639,7 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
 
         <!-- Règles d'annulation normales (rappel) -->
         <div class="card" style="margin-bottom:16px;">
-          <div class="card-head"><span class="card-title">📋 Règles d'annulation hors période estivale</span></div>
+          <div class="card-head"><span class="card-title">Règles d'annulation hors période estivale</span></div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:4px;">
             <div style="background:var(--surface2);border-radius:var(--radius);padding:12px;">
               <div style="font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:12px;font-weight:800;color:var(--text);margin-bottom:6px;">Dog Walking</div>
@@ -659,7 +659,7 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
         <!-- Autres périodes clôturées -->
         <div class="card" style="margin-bottom:16px;">
           <div class="card-head">
-            <span class="card-title">📅 Autres périodes clôturées</span>
+            <span class="card-title">Autres périodes clôturées</span>
             <button class="btn btn-accent" style="font-size:10px;padding:6px 12px;" onclick="ouvrirPeriode(null)">+ Ajouter</button>
           </div>
           <div class="info-box amber" style="margin:12px 16px 4px;">
@@ -691,7 +691,7 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
         <!-- Tarifs -->
         <div class="card" style="margin-bottom:16px;">
           <div class="card-head">
-            <span class="card-title">💶 Tarifs</span>
+            <span class="card-title">Tarifs</span>
             <span id="tarifs-grille-active" style="font-size:11px;color:var(--text-faint);margin-left:auto;margin-right:10px;"></span>
           </div>
           <div style="padding:14px 16px;">
@@ -743,7 +743,7 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
         <!-- Capacités -->
         <div class="card" style="margin-bottom:16px;">
           <div class="card-head">
-            <span class="card-title">🐕 Capacités</span>
+            <span class="card-title">Capacités</span>
             <button class="btn btn-accent" style="font-size:10px;padding:6px 12px;" onclick="saveCapacites()">Enregistrer</button>
           </div>
           <div style="padding:14px 16px;">
@@ -758,7 +758,7 @@ html.light .info-box.green { background: rgba(46,125,50,0.09); border-color: rgb
         <!-- Zones -->
         <div class="card">
           <div class="card-head">
-            <span class="card-title">📍 Zones géographiques</span>
+            <span class="card-title">Zones géographiques</span>
             <button class="btn btn-accent" style="font-size:10px;padding:6px 12px;" onclick="ouvrirZone(null)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Ajouter une zone
@@ -1851,7 +1851,7 @@ function renderFeries() {
     var v = FR_CAL.vacancesNoel(anneeFeries);
     var fmt = function(s) { return new Date(s + 'T00:00:00').toLocaleDateString('fr-LU', { day: 'numeric', month: 'short' }); };
     return '<div style="grid-column:1/-1;display:flex;justify-content:space-between;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);opacity:' + (v.fin < aujourdhui ? '0.5' : '1') + ';">'
-      + '<span style="font-size:12px;color:var(--text);">🎄 ' + v.nom + ' — promenades suspendues (crèche et pension ouvertes)</span>'
+      + '<span style="font-size:12px;color:var(--text);">' + v.nom + ' — promenades suspendues (crèche et pension ouvertes)</span>'
       + '<span style="font-size:11.5px;color:var(--text-faint);white-space:nowrap;">' + fmt(v.debut) + ' → ' + fmt(v.fin) + '</span></div>';
   })();
 }
@@ -2166,7 +2166,7 @@ function rangerRowHTML(s) {
     + (cr.length ? cr.map(function(c) { return '<span class="badge b-accent" style="font-size:9px;">' + (CRENEAUX_STAFF[c] || echapper(c)) + '</span>'; }).join('') : '<span style="font-size:11px;color:var(--text-faint);">Créneaux non renseignés</span>')
     + (s.flexible ? '<span class="badge b-green" style="font-size:9px;">Heures sup. possibles</span>' : '')
     + '</div>'
-    + (s.secteur && s.secteur.length ? '<div style="font-size:11.5px;color:var(--text-dim);margin-top:8px;">📍 Secteur : ' + echapper(s.secteur.join(', ')) + '</div>' : '')
+    + (s.secteur && s.secteur.length ? '<div style="font-size:11.5px;color:var(--text-dim);margin-top:8px;">' + FR_ICO('epingle', 12) + ' Secteur : ' + echapper(s.secteur.join(', ')) + '</div>' : '')
     + '</div>';
   return '<div class="staff-row" style="cursor:default;flex-wrap:wrap;gap:10px;">'
     + '<div class="staff-avatar" style="background:' + (admin ? 'linear-gradient(135deg,var(--accent),#c44010);color:white;' : 'linear-gradient(135deg,var(--surface3),#6b7450);color:var(--text);') + '">' + initials + '</div>'
@@ -3002,10 +3002,10 @@ function rpCellule(k) {
   var nom = rpNom(id), total = t.max + (id ? rpDejaChiens(id, k) : 0), cap = id ? RP.capa[id] : null;
   var s = id ? RP.equipe.filter(function(x) { return String(x.id) === String(id); })[0] : null;
   var w = '';
-  if (!id) w = '<div class="rp-warn" style="color:var(--red);">⚠ Personne ne fera cette tournée</div>';
+  if (!id) w = '<div class="rp-warn" style="color:var(--red);">' + FR_ICO('alerte', 12) + ' Personne ne fera cette tournée</div>';
   else {
-    if (cap && total > cap) w += '<div class="rp-warn">⚠ ' + echapper(nom) + ' aura ' + total + ' chiens (camionnette : ' + cap + ')</div>';
-    if (rpEnConge(id, t)) w += '<div class="rp-warn" style="color:var(--red);">⚠ ' + echapper(nom) + ' est aussi en congé</div>';
+    if (cap && total > cap) w += '<div class="rp-warn">' + FR_ICO('alerte', 12) + ' ' + echapper(nom) + ' aura ' + total + ' chiens (camionnette : ' + cap + ')</div>';
+    if (rpEnConge(id, t)) w += '<div class="rp-warn" style="color:var(--red);">' + FR_ICO('alerte', 12) + ' ' + echapper(nom) + ' est aussi en congé</div>';
     else if (s && !rpTravaille(s, t)) w += '<div class="rp-warn">ⓘ Ne travaille pas habituellement ce jour / ce créneau</div>';
   }
   return '<td class="rp-cell"><select onchange="RP.choix[\'' + k + '\']=this.value;rpRendre()">' + opts + '</select>'

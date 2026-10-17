@@ -395,7 +395,6 @@ html.light .actions-bar  { background: #f6f7f2; border-top-color: rgba(0,0,0,0.0
       + 'background:#1c1f14;color:#eceee6;display:flex;align-items:center;justify-content:center;'
       + 'padding:24px;font-family:\'Instrument Sans\',system-ui,sans-serif;text-align:center;">'
       + '<div style="max-width:340px;">'
-      + '<div style="font-size:34px;margin-bottom:14px;">📡</div>'
       + '<div style="font-size:17px;font-weight:600;margin-bottom:10px;">Connexion au serveur impossible</div>'
       + '<div style="font-size:13.5px;line-height:1.6;color:rgba(236,238,230,0.6);margin-bottom:20px;">'
       + 'Votre reseau ne permet pas de charger l\'application. Verifiez votre connexion, '
@@ -1884,7 +1883,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   try {
     if (factureId) {
       await initFactureExistante(factureId);
-      // Arrivée depuis Admin → Factures → « ✉ Envoyer »
+      // Arrivée depuis Admin → Factures → « Envoyer »
       if (params.get('envoyer') === '1' && currentFacture) setTimeout(envoyerFacture, 700);
       // Arrivée depuis Admin → Factures → « NC »
       if (params.get('nc') === '1' && currentFacture) setTimeout(annulerParNoteCredit, 600);
