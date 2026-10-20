@@ -772,22 +772,43 @@ function testeursMois(per) {
   });
   return tot;
 }
+// v2.95 : service d'une ligne de facture. Les lignes ajoutées à la main
+// avant la v2.95 n'avaient pas de champ service : on le déduit du libellé
+// (« Dog Walking · Monty », « Day Care · … », « Boarding · … », « Frais de déplacement »).
+function serviceLigne(l) {
+  if (!l) return null;
+  if (l.type === 'regularisation') return 'regularisation';
+  if (l.service) return l.service;
+  var t = String(l.label || '').toLowerCase();
+  if (/^(dog walking|promenade|walking|cani)/.test(t)) return 'walking';
+  if (/^(day care|daycare|crèche|creche)/.test(t)) return 'daycare';
+  if (/^(boarding|pension)/.test(t)) return 'boarding';
+  if (/déplacement|deplacement|hors zone|transport/.test(t)) return 'frais_deplacement';
+  return null;
+}
+// Nombre de chiens d'une ligne : chiens enregistrés, sinon noms du libellé (« Max + Luna »)
+function chiensLigne(l) {
+  if (Array.isArray(l.chiens) && l.chiens.length) return l.chiens.length;
+  if (+l.nb_chiens > 0) return +l.nb_chiens;
+  var p = String(l.label || '').split(' · ');
+  return p.length > 1 ? p[1].split(' + ').length : 1;
+}
 // Chiens d'un mois d'après le détail des factures (mois sans planning). null si aucun détail.
 function chiensFactures(per) {
   var r = { walking: 0, daycare: 0, boarding: 0 }, vu = false;
   facturesMois(per).forEach(function(f) {
     (Array.isArray(f.lignes) ? f.lignes : []).forEach(function(l) {
-      if (!l || r[l.service] == null) return;
+      var sv = serviceLigne(l);
+      if (!l || r[sv] == null) return;
       if (l.type === 'annulation' || l.type === 'regularisation' || /annulation/i.test(l.label || '')) return;
-      var n = +l.qte || 0;
-      if (Array.isArray(l.chiens) && l.chiens.length) n *= l.chiens.length;   // lignes de l'app : séances × chiens
-      r[l.service] += n; vu = true;
+      var n = (+l.qte || 0) * chiensLigne(l);   // séances × chiens
+      r[sv] += n; vu = true;
     });
   });
   return vu ? r : null;
 }
 
-// En tête de page : 2 derniers mois facturés, mois en cours, prévision, combiné clients + testeurs
+// En tête de page : dernier mois facturé, mois en cours, prévision, combiné clients + testeurs
 function sectionVueRapide() {
   var n = new Date(), an = n.getFullYear(), m = n.getMonth();
   var pM2 = perDe(an, m - 2), pM1 = perDe(an, m - 1), p0 = perDe(an, m), p1 = perDe(an, m + 1);
@@ -796,8 +817,8 @@ function sectionVueRapide() {
   var C0 = valeurMois(p0), A0 = agreger(C0), C1 = valeurMois(p1);
   var t1 = testeursMois(pM1);
   var nf = function(F, per) { return F.length + ' facture' + (F.length > 1 ? 's' : '') + ' · émises le 1er ' + moisNom(perSuivant(per)); };
-  var h = '<div class="section-title">Chiffre facturé — vue rapide</div><div class="grid grid-5">';
-  h += kpi('green', esc(moisLong(pM2)) + ' · facturé', eur(f2), nf(F2, pM2));
+  // v2.92 : 4 cases (la case M-2 est retirée ; M-1 garde son écart vs M-2)
+  var h = '<div class="section-title">Chiffre facturé — vue rapide</div><div class="grid grid-4">';
   h += kpi('green', esc(moisLong(pM1)) + ' · facturé', eur(f1), nf(F1, pM1), delta(f1, f2, moisNom(pM2)));
   h += kpi('accent', esc(moisLong(p0)) + ' · en cours', eur(C0.total), eur(A0.realise) + ' réalisés · ' + eur(A0.aVenir) + ' à venir (planning)', delta(C0.total, f1, moisNom(pM1)));
   h += kpi('blue', esc(moisLong(p1)) + ' · prévision', eur(C1.total), 'D\'après les réservations déjà connues', delta(C1.total, C0.total, moisNom(p0)));
@@ -823,7 +844,7 @@ function factureParService(F, note) {
     total += tot;
     (Array.isArray(f.lignes) ? f.lignes : []).forEach(function(l) {
       if (!l) return;
-      var k = l.type === 'regularisation' ? 'regularisation' : (l.service || 'autre');
+      var k = serviceLigne(l) || 'autre';
       if (!FAC_SVC.some(function(s) { return s[0] === k; })) k = 'autre';
       t[k] = (t[k] || 0) + (+l.total || 0); vu += (+l.total || 0);
     });

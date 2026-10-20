@@ -620,7 +620,8 @@ html, body {
 .cal-cell.annul { background: var(--red-dim); border-color: rgba(224,90,90,0.35); color: var(--text-dim); }
 .cal-cell.ferme { background: repeating-linear-gradient(45deg, var(--surface2) 0 4px, transparent 4px 8px); color: var(--text-faint); }
 /* ── PDF facture (v2.69) : même mise en page que la facture admin ── */
-.px-doc { width: 794px; background: #fff; color: #333; font-family: 'Instrument Sans', Arial, sans-serif; }
+.px-doc { width: 794px; background: #fff; color: #333; font-family: 'Instrument Sans', Arial, sans-serif;
+  display: flex; flex-direction: column; min-height: 1122px; }   /* v2.93 : page A4 entière, bas collé en bas (fr-pdf.js) */
 .px-head { background: #1c1f14; padding: 30px 40px 26px; display: flex; justify-content: space-between; align-items: flex-start; }
 .px-brand { display: flex; align-items: center; gap: 12px; }
 .px-name { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 20px; font-weight: 800; color: #fff; }
@@ -630,7 +631,7 @@ html, body {
 .px-n { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 26px; font-weight: 800; color: #fff; margin-bottom: 4px; }
 .px-dl { font-size: 10px; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 7px; }
 .px-dv { font-size: 13px; color: rgba(255,255,255,0.8); margin-top: 2px; }
-.px-body { padding: 30px 40px 18px; }
+.px-body { padding: 30px 40px 18px; flex: 1 0 auto; display: flex; flex-direction: column; }
 .px-addr { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px; }
 .px-al { font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: #ff5f1f; font-weight: 700; margin-bottom: 8px; }
 .px-an { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 15px; font-weight: 800; color: #1c1f14; margin-bottom: 4px; }
@@ -640,7 +641,7 @@ html, body {
 .px-table th.num, .px-table td.num { text-align: right; }
 .px-table td { padding: 11px 8px; font-size: 12.5px; border-top: 1px solid #f0f0f0; color: #333; vertical-align: top; }
 .px-table td.ttc { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-weight: 700; color: #1c1f14; }
-.px-tot { margin-left: auto; width: 300px; }
+.px-tot { margin-left: auto; margin-top: auto; width: 300px; }
 .px-tr { display: flex; justify-content: space-between; padding: 7px 0; font-size: 13px; border-top: 1px solid #eee; }
 .px-tr:first-child { border-top: none; }
 .px-tr .lbl { color: #666; }
@@ -2060,69 +2061,10 @@ document.addEventListener('keydown', function(e) {
   if (menu && menu.classList.contains('open')) menu.classList.remove('open');
 });
 
-function updateModalPrix() {
-  var svc = document.getElementById('modal-service').value;
-  var isBoarding = svc === 'boarding';
-  var isDaycare  = svc === 'daycare';
-  document.getElementById('modal-creneau-group').style.display = isBoarding || isDaycare ? 'none' : 'block';
-  document.getElementById('modal-jours-group').style.display   = isBoarding ? 'none' : 'block';
-  document.getElementById('modal-datefin-group').style.display = 'block';
-}
-
-var joursSelectionnes = [];
-function toggleJourPill(el, jour) {
-  el.classList.toggle('selected');
-  if (el.classList.contains('selected')) { joursSelectionnes.push(jour); }
-  else { joursSelectionnes = joursSelectionnes.filter(j => j !== jour); }
-}
-
-async function envoyerDemande() {
-  var svc    = document.getElementById('modal-service').value;
-  var debut  = document.getElementById('modal-date-debut').value;
-  var fin    = document.getElementById('modal-date-fin').value || debut;
-  var cr     = document.getElementById('modal-creneau') ? document.getElementById('modal-creneau').value : null;
-  var msg    = document.getElementById('modal-message').value;
-
-  if (!debut) {
-    document.getElementById('modal-date-debut').style.borderColor = 'var(--red)';
-    return;
-  }
-
-  var err = null;
-  try {
-    if (clientId) {
-      var res = await db.from('reservations').insert({
-        client_id:  clientId,
-        service:    svc,
-        date_debut: debut,
-        date_fin:   fin,
-        creneau:    cr,
-        jours:      joursSelectionnes.length > 0 ? joursSelectionnes : null,
-        notes:      msg || null,
-        statut:     'en_attente'
-        // ranger_nom / ranger_id : assignés automatiquement par le trigger fr_assign_ranger (§4.4)
-      });
-      err = res.error;
-    }
-  } catch(e) { err = e; console.log('Erreur envoi demande:', e); }
-
-  if (err) {
-    console.log('Erreur envoi demande:', err);
-    frAlert({ type: 'erreur', titre: 'Demande non enregistrée',
-      message: "Votre demande n'a pas pu être enregistrée. Réessayez dans un instant ; si le problème persiste, contactez Gabriel.",
-      apres: 'Détail : ' + (err.message || JSON.stringify(err)) });
-    return; // on ne ferme pas le modal et on n'affiche pas le toast de succès
-  }
-
-  closeBookingModal();
-
-  // Toast confirmation
-  var toast = document.createElement('div');
-  toast.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--green);color:white;padding:12px 20px;border-radius:12px;font-family:FRDisplay,Oswald,Arial Narrow,sans-serif;font-size:13px;font-weight:800;z-index:999;box-shadow:0 8px 24px rgba(94,201,122,0.4);white-space:nowrap;';
-  toast.textContent = '✓ Demande envoyée — Gabriel confirmera sous 24h';
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 3500);
-}
+// v2.96 : ancienne fenêtre de demande de réservation (envoyerDemande…) supprimée.
+// Elle n'était plus accessible et, sans client chargé, affichait
+// « Demande envoyée » sans rien enregistrer. Les réservations passent
+// toutes par forestrangers-reservation.html.
 
 async function sendComment() {
   const input = document.getElementById('commentInput');

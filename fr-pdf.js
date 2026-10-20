@@ -12,6 +12,9 @@
    puis photographié à défilement nul. Résultat : une page A4 pleine
    largeur, identique sur Chrome, Safari, iPhone et Android.
 
+   v2.93 : hauteur arrondie à un nombre entier de pages A4 (bas de facture
+   collé en bas de page).
+
    API (renvoient une Promise) :
      FR_PDF.telecharger(source, nomFichier)   → enregistre le PDF
      FR_PDF.base64(source, nomFichier)        → contenu base64 (e-mail)
@@ -20,6 +23,7 @@
 (function () {
   'use strict';
   var LARGEUR = 794;   // 210 mm à 96 ppp
+  var HAUTEUR = 1115;  // 297 mm à 96 ppp = 1123 ; 1115 laisse la marge d'arrondi de html2pdf (sinon page blanche en tête)
 
   function preparer(source) {
     var hote = document.createElement('div');
@@ -38,6 +42,7 @@
     doc.style.borderRadius = '0';
     doc.style.boxShadow = 'none';
     doc.style.transform = 'none';
+    doc.classList.add('fr-a4');
 
     var voile = document.createElement('div');
     voile.style.cssText = 'position:fixed;inset:0;z-index:2147483600;background:rgba(20,22,16,.55);'
@@ -50,6 +55,13 @@
     document.body.appendChild(hote);
     document.body.appendChild(voile);
     window.scrollTo(0, 0);
+    // v2.93 : hauteur = un nombre entier de pages A4. Les modèles de facture
+    // collent leur bas de page en bas du document (flex) : il tombe donc en
+    // bas de la (dernière) page, même avec une seule ligne.
+    doc.style.aspectRatio = 'auto';
+    doc.style.minHeight = '0';
+    var pages = Math.max(1, Math.ceil((doc.scrollHeight - 2) / HAUTEUR));
+    doc.style.minHeight = (pages * HAUTEUR) + 'px';
     return {
       el: doc,
       fin: function () {

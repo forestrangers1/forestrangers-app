@@ -204,11 +204,19 @@ select.form-input option { background: #252a1a; color: #eceee6; }
   width: 100%; max-width: 680px;
   flex-shrink: 0;
   background: white; border-radius: 12px;
-  overflow: hidden;
   box-shadow: 0 20px 60px rgba(0,0,0,0.4);
   font-family: 'Instrument Sans', sans-serif;
   color: #1c1f14;
+  /* v2.93 : toujours une page A4 entière ; à partir de « Sous-total HT »,
+     tout le bas (totaux, paiement, conditions, pied) est collé au bas de
+     la page, l'espace libre reste blanc au-dessus. Plus long qu'une page :
+     le document s'allonge (overflow visible, sinon il serait rogné). */
+  display: flex; flex-direction: column;
+  aspect-ratio: 210 / 297;
 }
+.invoice-doc > .inv-header { border-radius: 12px 12px 0 0; }
+.invoice-doc > .inv-footer { border-radius: 0 0 12px 12px; }
+.fr-a4 > .inv-header, .fr-a4 > .inv-footer { border-radius: 0; }
 
 /* Invoice header */
 .inv-header {
@@ -227,7 +235,7 @@ select.form-input option { background: #252a1a; color: #eceee6; }
 .inv-date-val { font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 2px; }
 
 /* Invoice body */
-.inv-body { padding: 28px 32px; }
+.inv-body { padding: 28px 32px; flex: 1 0 auto; display: flex; flex-direction: column; }
 
 /* Addresses */
 .inv-addresses { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px; }
@@ -250,7 +258,7 @@ select.form-input option { background: #252a1a; color: #eceee6; }
 .inv-discount-row td:last-child { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-weight: 700; color: #2e7d32 !important; }
 
 /* Totals */
-.inv-totals { margin-left: auto; width: 280px; }
+.inv-totals { margin-left: auto; margin-top: auto; width: 280px; }
 .inv-total-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 13px; border-top: 1px solid #eee; }
 .inv-total-row:first-child { border-top: none; }
 .inv-total-row .lbl { color: #666; }
@@ -1092,7 +1100,7 @@ function confirmAddLine() {
     var fraisTtc = tarifs.frais_deplacement_ttc || 5.85;
     var fraisHt  = tarifs.frais_deplacement_ht  || 5;
     lineItemsData.push({
-      label: 'Frais de déplacement',
+      label: 'Frais de déplacement', service: 'frais_deplacement',
       sousLabel: qte + ' ' + (qte > 1 ? 'déplacements' : 'déplacement') + ' · ' + eur(fraisHt) + ' HT l\'unité',
       qte: qte, prixUnit: fraisTtc, total: Math.round(qte * fraisTtc * 100) / 100,
       color: null, tvaRate: getTvaRate('frais_deplacement')
@@ -1115,7 +1123,7 @@ function confirmAddLine() {
     var nbDogs = Math.max(1, currentChiens.length);
     var combine = prixBase + prixReduit * (nbDogs - 1);
     var item = {
-      label: svc + ' · ' + noms.join(' + '),
+      label: svc + ' · ' + noms.join(' + '), service: service, nbChiens: nbDogs,
       sousLabel: uLabel,
       qte: qte, prixUnit: combine, total: Math.round(qte * combine * 100) / 100,
       color: null, tvaRate: getTvaRate(service)
@@ -1129,7 +1137,7 @@ function confirmAddLine() {
     var chien = currentChiens.find(function(c) { return c.id === chienVal; });
     var nom = chien ? chien.nom : '—';
     lineItemsData.push({
-      label: svc + ' · ' + nom,
+      label: svc + ' · ' + nom, service: service, nbChiens: 1,
       sousLabel: uLabel,
       qte: qte, prixUnit: prixBase, total: Math.round(qte * prixBase * 100) / 100,
       color: null, tvaRate: getTvaRate(service)
@@ -1532,6 +1540,7 @@ async function enregistrerFacture() {
       return { label: it.label, sousLabel: it.sousLabel || null, discountNote: it.discountNote || null,
                qte: it.qte, prixUnit: it.prixUnit, total: it.total,
                type: it.type || (it.color === 'red' ? 'annulation' : null),
+               service: it.service || null, nb_chiens: it.nbChiens || undefined,   // v2.95 : pour les statistiques
                ref_facture_id: it.ref_facture_id || undefined,
                tvaRate: it.tvaRate != null ? it.tvaRate : TVA_RATES.default };
     });
