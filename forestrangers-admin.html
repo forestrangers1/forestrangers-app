@@ -466,6 +466,17 @@ html.light .brand-name .rangers { color: var(--accent); }
 .rc-btn.pay { background:var(--green-dim); border-color:rgba(94,201,122,0.3); color:var(--green); }
 .rc-btn.go  { background:var(--accent-dim); border-color:var(--accent-mid); color:var(--accent); }
 .rc-btn.red { background:var(--red-dim); border-color:rgba(224,90,90,0.3); color:var(--red); }
+/* v2.98 : frais d'annulation modifiables — lisibles en mode clair, choix actuel marqué (plus estompé) */
+.fa-box { background:rgba(0,0,0,0.18); border-radius:10px; padding:8px 14px 4px; }
+.fa-box .fa-sub { color:var(--text-dim); }
+.rc-btn.fa-actif { cursor:default; box-shadow:inset 0 0 0 1.5px currentColor; }
+html.light .fa-box { background:#ffffff; border:1px solid var(--border2); }
+html.light .fa-box .fa-titre { color:#c2410c !important; }
+html.light .fa-box .b-green,
+html.light .fa-box .rc-btn.pay { background:rgba(34,139,54,0.12); border-color:rgba(34,139,54,0.35); color:#1f7a34; }
+html.light .fa-box .b-accent { background:rgba(194,65,12,0.12); color:#c2410c; }
+html.light .fa-box .rc-btn { color:#3d4429; border-color:var(--border2); }
+html.light .fa-box .rc-btn.pay { color:#1f7a34; }
 .rc-montant { font-family:FRDisplay,Oswald,Arial Narrow,sans-serif; font-size:14px; font-weight:800; text-align:right; min-width:92px; }
 
 /* ─── SLOT / PLANNING ─── */
@@ -843,6 +854,7 @@ textarea.form-control { resize: vertical; }
   <script src="fr-dialog.js"></script>
   <script src="fr-calendrier.js"></script>
   <script src="fr-facturation.js"></script>
+  <script src="fr-annul-periode.js"></script>
   <script src="fr-email.js"></script>
   <script src="fr-session.js"></script>
   <script src="fr-quartier.js"></script>
@@ -2823,7 +2835,7 @@ async function facturationMensuelle(mode) {
       if (typeof loadFacturesAdmin === 'function') loadFacturesAdmin();
     }
     if (b.sautees.length) h += '<div style="padding:8px 0 2px;color:var(--text-faint);">Déjà facturés, non renvoyés : '
-      + b.sautees.map(function(x) { return fmEsc(x.client) + (x.numero ? ' (' + fmEsc(x.numero) + ')' : ''); }).join(', ') + '</div>';
+      + b.sautees.map(function(x) { return fmEsc(x.client) + (x.numero ? ' (' + fmEsc(x.numero) + ')' : '') + (x.raison && x.raison !== 'déjà facturé' ? ' — ' + fmEsc(x.raison) : ''); }).join(', ') + '</div>';
     if (b.rien) h += '<div style="padding:2px 0;color:var(--text-faint);">Sans prestation ce mois : ' + b.rien + ' client(s)</div>';
     box.innerHTML = h;
   } catch (e) {
@@ -2880,11 +2892,11 @@ function renderStatsFactures() {
   var mois = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
   var encaisse = RC.paiements.filter(function(p) { return rcReel(p) && !p.annule_le && String(p.date_virement).slice(0, 7) === mois; })
                              .reduce(function(a, p) { return a + (parseFloat(p.montant) || 0); }, 0);
-  var ouvertes = RC.factures.filter(function(f) { return rcReel(f) && parseFloat(f.solde) > 0; });
+  var ouvertes = RC.factures.filter(function(f) { return rcReel(f) && f.statut !== 'brouillon' && parseFloat(f.solde) > 0; });
   var du = ouvertes.reduce(function(a, f) { return a + (parseFloat(f.solde) || 0); }, 0);
   var retard = ouvertes.filter(function(f) { return (f.jours_retard || 0) > 0; });
-  var aTraiter = RC.factures.filter(function(f) { return f.etape_suggeree; });
-  var emises = RC.factures.filter(function(f) { return rcReel(f) && String(f.date_emission || '').slice(0, 7) === mois; });
+  var aTraiter = RC.factures.filter(function(f) { return f.etape_suggeree && f.statut !== 'brouillon'; });
+  var emises = RC.factures.filter(function(f) { return rcReel(f) && f.statut !== 'brouillon' && String(f.date_emission || '').slice(0, 7) === mois; });
   function card(cls, label, val, sub) {
     return '<div class="stat-card ' + cls + '"><div class="stat-accent-bar"></div><div class="stat-label">' + label
       + '</div><div class="stat-val">' + val + '</div>' + (sub ? '<div class="stat-sub">' + sub + '</div>' : '') + '</div>';
@@ -2896,6 +2908,7 @@ function renderStatsFactures() {
 }
 
 function rcBadge(f) {
+  if (f.statut === 'brouillon') return '<span class="badge b-accent">Brouillon · pas envoyée</span>';   // v2.99
   if (f.statut === 'avoir') return '<span class="badge b-green">Note de crédit</span>';
   if (f.statut === 'annulee') return '<span class="badge b-muted">Annulée (note de crédit)</span>';
   if (parseFloat(f.solde) <= 0) return '<span class="badge b-green">Payée' + (f.date_paiement ? ' le ' + rcDate(f.date_paiement) : '') + '</span>';
@@ -2907,7 +2920,8 @@ function rcBadge(f) {
 }
 
 function rcLigneFacture(f, avecSuggestion) {
-  var reste = parseFloat(f.solde) || 0;
+  var brouillon = f.statut === 'brouillon';   // v2.99 : pas due, invisible pour le client
+  var reste = brouillon ? 0 : (parseFloat(f.solde) || 0);
   var detail = [rcNomClient(f.client_id), f.periode ? 'période ' + f.periode : null, 'émise le ' + rcDate(f.date_emission)];
   if (parseFloat(f.frais_dossier) > 0) detail.push('dont ' + rcEur(f.frais_dossier) + ' de frais de dossier');
   if (parseFloat(f.montant_paye) > 0 && reste > 0) detail.push('payé ' + rcEur(f.montant_paye));
@@ -2923,13 +2937,13 @@ function rcLigneFacture(f, avecSuggestion) {
       if (prochaine && (f.jours_retard || 0) > 0) actions += '<button class="rc-btn" onclick="ouvrirEtape(\'' + f.id + '\',\'' + prochaine + '\')">' + RC_ETAPES[prochaine] + '</button>';
     }
   }
-  if (f.statut !== 'annulee' && f.statut !== 'avoir' && !/^NC-/.test(f.numero || ''))
+  if (!brouillon && f.statut !== 'annulee' && f.statut !== 'avoir' && !/^NC-/.test(f.numero || ''))
     actions += '<button class="rc-btn red" title="Annule entièrement cette facture par une note de crédit NC-' + rcEsc(f.numero || '') + '" onclick="ouvrirFactureAdmin(\'id=' + encodeURIComponent(f.id) + '&nc=1\')">NC</button>';
   return '<div class="rc-row">'
     + '<span class="inv-num" style="cursor:pointer;text-decoration:underline;text-underline-offset:3px;" title="Ouvrir la facture" onclick="ouvrirFactureAdmin(\'id=' + encodeURIComponent(f.id) + '\')">' + rcEsc(f.numero || '—') + '</span>'
     + '<div class="rc-main"><div class="inv-client">' + rcEsc(rcNomClient(f.client_id)) + '</div><div class="rc-meta">' + rcEsc(detail.slice(1).join(' · ')) + '</div></div>'
     + rcBadge(f)
-    + '<div class="rc-montant" style="color:' + (reste > 0 ? 'var(--red)' : 'var(--green)') + ';">' + rcEur(reste > 0 ? reste : f.total_a_payer)
+    + '<div class="rc-montant" style="color:' + (brouillon ? 'var(--text-dim)' : reste > 0 ? 'var(--red)' : 'var(--green)') + ';">' + rcEur(reste > 0 ? reste : f.total_a_payer)
     +   (reste > 0 && reste < parseFloat(f.total_a_payer) ? '<div style="font-size:10px;color:var(--text-faint);font-family:inherit;font-weight:400;">sur ' + rcEur(f.total_a_payer) + '</div>' : '') + '</div>'
     + '<div class="inv-actions">' + actions + '<button class="rc-btn" onclick="ouvrirFactureAdmin(\'id=' + encodeURIComponent(f.id) + '\')">Ouvrir</button></div>'
     + '</div>';
@@ -2938,7 +2952,7 @@ function rcLigneFacture(f, avecSuggestion) {
 function renderRecouvrement() {
   var card = document.getElementById('recouv-card'), el = document.getElementById('recouv-list');
   if (!card || !el) return;
-  var aTraiter = RC.factures.filter(function(f) { return f.etape_suggeree; })
+  var aTraiter = RC.factures.filter(function(f) { return f.etape_suggeree && f.statut !== 'brouillon'; })
     .sort(function(a, b) { return (b.jours_retard || 0) - (a.jours_retard || 0); });
   card.style.display = aTraiter.length ? '' : 'none';
   el.innerHTML = aTraiter.map(function(f) { return rcLigneFacture(f, true); }).join('');
@@ -2953,6 +2967,7 @@ function renderFacturesSuivi() {
   var filtre = (document.getElementById('factures-filtre') || {}).value || 'ouvertes';
   var liste = RC.factures.filter(function(f) {
     var reste = parseFloat(f.solde) || 0;
+    if (f.statut === 'brouillon') return filtre === 'ouvertes' || filtre === 'toutes';   // v2.99 : brouillons avec les ouvertes
     if (filtre === 'ouvertes') return reste > 0;
     if (filtre === 'retard') return reste > 0 && (f.jours_retard || 0) > 0;
     if (filtre === 'payees') return reste <= 0;
@@ -3874,6 +3889,7 @@ async function enregistrerChien() {
   var nom = document.getElementById('ch-nom').value.trim();
   if (!nom) { showToastAdmin('Le nom est obligatoire', 'amber'); return; }
   function v(elId) { var el = document.getElementById(elId); return el ? String(el.value || '').trim() : ''; }
+  if (window.frNaissanceFuture && frNaissanceFuture(v('ch-naissance'))) { showToastAdmin('La date de naissance ne peut pas être dans le futur.', 'amber'); return; }
   function boolOuNull(elId) { var x = v(elId); return x === '' ? null : (x === 'true'); }
   var poids = parseFloat(v('ch-poids'));
   var race = v('ch-race');
@@ -5135,7 +5151,7 @@ function faJour(iso) { var p = String(iso).slice(0, 10).split('-'); return p[2] 
 function faBoutons(kind, id, pct) {
   return [100, 50, 0].map(function(v) {
     var actif = +pct === v;
-    return '<button class="rc-btn' + (v === 0 ? ' pay' : '') + '" ' + (actif ? 'disabled style="opacity:.45;cursor:default;"' : '')
+    return '<button class="rc-btn' + (v === 0 ? ' pay' : '') + (actif ? ' fa-actif' : '') + '" ' + (actif ? 'disabled title="Choix actuel"' : '')
       + ' onclick="modifierFraisAnnul(\'' + kind + '\',\'' + id + '\',' + v + ')">' + (v === 0 ? 'Offrir (0 %)' : v + ' %') + '</button>';
   }).join('') + '<button class="rc-btn" onclick="modifierFraisAnnul(\'' + kind + '\',\'' + id + '\',null)">Autre…</button>';
 }
@@ -5163,7 +5179,7 @@ async function editeurFraisAnnul(r) {
       var p0 = +lignes[0].facture_pourcentage || 0;
       h += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--border);">'
         + '<div style="flex:1;min-width:150px;font-size:12.5px;"><strong>Toute la réservation annulée</strong>'
-        + (lignes[0].pct_initial != null && +lignes[0].pct_initial !== p0 ? '<div style="font-size:11px;color:var(--text-faint);">modifié : ' + lignes[0].pct_initial + ' % → ' + p0 + ' %' + (lignes[0].motif_modif ? ' · ' + msgEsc(lignes[0].motif_modif) : '') + '</div>' : '') + '</div>'
+        + (lignes[0].pct_initial != null && +lignes[0].pct_initial !== p0 ? '<div class="fa-sub" style="font-size:11px;">modifié : ' + lignes[0].pct_initial + ' % → ' + p0 + ' %' + (lignes[0].motif_modif ? ' · ' + msgEsc(lignes[0].motif_modif) : '') + '</div>' : '') + '</div>'
         + '<span class="badge ' + (p0 > 0 ? 'b-accent' : 'b-green') + '">' + p0 + ' %</span>'
         + '<div style="display:flex;gap:5px;flex-wrap:wrap;">' + faBoutons('serie', lignes[0].id, p0) + '</div></div>';
     }
@@ -5174,14 +5190,14 @@ async function editeurFraisAnnul(r) {
       var qui = o.annule_par === 'client' ? 'par le client' : o.annule_par === 'chaleur' ? 'chaleurs' : 'par Gabriel';
       h += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--border);' + (d === occSel ? 'background:rgba(255,95,31,0.07);margin:0 -8px;padding:8px;border-radius:8px;' : '') + '">'
         + '<div style="flex:1;min-width:150px;font-size:12.5px;"><strong>' + faJour(d) + '</strong> · ' + msgEsc(chien)
-        + '<div style="font-size:11px;color:var(--text-faint);">annulée ' + qui + (o.annulation_tardive ? ' · tardive' : '')
+        + '<div class="fa-sub" style="font-size:11px;">annulée ' + qui + (o.annulation_tardive ? ' · tardive' : '')
         + (o.pct_initial != null && +o.pct_initial !== p ? ' · modifié : ' + o.pct_initial + ' % → ' + p + ' %' + (o.motif_modif ? ' (' + msgEsc(o.motif_modif) + ')' : '') : '') + '</div></div>'
         + '<span class="badge ' + (p > 0 ? 'b-accent' : 'b-green') + '">' + p + ' %</span>'
         + '<div style="display:flex;gap:5px;flex-wrap:wrap;">' + faBoutons('seance', o.id, p) + '</div></div>';
     });
-    box.innerHTML = '<div style="background:rgba(0,0,0,0.18);border-radius:10px;padding:8px 14px 4px;">'
-      + '<div style="font-family:FRDisplay,Oswald,Arial Narrow,sans-serif;font-size:13px;font-weight:800;letter-spacing:.04em;color:var(--accent);">Frais d\'annulation — modifiables</div>'
-      + '<div style="font-size:11px;color:var(--text-faint);margin-bottom:4px;">La facture du mois suit automatiquement tant qu\'elle n\'est pas émise. Le client est prévenu.</div>'
+    box.innerHTML = '<div class="fa-box">'
+      + '<div class="fa-titre" style="font-family:FRDisplay,Oswald,Arial Narrow,sans-serif;font-size:13px;font-weight:800;letter-spacing:.04em;color:var(--accent);">Frais d\'annulation — modifiables</div>'
+      + '<div class="fa-sub" style="font-size:11px;margin-bottom:4px;">La facture du mois suit automatiquement tant qu\'elle n\'est pas émise. Le client est prévenu.</div>'
       + h + '</div>';
     box.style.display = '';
   } catch (e) { console.log('frais annulation:', e); }
@@ -5210,7 +5226,7 @@ async function modifierFraisAnnul(kind, id, pct) {
   try {
     var mois = date.slice(0, 7);
     var rf = await db.from('factures').select('id,numero_facture,numero,statut').eq('client_id', r.client_id).eq('periode', mois);
-    var emises = (rf.data || []).filter(function(f) { return f.statut !== 'annulee' && f.statut !== 'avoir'; });
+    var emises = (rf.data || []).filter(function(f) { return f.statut !== 'annulee' && f.statut !== 'avoir' && f.statut !== 'brouillon'; });
     if (emises.length) {
       var num = emises[0].numero_facture || emises[0].numero || '';
       if (!(await frConfirm({ titre: 'Facture déjà émise', icone: 'attention',
@@ -5398,7 +5414,7 @@ async function chargerChiensAnnulation(r) {
     lignesAnnulation = lignes;
     box.innerHTML = lignes.map(function(x) {
       return '<label style="display:flex;align-items:center;gap:9px;font-size:12.5px;padding:4px 0;cursor:pointer;">'
-        + '<input type="checkbox" class="annul-chien-admin" id="ann-chien-' + x.id + '" checked '
+        + '<input type="checkbox" class="annul-chien-admin" id="ann-chien-' + x.id + '" checked onchange="majPeriodeAnnulation()" '
         + 'style="width:15px;height:15px;accent-color:#ff5f1f;">'
         + (noms[x.chien_id] || 'Chien') + '</label>';
     }).join('');
@@ -5422,14 +5438,68 @@ function ouvrirAnnulationResa() {
     porteeSelect.value = 'serie';
   }
   document.getElementById('annulation-qui').value = 'client';
+  // v2.97 : période — du jour de la séance ouverte (ou d'aujourd'hui), fin à choisir
+  periodeLignesAdmin = null;
+  var auj = window.FR_FACT ? FR_FACT.aujourdhui() : formatDateISO(new Date());
+  var pd = document.getElementById('annulation-periode-debut');
+  var pf = document.getElementById('annulation-periode-fin');
+  pd.value = (r._occurrenceDate && r._occurrenceDate >= auj) ? r._occurrenceDate : auj;
+  pd.min = auj; pf.min = pd.value; pf.value = '';
   majSuggestionAnnulation();
   document.getElementById('modal-annulation').classList.add('open');
+}
+
+// ── v2.97 : annulation d'une période (dates exclues, la série continue après) ──
+var periodeLignesAdmin = null;   // lignes (une par chien) de la réservation ouverte
+var periodeSeancesAdmin = [];
+
+async function lignesPeriodeAdmin(r) {
+  if (periodeLignesAdmin) return periodeLignesAdmin;
+  var brutes = await FR_FACT.lignesDeReservation(db, r);
+  if (!brutes.length) brutes = [r];
+  // Les lignes partagent le planning de la réservation ouverte
+  periodeLignesAdmin = brutes.map(function(x) {
+    return { id: x.id, chien_id: x.chien_id, statut: x.statut, dates_exclues: x.dates_exclues,
+      client_id: r.client_id, service: r.service, creneau: r.creneau, date_debut: r.date_debut, date_fin: r.date_fin,
+      jours_recurrence: r.jours_recurrence, date_fin_recurrence: r.date_fin_recurrence };
+  });
+  return periodeLignesAdmin;
+}
+
+async function majPeriodeAnnulation() {
+  var r = currentResaDetail;
+  var porteeEl = document.getElementById('annulation-portee');
+  if (!r || !porteeEl || porteeEl.value !== 'periode') return;
+  var pd = document.getElementById('annulation-periode-debut');
+  var pf = document.getElementById('annulation-periode-fin');
+  var box = document.getElementById('annulation-periode-recap');
+  if (pd.value) pf.min = pd.value;
+  periodeSeancesAdmin = [];
+  if (!pd.value || !pf.value) { box.innerHTML = '<div style="font-size:12px;color:var(--text-faint);">Choisissez la date de fin.</div>'; return; }
+  if (pf.value < pd.value) { box.innerHTML = '<div style="font-size:12px;color:var(--red);">La date de fin est avant la date de début.</div>'; return; }
+  try {
+    var lignes = await lignesPeriodeAdmin(r);
+    if (lignesAnnulation.length > 1) {
+      lignes = lignes.filter(function(x) { var b = document.getElementById('ann-chien-' + x.id); return !b || b.checked; });
+    }
+    periodeSeancesAdmin = FR_ANNUL.seances(lignes, pd.value, pf.value);
+    box.innerHTML = FR_ANNUL.htmlRecap(periodeSeancesAdmin, document.getElementById('annulation-pourcentage').value);
+  } catch(e) { box.innerHTML = '<div style="font-size:12px;color:var(--red);">Erreur : ' + (e.message || e) + '</div>'; }
 }
 
 function majSuggestionAnnulation() {
   if (!currentResaDetail) return;
   var r = currentResaDetail;
   var portee = document.getElementById('annulation-portee').value;
+  var enPeriode = portee === 'periode';
+  document.getElementById('annulation-periode-group').style.display = enPeriode ? 'block' : 'none';
+  document.getElementById('annulation-pct-auto').hidden = !enPeriode;
+  if (enPeriode) {
+    document.getElementById('annulation-raison').textContent = 'Les séances de la période sont retirées ; la série reprend normalement ensuite. Facturation par défaut : chaque séance selon son délai (gratuite avant 9h la veille, 100 % après ; 100 % en période estivale).';
+    document.getElementById('annulation-pourcentage').value = 'auto';
+    majPeriodeAnnulation();
+    return;
+  }
   var dateRef = portee === 'occurrence' ? r._occurrenceDate : r.date_debut;
   // Série déjà commencée : elle sera arrêtée à sa prochaine séance, c'est
   // donc cette séance-là qui porte le délai d'annulation, pas le début de série.
@@ -5491,6 +5561,7 @@ async function confirmerAnnulationResa() {
   var pct = parseInt(document.getElementById('annulation-pourcentage').value, 10) || 0;
   var estRecurrente = r.service !== 'boarding' && r.jours_recurrence && r.jours_recurrence.length > 0;
   var portee = estRecurrente ? document.getElementById('annulation-portee').value : 'serie';
+  if (portee === 'periode') { await confirmerAnnulationPeriodeAdmin(); return; }
   var dateRef = portee === 'occurrence' ? r._occurrenceDate : r.date_debut;
   var sugg = currentResaDetail._suggestion || calculerSuggestionAnnulation(r, dateRef);
   try {
@@ -5605,6 +5676,51 @@ async function confirmerAnnulationResa() {
   } catch(e) { showToastAdmin('Erreur : '+e.message, 'red'); console.error(e); }
 }
 
+
+// v2.97 : confirmation de l'annulation d'une période (fenêtre de la réservation)
+async function confirmerAnnulationPeriodeAdmin() {
+  var r = currentResaDetail;
+  await majPeriodeAnnulation();
+  var liste = periodeSeancesAdmin.slice();
+  if (!liste.length) { showToastAdmin('Aucune séance à annuler sur cette période', 'amber'); return; }
+  var qui = document.getElementById('annulation-qui').value;
+  var pctVal = document.getElementById('annulation-pourcentage').value;
+  var pct = pctVal === 'auto' ? 'auto' : (parseInt(pctVal, 10) || 0);
+  var payantes = liste.filter(function(s) { return FR_ANNUL.pctDe(s, pct) > 0; }).length;
+  var ok = await frConfirm({ titre: 'Annuler la période ?', danger: true,
+    message: liste.length + ' séance' + (liste.length > 1 ? 's' : '') + ' du ' + formatDateFR(liste[0].date) + ' au ' + formatDateFR(liste[liste.length - 1].date) + ' seront annulées'
+      + (qui === 'client' ? ' (à la demande du client).' : ' (par Forest Rangers).')
+      + '\n\n' + (payantes ? payantes + ' séance' + (payantes > 1 ? 's' : '') + ' facturée' + (payantes > 1 ? 's' : '') + '.' : 'Aucune séance facturée.')
+      + '\nLe client est prévenu dans sa messagerie.',
+    ok: 'Annuler la période', annuler: 'Retour' });
+  if (!ok) return;
+  try {
+    // Chiens cochés (réservation à plusieurs chiens, annulation partielle)
+    var partielle = false, nomsCibles = [];
+    if (lignesAnnulation.length > 1) {
+      var labels = document.querySelectorAll('#annulation-chiens label');
+      var nCoches = 0;
+      lignesAnnulation.forEach(function(x, i) {
+        var b = document.getElementById('ann-chien-' + x.id);
+        if (b && b.checked) { nCoches++; if (labels[i]) nomsCibles.push(labels[i].textContent.trim()); }
+      });
+      if (!nCoches) { showToastAdmin('Selectionnez au moins un chien', 'amber'); return; }
+      partielle = nCoches < lignesAnnulation.length;
+    }
+    var res = await FR_ANNUL.executer(db, liste, { qui: qui, pct: pct });
+    var noms = nomsCibles.join(' + ');
+    var txt = FR_ANNUL.messages(liste, { qui: qui, pct: pct, mention: partielle
+      ? { fr: ' pour ' + noms, en: ' for ' + noms, lu: ' fir ' + noms } : null });
+    await notifierClientAnnulation(r.client_id, txt.fr, txt.en, txt.lu);
+    showToastAdmin('✓ ' + res.seances + ' séance' + (res.seances > 1 ? 's' : '') + ' annulée' + (res.seances > 1 ? 's' : '')
+      + ' du ' + formatDateFR(liste[0].date) + ' au ' + formatDateFR(liste[liste.length - 1].date), 'green');
+    document.getElementById('modal-annulation').classList.remove('open');
+    document.getElementById('modal-resa-detail').classList.remove('open');
+    loadPlanning();
+    loadReservationsAdmin();
+    chargerAnnulationsOccurrences();
+  } catch(e) { showToastAdmin('Erreur : ' + e.message, 'red'); console.error(e); }
+}
 
 // ══════════════════════════════════════════════════════════════
 //  MESSAGERIE CLIENTS  (table `messages`)
@@ -8291,8 +8407,17 @@ document.addEventListener('click', function(e) {
       <label class="form-label">Que voulez-vous annuler ?</label>
       <select class="form-control" id="annulation-portee" style="width:100%;" onchange="majSuggestionAnnulation()">
         <option value="occurrence">Seulement ce jour</option>
+        <option value="periode">Une période (du… au…)</option>
         <option value="serie">Toute la récurrence</option>
       </select>
+    </div>
+
+    <div class="form-group" id="annulation-periode-group" style="display:none;">
+      <div style="display:flex;gap:8px;">
+        <div style="flex:1;"><label class="form-label">Du</label><input type="date" class="form-control" id="annulation-periode-debut" style="width:100%;" onchange="majPeriodeAnnulation()"></div>
+        <div style="flex:1;"><label class="form-label">Au</label><input type="date" class="form-control" id="annulation-periode-fin" style="width:100%;" onchange="majPeriodeAnnulation()"></div>
+      </div>
+      <div id="annulation-periode-recap" style="margin-top:10px;"></div>
     </div>
 
     <div class="form-group" id="annulation-chiens-group" style="display:none;">
@@ -8315,7 +8440,8 @@ document.addEventListener('click', function(e) {
 
     <div class="form-group" style="margin-bottom:14px;">
       <label class="form-label">Facturation</label>
-      <select class="form-control" id="annulation-pourcentage" style="width:100%;">
+      <select class="form-control" id="annulation-pourcentage" style="width:100%;" onchange="majPeriodeAnnulation()">
+        <option value="auto" id="annulation-pct-auto" hidden>Selon les délais CGV, séance par séance</option>
         <option value="0">0% — Gratuit</option>
         <option value="50">50%</option>
         <option value="100">100% — Facturé en intégralité</option>

@@ -478,6 +478,9 @@ html.light .actions-bar  { background: #f6f7f2; border-top-color: rgba(0,0,0,0.0
         <button class="btn btn-outline" onclick="annulerParNoteCredit()" id="btn-nc" style="display:none;border-color:rgba(224,90,90,0.5);color:var(--red);" title="Annule entièrement cette facture par une note de crédit NC-…">
           <span class="btn-label-long">Annuler (note de crédit)</span>
         </button>
+        <button class="btn btn-outline" onclick="supprimerFacture()" id="btn-suppr" style="display:none;border-color:rgba(224,90,90,0.5);color:var(--red);" title="Supprime définitivement cette facture jamais envoyée">
+          <span class="btn-label-long">Supprimer</span>
+        </button>
         <button class="btn btn-green" onclick="marquerPayeeFacture()" id="btn-mark-paid" style="display:none;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           <span class="btn-label-long">Marquer payée</span>
@@ -522,6 +525,7 @@ html.light .actions-bar  { background: #f6f7f2; border-top-color: rgba(0,0,0,0.0
               <div class="form-group">
                 <label class="form-label">Statut</label>
                 <select class="form-input" id="facture-statut-input" onchange="updatePreview()">
+                  <option value="brouillon">Brouillon (pas encore envoyée)</option>
                   <option value="impayee">Impayée</option>
                   <option value="payee">Payée</option>
                   <option value="annulee">Annulée (note de crédit)</option>
@@ -632,6 +636,9 @@ html.light .actions-bar  { background: #f6f7f2; border-top-color: rgba(0,0,0,0.0
           <div class="total-row"><span class="total-label">Frais de dossier (hors TVA)</span><span class="total-val" id="frais-rappel">—</span></div>
           <div class="total-row main"><span class="total-label">Total à payer</span><span class="total-val" id="total-ttc">0,00 €</span></div>
         </div>
+
+        <!-- v2.99 : état brouillon / modifiable -->
+        <div id="etat-brouillon" style="display:none;margin:0 0 10px;padding:9px 12px;border-radius:var(--r);border:1px solid var(--bd2);font-size:11.5px;line-height:1.5;color:var(--tx);"></div>
 
         <!-- Actions -->
         <div class="actions-bar">
@@ -1422,11 +1429,15 @@ async function initFactureExistante(id) {
   var totalHtStocke = parseFloat(f.total_ht) || 0;
   var totalTtcStocke = (f.total_ttc != null ? parseFloat(f.total_ttc) : totalHtStocke) || 0;
   var tauxDerive = totalHtStocke > 0 ? Math.round(((totalTtcStocke - totalHtStocke) / totalHtStocke) * 100) : TVA_RATES.default;
+  // v2.99 : jamais envoyée et sans paiement → modifiable et supprimable
+  await calculerEtatModifiable(f);
+  var editable = factureModifiable && Array.isArray(f.lignes) && f.lignes.length > 0;
   if (Array.isArray(f.lignes) && f.lignes.length) {
-    // v35 : détail figé à l'émission
+    // v35 : détail figé à l'émission (sauf facture encore modifiable, v2.99)
     lineItemsData = f.lignes.map(function(l) {
       return { label: l.label, sousLabel: l.sousLabel, discountNote: l.discountNote, qte: l.qte,
-               prixUnit: l.prixUnit, total: l.total, type: l.type, readOnly: true, ref_facture_id: l.ref_facture_id || null,
+               prixUnit: l.prixUnit, total: l.total, type: l.type, readOnly: !editable, ref_facture_id: l.ref_facture_id || null,
+               service: l.service || null, nbChiens: l.nb_chiens || undefined,
                color: (l.type === 'annulation' || (l.type === 'regularisation' && l.total < 0)) ? 'red' : null,
                tvaRate: l.tvaRate != null ? l.tvaRate : TVA_RATES.default };
     });
@@ -1438,15 +1449,18 @@ async function initFactureExistante(id) {
     }];
   }
   horsZoneCount = 0;
-  useStoredTotals = true;
+  useStoredTotals = !editable;
+  lignesDuPlanning = false;
   renderLineItems();
   recalculateTotals();
 
-  // Vue lecture : pas de modification des lignes pour une facture déjà enregistrée
-  document.getElementById('btn-depuis-planning').style.display = 'none';
-  document.getElementById('btn-add-line').style.display = 'none';
-  document.getElementById('btn-mark-paid').style.display = (['payee', 'annulee', 'avoir'].indexOf(f.statut) === -1) ? '' : 'none';
+  // Facture envoyée (ou payée) : lecture seule, correction par note de crédit.
+  // v2.99 : jamais envoyée → lignes modifiables et suppression possible.
+  document.getElementById('btn-depuis-planning').style.display = editable ? '' : 'none';
+  document.getElementById('btn-add-line').style.display = editable ? '' : 'none';
+  document.getElementById('btn-mark-paid').style.display = (['payee', 'annulee', 'avoir', 'brouillon'].indexOf(f.statut) === -1) ? '' : 'none';
   afficherEtatNoteCredit(f);
+  majEtatBrouillon();
 
   updatePreview();
 }
@@ -1545,13 +1559,16 @@ async function enregistrerFacture() {
                tvaRate: it.tvaRate != null ? it.tvaRate : TVA_RATES.default };
     });
     if (!(currentFacture && currentFacture.id)) payload.mensuelle = lignesDuPlanning;
+    else if (factureModifiable) payload.mensuelle = !!(lignesDuPlanning || currentFacture.mensuelle);
   }
   if (EDIT_V31) {
     // v31 : les frais de dossier ont leur colonne ; le statut « payée » ne se pose
     // que par un paiement daté (Admin → Factures → Paiement reçu).
     payload.frais_dossier = Math.round((totals.fraisDossier || 0) * 100) / 100;
+    // v2.99 : une nouvelle facture est un brouillon (invisible pour le client,
+    // pas due) jusqu'à son envoi ; une facture existante garde son statut.
     if (currentFacture && currentFacture.id) delete payload.statut;
-    else payload.statut = 'impayee';
+    else payload.statut = 'brouillon';
   } else {
     payload.total_ttc = Math.round((totals.totalAPayer != null ? totals.totalAPayer : totals.totalTtc) * 100) / 100;
   }
@@ -1570,10 +1587,16 @@ async function enregistrerFacture() {
       if (errIns) throw errIns;
       currentFacture = data;
       window.history.replaceState({}, '', window.location.pathname + '?id=' + data.id);
+      if (EDIT_V31) document.getElementById('facture-statut-input').value = data.statut || 'brouillon';
+      factureModifiable = true;
+      lineItemsData.forEach(function(it) { it.readOnly = false; });
     }
-    document.getElementById('btn-mark-paid').style.display = (statut !== 'payee') ? '' : 'none';
+    var stNow = (currentFacture && currentFacture.statut) || statut;
+    document.getElementById('btn-mark-paid').style.display = (['payee', 'brouillon', 'annulee', 'avoir'].indexOf(stNow) === -1) ? '' : 'none';
+    if (factureModifiable) lignesDuPlanning = false;
     btn.textContent = '✓ Enregistré';
     updateStatusPill();
+    majEtatBrouillon();
   } catch(e) {
     console.error('Erreur enregistrement facture:', e);
     btn.textContent = 'Erreur';
@@ -1617,6 +1640,9 @@ async function envoyerFacture() {
     if (!(await frConfirm({ titre: 'Enregistrer et envoyer ?', message: 'La facture n\'est pas encore enregistrée. L\'enregistrer puis l\'envoyer ?', ok: 'Enregistrer et envoyer', icone: 'envoi' }))) return;
     await enregistrerFacture();
     if (!currentFacture || !currentFacture.id) return;
+  } else if (factureModifiable && !useStoredTotals) {
+    // v2.99 : lignes modifiées depuis l'ouverture → enregistrées avant l'envoi
+    await enregistrerFacture();
   }
 
   var numero  = document.getElementById('facture-numero-input').value;
@@ -1656,6 +1682,9 @@ async function envoyerFacture() {
     ok: 'Envoyer', icone: 'envoi' }))) return;
 
   _envoiEnCours = true;
+  // v2.99 : un brouillon part comme facture « impayée » (le PDF n'affiche jamais « brouillon »)
+  var etaitBrouillon = currentFacture.statut === 'brouillon';
+  if (etaitBrouillon) document.getElementById('facture-statut-input').value = 'impayee';
   var btns = [document.getElementById('btn-send'), document.getElementById('btn-send-invoice')];
   var anciens = btns.map(function(b) { return b ? b.innerHTML : ''; });
   btns.forEach(function(b) { if (b) { b.disabled = true; b.innerHTML = 'Envoi…'; } });
@@ -1674,6 +1703,8 @@ async function envoyerFacture() {
       client_id: currentClient.id, facture_id: String(currentFacture.id), attachments: pieces
     });
     if (r.ok) {
+      if (etaitBrouillon) { await passerEnImpayee(); etaitBrouillon = false; }
+      if (!estNC) { factureModifiable = false; verrouillerLignes(); }
       toastFacture('✓ ' + (estNC ? 'Note de crédit' : 'Facture') + ' envoyée à ' + (r.destinataire || currentClient.email) + (r.redirige_depuis ? ' (compte test)' : ''));
     } else if (r.indisponible) {
       if (await frConfirm({ titre: 'Envoi automatique indisponible', message: 'L\'envoi automatique ne répond pas.\n\nOuvrir votre messagerie à la place ? Pensez à joindre le PDF (bouton Télécharger PDF).\n\nDétail : ' + (r.erreur || ''), ok: 'Ouvrir la messagerie', icone: 'envoi' })) {
@@ -1683,9 +1714,84 @@ async function envoyerFacture() {
       frAlert({ type: 'erreur', titre: 'Envoi impossible', message: 'La facture n\'a pas été envoyée.\n\nDétail : ' + (r.erreur || 'Erreur inconnue') });
     }
   } finally {
+    if (etaitBrouillon) document.getElementById('facture-statut-input').value = 'brouillon';   // pas parti : reste brouillon
     _envoiEnCours = false;
     btns.forEach(function(b, k) { if (b) { b.disabled = false; b.innerHTML = anciens[k]; } });
   }
+}
+
+// ── v2.99 : BROUILLON, MODIFICATION ET SUPPRESSION ──────────────
+// Une facture est modifiable (lignes) et supprimable tant qu'elle n'est
+// jamais partie par l'app (journal emails_envoyes), sans paiement, et
+// qu'elle n'est ni payée, ni annulée, ni une note de crédit, ni historique.
+var factureModifiable = false;
+var factureEnvoyeeLe = null;
+async function calculerEtatModifiable(f) {
+  factureModifiable = false; factureEnvoyeeLe = null;
+  if (!f || !f.id) return;
+  if (f.historique || ['payee', 'annulee', 'avoir'].indexOf(f.statut) !== -1 || /^NC-/.test(f.numero || '')) return;
+  if ((parseFloat(f.montant_paye) || 0) > 0) return;
+  try {
+    var j = await db.from('emails_envoyes').select('created_at').eq('facture_id', f.id).eq('statut', 'envoye').limit(1);
+    if (j.error) return;                                   // journal illisible : prudence, lecture seule
+    if (j.data && j.data.length) { factureEnvoyeeLe = j.data[0].created_at; return; }
+  } catch (e) { return; }
+  factureModifiable = true;
+}
+function verrouillerLignes() {
+  lineItemsData.forEach(function(it) { it.readOnly = true; });
+  document.getElementById('btn-depuis-planning').style.display = 'none';
+  document.getElementById('btn-add-line').style.display = 'none';
+  document.getElementById('add-line-form').style.display = 'none';
+  renderLineItems();
+  majEtatBrouillon();
+}
+function majEtatBrouillon() {
+  var box = document.getElementById('etat-brouillon');
+  var del = document.getElementById('btn-suppr');
+  var f = currentFacture;
+  if (del) del.style.display = (f && f.id && factureModifiable) ? '' : 'none';
+  if (!box) return;
+  if (!f || !f.id || !factureModifiable) { box.style.display = 'none'; return; }
+  var br = f.statut === 'brouillon';
+  box.style.display = '';
+  box.style.background = br ? 'rgba(255,95,31,0.08)' : 'rgba(255,255,255,0.03)';
+  box.innerHTML = br
+    ? '<strong>Brouillon</strong> — pas encore envoyé : invisible pour le client et pas dû. Lignes modifiables ; « Envoyer au client » le transforme en facture.'
+    : '<strong>Pas encore envoyée</strong> — lignes encore modifiables, suppression possible.';
+}
+async function passerEnImpayee() {
+  var u = await db.from('factures').update({ statut: 'impayee' }).eq('id', currentFacture.id).eq('statut', 'brouillon').select('id,statut');
+  if (u.error) { frAlert({ type: 'attention', titre: 'Statut non mis à jour', message: 'La facture est partie, mais elle est restée en brouillon dans l\'app. Réessayez « Envoyer » ou prévenez Claude.\n\nDétail : ' + u.error.message }); return false; }
+  currentFacture.statut = 'impayee';
+  document.getElementById('facture-statut-input').value = 'impayee';
+  document.getElementById('btn-mark-paid').style.display = '';
+  afficherEtatNoteCredit(currentFacture);
+  updateStatusPill();
+  majEtatBrouillon();
+  return true;
+}
+async function supprimerFacture() {
+  var f = currentFacture;
+  if (!f || !f.id) return;
+  await calculerEtatModifiable(f);          // relu juste avant : envoyée entre-temps ?
+  if (!factureModifiable) {
+    majEtatBrouillon();
+    frAlert({ type: 'attention', titre: 'Suppression impossible', message: 'Cette facture a été envoyée ou a reçu un paiement' + (factureEnvoyeeLe ? ' (envoyée le ' + new Date(factureEnvoyeeLe).toLocaleDateString('fr-LU') + ')' : '') + '. Corrigez-la par une note de crédit.' });
+    return;
+  }
+  var ok = await frConfirm({ titre: 'Supprimer la facture ?', danger: true, icone: 'danger',
+    message: 'Supprimer définitivement la facture **' + (f.numero || '') + '** (' + document.getElementById('total-ttc').textContent + ') ?',
+    liste: ['Elle n\'a jamais été envoyée au client.', 'Son numéro sera réattribué à la prochaine facture de ce client.'],
+    ok: 'Supprimer', annuler: 'Retour' });
+  if (!ok) return;
+  var r = await db.from('factures').delete().eq('id', f.id).select('id');
+  if (r.error || !r.data || !r.data.length) {
+    frAlert({ type: 'erreur', titre: 'Facture non supprimée', message: 'La facture n\'a pas pu être supprimée.' + (r.error ? '\n\nDétail : ' + r.error.message : ' (droits insuffisants ?)') });
+    return;
+  }
+  frToast('Facture ' + (f.numero || '') + ' supprimée.');
+  setTimeout(retourFiche, 700);
 }
 
 // ── NOTE DE CRÉDIT (v38) : annulation complète d'une facture ──
@@ -1693,7 +1799,7 @@ async function afficherEtatNoteCredit(f) {
   var btn = document.getElementById('btn-nc');
   var note = document.getElementById('inv-note');
   var estNC = f.statut === 'avoir' || /^NC-/.test(f.numero || '');
-  if (btn) btn.style.display = (f.id && !estNC && f.statut !== 'annulee') ? '' : 'none';
+  if (btn) btn.style.display = (f.id && !estNC && f.statut !== 'annulee' && f.statut !== 'brouillon') ? '' : 'none';
   if (!note) return;
   var txt = '';
   try {
@@ -1774,6 +1880,8 @@ async function marquerPayeeFacture() {
 }
 
 function telechargerPDF() {
+  // v3.00 : toutes les factures partent par l'app — plus de question à l'export PDF.
+  // Le PDF n'affiche jamais « brouillon » (même pastille qu'une facture à payer).
   var inv = document.getElementById('invoiceDoc');
   if (!inv) { frAlert({ type: 'erreur', titre: 'Aperçu non disponible', message: 'L\'aperçu de la facture n\'est pas disponible.' }); return; }
   var btn = document.getElementById('btn-dl');

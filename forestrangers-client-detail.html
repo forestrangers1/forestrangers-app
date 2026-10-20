@@ -39,6 +39,7 @@ try {
 <script src="fr-dialog.js"></script>
 <script src="fr-calendrier.js"></script>
 <script src="fr-facturation.js"></script>
+<script src="fr-annul-periode.js"></script>
 <script src="fr-email.js"></script>
 <script src="fr-quartier.js"></script>
 <script src="fr-messages.js"></script>
@@ -501,7 +502,10 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <div class="card">
         <div class="card-head">
           <div class="card-title">Réservations actives</div>
-          <button class="btn btn-accent" style="width:auto;" onclick="nouvelleResaFiche()">+ Nouvelle</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-outline" style="width:auto;color:var(--red);border-color:rgba(224,90,90,0.4);" onclick="ouvrirAnnulPeriodeClient()">Annuler une période</button>
+            <button class="btn btn-accent" style="width:auto;" onclick="nouvelleResaFiche()">+ Nouvelle</button>
+          </div>
         </div>
         <div class="table-wrap">
           <table>
@@ -812,8 +816,17 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <label class="form-label">Que voulez-vous annuler ?</label>
       <select class="form-control" id="annulation-portee" onchange="majSuggestionAnnulation()">
         <option value="occurrence">Seulement une date</option>
+        <option value="periode">Une période (du… au…)</option>
         <option value="serie">Toute la récurrence</option>
       </select>
+    </div>
+
+    <div class="form-group" id="annulation-periode-group" style="display:none;">
+      <div style="display:flex;gap:8px;">
+        <div style="flex:1;"><label class="form-label">Du</label><input type="date" class="form-control" id="annulation-periode-debut" onchange="majPeriodeResa()"></div>
+        <div style="flex:1;"><label class="form-label">Au</label><input type="date" class="form-control" id="annulation-periode-fin" onchange="majPeriodeResa()"></div>
+      </div>
+      <div id="annulation-periode-recap" style="margin-top:10px;"></div>
     </div>
 
     <div class="form-group" id="annulation-date-group" style="display:none;">
@@ -833,7 +846,8 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
     <div class="form-group" style="margin-bottom:14px;">
       <label class="form-label">Facturation</label>
-      <select class="form-control" id="annulation-pourcentage">
+      <select class="form-control" id="annulation-pourcentage" onchange="majPeriodeResa()">
+        <option value="auto" id="annulation-pct-auto" hidden>Selon les délais CGV, séance par séance</option>
         <option value="0">0% — Gratuit</option>
         <option value="50">50%</option>
         <option value="100">100% — Facturé en intégralité</option>
@@ -843,6 +857,44 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <div class="modal-foot" style="margin-top:0;">
       <button class="btn btn-outline" style="flex:1;" onclick="document.getElementById('modal-annulation').classList.remove('open')">Retour</button>
       <button style="flex:1;background:var(--red);border:none;border-radius:8px;padding:10px;color:white;font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:11px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:0.04em;" onclick="confirmerAnnulationResa()">Confirmer l'annulation</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL ANNULATION D'UNE PÉRIODE (toutes les réservations du client) — v2.97 ══ -->
+<div class="modal-overlay" id="modal-annul-periode" onclick="if(event.target===this)this.classList.remove('open')" style="z-index:400;">
+  <div class="modal-sheet" style="width:460px;">
+    <div class="modal-head">
+      <div class="modal-title">Annuler une période</div>
+      <button class="modal-close" onclick="document.getElementById('modal-annul-periode').classList.remove('open')">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--td);line-height:1.5;margin-bottom:12px;">
+      Toutes les promenades et la crèche du client sur la période, comme « Annuler une période » de son espace. Les séries reprennent normalement ensuite. Pour la pension, ouvrez la réservation concernée.
+    </div>
+    <div style="display:flex;gap:8px;">
+      <div class="form-group" style="flex:1;"><label class="form-label">Du</label><input type="date" class="form-control" id="ap-debut" onchange="majAnnulPeriodeClient()"></div>
+      <div class="form-group" style="flex:1;"><label class="form-label">Au</label><input type="date" class="form-control" id="ap-fin" onchange="majAnnulPeriodeClient()"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Qui annule ?</label>
+      <select class="form-control" id="ap-qui">
+        <option value="client">Le client</option>
+        <option value="gabriel">Gabriel</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Facturation</label>
+      <select class="form-control" id="ap-pct" onchange="majAnnulPeriodeClient()">
+        <option value="auto">Selon les délais CGV, séance par séance</option>
+        <option value="0">0% — Gratuit</option>
+        <option value="50">50%</option>
+        <option value="100">100% — Facturé en intégralité</option>
+      </select>
+    </div>
+    <div id="ap-recap" style="margin-bottom:14px;"></div>
+    <div class="modal-foot" style="margin-top:0;">
+      <button class="btn btn-outline" style="flex:1;" onclick="document.getElementById('modal-annul-periode').classList.remove('open')">Retour</button>
+      <button id="ap-confirm" style="flex:1;background:var(--red);border:none;border-radius:8px;padding:10px;color:white;font-family:'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif;font-size:11px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:0.04em;" onclick="confirmerAnnulPeriodeClient()">Annuler ces séances</button>
     </div>
   </div>
 </div>
@@ -2565,8 +2617,116 @@ function openAnnulationResa() {
     porteeSelect.value = 'serie';
   }
   document.getElementById('annulation-qui').value = 'client';
+  // v2.97 : période — du jour de la séance ouverte (ou d'aujourd'hui), fin à choisir
+  periodeLignesResa = null;
+  var pd = document.getElementById('annulation-periode-debut');
+  var pf = document.getElementById('annulation-periode-fin');
+  pd.value = (r._occurrenceDate && r._occurrenceDate >= today) ? r._occurrenceDate : today;
+  pd.min = today; pf.min = pd.value; pf.value = '';
   majSuggestionAnnulation();
   document.getElementById('modal-annulation').classList.add('open');
+}
+
+// ── v2.97 : annulation d'une période ──────────────────────────
+// Noms des chiens d'un groupe de lignes (chien_id null = tous les chiens)
+function nomsLignesPeriode(lignes) {
+  var noms = [];
+  lignes.forEach(function(l) {
+    var n = l.chien_id ? [chienNom(l.chien_id)] : (currentChiens || []).map(function(c) { return c.nom; });
+    n.forEach(function(x) { if (x && noms.indexOf(x) === -1) noms.push(x); });
+  });
+  return noms.join(' + ');
+}
+
+// a) Depuis la fenêtre d'une réservation : seulement cette série
+var periodeLignesResa = null, periodeSeancesResa = [];
+async function majPeriodeResa() {
+  var r = currentResaDetail;
+  var porteeEl = document.getElementById('annulation-portee');
+  if (!r || !porteeEl || porteeEl.value !== 'periode') return;
+  var pd = document.getElementById('annulation-periode-debut');
+  var pf = document.getElementById('annulation-periode-fin');
+  var box = document.getElementById('annulation-periode-recap');
+  if (pd.value) pf.min = pd.value;
+  periodeSeancesResa = [];
+  if (!pd.value || !pf.value) { box.innerHTML = '<div style="font-size:12px;color:var(--tf);">Choisissez la date de fin.</div>'; return; }
+  if (pf.value < pd.value) { box.innerHTML = '<div style="font-size:12px;color:var(--red);">La date de fin est avant la date de début.</div>'; return; }
+  try {
+    if (!periodeLignesResa) {
+      var brutes = await FR_FACT.lignesDeReservation(db, r);
+      if (!brutes.length) brutes = [r];
+      periodeLignesResa = brutes.map(function(x) {
+        return { id: x.id, chien_id: x.chien_id, statut: x.statut, dates_exclues: x.dates_exclues,
+          client_id: r.client_id, service: r.service, creneau: r.creneau, date_debut: r.date_debut, date_fin: r.date_fin,
+          jours_recurrence: r.jours_recurrence, date_fin_recurrence: r.date_fin_recurrence };
+      });
+    }
+    periodeSeancesResa = FR_ANNUL.seances(periodeLignesResa, pd.value, pf.value);
+    box.innerHTML = FR_ANNUL.htmlRecap(periodeSeancesResa, document.getElementById('annulation-pourcentage').value, nomsLignesPeriode);
+  } catch(e) { box.innerHTML = '<div style="font-size:12px;color:var(--red);">Erreur : ' + (e.message || e) + '</div>'; }
+}
+
+// b) Depuis la fiche : toutes les promenades / crèche du client
+var periodeSeancesClient = [];
+function ouvrirAnnulPeriodeClient() {
+  if (!currentClient) return;
+  var auj = FR_FACT.aujourdhui();
+  var pd = document.getElementById('ap-debut'), pf = document.getElementById('ap-fin');
+  pd.value = auj; pd.min = auj; pf.value = ''; pf.min = auj;
+  document.getElementById('ap-qui').value = 'client';
+  document.getElementById('ap-pct').value = 'auto';
+  majAnnulPeriodeClient();
+  document.getElementById('modal-annul-periode').classList.add('open');
+}
+function majAnnulPeriodeClient() {
+  var pd = document.getElementById('ap-debut'), pf = document.getElementById('ap-fin');
+  var box = document.getElementById('ap-recap'), btn = document.getElementById('ap-confirm');
+  if (pd.value) pf.min = pd.value;
+  periodeSeancesClient = [];
+  btn.style.display = 'none';
+  if (!pd.value || !pf.value) { box.innerHTML = '<div style="font-size:12px;color:var(--tf);">Choisissez les dates de début et de fin.</div>'; return; }
+  if (pf.value < pd.value) { box.innerHTML = '<div style="font-size:12px;color:var(--red);">La date de fin est avant la date de début.</div>'; return; }
+  periodeSeancesClient = FR_ANNUL.seances(currentReservationsList, pd.value, pf.value);
+  box.innerHTML = FR_ANNUL.htmlRecap(periodeSeancesClient, document.getElementById('ap-pct').value, nomsLignesPeriode);
+  if (periodeSeancesClient.length) btn.style.display = '';
+}
+
+// Commun : confirmation, écriture, message au client, rafraîchissement
+async function executerAnnulPeriode(liste, qui, pct, clientId) {
+  var payantes = liste.filter(function(s) { return FR_ANNUL.pctDe(s, pct) > 0; }).length;
+  var ok = await frConfirm({ titre: 'Annuler la période ?', danger: true,
+    message: liste.length + ' séance' + (liste.length > 1 ? 's' : '') + ' du ' + formatDateFR(liste[0].date) + ' au ' + formatDateFR(liste[liste.length - 1].date) + ' seront annulées'
+      + (qui === 'client' ? ' (à la demande du client).' : ' (par Forest Rangers).')
+      + '\n\n' + (payantes ? payantes + ' séance' + (payantes > 1 ? 's' : '') + ' facturée' + (payantes > 1 ? 's' : '') + '.' : 'Aucune séance facturée.')
+      + '\nLe client est prévenu dans sa messagerie.',
+    ok: 'Annuler la période', annuler: 'Retour' });
+  if (!ok) return false;
+  try {
+    var res = await FR_ANNUL.executer(db, liste, { qui: qui, pct: pct });
+    var txt = FR_ANNUL.messages(liste, { qui: qui, pct: pct });
+    var prevenu = await notifierClientAnnulation(clientId, txt.fr, txt.en, txt.lu);
+    frToast(res.seances + ' séance' + (res.seances > 1 ? 's' : '') + ' annulée' + (res.seances > 1 ? 's' : '') + '.' + (prevenu ? ' Le client a été prévenu.' : ''));
+    try {
+      var rr = await db.from('reservations').select('*').eq('client_id', clientId).order('date_debut', { ascending: false });
+      if (!rr.error && rr.data) currentReservationsList = rr.data;
+    } catch (_) {}
+    loadReservations(currentReservationsList);
+    loadAnnulationDetails(currentReservationsList);
+    return true;
+  } catch(e) {
+    console.error('Erreur annulation période:', e);
+    frAlert({ type: 'erreur', titre: 'Annulation impossible', message: 'La période n\'a pas pu être annulée.\n\nDétail : ' + (e.message || 'inconnu') });
+    return false;
+  }
+}
+async function confirmerAnnulPeriodeClient() {
+  majAnnulPeriodeClient();
+  if (!periodeSeancesClient.length || !currentClient) return;
+  var pctVal = document.getElementById('ap-pct').value;
+  var pct = pctVal === 'auto' ? 'auto' : (parseInt(pctVal, 10) || 0);
+  if (await executerAnnulPeriode(periodeSeancesClient.slice(), document.getElementById('ap-qui').value, pct, currentClient.id)) {
+    document.getElementById('modal-annul-periode').classList.remove('open');
+  }
 }
 
 function dateRefAnnulation() {
@@ -2587,6 +2747,15 @@ function majSuggestionAnnulation() {
   var portee = document.getElementById('annulation-portee').value;
   var dateGroup = document.getElementById('annulation-date-group');
   if (dateGroup) dateGroup.style.display = (portee === 'occurrence') ? 'block' : 'none';
+  var enPeriode = portee === 'periode';
+  document.getElementById('annulation-periode-group').style.display = enPeriode ? 'block' : 'none';
+  document.getElementById('annulation-pct-auto').hidden = !enPeriode;
+  if (enPeriode) {
+    document.getElementById('annulation-raison').textContent = 'Les séances de la période sont retirées ; la série reprend normalement ensuite. Facturation par défaut : chaque séance selon son délai (gratuite avant 9h la veille, 100 % après ; 100 % en période estivale).';
+    document.getElementById('annulation-pourcentage').value = 'auto';
+    majPeriodeResa();
+    return;
+  }
   var dateRef = dateRefAnnulation();
   var sugg = calculerSuggestionAnnulation(r, dateRef);
   var raisonTxt = sugg.raison;
@@ -2657,6 +2826,16 @@ async function confirmerAnnulationResa() {
   var pct = parseInt(document.getElementById('annulation-pourcentage').value, 10) || 0;
   var estRecurrente = r.service !== 'boarding' && r.jours_recurrence && r.jours_recurrence.length > 0;
   var portee = estRecurrente ? document.getElementById('annulation-portee').value : 'serie';
+  if (portee === 'periode') {
+    await majPeriodeResa();
+    if (!periodeSeancesResa.length) { frAlert({ type: 'info', titre: 'Rien à annuler', message: 'Aucune séance à venir sur cette période.' }); return; }
+    var pctV = document.getElementById('annulation-pourcentage').value;
+    if (await executerAnnulPeriode(periodeSeancesResa.slice(), qui, pctV === 'auto' ? 'auto' : (parseInt(pctV, 10) || 0), r.client_id)) {
+      document.getElementById('modal-annulation').classList.remove('open');
+      document.getElementById('modal-resa-detail').classList.remove('open');
+    }
+    return;
+  }
   var dateRef = dateRefAnnulation();
   var sugg = currentResaDetail._suggestion || calculerSuggestionAnnulation(r, dateRef);
   try {
@@ -2807,6 +2986,7 @@ function openAjoutChien() {
 async function saveNouveauChien() {
   var nom = document.getElementById('ac-nom').value.trim();
   if (!nom) { frAlert({ type: 'attention', titre: 'Nom manquant', message: 'Le nom du chien est obligatoire.' }); return; }
+  if (window.frNaissanceFuture && frNaissanceFuture(document.getElementById('ac-naissance').value)) { frAlert({ type: 'attention', titre: 'Date de naissance', message: 'La date de naissance ne peut pas être dans le futur.' }); return; }
   var poids = parseFloat(document.getElementById('ac-poids').value);
   if (isNaN(poids)) poids = null;
 

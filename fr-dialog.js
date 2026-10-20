@@ -241,6 +241,18 @@
   window.frAlert   = function (o) { o = norm(o); return enFile(function (fin) { fenetre(o, 'alert', fin); }); };
   window.frPrompt  = function (o) { o = norm(o); return enFile(function (fin) { fenetre(o, 'prompt', fin); }); };
 
+  // ── Date de naissance d'un chien (v3.00) : jamais dans le futur ──
+  window.frAujourdhui = function () {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  };
+  window.frNaissanceFuture = function (v) { return !!v && String(v).slice(0, 10) > window.frAujourdhui(); };
+  // Calendrier borné à aujourd'hui sur tout champ « naissance » (y compris ajouté plus tard)
+  document.addEventListener('focusin', function (e) {
+    var el = e.target;
+    if (el && el.type === 'date' && /naissance/i.test((el.id || '') + ' ' + (el.className || ''))) el.max = window.frAujourdhui();
+  }, true);
+
   // ── Notification ────────────────────────────────────────────────
   var COUL_T = { succes: ['#3f9e5a', 'succes'], erreur: ['#d64545', 'erreur'], info: ['#3d4429', 'info'], attention: ['#c98a10', 'attention'] };
   window.frToast = function (message, type) {

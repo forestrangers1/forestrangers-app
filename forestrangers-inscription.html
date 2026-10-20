@@ -782,6 +782,7 @@ input[type=range]::-webkit-slider-runnable-track {
 "Sélectionner...": "Select...",
 "Champs obligatoires manquants : ": "Missing required fields: ",
 "Numéro de puce (15 chiffres)": "Microchip number (15 digits)",
+"Date de naissance (pas dans le futur)": "Date of birth (not in the future)",
 "Où trouver ce numéro ?": "Where can I find this number?",
 "Laissé vide : même vétérinaire que le premier chien.": "Left empty: same vet as the first dog.",
 "Assurance responsabilité civile": "Third-party liability insurance",
@@ -1016,6 +1017,7 @@ input[type=range]::-webkit-slider-runnable-track {
 "Sélectionner...": "Auswielen...",
 "Champs obligatoires manquants : ": "Et feelen obligatoresch Felder: ",
 "Numéro de puce (15 chiffres)": "Chipnummer (15 Zifferen)",
+"Date de naissance (pas dans le futur)": "Gebuertsdatum (net an der Zukunft)",
 "Où trouver ce numéro ?": "Wou fannen ech dës Nummer?",
 "Laissé vide : même vétérinaire que le premier chien.": "Eidel gelooss: selwechten Veterinär wéi fir den éischten Hond.",
 "Assurance responsabilité civile": "Haftflichtversécherung",
@@ -2088,6 +2090,12 @@ function validerPage2() {
     if (puce) puce.style.borderColor = '#e05a5a';
     erreurs.push('Numéro de puce (15 chiffres)');
   }
+  var naisP = document.getElementById('naissance-chien');
+  if (naisP) naisP.style.borderColor = '';
+  if (naisP && window.frNaissanceFuture && frNaissanceFuture(naisP.value)) {
+    naisP.style.borderColor = '#e05a5a';
+    erreurs.push('Date de naissance (pas dans le futur)');
+  }
   var assPrincipal = document.getElementById('assurance-pills');
   if (assPrincipal) assPrincipal.style.outline = '';
   if (!document.querySelector('#assurance-pills .radio-pill.selected')) {
@@ -2117,6 +2125,12 @@ function validerPage2() {
     if (!pv || !/^\d{15}$/.test(pv)) {
       if (ePuce) ePuce.style.borderColor = '#e05a5a';
       erreurs.push(pref + t('Numéro de puce (15 chiffres)'));
+    }
+    var eNais = c.querySelector('.chien-naissance');
+    if (eNais) eNais.style.borderColor = '';
+    if (eNais && window.frNaissanceFuture && frNaissanceFuture(eNais.value)) {
+      eNais.style.borderColor = '#e05a5a';
+      erreurs.push(pref + t('Date de naissance (pas dans le futur)'));
     }
     var eAss = c.querySelector('.assurance-pills');
     if (eAss) eAss.style.outline = '';
