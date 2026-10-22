@@ -9,7 +9,8 @@
 <script>
   try { if (window.self !== window.top || new URLSearchParams(location.search).get('embed') === '1') document.documentElement.classList.add('embed'); } catch (e) { document.documentElement.classList.add('embed'); }
 </script>
-<style>html.embed .sidebar { display: none !important; }
+<style>.suivi-titre { font-family:'FRDisplay','Oswald','Arial Narrow',sans-serif; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.12em; color:var(--tf); margin-bottom:6px; }
+html.embed .sidebar { display: none !important; }
 /* v2.71 : dans l'admin, le jour / nuit est celui de l'admin (relayé à la facture) */
 html.embed .theme-toggle { display: none !important; }</style>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -648,6 +649,9 @@ html.light .actions-bar  { background: #f6f7f2; border-top-color: rgba(0,0,0,0.0
             Envoyer au client
           </button>
         </div>
+
+        <!-- v3.02 : suivi (envoi, rappels, paiements) -->
+        <div id="suivi-facture" style="display:none;margin-top:14px;border:1px solid var(--bd2);border-radius:var(--r);padding:12px 14px;"></div>
 
       </div><!-- /form-panel -->
 
@@ -1473,6 +1477,7 @@ async function initFactureExistante(id) {
   document.getElementById('btn-mark-paid').style.display = (['payee', 'annulee', 'avoir', 'brouillon'].indexOf(f.statut) === -1) ? '' : 'none';
   afficherEtatNoteCredit(f);
   majEtatBrouillon();
+  afficherSuiviFacture();
 
   updatePreview();
 }
@@ -1719,6 +1724,7 @@ async function envoyerFacture() {
     if (r.ok) {
       if (etaitBrouillon) { await passerEnImpayee(); etaitBrouillon = false; }
       if (!estNC) { factureModifiable = false; verrouillerLignes(); }
+      afficherSuiviFacture();
       toastFacture('✓ ' + (estNC ? 'Note de crédit' : 'Facture') + ' envoyée à ' + (r.destinataire || currentClient.email) + (r.redirige_depuis ? ' (compte test)' : ''));
     } else if (r.indisponible) {
       if (await frConfirm({ titre: 'Envoi automatique indisponible', message: 'L\'envoi automatique ne répond pas.\n\nOuvrir votre messagerie à la place ? Pensez à joindre le PDF (bouton Télécharger PDF).\n\nDétail : ' + (r.erreur || ''), ok: 'Ouvrir la messagerie', icone: 'envoi' })) {
@@ -1732,6 +1738,90 @@ async function envoyerFacture() {
     _envoiEnCours = false;
     btns.forEach(function(b, k) { if (b) { b.disabled = false; b.innerHTML = anciens[k]; } });
   }
+}
+
+
+// ── v3.02 : SUIVI DE LA FACTURE — envoi, rappels, paiements, étape suivante ──
+// Lecture seule : factures (rappel_1_le, rappel_2_le, mise_en_demeure_le),
+// emails_envoyes (journal v32), paiements imputés (v31), v_factures_suivi (délais).
+function suiviDate(v) { return v ? new Date(String(v).length <= 10 ? v + 'T12:00:00' : v).toLocaleDateString('fr-LU', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'; }
+function suiviEsc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+async function afficherSuiviFacture() {
+  var box = document.getElementById('suivi-facture');
+  var f = currentFacture;
+  if (!box) return;
+  if (!f || !f.id || f.statut === 'avoir' || /^NC-/.test(f.numero || '')) { box.style.display = 'none'; return; }
+  box.style.display = '';
+  if (f.statut === 'brouillon') {
+    box.innerHTML = '<div class="suivi-titre">Suivi</div><div style="font-size:12px;color:var(--tf);">Pas encore envoyée.</div>';
+    return;
+  }
+  box.innerHTML = '<div class="suivi-titre">Suivi</div><div style="font-size:12px;color:var(--tf);">Chargement…</div>';
+  var ev = [];   // { d: tri, date, txt, coul }
+  var fx = f, sv = null, mails = [], pays = [];
+  try {
+    var r1 = await db.from('factures').select('*').eq('id', f.id).maybeSingle(); if (r1.data) fx = r1.data;
+    var r2 = await db.from('v_factures_suivi').select('*').eq('id', f.id).maybeSingle(); if (!r2.error) sv = r2.data;
+    var r3 = await db.from('emails_envoyes').select('type,statut,created_at,destinataire,erreur').eq('facture_id', f.id).order('created_at', { ascending: true });
+    if (!r3.error) mails = r3.data || [];
+    var r4 = await db.from('paiements_imputations').select('montant,created_at,paiement_id,paiements(date_virement,reference,annule_le)').eq('facture_id', f.id);
+    if (!r4.error) pays = r4.data || [];
+  } catch (e) { /* tables absentes : on affiche ce qu'on a */ }
+
+  var LIB = { facture: 'Facture envoyée', rappel_1: 'Rappel 1 envoyé', rappel_2: 'Rappel 2 envoyé', mise_en_demeure: 'Mise en demeure envoyée' };
+  ev.push({ d: String(fx.date_emission || fx.created_at || ''), txt: 'Émise le ' + suiviDate(fx.date_emission || fx.created_at) });
+  mails.forEach(function(m) {
+    var ok = m.statut === 'envoye';
+    ev.push({ d: String(m.created_at), coul: ok ? null : 'var(--red)',
+      txt: (ok ? (LIB[m.type] || m.type) : 'Échec d\'envoi · ' + (LIB[m.type] || m.type).replace(' envoyée', '').replace(' envoyé', ''))
+        + ' le ' + suiviDate(m.created_at) + ' à ' + suiviEsc(m.destinataire) + (!ok && m.erreur ? ' — ' + suiviEsc(m.erreur) : '') });
+  });
+  // Étapes enregistrées sans e-mail de l'app (messagerie personnelle ou « enregistrer seulement »)
+  [['rappel_1', fx.rappel_1_le, 'Rappel 1'], ['rappel_2', fx.rappel_2_le, 'Rappel 2'], ['mise_en_demeure', fx.mise_en_demeure_le, 'Mise en demeure']].forEach(function(x) {
+    if (!x[1]) return;
+    var parti = mails.some(function(m) { return m.type === x[0] && m.statut === 'envoye'; });
+    if (!parti) ev.push({ d: String(x[1]), txt: x[2] + ' enregistré le ' + suiviDate(x[1]) + ' (sans e-mail de l\'app)' });
+  });
+  if (fx.rappel_2_le && (parseFloat(fx.frais_dossier) || 0) > 0)
+    ev.push({ d: String(fx.rappel_2_le) + 'z', txt: '+ ' + eur(parseFloat(fx.frais_dossier)) + ' de frais de dossier', coul: 'var(--red)' });
+  var total = (parseFloat(fx.total_ttc) || 0) + (parseFloat(fx.frais_dossier) || 0), cumul = 0;
+  pays.map(function(p) { var pa = p.paiements || {}; return { date: pa.date_virement || p.created_at, m: parseFloat(p.montant) || 0, annule: !!pa.annule_le, ref: pa.reference }; })
+      .sort(function(a, b) { return String(a.date).localeCompare(String(b.date)); })
+      .forEach(function(p) {
+        if (p.annule) { ev.push({ d: String(p.date), txt: 'Paiement du ' + suiviDate(p.date) + ' annulé (' + eur(p.m) + ')', coul: 'var(--tf)' }); return; }
+        cumul += p.m;
+        var reste = Math.max(0, Math.round((total - cumul) * 100) / 100);
+        ev.push({ d: String(p.date), coul: 'var(--green)', txt: 'Paiement reçu le ' + suiviDate(p.date) + ' : ' + eur(p.m) + (reste > 0.004 ? ' (reste ' + eur(reste) + ')' : ' — soldée') });
+      });
+  if (fx.statut === 'annulee') ev.push({ d: String(fx.annulee_le || ''), txt: 'Annulée par note de crédit le ' + suiviDate(fx.annulee_le), coul: 'var(--tf)' });
+  ev.sort(function(a, b) { return a.d.localeCompare(b.d); });
+
+  // Échéance et étape suivante (délais de la vue de suivi : j1 / j2 / j3 jours après l'émission)
+  var bas = '';
+  var solde = sv ? parseFloat(sv.solde) || 0 : null;
+  if (fx.statut !== 'annulee' && solde != null && solde > 0.004) {
+    var em = new Date(String(fx.date_emission || '').slice(0, 10) + 'T12:00:00');
+    var plus = function(n) { var d = new Date(em); d.setDate(d.getDate() + (n || 0)); return d; };
+    var auj = new Date(); auj.setHours(12, 0, 0, 0);
+    var prochaine = !fx.rappel_1_le ? ['Rappel 1', sv.j1] : !fx.rappel_2_le ? ['Rappel 2 (+ frais)', sv.j2] : !fx.mise_en_demeure_le ? ['Mise en demeure', sv.j3] : null;
+    bas = '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--bd2);font-size:12px;line-height:1.6;">'
+      + 'Échéance : ' + suiviDate(fx.date_echeance) + ((sv.jours_retard || 0) > 0 ? ' — <strong style="color:var(--red);">' + sv.jours_retard + ' j de retard</strong>' : '')
+      + ' · reste dû <strong>' + eur(solde) + '</strong>';
+    if (prochaine && prochaine[1] != null) {
+      var dp = plus(prochaine[1]);
+      bas += '<br><strong>Prochaine étape :</strong> ' + prochaine[0] + (dp <= auj ? ' — <strong style="color:var(--red);">à faire maintenant</strong> (Admin → Factures)' : ' — proposée à partir du ' + dp.toLocaleDateString('fr-LU', { day: '2-digit', month: '2-digit', year: 'numeric' }));
+    } else if (!prochaine) bas += '<br><strong>Prochaine étape :</strong> toutes les étapes sont faites — suspension des réservations possible (Admin → Factures).';
+    bas += '</div>';
+  } else if (fx.statut !== 'annulee' && solde != null) {
+    bas = '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--bd2);font-size:12px;color:var(--green);font-weight:600;">Soldée — rien à suivre.</div>';
+  }
+
+  box.innerHTML = '<div class="suivi-titre">Suivi</div>'
+    + ev.map(function(e) {
+        return '<div style="display:flex;gap:9px;align-items:flex-start;font-size:12px;line-height:1.5;padding:3px 0;color:' + (e.coul || 'var(--tx)') + ';">'
+          + '<span style="width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.7;flex-shrink:0;margin-top:6px;"></span><span>' + e.txt + '</span></div>';
+      }).join('')
+    + bas;
 }
 
 // ── v2.99 : BROUILLON, MODIFICATION ET SUPPRESSION ──────────────
@@ -1878,6 +1968,7 @@ async function marquerPayeeFacture() {
     updateStatusPill();
     document.getElementById('btn-mark-paid').style.display = currentFacture.statut === 'payee' ? 'none' : '';
     frToast(currentFacture.statut === 'payee' ? 'Paiement enregistré : facture soldée.' : 'Paiement enregistré : la facture reste partiellement due.');
+    afficherSuiviFacture();
     return;
   }
   try {
