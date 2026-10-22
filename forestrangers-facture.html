@@ -1195,6 +1195,18 @@ async function chargerLignesPourPeriode(periodStart, periodEnd, annee, mois) {
     } catch (e) { console.log('Régularisations :', e && e.message); }
   }
 
+  // v3.01 : journées test et première visite au parc pas encore facturées
+  if (FR_FACT.journeesTestAFacturer) {
+    try {
+      var jts = await FR_FACT.journeesTestAFacturer(db, [currentClient], { exclureFactureId: currentFacture && currentFacture.id });
+      (jts[String(currentClient.id)] || []).forEach(function(l) {
+        items.push({ label: l.label, sousLabel: l.sousLabel, discountNote: l.discountNote || null, qte: l.qte, prixUnit: l.prixUnit, total: l.total,
+                     type: 'journee_test', jt_id: l.jt_id, service: l.service, nbChiens: l.nb_chiens, color: null,
+                     tvaRate: getTvaRate(l.service === 'premiere_visite' ? 'default' : l.service) });
+      });
+    } catch (e) { console.log('Journées test :', e && e.message); }
+  }
+
   useStoredTotals = false;
   lineItemsData = items;
   lignesDuPlanning = true;
@@ -1437,7 +1449,7 @@ async function initFactureExistante(id) {
     lineItemsData = f.lignes.map(function(l) {
       return { label: l.label, sousLabel: l.sousLabel, discountNote: l.discountNote, qte: l.qte,
                prixUnit: l.prixUnit, total: l.total, type: l.type, readOnly: !editable, ref_facture_id: l.ref_facture_id || null,
-               service: l.service || null, nbChiens: l.nb_chiens || undefined,
+               service: l.service || null, nbChiens: l.nb_chiens || undefined, jt_id: l.jt_id || undefined,
                color: (l.type === 'annulation' || (l.type === 'regularisation' && l.total < 0)) ? 'red' : null,
                tvaRate: l.tvaRate != null ? l.tvaRate : TVA_RATES.default };
     });
@@ -1556,6 +1568,7 @@ async function enregistrerFacture() {
                type: it.type || (it.color === 'red' ? 'annulation' : null),
                service: it.service || null, nb_chiens: it.nbChiens || undefined,   // v2.95 : pour les statistiques
                ref_facture_id: it.ref_facture_id || undefined,
+               jt_id: it.jt_id || undefined,   // v3.01 : journée test facturée ici
                tvaRate: it.tvaRate != null ? it.tvaRate : TVA_RATES.default };
     });
     if (!(currentFacture && currentFacture.id)) payload.mensuelle = lignesDuPlanning;
@@ -1591,6 +1604,7 @@ async function enregistrerFacture() {
       factureModifiable = true;
       lineItemsData.forEach(function(it) { it.readOnly = false; });
     }
+    if (payload.lignes && window.FR_FACT && FR_FACT.rattacherJourneesTest) await FR_FACT.rattacherJourneesTest(db, currentFacture.id, payload.lignes);
     var stNow = (currentFacture && currentFacture.statut) || statut;
     document.getElementById('btn-mark-paid').style.display = (['payee', 'brouillon', 'annulee', 'avoir'].indexOf(stNow) === -1) ? '' : 'none';
     if (factureModifiable) lignesDuPlanning = false;

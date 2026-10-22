@@ -466,6 +466,13 @@ html.light .brand-name .rangers { color: var(--accent); }
 .rc-btn.pay { background:var(--green-dim); border-color:rgba(94,201,122,0.3); color:var(--green); }
 .rc-btn.go  { background:var(--accent-dim); border-color:var(--accent-mid); color:var(--accent); }
 .rc-btn.red { background:var(--red-dim); border-color:rgba(224,90,90,0.3); color:var(--red); }
+/* v3.01 : journées test */
+.jt-lab { font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:var(--text-faint); font-weight:700; display:block; margin-bottom:5px; }
+.jt-in { width:100%; background:var(--surface2); border:1.5px solid var(--border); border-radius:8px; padding:9px 12px; color:var(--text); font-family:'Instrument Sans',sans-serif; font-size:13px; outline:none; }
+.jt-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+@media (max-width:560px) { .jt-grid { grid-template-columns:1fr; } }
+.jt-memo { border:1px solid rgba(240,180,41,0.4); background:rgba(240,180,41,0.08); border-radius:8px; padding:9px 12px; font-size:12px; line-height:1.5; margin-bottom:12px; }
+.jt-row { display:flex; align-items:flex-start; gap:12px; padding:11px 16px; border-top:1px solid var(--border); }
 /* v2.98 : frais d'annulation modifiables — lisibles en mode clair, choix actuel marqué (plus estompé) */
 .fa-box { background:rgba(0,0,0,0.18); border-radius:10px; padding:8px 14px 4px; }
 .fa-box .fa-sub { color:var(--text-dim); }
@@ -1321,16 +1328,47 @@ textarea.form-control { resize: vertical; }
             <span class="card-title" style="color:var(--accent);">Générer un lien d'inscription</span>
           </div>
           <div class="card-body">
+            <label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:12px;">
+              <input type="checkbox" id="jt-actif" onchange="majFormulaireJT()" style="width:16px;height:16px;accent-color:#ff5f1f;">
+              Journée test d'abord <span style="font-weight:400;font-size:11.5px;color:var(--text-faint);">— le lien d'inscription part seulement si le chien est accepté</span>
+            </label>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
               <div>
                 <label style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;display:block;margin-bottom:5px;">Prenom du client</label>
-                <input type="text" id="inv-prenom" placeholder="Marie" style="width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:13px;outline:none;">
+                <input type="text" id="inv-prenom" placeholder="Marie" oninput="verifierProspectJT()" style="width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:13px;outline:none;">
               </div>
               <div>
                 <label style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;display:block;margin-bottom:5px;">Email</label>
-                <input type="email" id="inv-email" placeholder="marie@email.lu" style="width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:13px;outline:none;">
+                <input type="email" id="inv-email" placeholder="marie@email.lu" oninput="verifierProspectJT()" style="width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:13px;outline:none;">
               </div>
             </div>
+            <div id="jt-bloc" style="display:none;border:1px solid var(--accent-mid);background:var(--accent-dim);border-radius:10px;padding:12px 12px 2px;margin-bottom:12px;">
+              <div class="jt-grid">
+                <div><label class="jt-lab">Nom du client</label><input class="jt-in" id="jt-nom" placeholder="Dupont" oninput="verifierProspectJT()"></div>
+                <div><label class="jt-lab">Chien(s)</label><input class="jt-in" id="jt-chiens" placeholder="Rex  ·  ou  Rex + Lola" oninput="verifierProspectJT()"></div>
+              </div>
+              <div class="jt-grid">
+                <div><label class="jt-lab">Commune</label><input class="jt-in" id="jt-commune" placeholder="Kopstal"></div>
+                <div><label class="jt-lab">Téléphone</label><input class="jt-in" id="jt-tel" type="tel" placeholder="+352 …"></div>
+              </div>
+              <div class="jt-grid">
+                <div><label class="jt-lab">Service</label>
+                  <select class="jt-in" id="jt-service" onchange="majFormulaireJT()">
+                    <option value="walking">Dog Walking</option><option value="daycare">Day Care</option><option value="boarding">Boarding (une nuit)</option>
+                  </select></div>
+                <div><label class="jt-lab" id="jt-date-lab">Date du test</label><input class="jt-in" id="jt-date" type="date"></div>
+              </div>
+              <div class="jt-grid" id="jt-creneau-ligne">
+                <div><label class="jt-lab">Créneau</label>
+                  <select class="jt-in" id="jt-creneau"><option value="matin">Matin — 09h00</option><option value="midi">Midi — 12h00</option><option value="apmidi">Après-midi — 14h30</option></select></div>
+                <div></div>
+              </div>
+              <label style="display:flex;align-items:center;gap:9px;font-size:12.5px;cursor:pointer;margin:2px 0 12px;">
+                <input type="checkbox" id="jt-visite" style="width:15px;height:15px;accent-color:#ff5f1f;">
+                Première visite au parc à chiens — 40 € TTC
+              </label>
+            </div>
+            <div id="jt-memoire" class="jt-memo" style="display:none;"></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
               <div>
                 <label style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-faint);font-weight:700;display:block;margin-bottom:5px;">Validite du lien</label>
@@ -1357,7 +1395,7 @@ textarea.form-control { resize: vertical; }
             </div>
             <button onclick="genererLien()" class="btn btn-accent" style="width:100%;padding:11px;justify-content:center;font-size:12px;">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-              Créer et envoyer l'invitation
+              <span id="inv-btn-txt">Créer et envoyer l'invitation</span>
             </button>
           </div>
         </div>
@@ -1386,6 +1424,17 @@ textarea.form-control { resize: vertical; }
             <span class="badge b-muted" id="invitations-count">—</span>
           </div>
           <div id="invitations-historique">
+            <div style="padding:16px;text-align:center;font-size:12px;color:var(--text-faint);">Chargement...</div>
+          </div>
+        </div>
+
+        <!-- v3.01 : journées test -->
+        <div class="card" style="margin-top:14px;">
+          <div class="card-head">
+            <span class="card-title">Journées test</span>
+            <span class="badge b-muted" id="jt-count">—</span>
+          </div>
+          <div id="jt-historique">
             <div style="padding:16px;text-align:center;font-size:12px;color:var(--text-faint);">Chargement...</div>
           </div>
         </div>
@@ -1975,6 +2024,7 @@ function lienInvitation(token) {
 }
 
 async function genererLien() {
+  if ((document.getElementById('jt-actif') || {}).checked) return enregistrerJourneeTest();   // v3.01
   var prenom = document.getElementById('inv-prenom').value.trim();
   var email  = document.getElementById('inv-email').value.trim();
   var noteEl = document.querySelector('#page-invitation input[placeholder*="référé"]');
@@ -2051,9 +2101,298 @@ function copyLien() {
   setTimeout(function() { btn.textContent = orig; btn.style.color = ''; }, 2000);
 }
 
+// ══════════════════════════════════════════════════════════════
+//  JOURNÉES TEST (v3.01, migration v68 — idée de Gabriel, 22/10/2026)
+//  Invitations → « Journée test d'abord » : le test apparaît au planning ;
+//  le jour du test dès 18 h, une alerte demande la décision :
+//  accepté (le lien d'inscription part), 2e journée test (une seule),
+//  refusé (notes gardées). Toujours payante ; première visite au parc
+//  à chiens 40 € TTC. Facturées sur la première facture du client.
+// ══════════════════════════════════════════════════════════════
+var JT_SVC = { walking: 'Dog Walking', daycare: 'Day Care', boarding: 'Boarding' };
+var JT_CREN = { matin: 'Matin', midi: 'Midi', apmidi: 'Après-midi' };
+var _JT_PSEUDO = {};
+function jtEsc(v) { return rcEsc(v); }
+function jtDerniereDate(j) { return String(j.date_2 || j.date_1 || '').slice(0, 10); }
+function jtNbChiens(txt) { return Math.max(1, Math.min(6, String(txt || '').split(/\s*(?:\+|,|&|\bet\b|\band\b)\s*/i).filter(function(x){ return x.trim(); }).length)); }
+function jtChiensListe(txt) { return String(txt || '').split(/\s*(?:\+|,|&|\bet\b|\band\b)\s*/i).map(function(x){ return x.trim(); }).filter(Boolean); }
+function jtDatesTxt(j) {
+  var t = [];
+  [[j.date_1, j.creneau_1], [j.date_2, j.creneau_2 || j.creneau_1]].forEach(function(x) {
+    if (!x[0]) return;
+    t.push(formatDateFR(String(x[0]).slice(0, 10)) + (j.service === 'walking' && x[1] ? ' ' + (JT_CREN[x[1]] || '').toLowerCase() : ''));
+  });
+  return t.join(' puis ');
+}
+// Décision due : le jour du (dernier) test dès 18 h, ou plus tard
+function jtDecisionDue(j) {
+  if (j.statut !== 'prevu') return false;
+  var d = jtDerniereDate(j), auj = formatDateISO(new Date());
+  return d < auj || (d === auj && new Date().getHours() >= 18);
+}
+async function jtMontant(j) {
+  if (!window.FR_FACT || !FR_FACT.lignesJourneeTest) return null;
+  try { await FR_FACT.chargerTarifs(db); } catch (e) {}
+  return FR_FACT.lignesJourneeTest(j, null).reduce(function(s, l) { return s + (+l.total || 0); }, 0);
+}
+
+function majFormulaireJT() {
+  var on = document.getElementById('jt-actif').checked;
+  document.getElementById('jt-bloc').style.display = on ? '' : 'none';
+  document.getElementById('inv-btn-txt').textContent = on ? 'Enregistrer la journée test' : 'Créer et envoyer l\'invitation';
+  var svc = document.getElementById('jt-service').value;
+  document.getElementById('jt-creneau-ligne').style.display = svc === 'walking' ? '' : 'none';
+  document.getElementById('jt-date-lab').textContent = svc === 'boarding' ? 'Nuit du test (arrivée)' : 'Date du test';
+  var dt = document.getElementById('jt-date'); if (dt) dt.min = formatDateISO(new Date());
+  verifierProspectJT();
+}
+
+// Mémoire des prospects : même e-mail, même nom de chien, déjà client
+var _jtTimer = null;
+function verifierProspectJT() {
+  clearTimeout(_jtTimer);
+  _jtTimer = setTimeout(verifierProspectJTMaintenant, 400);
+}
+async function verifierProspectJTMaintenant() {
+  var box = document.getElementById('jt-memoire');
+  if (!box) return;
+  var net = function(v) { return String(v || '').replace(/[%_,()*\\]/g, ' ').trim(); };
+  var email = net(document.getElementById('inv-email').value).toLowerCase();
+  var chiens = jtChiensListe(net((document.getElementById('jt-chiens') || {}).value)).filter(function(x){ return x.length >= 3; });
+  var trouves = {}, lignes = [];
+  try {
+    var q = [];
+    if (email.indexOf('@') > 0) q.push(db.from('journees_test').select('*').ilike('email', email));
+    chiens.forEach(function(n) { q.push(db.from('journees_test').select('*').ilike('chiens', '%' + n + '%')); });
+    var rs = await Promise.all(q);
+    rs.forEach(function(r) { (r.data || []).forEach(function(j) { trouves[j.id] = j; }); });
+    Object.keys(trouves).map(function(k){ return trouves[k]; }).sort(function(a, b){ return String(b.date_1).localeCompare(String(a.date_1)); }).forEach(function(j) {
+      var st = { prevu: 'prévue', accepte: 'accepté', refuse: 'REFUSÉ', annule: 'annulée' }[j.statut] || j.statut;
+      lignes.push('<div style="margin-top:4px;"><strong>' + jtEsc(j.chiens) + '</strong> (' + jtEsc(j.client_nom) + (j.email ? ', ' + jtEsc(j.email) : '') + ') — journée test du '
+        + jtEsc(jtDatesTxt(j)) + ' : <strong style="color:' + (j.statut === 'refuse' ? 'var(--red)' : 'inherit') + ';">' + st + '</strong>'
+        + (j.notes ? '<div style="color:var(--text-dim);font-style:italic;">« ' + jtEsc(j.notes) + ' »</div>' : '') + '</div>');
+    });
+    if (email.indexOf('@') > 0) {
+      var cl = await db.from('clients').select('prenom,nom,numero_client,actif').ilike('email', email);
+      (cl.data || []).forEach(function(c) { lignes.push('<div style="margin-top:4px;">Déjà une fiche client : <strong>' + jtEsc(c.prenom + ' ' + (c.nom || '')) + '</strong> · n° ' + jtEsc(c.numero_client) + (c.actif === false ? ' (inactive)' : '') + '</div>'); });
+    }
+  } catch (e) { /* migration v68 absente */ }
+  box.style.display = lignes.length ? '' : 'none';
+  box.innerHTML = lignes.length ? '<strong>Déjà connu :</strong>' + lignes.join('') : '';
+}
+
+async function enregistrerJourneeTest() {
+  var g = function(id) { var e = document.getElementById(id); return e ? String(e.value || '').trim() : ''; };
+  var champs = { 'inv-prenom': g('inv-prenom'), 'inv-email': g('inv-email'), 'jt-chiens': g('jt-chiens'), 'jt-date': g('jt-date') };
+  var manque = false;
+  Object.keys(champs).forEach(function(id) {
+    var el = document.getElementById(id); el.style.borderColor = '';
+    if (!champs[id] || (id === 'inv-email' && champs[id].indexOf('@') < 1)) { el.style.borderColor = '#e05a5a'; manque = true; }
+  });
+  if (manque) { showToastAdmin('Prénom, e-mail, chien(s) et date sont obligatoires', 'amber'); return; }
+  var svc = g('jt-service');
+  var row = {
+    client_nom: (g('inv-prenom') + ' ' + g('jt-nom')).trim(),
+    chiens: jtChiensListe(g('jt-chiens')).join(' + '), nb_chiens: jtNbChiens(g('jt-chiens')),
+    email: g('inv-email').toLowerCase(), commune: g('jt-commune') || null, telephone: g('jt-tel') || null,
+    langue: g('inv-langue') || 'fr', service: svc, date_1: g('jt-date'),
+    creneau_1: svc === 'walking' ? g('jt-creneau') : null,
+    premiere_visite: document.getElementById('jt-visite').checked,
+    note_interne: (document.querySelector('#page-invitation input[placeholder*="référé"]') || {}).value || null
+  };
+  var r = await db.from('journees_test').insert(row).select('id');
+  if (r.error) {
+    frAlert({ type: 'erreur', titre: 'Journée test non enregistrée', message: /journees_test/.test(r.error.message || '') ? 'Exécutez d\'abord la migration v68 dans Supabase (sql/fr_migration_v68_journees_test.sql).' : 'Détail : ' + r.error.message });
+    return;
+  }
+  showToastAdmin('✓ Journée test du ' + formatDateFR(row.date_1) + ' enregistrée — elle est au planning', 'green');
+  ['inv-prenom', 'inv-email', 'jt-nom', 'jt-chiens', 'jt-commune', 'jt-tel', 'jt-date'].forEach(function(id) { var e = document.getElementById(id); if (e) e.value = ''; });
+  var n = document.querySelector('#page-invitation input[placeholder*="référé"]'); if (n) n.value = '';
+  document.getElementById('jt-visite').checked = false;
+  document.getElementById('jt-memoire').style.display = 'none';
+  loadJourneesTest();
+}
+
+async function loadJourneesTest() {
+  var box = document.getElementById('jt-historique');
+  if (!box) return;
+  var r = await db.from('journees_test').select('*').order('date_1', { ascending: false }).limit(60);
+  if (r.error) { box.innerHTML = '<div style="padding:16px;text-align:center;font-size:12px;color:var(--text-faint);">Migration v68 à exécuter pour les journées test.</div>'; return; }
+  var L = r.data || [];
+  var cnt = document.getElementById('jt-count'); if (cnt) cnt.textContent = L.length;
+  if (!L.length) { box.innerHTML = '<div style="padding:16px;text-align:center;font-size:12px;color:var(--text-faint);">Aucune journée test</div>'; return; }
+  var fids = L.map(function(j){ return j.facture_id; }).filter(Boolean), fx = {};
+  if (fids.length) { var f = await db.from('factures').select('id,numero,statut').in('id', fids); (f.data || []).forEach(function(x){ fx[x.id] = x; }); }
+  box.innerHTML = L.map(function(j) {
+    var due = jtDecisionDue(j);
+    var badge = j.statut === 'accepte' ? '<span class="badge b-green">Accepté · lien envoyé</span>'
+      : j.statut === 'refuse' ? '<span class="badge b-red">Refusé</span>'
+      : j.statut === 'annule' ? '<span class="badge b-muted">Annulée</span>'
+      : due ? '<span class="badge b-accent">Décision à prendre</span>' : '<span class="badge b-amber">Prévue</span>';
+    var fact = '';
+    if (j.statut === 'accepte') {
+      var fa = j.facture_id && fx[j.facture_id];
+      fact = fa && fa.statut !== 'annulee' ? 'Facturée sur ' + jtEsc(fa.numero) : (j.client_id ? 'À facturer : sur sa prochaine facture' : 'À facturer dès son inscription');
+    } else if (j.statut === 'refuse') fact = 'À facturer par vous (pas de fiche client)';
+    return '<div class="jt-row" style="cursor:pointer;" onclick="ouvrirJourneeTest(\'' + j.id + '\')">'
+      + '<div style="flex:1;min-width:0;">'
+      +   '<div style="font-size:13px;font-weight:600;">' + jtEsc(j.chiens) + ' <span style="font-weight:400;color:var(--text-dim);">· ' + jtEsc(j.client_nom) + '</span></div>'
+      +   '<div style="font-size:11px;color:var(--text-faint);margin-top:2px;">' + jtEsc(JT_SVC[j.service] || j.service) + ' · ' + jtEsc(jtDatesTxt(j))
+      +     (j.premiere_visite ? ' · 1re visite parc' : '') + (j.commune ? ' · ' + jtEsc(j.commune) : '') + (j.email ? ' · ' + jtEsc(j.email) : '') + '</div>'
+      +   (j.notes ? '<div style="font-size:11.5px;color:var(--text-dim);font-style:italic;margin-top:3px;">« ' + jtEsc(j.notes) + ' »</div>' : '')
+      +   (fact ? '<div style="font-size:11px;color:var(--text-dim);margin-top:3px;">' + fact + '</div>' : '')
+      + '</div><div style="flex-shrink:0;">' + badge + '</div></div>';
+  }).join('');
+}
+
+// Pseudo-réservations pour le planning (une par date de test)
+async function journeesTestPlanning(debut, fin, filtSvc) {
+  var r = await db.from('journees_test').select('*').neq('statut', 'annule')
+    .or('and(date_1.gte.' + debut + ',date_1.lte.' + fin + '),and(date_2.gte.' + debut + ',date_2.lte.' + fin + ')');
+  if (r.error) return [];
+  var out = [];
+  (r.data || []).forEach(function(j) {
+    if (filtSvc && j.service !== filtSvc) return;
+    [[j.date_1, j.creneau_1, 1], [j.date_2, j.creneau_2 || j.creneau_1, 2]].forEach(function(x) {
+      if (!x[0]) return;
+      var d = String(x[0]).slice(0, 10), fin2 = d;
+      if (j.service === 'boarding') { var t = new Date(d + 'T00:00:00'); t.setDate(t.getDate() + 1); fin2 = formatDateISO(t); }
+      var pid = 'jt-' + j.id + '-' + x[2];
+      _JT_PSEUDO[pid] = j.id;
+      out.push({
+        r: { id: pid, service: j.service, creneau: j.service === 'walking' ? (x[1] || 'matin') : null, statut: 'confirme',
+             date_debut: d, date_fin: fin2, jours_recurrence: null, date_fin_recurrence: null, dates_exclues: null,
+             client_id: 'jt-' + j.id, chien_id: null, ranger_id: null, ranger_nom: j.service === 'walking' ? 'Gabriel' : null },
+        c: { id: 'jt-' + j.id, prenom: j.client_nom, nom: '', commune: j.commune, is_test: true, _jt: true },
+        chiens: jtChiensListe(j.chiens)
+      });
+    });
+  });
+  return out;
+}
+
+// Alerte du tableau de bord : décisions à prendre (dès 18 h le jour du test)
+async function alertesJourneesTest() {
+  try {
+    var r = await db.from('journees_test').select('*').eq('statut', 'prevu').lte('date_1', formatDateISO(new Date()));
+    if (r.error) return '';
+    var dues = (r.data || []).filter(jtDecisionDue);
+    return dues.map(function(j) {
+      return '<div class="alert alert-a" style="cursor:pointer;" onclick="ouvrirJourneeTest(\'' + j.id + '\')">'
+        + '<div class="alert-dot"></div><div class="alert-body">'
+        + '<strong>Journée test de ' + jtEsc(j.chiens) + ' (' + jtEsc(j.client_nom) + ') : ça s\'est bien passé ?</strong>'
+        + '<div class="alert-time">' + jtEsc(JT_SVC[j.service] || j.service) + ' · ' + jtEsc(jtDatesTxt(j)) + ' — accepter, 2e journée test ou refuser</div>'
+        + '</div></div>';
+    }).join('');
+  } catch (e) { return ''; }
+}
+
+// Fenêtre de décision / détail
+async function ouvrirJourneeTest(id) {
+  var r = await db.from('journees_test').select('*').eq('id', id).maybeSingle();
+  if (r.error || !r.data) { showToastAdmin('Journée test introuvable', 'red'); return; }
+  var j = r.data;
+  var mt = await jtMontant(j);
+  var old = document.getElementById('modal-jt'); if (old) old.remove();
+  var m = document.createElement('div');
+  m.id = 'modal-jt';
+  m.style.cssText = 'position:fixed;inset:0;z-index:1400;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+  m.onclick = function(e) { if (e.target === m) m.remove(); };
+  var info = '<div style="font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-bottom:12px;">'
+    + jtEsc(JT_SVC[j.service] || j.service) + ' · ' + jtEsc(jtDatesTxt(j)) + '<br>'
+    + jtEsc(j.client_nom) + (j.email ? ' · ' + jtEsc(j.email) : '') + (j.telephone ? ' · ' + jtEsc(j.telephone) : '') + (j.commune ? ' · ' + jtEsc(j.commune) : '')
+    + (j.premiere_visite ? '<br>Première visite au parc à chiens (40 € TTC)' : '')
+    + (mt != null ? '<br>Montant : <strong style="color:var(--text);">' + rcEur(mt) + ' TTC</strong>' : '')
+    + (j.note_interne ? '<br>Note : ' + jtEsc(j.note_interne) : '') + '</div>';
+  var corps = '';
+  if (j.statut === 'prevu') {
+    corps = '<div style="display:flex;flex-direction:column;gap:8px;">'
+      + '<button class="btn btn-accent" style="justify-content:center;" onclick="jtAccepter(\'' + j.id + '\')">Accepté — envoyer le lien d\'inscription</button>'
+      + (!j.date_2 ? '<button class="btn btn-outline" style="justify-content:center;" onclick="jtVoir(\'jt-z2\')">Besoin d\'une 2e journée test</button>'
+        + '<div id="jt-z2" style="display:none;background:var(--surface2);border-radius:8px;padding:10px;">'
+        + '<div class="jt-grid" style="margin-bottom:8px;"><div><label class="jt-lab">Date</label><input class="jt-in" type="date" id="jt2-date" min="' + formatDateISO(new Date()) + '"></div>'
+        + (j.service === 'walking' ? '<div><label class="jt-lab">Créneau</label><select class="jt-in" id="jt2-creneau">' + ['matin','midi','apmidi'].map(function(k){ return '<option value="' + k + '"' + (k === j.creneau_1 ? ' selected' : '') + '>' + JT_CREN[k] + '</option>'; }).join('') + '</select></div>' : '<div></div>')
+        + '</div><button class="btn btn-accent" style="width:100%;justify-content:center;" onclick="jtDeuxieme(\'' + j.id + '\')">Ajouter au planning</button></div>' : '')
+      + '<button class="btn btn-outline" style="justify-content:center;color:var(--red);border-color:rgba(224,90,90,0.5);" onclick="jtVoir(\'jt-zr\')">Chien refusé</button>'
+      + '<div id="jt-zr" style="display:none;background:var(--surface2);border-radius:8px;padding:10px;">'
+      + '<label class="jt-lab">Pourquoi ? (2-3 infos, gardées dans l\'historique)</label>'
+      + '<textarea class="jt-in" id="jt-notes" rows="3" style="resize:vertical;" placeholder="Ex : réactif aux autres chiens, tire fort en laisse"></textarea>'
+      + (mt ? '<div style="font-size:11.5px;color:var(--text-dim);margin-top:6px;">Pas de fiche client : facturez vous-même ' + rcEur(mt) + ' TTC.</div>' : '')
+      + '<button class="btn" style="width:100%;justify-content:center;margin-top:8px;background:var(--red);color:white;border:none;" onclick="jtRefuser(\'' + j.id + '\')">Enregistrer le refus</button></div>'
+      + '<button style="background:none;border:none;color:var(--text-faint);font-size:11.5px;cursor:pointer;margin-top:4px;" onclick="jtAnnuler(\'' + j.id + '\')">Le prospect a annulé la journée test</button>'
+      + '</div>';
+  } else {
+    var st = { accepte: 'Accepté — lien d\'inscription envoyé', refuse: 'Refusé', annule: 'Journée test annulée' }[j.statut] || j.statut;
+    corps = '<div style="font-size:13px;font-weight:700;margin-bottom:6px;">' + st + (j.decide_le ? ' <span style="font-weight:400;color:var(--text-faint);font-size:11.5px;">le ' + new Date(j.decide_le).toLocaleDateString('fr-LU') + '</span>' : '') + '</div>'
+      + (j.notes ? '<div style="font-size:12.5px;color:var(--text-dim);font-style:italic;">« ' + jtEsc(j.notes) + ' »</div>' : '');
+  }
+  m.innerHTML = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;max-width:420px;width:100%;max-height:90vh;overflow:auto;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;"><div style="font-family:FRDisplay,Oswald,Arial Narrow,sans-serif;font-size:18px;font-weight:800;margin-bottom:6px;">Journée test · ' + jtEsc(j.chiens) + '</div>'
+    + '<button onclick="document.getElementById(\'modal-jt\').remove()" style="background:none;border:none;color:var(--text-faint);font-size:18px;cursor:pointer;">×</button></div>'
+    + info + corps + '</div>';
+  document.body.appendChild(m);
+}
+function jtVoir(id) { var e = document.getElementById(id); if (e) e.style.display = e.style.display === 'none' ? '' : 'none'; }
+async function jtApres(msg) {
+  var m = document.getElementById('modal-jt'); if (m) m.remove();
+  if (msg) showToastAdmin(msg, 'green');
+  loadJourneesTest(); chargerAlertes();
+  if (document.getElementById('page-planning') && document.getElementById('page-planning').classList.contains('active')) loadPlanning();
+}
+
+async function jtAccepter(id) {
+  var r = await db.from('journees_test').select('*').eq('id', id).maybeSingle();
+  var j = r.data; if (!j || j.statut !== 'prevu') return;
+  if (!j.email) { showToastAdmin('Pas d\'e-mail : ajoutez-le pour envoyer le lien', 'amber'); return; }
+  if (!(await frConfirm({ titre: 'Chien accepté ?', icone: 'envoi', message: 'Le lien d\'inscription part maintenant à **' + j.email + '** (valable 7 jours).', ok: 'Envoyer le lien' }))) return;
+  var token = genererTokenInvitation();
+  var exp = new Date(); exp.setDate(exp.getDate() + 7);
+  var prenom = String(j.client_nom || '').split(' ')[0] || j.client_nom;
+  var ins = await db.from('invitations').insert({ prenom: prenom, email: j.email, token: token, expire_at: exp.toISOString(), utilise: false,
+    langue: j.langue || 'fr', note_interne: 'Journée test du ' + formatDateFR(jtDerniereDate(j)) + ' (' + j.chiens + ')' }).select('id').single();
+  if (ins.error) { frAlert({ type: 'erreur', titre: 'Invitation non créée', message: 'Détail : ' + ins.error.message }); return; }
+  // Déjà une fiche avec cet e-mail (ancien client) : rattachée tout de suite
+  var cl = await db.from('clients').select('id').ilike('email', j.email).limit(1);
+  var maj = { statut: 'accepte', decide_le: new Date().toISOString(), invitation_id: ins.data.id };
+  if (cl.data && cl.data.length) maj.client_id = cl.data[0].id;
+  var u = await db.from('journees_test').update(maj).eq('id', id);
+  if (u.error) { frAlert({ type: 'erreur', titre: 'Décision non enregistrée', message: 'Détail : ' + u.error.message }); return; }
+  var lien = lienInvitation(token);
+  var e = await envoyerInvitationEmail({ prenom: prenom, email: j.email, lien: lien, expire_at: exp.toISOString(), langue: j.langue || 'fr' }, null);
+  loadInvitations();
+  if (!e.ok) {
+    await jtApres(null);
+    frAlert({ type: 'attention', titre: 'Lien créé, e-mail non parti', message: 'Transmettez ce lien vous-même (WhatsApp, SMS) :\n\n' + lien + '\n\nDétail : ' + (e.erreur || '') });
+    return;
+  }
+  jtApres('✓ ' + j.chiens + ' accepté — lien d\'inscription envoyé à ' + j.email);
+}
+async function jtDeuxieme(id) {
+  var d = (document.getElementById('jt2-date') || {}).value;
+  if (!d) { showToastAdmin('Choisissez la date de la 2e journée test', 'amber'); return; }
+  var cr = (document.getElementById('jt2-creneau') || {}).value || null;
+  var u = await db.from('journees_test').update({ date_2: d, creneau_2: cr }).eq('id', id).eq('statut', 'prevu');
+  if (u.error) { frAlert({ type: 'erreur', titre: '2e journée non enregistrée', message: 'Détail : ' + u.error.message }); return; }
+  jtApres('✓ 2e journée test le ' + formatDateFR(d) + ' — au planning');
+}
+async function jtRefuser(id) {
+  var notes = ((document.getElementById('jt-notes') || {}).value || '').trim();
+  if (!notes) { showToastAdmin('Notez 2-3 infos sur le refus', 'amber'); return; }
+  var u = await db.from('journees_test').update({ statut: 'refuse', notes: notes, decide_le: new Date().toISOString() }).eq('id', id);
+  if (u.error) { frAlert({ type: 'erreur', titre: 'Refus non enregistré', message: 'Détail : ' + u.error.message }); return; }
+  jtApres('Refus enregistré dans l\'historique des invitations');
+}
+async function jtAnnuler(id) {
+  if (!(await frConfirm({ titre: 'Journée test annulée ?', message: 'Le prospect a annulé : la journée sort du planning et reste dans l\'historique.', ok: 'Oui, annulée', danger: true }))) return;
+  var u = await db.from('journees_test').update({ statut: 'annule', decide_le: new Date().toISOString() }).eq('id', id);
+  if (u.error) { frAlert({ type: 'erreur', titre: 'Non enregistré', message: 'Détail : ' + u.error.message }); return; }
+  jtApres('Journée test annulée');
+}
+
 async function loadInvitations() {
   var container = document.getElementById('invitations-historique');
   if (!container) return;
+  loadJourneesTest();   // v3.01
 
   try {
     var { data, error } = await db.from('invitations')
@@ -4382,6 +4721,7 @@ function slotHtml(rows, clientsMap, chiensMap, clientDogsMap, dateStr) {
   var client = c?c.prenom+' '+(c.nom?c.nom[0]+'.':''):'—';
   var isTest = c&&c.is_test;
   var dogs = dogNamesForRows(rows, chiensMap, clientDogsMap);
+  if (c && c._jt) client = 'Journée test · ' + c.prenom;   // v3.01
   var dogsTxt = dogs.length?dogs.join(' + '):'Tous les chiens';
   var sc = r.statut==='en_attente'?'#f0b429':color;
   return '<div class="week-slot'+(r.service==='boarding'?' boarding':'')+'" style="border-left:2px solid '+sc+';cursor:pointer;" onclick="openResaDetail(\''+r.id+'\',\''+dateStr+'\')">'
@@ -4505,6 +4845,14 @@ async function loadPlanning() {
       });
     }
     if (!resas) resas=[];
+    // v3.01 : journées test dans le planning (badge « Journée test »)
+    try {
+      var jtx = await journeesTestPlanning(debut, fin, filtSvc);
+      jtx.forEach(function(x) {
+        if (filtClient && (x.c.prenom + ' ' + x.chiens.join(' ')).toLowerCase().indexOf(filtClient) === -1) return;
+        resas.push(x.r); clientsMap[x.r.client_id] = x.c; clientDogsMap[x.r.client_id] = x.chiens;
+      });
+    } catch (e) { console.log('journées test :', e); }
     var _fs = document.getElementById('semaine-filtres'); if (_fs && vuePlanning !== 'semaine') _fs.style.display = 'none';
     if (vuePlanning==='jour') {
       renderPlanningJour(resas, clientsMap, chiensMap, clientDogsMap, debut, today);
@@ -4667,6 +5015,7 @@ function carteJourHtml(rows, clientsMap, chiensMap, clientDogsMap, dateStr) {
   var dogs = dogNamesForRows(rows, chiensMap, clientDogsMap);
   var dogsTxt = dogs.length ? dogs.join(' + ') : 'Tous les chiens';
   var st = annulee ? ['rgba(224,90,90,0.12)', '#e05a5a', 'Annulée']
+         : (c && c._jt) ? ['rgba(255,95,31,0.14)', '#ff5f1f', 'Journée test']
          : r.statut === 'en_attente' ? ['rgba(240,180,41,0.14)', '#f0b429', 'À valider']
          : ['rgba(94,201,122,0.12)', '#5ec97a', 'Confirmée'];
   var meta = [client];
@@ -4700,7 +5049,7 @@ function carteJourHtml(rows, clientsMap, chiensMap, clientDogsMap, dateStr) {
     +   '<div style="font-family:FRDisplay,Oswald,Arial Narrow,sans-serif;font-size:15px;font-weight:800;color:' + (annulee ? '#e05a5a' : 'var(--text)') + ';' + (annulee ? 'text-decoration:line-through;' : '') + '">'
     +     dogsTxt + (dogs.length > 1 ? ' <span style="font-weight:400;font-size:11px;color:var(--text-faint);">· ' + dogs.length + ' chiens</span>' : '')
     +     (c && c.acces_cle ? ' <span title="Clés confiées à Forest Rangers" style="color:var(--accent);">' + FR_ICO('cle', 13) + '</span>' : '')
-    +     (c && c.is_test ? ' <span class="badge b-muted" style="font-size:9px;vertical-align:middle;">Test</span>' : '') + '</div>'
+    +     (c && c.is_test && !c._jt ? ' <span class="badge b-muted" style="font-size:9px;vertical-align:middle;">Test</span>' : '') + '</div>'
     +   '<span style="flex-shrink:0;font-size:10px;background:' + st[0] + ';color:' + st[1] + ';padding:3px 8px;border-radius:10px;font-family:FRDisplay,Oswald,Arial Narrow,sans-serif;font-weight:800;">' + st[2] + '</span>'
     + '</div>'
     + '<div style="font-size:12px;color:var(--text-dim);margin-top:3px;' + (annulee ? 'text-decoration:line-through;' : '') + '">' + meta.join(' · ') + '</div>'
@@ -4872,6 +5221,7 @@ function renderPlanningMois(resas, clientsMap, debut, fin, today) {
 }
 
 async function openResaDetail(id, dateOccurrence) {
+  if (window._JT_PSEUDO && _JT_PSEUDO[id]) return ouvrirJourneeTest(_JT_PSEUDO[id]);   // v3.01 : journée test
   try {
     var { data: r, error } = await db.from('reservations')
       .select('*')
@@ -6984,6 +7334,7 @@ async function chargerAlertes() {
   var today = formatDateISO(new Date());
 
   try {
+    html += await alertesJourneesTest();   // v3.01 : décision le jour du test, dès 18 h
     // Messages clients non lus
     var nonLus = messagesData.filter(function(m){ return m.expediteur === 'client' && !m.lu; });
     if (nonLus.length) {

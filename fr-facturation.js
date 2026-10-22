@@ -673,7 +673,7 @@
     var fx = await q;
     if (fx.error) throw fx.error;
     var cands = (fx.data || []).filter(function (f) {
-      if (f.statut === 'annulee' || f.statut === 'avoir') return false;
+      if (f.statut === 'annulee' || f.statut === 'avoir' || f.statut === 'brouillon') return false;   // v2.99
       if (!Array.isArray(f.lignes) || !f.lignes.length) return false;       // factures d'avant la v35
       if (opts.periodeCible && !(f.periode < opts.periodeCible)) return false;
       return true;
@@ -685,7 +685,7 @@
     var deja = {};
     var tt = await db.from('factures').select('id,statut,lignes').in('client_id', ids);
     (tt.data || []).forEach(function (f) {
-      if (f.statut === 'annulee' || f.statut === 'avoir') return;
+      if (f.statut === 'annulee' || f.statut === 'avoir' || f.statut === 'brouillon') return;
       if (opts.exclureFactureId && String(f.id) === String(opts.exclureFactureId)) return;
       (Array.isArray(f.lignes) ? f.lignes : []).forEach(function (l) {
         if (l && l.type === 'regularisation' && l.ref_facture_id) deja[l.ref_facture_id] = r2((deja[l.ref_facture_id] || 0) + (+l.total || 0));
@@ -750,6 +750,90 @@
       ? await db.from('parametres').update({ valeur: JSON.stringify(ign) }).eq('cle', 'regularisations_ignorees')
       : await db.from('parametres').insert({ cle: 'regularisations_ignorees', valeur: JSON.stringify(ign) });
     if (w.error) throw w.error;
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  JOURNÉES TEST (v3.01, migration v68)
+  //  Une journée test est toujours payante (tarif du client à la date du
+  //  test), la première visite au parc à chiens vaut 40 € TTC. Elles
+  //  sont reportées sur la prochaine facture du client, une fois sa fiche
+  //  créée par l'inscription (rattachement par e-mail, trigger v68).
+  //  À facturer : acceptée, rattachée, et facture_id vide ou facture annulée.
+  // ══════════════════════════════════════════════════════════════
+  var PRIX_PREMIERE_VISITE = 40;
+  var CRENEAU_LIB = { matin: 'Matin', midi: 'Midi', apmidi: 'Après-midi' };
+  var NOMS_JT = { walking: 'Dog Walking', daycare: 'Day Care', boarding: 'Boarding' };   // noms de services de l'app
+
+  function datesJourneeTest(jt) {
+    var out = [];
+    if (jt && jt.date_1) out.push({ date: jour(jt.date_1), creneau: jt.creneau_1 || null });
+    if (jt && jt.date_2) out.push({ date: jour(jt.date_2), creneau: jt.creneau_2 || jt.creneau_1 || null });
+    return out;
+  }
+  function lignesJourneeTest(jt, client) {
+    var out = [], n = Math.max(1, parseInt(jt.nb_chiens, 10) || 1);
+    datesJourneeTest(jt).forEach(function (x) {
+      var t = tarifsPour(client || { client_fidele: false }, x.date);
+      var base = +t[jt.service] || 0;
+      var prix = r2(prixPourChiens(base, n, t.reduction));
+      var d = parse(x.date);
+      out.push({
+        type: 'journee_test', jt_id: jt.id, service: jt.service, nb_chiens: n,
+        label: 'Journée test · ' + (NOMS_JT[jt.service] || jt.service) + ' · ' + (jt.chiens || ''),
+        sousLabel: d.getDate() + ' ' + MOIS[d.getMonth()] + ' ' + d.getFullYear()
+          + (jt.service === 'walking' && x.creneau ? ' · ' + CRENEAU_LIB[x.creneau] : '')
+          + (jt.service === 'boarding' ? ' · 1 nuit' : ''),
+        discountNote: n > 1 ? eur(base) + ' + ' + (n - 1) + ' × ' + eur(r2(base * (1 - t.reduction / 100))) + ' · 2e chien −' + t.reduction + ' %' : null,
+        qte: 1, prixUnit: prix, total: prix
+      });
+    });
+    if (jt.premiere_visite) out.push({
+      type: 'journee_test', jt_id: jt.id, service: 'premiere_visite',
+      label: 'Première visite au parc à chiens', sousLabel: jt.chiens || null,
+      qte: 1, prixUnit: PRIX_PREMIERE_VISITE, total: PRIX_PREMIERE_VISITE
+    });
+    return out;
+  }
+  // Lignes à facturer, par client : { client_id: [lignes] }.
+  // clients : fiches (au moins id, client_fidele et tarifs sur mesure).
+  // opts.exclureFactureId : facture en cours de préparation (ses propres lignes restent à reprendre).
+  async function journeesTestAFacturer(db, clients, opts) {
+    opts = opts || {};
+    await prerequis(db);
+    var ids = (clients || []).map(function (c) { return c.id; });
+    if (!ids.length) return {};
+    var r = await db.from('journees_test').select('*').in('client_id', ids).eq('statut', 'accepte');
+    if (r.error) return {};                       // migration v68 absente : rien à reporter
+    var jts = r.data || [];
+    var fids = jts.map(function (j) { return j.facture_id; }).filter(Boolean);
+    var stat = {};
+    if (fids.length) {
+      var f = await db.from('factures').select('id,statut').in('id', fids);
+      (f.data || []).forEach(function (x) { stat[String(x.id)] = x.statut; });
+    }
+    var parId = {}; (clients || []).forEach(function (c) { parId[String(c.id)] = c; });
+    var out = {};
+    jts.forEach(function (j) {
+      var libre = !j.facture_id || stat[String(j.facture_id)] === 'annulee'
+               || (opts.exclureFactureId && String(j.facture_id) === String(opts.exclureFactureId));
+      if (!libre) return;
+      var k = String(j.client_id);
+      out[k] = (out[k] || []).concat(lignesJourneeTest(j, parId[k]));
+    });
+    return out;
+  }
+  // Après l'enregistrement d'une facture : ses journées test pointent vers elle
+  // (et celles retirées de la facture redeviennent à facturer).
+  async function rattacherJourneesTest(db, factureId, lignes) {
+    if (!factureId) return;
+    var ids = [];
+    (lignes || []).forEach(function (l) { if (l && l.jt_id && ids.indexOf(String(l.jt_id)) === -1) ids.push(String(l.jt_id)); });
+    try {
+      var q = db.from('journees_test').update({ facture_id: null }).eq('facture_id', factureId);
+      if (ids.length) q = q.not('id', 'in', '(' + ids.join(',') + ')');
+      await q;
+      if (ids.length) await db.from('journees_test').update({ facture_id: factureId }).in('id', ids);
+    } catch (e) { /* migration v68 absente */ }
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -841,6 +925,10 @@
     arreterSerie: arreterSerie,
     aRegulariser: aRegulariser,
     lignesRegularisation: lignesRegularisation,
+    lignesJourneeTest: lignesJourneeTest,
+    journeesTestAFacturer: journeesTestAFacturer,
+    rattacherJourneesTest: rattacherJourneesTest,
+    PRIX_PREMIERE_VISITE: PRIX_PREMIERE_VISITE,
     ignorerRegularisation: ignorerRegularisation,
     _grilleA: grilleA,
     _reinitialiser: function () { _versions = []; _parametres = {}; _tarifsCharges = false; }
