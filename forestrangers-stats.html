@@ -1041,7 +1041,7 @@ function sectionAffluence(b, C, EV) {
   h += '<div class="grid grid-21">'
     + carte('Chiens par jour et créneau', '<div class="tbl-wrap">' + heat + '</div><div class="card-note">Nombre de chiens accueillis sur la période, par jour de la semaine. Plus la case est foncée, plus le créneau est chargé.</div>', seg)
     + carte('Jours les plus chargés', topH) + '</div>';
-  h += '<div style="margin-top:10px;">' + carte('Saisonnalité — chiens par jour ouvré, en moyenne', '<div class="chart-box small"><canvas id="ch-saison"></canvas></div><div class="card-note">Moyenne de chiens accueillis par jour ouvré, mois par mois, pour chaque service. Pension : chiens présents la nuit. Losanges et pointillés : mois sans planning, complétés par le détail des factures (chiens × séances).</div>') + '</div>';
+  h += '<div style="margin-top:10px;">' + carte('Saisonnalité — chiens par jour ouvré, en moyenne', '<div class="chart-box small"><canvas id="ch-saison"></canvas></div><div class="card-note">Moyenne de chiens accueillis par jour ouvré, mois par mois, pour chaque service. Pension : chiens présents la nuit. Losanges et pointillés : mois sans planning complet, lus dans le détail des factures (chiens × séances).</div>') + '</div>';
   return h;
 }
 function choisirHeat(s) { HEAT_SVC = s; renderStats(); }
@@ -1191,7 +1191,17 @@ function dessiner(b, C, A, EV, ic) {
 
   // Saisonnalité : chiens par jour ouvré. v2.90 : un mois passé sans planning
   // est complété par le détail de ses factures (pointillés, losange).
-  var parFact = EV.map(function(e, i) { return (!futur(i) && !e.a.totalSorties) ? chiensFactures(e.per) : null; });
+  // v2.98 : septembre 2026 a été facturé à la main mais compte quelques séances au
+  // planning (fin de mois) : le mois était lu comme « avec planning » et tombait
+  // presque à 0. Un mois passé prend désormais le détail des factures dès qu'il
+  // compte plus de chiens × séances que le planning.
+  var totChiens = function(x) { return x ? (+x.walking || 0) + (+x.daycare || 0) + (+x.boarding || 0) : 0; };
+  var parFact = EV.map(function(e, i) {
+    if (futur(i)) return null;
+    var f = chiensFactures(e.per);
+    if (!f) return null;
+    return (!e.a.totalSorties || totChiens(f) > totChiens(e.a.chiens)) ? f : null;
+  });
   var tiret = { borderDash: function(ctx) { return (ctx.p1DataIndex > ic || parFact[ctx.p0DataIndex] || parFact[ctx.p1DataIndex]) ? [5, 4] : undefined; } };
   nouveauGraph('ch-saison', { type: 'line', data: { labels: labels, datasets: ds.map(function(s) {
     return { label: s[1], data: EV.map(function(e, i) { var src = parFact[i] || e.a.chiens; return Math.round(src[s[0]] / joursOuvres(e.debut, e.fin) * 10) / 10; }),
