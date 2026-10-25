@@ -133,6 +133,7 @@ html, body { min-height: 100vh; font-family: 'Instrument Sans', sans-serif; back
 
 /* ── CARDS ── */
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.card-head .badge.chiffre { font-size: 14px; padding: 3px 11px; letter-spacing: 0.04em; }   /* v3.09 : chiffre du titre plus lisible */
 .card-head { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
 .card-title { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-dim); }
 .card-body { padding: 14px 16px; }
@@ -556,7 +557,7 @@ function factMois(per, opt) {
   if (opt.ranger) return null;
   var k = '__fm|' + per + '|' + (opt.service || '');
   if (k in ST.cache) return ST.cache[k];
-  var a = { sorties: { walking: 0, daycare: 0, boarding: 0 }, chiens: { walking: 0, daycare: 0, boarding: 0 }, valSvc: { walking: 0, daycare: 0, boarding: 0 }, valeur: 0, hzTrajets: 0, hzMontant: 0, clients: {} }, vu = false;
+  var a = { sorties: { walking: 0, daycare: 0, boarding: 0 }, chiens: { walking: 0, daycare: 0, boarding: 0 }, valSvc: { walking: 0, daycare: 0, boarding: 0 }, valeur: 0, hzTrajets: 0, hzMontant: 0, hzClients: {}, clients: {} }, vu = false;
   ST.factures.filter(factureValide).forEach(function(f) {
     var parC = {};
     (Array.isArray(f.lignes) ? f.lignes : []).forEach(function(l) {
@@ -567,7 +568,8 @@ function factMois(per, opt) {
       var sv = serviceLigne(l);
       if (l.type === 'regularisation') return;
       if (!opt.service || sv === opt.service) a.valeur += (+l.total || 0) * part;
-      if (sv === 'frais_deplacement') { if (!opt.service) { a.hzTrajets += (+l.qte || 0) * part; a.hzMontant += (+l.total || 0) * part; } return; }
+      if (sv === 'frais_deplacement') { if (!opt.service) { a.hzTrajets += (+l.qte || 0) * part; a.hzMontant += (+l.total || 0) * part;
+        var hc = (a.hzClients[f.client_id] = a.hzClients[f.client_id] || { n: 0, v: 0 }); hc.n += (+l.qte || 0) * part; hc.v += (+l.total || 0) * part; } return; }
       if (a.sorties[sv] == null || (opt.service && sv !== opt.service)) return;
       if (l.type === 'annulation' || /annulation/i.test(l.label || '')) return;
       var q = (+l.qte || 0) * part, nc = chiensLigne(l), supp = LIGNE_SUPP.test(l.label || '') || l.discountNote === 'Chien supplémentaire';
@@ -607,6 +609,10 @@ function completer(A, debut, fin, opt) {
     });
     A.valeur += f.valeur - pm.valeur; A.realise += f.valeur - pm.realise;
     A.hzTrajets += f.hzTrajets - pm.hzTrajets; A.hzMontant += f.hzMontant - pm.hzMontant;
+    // v3.09 : hors zone par client — ce mois-ci d'après les factures au lieu du planning
+    A.hzClientsFact = A.hzClientsFact || {};
+    Object.keys(f.hzClients).forEach(function(id) { var x = (A.hzClientsFact[id] = A.hzClientsFact[id] || { n: 0, v: 0 }); x.n += f.hzClients[id].n; x.v += f.hzClients[id].v; });
+    cm.lignes.forEach(function(l) { if (l.type === 'supplement') { var x = (A.hzClientsFact[l.client.id] = A.hzClientsFact[l.client.id] || { n: 0, v: 0 }); x.n -= l.qte; x.v -= l.total; } });
     Object.keys(f.clients).forEach(function(id) {
       if (A.clientsActifs[id]) return;
       A.clientsActifs[id] = true;
@@ -703,10 +709,10 @@ function renderStats() {
   h += sectionServices(b, C, A, AP, EV, idxCourant);
   h += sectionClients(b, A, AP, EV, idxCourant);
   h += sectionAffluence(b, C, EV);
-  h += sectionEquipe(b);
-  h += sectionCamionnettes(b, EV, idxCourant);
   h += sectionProjection();
   h += sectionTesteurs();
+  h += sectionEquipe(b);                         // v3.09 : équipe et camionnettes à la toute fin (Gabriel, 25/10/2026)
+  h += sectionCamionnettes(b, EV, idxCourant);
   document.getElementById('stats-content').innerHTML = h;
   dessiner(b, C, A, EV, idxCourant);
   majProj();
@@ -820,9 +826,9 @@ function sectionFinance(b, A, AP, EV, ic) {
     var Cx = calc(b.debut, b.fin, TOUS);
     h += '<div style="margin-top:10px;">' + carte('Prestations par service — ' + esc(b.label) + ' · estimation',
       factureParService([{ total_ttc: Cx.total, lignes: Cx.lignes }], 'Mois pas encore facturé : répartition d\'après le planning, TTC. Pour un mois déjà facturé, la carte devient « Facturé par service », d\'après les factures.'),
-      '<span class="badge b-muted">' + eur(Cx.total) + '</span>') + '</div>';
+      '<span class="badge b-muted chiffre">' + eur(Cx.total) + '</span>') + '</div>';
   } else {
-    h += '<div style="margin-top:10px;">' + carte('Facturé par service — ' + esc(b.label), factureParService(F), '<span class="badge b-muted">' + eur(fac) + '</span>') + '</div>';
+    h += '<div style="margin-top:10px;">' + carte('Facturé par service — ' + esc(b.label), factureParService(F), '<span class="badge b-muted chiffre">' + eur(fac) + '</span>') + '</div>';
   }
 
   // Top clients + à relancer
@@ -849,7 +855,7 @@ function sectionFinance(b, A, AP, EV, ic) {
     }).join('') + '</tbody></table>' : '<div class="empty" style="color:var(--green);">✓ Aucun impayé</div>';
   h += '<div class="grid grid-2" style="margin-top:10px;">'
     + '<div class="card"><div class="card-head"><span class="card-title">Top clients — ' + esc(b.label) + '</span></div>' + topH + '</div>'
-    + '<div class="card"><div class="card-head"><span class="card-title">Clients à relancer</span><span class="badge b-red">' + rel.length + '</span></div>' + relH + '</div>'
+    + '<div class="card"><div class="card-head"><span class="card-title">Clients à relancer</span><span class="badge b-red chiffre">' + rel.length + '</span></div>' + relH + '</div>'
     + '</div>';
   return h;
 }
@@ -1136,7 +1142,7 @@ function sectionServices(b, C, A, AP, EV, ic) {
   h += kpi('blue', 'Récurrent', tot ? Math.round(rec / tot * 100) + ' %' : '—', fmt(rec) + ' récurrentes · ' + fmt(pon) + ' ponctuelles');
   h += '</div>';
 
-  h += '<div style="margin-top:10px;">' + carte('Évolution des séances par service', '<div class="chart-box"><canvas id="ch-svc"></canvas></div><div class="card-note">Dog Walking : sorties · Day Care : journées · Boarding : nuits. Mois grisés : prévision d\'après les réservations connues.</div>') + '</div>';
+  h += '<div style="margin-top:10px;">' + carte('Évolution des séances par service', '<div class="chart-box"><canvas id="ch-svc"></canvas></div><div class="card-note">Dog Walking : sorties · Day Care : journées · Boarding : nuits. Mois grisés : prévision d\'après les réservations connues. Comparaison avec l\'année précédente : Saisonnalité, plus bas.</div>') + '</div>';
 
   // Créneaux + hors zone par client
   var cr = { matin: 0, midi: 0, apmidi: 0 };
@@ -1148,12 +1154,17 @@ function sectionServices(b, C, A, AP, EV, ic) {
     + '<div class="card-note">Chiens promenés par créneau (Dog Walking).</div>';
   var hz = {};
   C.lignes.forEach(function(l) { if (l.type === 'supplement') { var x = hz[l.client.id] = hz[l.client.id] || { c: l.client, n: 0, v: 0 }; x.n += l.qte; x.v += l.total; } });
-  var hzL = Object.keys(hz).map(function(k) { return hz[k]; }).sort(function(x, y) { return y.v - x.v; });
+  // v3.09 : mois sans planning lus dans les factures (même total que le badge)
+  if (A.hzClientsFact) Object.keys(A.hzClientsFact).forEach(function(id) {
+    var c = ST.clientParId[id] || { prenom: 'Client', nom: '' }, x = hz[id] = hz[id] || { c: c, n: 0, v: 0 };
+    x.n += A.hzClientsFact[id].n; x.v += A.hzClientsFact[id].v;
+  });
+  var hzL = Object.keys(hz).map(function(k) { return hz[k]; }).filter(function(x) { return x.v > 0.005; }).sort(function(x, y) { return y.v - x.v; });
   var hzH = hzL.length ? '<table class="tbl"><thead><tr><th>Client</th><th>Commune</th><th>Trajets</th><th style="text-align:right;">Supplément</th></tr></thead><tbody>' + hzL.map(function(x) {
-      return '<tr><td class="main">' + esc(x.c.prenom + ' ' + x.c.nom) + '</td><td>' + esc(x.c.commune || '—') + '</td><td>' + x.n + '</td><td class="main" style="text-align:right;">' + eur(x.v) + '</td></tr>';
+      return '<tr><td class="main">' + esc(x.c.prenom + ' ' + x.c.nom) + '</td><td>' + esc(x.c.commune || '—') + '</td><td>' + Math.round(x.n) + '</td><td class="main" style="text-align:right;">' + eur(x.v) + '</td></tr>';
     }).join('') + '</tbody></table>' : '<div class="empty">Aucun client hors zone sur la période</div>';
   h += '<div class="grid grid-2" style="margin-top:10px;">' + carte('Créneaux Dog Walking', crH)
-    + '<div class="card"><div class="card-head"><span class="card-title">Hors zone — par client</span><span class="badge b-red">' + eur(A.hzMontant) + '</span></div>' + hzH + '</div></div>';
+    + '<div class="card"><div class="card-head"><span class="card-title">Hors zone — par client</span><span class="badge b-red chiffre">' + eur(A.hzMontant) + '</span></div>' + hzH + '</div></div>';
   return h;
 }
 
@@ -1349,11 +1360,7 @@ function dessiner(b, C, A, EV, ic) {
   var dsSvc = ds.map(function(s) {
     return { type: 'bar', stack: 'an', label: s[1], data: EV.map(function(e) { return Math.round(e.a[s[3]][s[0]]); }), backgroundColor: EV.map(function(e, i) { return futur(i) ? rgba(s[2], 0.35) : s[2]; }), borderRadius: 3, maxBarThickness: 26 };
   });
-  // v3.08 : un an plus tôt (factures avant l'app), en pointillés par service
-  ds.forEach(function(s) {
-    dsSvc.push({ type: 'line', label: s[1] + ' un an plus tôt', data: EV.map(function(e) { var v = aMois(anMoins1(e.per))[s[3]][s[0]]; return v ? Math.round(v) : null; }),
-      borderColor: rgba(s[2], 0.75), backgroundColor: rgba(s[2], 0.75), borderDash: [5, 4], borderWidth: 1.5, pointRadius: 2, pointStyle: 'rectRot', tension: 0.25, cubicInterpolationMode: 'monotone', spanGaps: true, stack: 'n1-' + s[0] });   // seule dans sa pile : pas additionnée aux barres
-  });
+  // v3.09 : plus de lignes « un an plus tôt » ici (Gabriel, 25/10/2026) — la comparaison entre années est dans la Saisonnalité
   var oSvc = optsBase(true); oSvc.scales.y.stacked = true;
   nouveauGraph('ch-svc', { data: { labels: labels, datasets: dsSvc }, options: oSvc });
 
