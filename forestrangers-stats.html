@@ -180,6 +180,7 @@ html, body { min-height: 100vh; font-family: 'Instrument Sans', sans-serif; back
 .filter-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; color: var(--text); font-family: 'Instrument Sans', sans-serif; font-size: 12px; }
 .chart-box { position: relative; height: 240px; }
 .chart-box.small { height: 190px; }
+.chart-box.saison { height: 340px; }   /* v3.07 : deux années superposées */
 .card-note { font-size: 11px; color: var(--text-faint); margin-top: 8px; line-height: 1.45; }
 .seg { display: inline-flex; background: var(--surface2); border-radius: 8px; padding: 2px; gap: 2px; }
 .seg button { border: 0; background: transparent; color: var(--text-dim); font-size: 11px; font-weight: 600; padding: 5px 9px; border-radius: 6px; cursor: pointer; font-family: 'Instrument Sans', sans-serif; }
@@ -202,6 +203,7 @@ html, body { min-height: 100vh; font-family: 'Instrument Sans', sans-serif; back
 .grid-21 { grid-template-columns: 2fr 1fr; }
 .card-head { flex-wrap: wrap; gap: 8px; }
 @media (max-width: 900px) { .grid-21 { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .chart-box.saison { height: 280px; } }
 @media (max-width: 600px) { .chart-box { height: 210px; } .heat td { height: 32px; min-width: 30px; } .filter-sep { display: none; } }
 </style>
 </head>
@@ -797,13 +799,20 @@ function chiensLigne(l) {
 // Chiens d'un mois d'après le détail des factures (mois sans planning). null si aucun détail.
 function chiensFactures(per) {
   var r = { walking: 0, daycare: 0, boarding: 0 }, vu = false;
-  facturesMois(per).forEach(function(f) {
+  // v3.07 : une ligne d'une facture couvrant plusieurs mois (« Juil-Août-Sept »)
+  // porte la liste de ses mois (l.mois) : ses séances sont réparties à parts
+  // égales sur ces mois, quelle que soit la période de la facture.
+  ST.factures.filter(factureValide).forEach(function(f) {
     (Array.isArray(f.lignes) ? f.lignes : []).forEach(function(l) {
+      if (!l) return;
+      var part;
+      if (Array.isArray(l.mois) && l.mois.length) { if (l.mois.indexOf(per) === -1) return; part = 1 / l.mois.length; }
+      else { if (f.periode !== per) return; part = 1; }
       var sv = serviceLigne(l);
-      if (!l || r[sv] == null) return;
+      if (r[sv] == null) return;
       if (l.type === 'annulation' || l.type === 'regularisation' || /annulation/i.test(l.label || '')) return;
-      var n = (+l.qte || 0) * chiensLigne(l);   // séances × chiens
-      r[sv] += n; vu = true;
+      r[sv] += (+l.qte || 0) * chiensLigne(l) * part;   // séances × chiens
+      vu = true;
     });
   });
   return vu ? r : null;
@@ -1042,7 +1051,7 @@ function sectionAffluence(b, C, EV) {
   h += '<div class="grid grid-21">'
     + carte('Chiens par jour et créneau', '<div class="tbl-wrap">' + heat + '</div><div class="card-note">Nombre de chiens accueillis sur la période, par jour de la semaine. Plus la case est foncée, plus le créneau est chargé.</div>', seg)
     + carte('Jours les plus chargés', topH) + '</div>';
-  h += '<div style="margin-top:10px;">' + carte('Saisonnalité — chiens par jour ouvré, en moyenne', '<div class="chart-box small"><canvas id="ch-saison"></canvas></div><div class="card-note">Moyenne de chiens accueillis par jour ouvré, mois par mois, pour chaque service. Pension : chiens présents la nuit. Losanges et pointillés : mois sans planning complet, lus dans le détail des factures (chiens × séances).</div>') + '</div>';
+  h += '<div style="margin-top:10px;">' + carte('Saisonnalité — chiens par jour ouvré, en moyenne · ' + (new Date().getFullYear() - 1) + ' et ' + new Date().getFullYear(), '<div class="chart-box saison"><canvas id="ch-saison"></canvas></div><div class="card-note">Moyenne de chiens accueillis par jour ouvré, mois par mois, pour chaque service. Pension : chiens présents la nuit. Année précédente en pointillés (d\'après les factures, chiens × séances ; une facture sur plusieurs mois est répartie à parts égales). Année en cours en trait plein ; mois à venir en trait clair, d\'après les réservations connues.</div>') + '</div>';
   return h;
 }
 function choisirHeat(s) { HEAT_SVC = s; renderStats(); }
@@ -1203,12 +1212,38 @@ function dessiner(b, C, A, EV, ic) {
     if (!f) return null;
     return (!e.a.totalSorties || totChiens(f) > totChiens(e.a.chiens)) ? f : null;
   });
-  var tiret = { borderDash: function(ctx) { return (ctx.p1DataIndex > ic || parFact[ctx.p0DataIndex] || parFact[ctx.p1DataIndex]) ? [5, 4] : undefined; } };
-  nouveauGraph('ch-saison', { type: 'line', data: { labels: labels, datasets: ds.map(function(s) {
-    return { label: s[1], data: EV.map(function(e, i) { var src = parFact[i] || e.a.chiens; return Math.round(src[s[0]] / joursOuvres(e.debut, e.fin) * 10) / 10; }),
-      borderColor: s[2], backgroundColor: s[2], borderWidth: 2, tension: 0.25, cubicInterpolationMode: 'monotone', segment: tiret,
-      pointRadius: EV.map(function(e, i) { return parFact[i] ? 3 : 2; }), pointStyle: EV.map(function(e, i) { return parFact[i] ? 'rectRot' : 'circle'; }) };
-  }) }, options: (function() { var o = optsBase(false); o.plugins.tooltip.callbacks.label = function(c) { return c.dataset.label + ' : ' + String(c.parsed.y).replace('.', ',') + ' chiens/jour' + (parFact[c.dataIndex] ? ' (factures)' : ''); }; return o; })() });
+  // v3.07 (Gabriel, 25/10/2026) : l'année en cours et la précédente superposées,
+  // de janvier à décembre. Année précédente en pointillés, d'après les factures ;
+  // année en cours : planning, ou factures pour un mois passé sans planning complet ;
+  // mois à venir d'après les réservations connues (trait plus clair).
+  var anS = new Date().getFullYear(), moisAuj = new Date().getMonth();
+  var parPer = {}; EV.forEach(function(e, i) { parPer[e.per] = { e: e, src: parFact[i] || e.a.chiens, fact: !!parFact[i], futur: futur(i) }; });
+  function saison(an, m) {
+    var per = perDe(an, m), bm = FR_FACT.periodeMois(per), x = parPer[per], src = null, fact = false, fut = false;
+    if (x) { src = x.src; fact = x.fact; fut = x.futur; }
+    else { src = chiensFactures(per); fact = !!src; }
+    return { src: src, fact: fact, futur: fut, jo: joursOuvres(bm.debut, bm.fin) };
+  }
+  var S = {}; [anS - 1, anS].forEach(function(an) { S[an] = []; for (var m = 0; m < 12; m++) S[an].push(saison(an, m)); });
+  var dsSaison = [];
+  ds.forEach(function(s) {
+    [anS - 1, anS].forEach(function(an) {
+      var prec = an < anS;
+      dsSaison.push({ label: s[1] + ' ' + an, _an: an,
+        data: S[an].map(function(v) { return v.src ? Math.round((+v.src[s[0]] || 0) / v.jo * 10) / 10 : null; }),
+        borderColor: prec ? rgba(s[2], 0.55) : s[2], backgroundColor: prec ? rgba(s[2], 0.55) : s[2],
+        borderWidth: prec ? 1.5 : 2.2, borderDash: prec ? [5, 4] : undefined, spanGaps: false,
+        tension: 0.25, cubicInterpolationMode: 'monotone',
+        segment: prec ? undefined : { borderDash: function(ctx) { return S[an][ctx.p1DataIndex] && S[an][ctx.p1DataIndex].futur ? [2, 3] : undefined; },
+                                      borderColor: function(ctx) { return S[an][ctx.p1DataIndex] && S[an][ctx.p1DataIndex].futur ? rgba(s[2], 0.4) : undefined; } },
+        pointRadius: S[an].map(function(v) { return v.src ? (prec ? 2 : 3) : 0; }),
+        pointStyle: prec ? 'rectRot' : 'circle' });
+    });
+  });
+  nouveauGraph('ch-saison', { type: 'line', data: { labels: MOIS_C, datasets: dsSaison },
+    options: (function() { var o = optsBase(false); o.plugins.tooltip.callbacks.label = function(c) {
+      var v = S[c.dataset._an][c.dataIndex] || {};
+      return c.dataset.label + ' : ' + String(c.parsed.y).replace('.', ',') + ' chiens/jour' + (v.fact ? ' (factures)' : v.futur ? ' (réservations connues)' : ''); }; return o; })() });
 
   // Comptes test (v2.90) : barres empilées, combiné écrit au-dessus, détail au survol
   var R = window._TEST_ROWS || [];
