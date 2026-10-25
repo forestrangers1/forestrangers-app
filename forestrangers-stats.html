@@ -605,14 +605,15 @@ function renderStats() {
   var EV = evo.map(function(per) { var bm = FR_FACT.periodeMois(per); var c = calc(bm.debut, bm.fin); return { per: per, debut: bm.debut, fin: bm.fin, c: c, a: agreger(c) }; });
 
   var h = '';
+  // v3.04 (Gabriel, 22/10/2026) : d'abord tout le mois choisi, puis la tendance
   h += sectionVueRapide();   // v2.90
   h += sectionFinance(b, A, AP, EV, idxCourant);
-  h += sectionProjection();
   h += sectionServices(b, C, A, AP, EV, idxCourant);
-  h += sectionAffluence(b, C, EV);
   h += sectionClients(b, A, AP, EV, idxCourant);
+  h += sectionAffluence(b, C, EV);
   h += sectionEquipe(b);
   h += sectionCamionnettes(b, EV, idxCourant);
+  h += sectionProjection();
   h += sectionTesteurs();
   document.getElementById('stats-content').innerHTML = h;
   dessiner(b, C, A, EV, idxCourant);
@@ -745,7 +746,7 @@ function sectionFinance(b, A, AP, EV, ic) {
 
 // ── v2.90 : VUE RAPIDE, SAISONNALITÉ D'APRÈS LES FACTURES, COMPTES TEST ──
 var TOUS = { service: '', ranger: '' };          // ces blocs ignorent les filtres Service / Employé
-var TEST_DEBUT = '2026-09';                      // comptes test suivis à partir de septembre (Gabriel, 17/10/2026)
+var TEST_DEBUT = '2026-10';                      // comptes test suivis à partir d'octobre (Gabriel, 22/10/2026 ; avant : septembre)
 function moisNom(per) { return MOIS_L[+String(per).split('-')[1] - 1]; }
 function moisLong(per) { return moisNom(per) + ' ' + String(per).split('-')[0]; }
 function perSuivant(per) { var p = String(per).split('-'); return perDe(+p[0], +p[1]); }

@@ -753,6 +753,42 @@
   }
 
   // ══════════════════════════════════════════════════════════════
+  //  DOUBLONS (v3.04) — séances en commun avec une réservation existante
+  //  du même client : même service, même créneau, même chien (ou « tous
+  //  les chiens »), à partir d'aujourd'hui. nouvelles : lignes à insérer.
+  //  Renvoie [{ reservation, chiens: [chien_id|null], dates: [ISO] }].
+  // ══════════════════════════════════════════════════════════════
+  async function conflitsReservation(db, nouvelles) {
+    if (!nouvelles || !nouvelles.length || !nouvelles[0].client_id) return [];
+    await prerequis(db);
+    var n0 = nouvelles[0];
+    var r = await db.from('reservations').select('*').eq('client_id', n0.client_id).eq('service', n0.service).neq('statut', 'annule');
+    if (r.error) return [];
+    var auj = aujourdhui(), out = {}, ordre = [];
+    nouvelles.forEach(function (n) {
+      var fin = jour(n.service === 'boarding' ? n.date_fin : (n.date_fin_recurrence || n.date_fin || n.date_debut));
+      var deb = jour(n.date_debut) < auj ? auj : jour(n.date_debut);
+      if (!fin || fin < deb) return;
+      var exN = datesExclues(n);
+      var miennes = datesPrevues(n, deb, fin).filter(function (d) { return exN.indexOf(d) === -1; });
+      if (!miennes.length) return;
+      (r.data || []).forEach(function (e) {
+        if ((e.creneau || '') !== (n.creneau || '')) return;
+        if (n.chien_id && e.chien_id && String(n.chien_id) !== String(e.chien_id)) return;
+        var exE = datesExclues(e);
+        var communes = datesPrevues(e, deb, fin).filter(function (d) { return exE.indexOf(d) === -1 && miennes.indexOf(d) !== -1; });
+        if (!communes.length) return;
+        var k = [e.service, jour(e.date_debut), jour(e.date_fin), e.creneau || '', e.jours_recurrence || ''].join('|');
+        if (!out[k]) { out[k] = { reservation: e, chiens: [], dates: [] }; ordre.push(k); }
+        var cid = e.chien_id || null;
+        if (out[k].chiens.indexOf(cid) === -1) out[k].chiens.push(cid);
+        communes.forEach(function (d) { if (out[k].dates.indexOf(d) === -1) out[k].dates.push(d); });
+      });
+    });
+    return ordre.map(function (k) { out[k].dates.sort(); return out[k]; });
+  }
+
+  // ══════════════════════════════════════════════════════════════
   //  JOURNÉES TEST (v3.01, migration v68)
   //  Une journée test est toujours payante (tarif du client à la date du
   //  test), la première visite au parc à chiens vaut 40 € TTC. Elles
@@ -927,6 +963,7 @@
     lignesRegularisation: lignesRegularisation,
     lignesJourneeTest: lignesJourneeTest,
     journeesTestAFacturer: journeesTestAFacturer,
+    conflitsReservation: conflitsReservation,
     rattacherJourneesTest: rattacherJourneesTest,
     PRIX_PREMIERE_VISITE: PRIX_PREMIERE_VISITE,
     ignorerRegularisation: ignorerRegularisation,

@@ -2676,14 +2676,20 @@ async function loadDashboardStats() {
   try {
     // 5. Charger planning du jour dans le tableau
     var planRes = await db.from('reservations')
-      .select('*, clients(prenom, nom, numero_client, is_test)')
+      .select('*, clients(prenom, nom, numero_client, is_test, adresse, commune, code_postal)')
       .lte('date_debut', today)
       .gte('date_fin', today)
       .neq('statut', 'annule')
       .order('creneau', { ascending: true });
+    if (planRes.error && /adresse|commune|code_postal/.test(planRes.error.message || '')) {   // repli sans les colonnes d'adresse
+      planRes = await db.from('reservations').select('*, clients(prenom, nom, numero_client, is_test)')
+        .lte('date_debut', today).gte('date_fin', today).neq('statut', 'annule').order('creneau', { ascending: true });
+    }
 
     var planJour = filterResasForDay(planRes.data || [], today);
-    loadPlanningToday(planJour, today, await chiensDesResas(planJour));
+    window._chDash = await chiensDesResas(planJour);
+    loadPlanningToday(planJour, today, window._chDash);
+    geocoderAdressesA(planJour.map(function(r){ return r.clients; }).filter(Boolean), function() { loadPlanningToday(planJour, today, window._chDash); }, 'tableau');   // v3.03
   } catch(e) { console.log('planning:', e); }
 
   try {
@@ -2741,6 +2747,7 @@ function loadPlanningToday(reservations, today, CH) {
       creneau: r.creneau, service: r.service, statut: r.statut,
       ranger: r.ranger_nom || '',
       client: r.clients ? (r.clients.prenom + ' ' + r.clients.nom) : '—',
+      fiche: r.clients || null,   // v3.03 : tri par distance de Kopstal
       test: !!(r.clients && r.clients.is_test),
       dogs: 0, noms: [], aller: false, retour: false, trStatut: null,
       heure_depot: r.heure_depot || null, heure_recuperation: r.heure_recuperation || null
@@ -2771,7 +2778,8 @@ function loadPlanningToday(reservations, today, CH) {
   }
   list.sort(function(a, b) {
     var d = groupe(a)[2] - groupe(b)[2]; if (d) return d;
-    if (a.service === 'daycare') { var x = a.heure_depot || '99', y = b.heure_depot || '99'; if (x !== y) return x < y ? -1 : 1; }
+    if (a.service === 'daycare') { var x = a.heure_depot || '99', y = b.heure_depot || '99'; if (x !== y) return x < y ? -1 : 1; }   // Day Care : heure de dépôt d'abord
+    var k = compareKopstal(a.fiche, b.fiche); if (k) return k;   // v3.03 : plus proche de Kopstal d'abord
     return a.noms.join(', ').localeCompare(b.noms.join(', '), 'fr');
   });
 
@@ -4759,6 +4767,85 @@ function rangerSeance(r, ds) {
   e.cle = (e.prenom && !e.sansRemplacant) ? e.prenom : '__aucun__';
   return e;
 }
+
+// ══════════════════════════════════════════════════════════════
+//  TRI PAR DISTANCE DE KOPSTAL (v3.03, demande de Gabriel 25/10/2026)
+//  Dans tous les plannings de l'admin, le chien le plus proche de Kopstal
+//  en premier ; les chiens d'une même adresse côte à côte. Même calcul que
+//  l'app ranger : coordonnées OpenStreetMap (1 demande par seconde,
+//  mémorisées dans le navigateur, même cache « fr-geo-cache »). Tant qu'une
+//  adresse n'est pas encore localisée : rangée par commune puis adresse.
+// ══════════════════════════════════════════════════════════════
+var KOPSTAL_GPS = [49.6644, 6.0736];
+var GEO_LS_A = 'fr-geo-cache';
+var GEO_A = {};
+try { GEO_A = JSON.parse(localStorage.getItem(GEO_LS_A) || '{}') || {}; } catch (e) { GEO_A = {}; }
+function adresseCompleteA(c) {
+  c = c || {};
+  return [c.adresse, ((c.code_postal ? 'L-' + c.code_postal + ' ' : '') + (c.commune || '')).trim(), 'Luxembourg'].filter(Boolean).join(', ');
+}
+function distKmA(a, b) {
+  var R = 6371, r = Math.PI / 180, dLa = (b[0] - a[0]) * r, dLo = (b[1] - a[1]) * r;
+  var x = Math.sin(dLa / 2) * Math.sin(dLa / 2) + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLo / 2) * Math.sin(dLo / 2);
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+function distanceKopstalA(c) {
+  if (!c) return null;
+  var g = GEO_A[adresseCompleteA(c)];
+  if (!(g && g.length)) g = GEO_A[[c.commune, 'Luxembourg'].filter(Boolean).join(', ')];
+  return g && g.length ? distKmA(KOPSTAL_GPS, g) : null;
+}
+function cleAdresseA(c) { return String(adresseCompleteA(c)).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
+// Compare deux clients : distance, puis adresse (mêmes adresses côte à côte), puis nom
+function compareKopstal(ca, cb) {
+  var da = distanceKopstalA(ca), db2 = distanceKopstalA(cb);
+  if (da != null && db2 != null && Math.abs(da - db2) > 0.05) return da - db2;
+  if (da == null && db2 != null) return 1;
+  if (db2 == null && da != null) return -1;
+  if (da == null && db2 == null) {
+    var cm = String((ca || {}).commune || '').localeCompare(String((cb || {}).commune || ''), 'fr'); if (cm) return cm;
+  }
+  var ad = cleAdresseA(ca).localeCompare(cleAdresseA(cb)); if (ad) return ad;
+  return String(((ca || {}).nom || '') + ' ' + ((ca || {}).prenom || '')).localeCompare(((cb || {}).nom || '') + ' ' + ((cb || {}).prenom || ''), 'fr');
+}
+// Groupes de lignes (une réservation = un tableau de lignes) triés par distance
+function trierGroupesKopstal(groupes, clientsMap) {
+  return groupes.sort(function(a, b) {
+    // Day Care : heure de dépôt d'abord (choix de Gabriel), puis distance
+    if (a[0].service === 'daycare' && b[0].service === 'daycare') {
+      var h = String(a[0].heure_depot || '99').localeCompare(String(b[0].heure_depot || '99')); if (h) return h;
+    }
+    return compareKopstal(clientsMap[a[0].client_id], clientsMap[b[0].client_id]);
+  });
+}
+// Localisation des adresses inconnues, puis un seul rafraîchissement
+var _geoFileA = [], _geoEnCoursA = false, _geoApres = {};
+function geocoderAdressesA(clients, apres, cle) {
+  (clients || []).forEach(function(c) {
+    if (!c || (!c.adresse && !c.commune)) return;
+    var a = adresseCompleteA(c);
+    if (!(a in GEO_A) && _geoFileA.indexOf(a) === -1) _geoFileA.push(a);
+  });
+  if (apres) _geoApres[cle || 'defaut'] = apres;
+  if (_geoEnCoursA || !_geoFileA.length) return;
+  _geoEnCoursA = true;
+  var nouveau = false;
+  (function suivant() {
+    var a = _geoFileA.shift();
+    if (!a) {
+      _geoEnCoursA = false;
+      try { localStorage.setItem(GEO_LS_A, JSON.stringify(GEO_A)); } catch (e) {}
+      var fs = _geoApres; _geoApres = {};
+      if (nouveau) Object.keys(fs).forEach(function(k) { try { fs[k](); } catch (e) {} });
+      return;
+    }
+    fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=lu,fr,be,de&q=' + encodeURIComponent(a), { headers: { 'Accept-Language': 'fr' } })
+      .then(function(r) { return r.ok ? r.json() : []; })
+      .then(function(j) { GEO_A[a] = (j && j[0]) ? [parseFloat(j[0].lat), parseFloat(j[0].lon)] : []; nouveau = true; })
+      .catch(function() { /* hors ligne : on réessaiera au prochain affichage */ })
+      .then(function() { setTimeout(suivant, 1100); });
+  })();
+}
 // Séances du jour pour le planning, filtre « Ranger » appliqué
 function seancesPlanning(resas, ds) {
   var liste = filterResasForDay(resas, ds);
@@ -4853,6 +4940,7 @@ async function loadPlanning() {
         resas.push(x.r); clientsMap[x.r.client_id] = x.c; clientDogsMap[x.r.client_id] = x.chiens;
       });
     } catch (e) { console.log('journées test :', e); }
+    geocoderAdressesA(Object.keys(clientsMap).map(function(k){ return clientsMap[k]; }).filter(function(c){ return !c._jt; }), function() { loadPlanning(); }, 'planning');   // v3.03
     var _fs = document.getElementById('semaine-filtres'); if (_fs && vuePlanning !== 'semaine') _fs.style.display = 'none';
     if (vuePlanning==='jour') {
       renderPlanningJour(resas, clientsMap, chiensMap, clientDogsMap, debut, today);
@@ -4932,12 +5020,7 @@ function barreFiltresSemaine() {
   }).join('');
 }
 function trierGroupe(liste, clientsMap) {
-  return liste.sort(function(a, b) {
-    var ra = a[0], rb = b[0];
-    if (ra.service === 'daycare') { var h = String(ra.heure_depot || '99').localeCompare(String(rb.heure_depot || '99')); if (h) return h; }
-    var ca = clientsMap[ra.client_id] || {}, cb = clientsMap[rb.client_id] || {};
-    return ((ca.nom || '') + ' ' + (ca.prenom || '')).localeCompare((cb.nom || '') + ' ' + (cb.prenom || ''), 'fr');
-  });
+  return trierGroupesKopstal(liste, clientsMap);   // v3.03 : plus proche de Kopstal d'abord
 }
 function renderPlanningSemaine(resas, clientsMap, chiensMap, clientDogsMap, debut, today) {
   var grid = document.getElementById('planning-grid');
@@ -5122,8 +5205,8 @@ function renderPlanningJour(resas, clientsMap, chiensMap, clientDogsMap, dateStr
   var tout = actives.concat(annulees);
   function blocs(filtre) {
     var rows = tout.filter(filtre);
-    var ok = groupBookings(rows.filter(function(r){ return !r._annulee; }));
-    var ko = groupBookings(rows.filter(function(r){ return r._annulee; }));
+    var ok = trierGroupesKopstal(groupBookings(rows.filter(function(r){ return !r._annulee; })), clientsMap);
+    var ko = trierGroupesKopstal(groupBookings(rows.filter(function(r){ return r._annulee; })), clientsMap);
     return { html: ok.concat(ko).map(function(g){ return carteJourHtml(g, clientsMap, chiensMap, clientDogsMap, dateStr); }).join(''),
              n: ok.reduce(function(s, g){ return s + Math.max(1, dogNamesForRows(g, chiensMap, clientDogsMap).length); }, 0) };
   }
@@ -5153,8 +5236,8 @@ function renderPlanningJour(resas, clientsMap, chiensMap, clientDogsMap, dateStr
     if (parR.__aucun__) cles.push('__aucun__');
     var n = 0, html = '';
     cles.forEach(function(k) {
-      var ok = groupBookings(parR[k].filter(function(r){ return !r._annulee; }));
-      var ko = groupBookings(parR[k].filter(function(r){ return r._annulee; }));
+      var ok = trierGroupesKopstal(groupBookings(parR[k].filter(function(r){ return !r._annulee; })), clientsMap);
+      var ko = trierGroupesKopstal(groupBookings(parR[k].filter(function(r){ return r._annulee; })), clientsMap);
       var nb = ok.reduce(function(s, g){ return s + Math.max(1, dogNamesForRows(g, chiensMap, clientDogsMap).length); }, 0);
       n += nb;
       var rouge = k === '__aucun__';
@@ -8146,6 +8229,27 @@ async function sauvegarderResaAdmin() {
         return l;
       })
     : [ligne];
+  // v3.04 : doublon ? (même chien, même service, même créneau, séances en commun)
+  try {
+    var cf = (window.FR_FACT && FR_FACT.conflitsReservation) ? await FR_FACT.conflitsReservation(db, lignes) : [];
+    if (cf.length) {
+      var nomsCh = {};
+      Array.prototype.forEach.call(document.getElementById('resa-chien-id').options, function(o) { if (o.value) nomsCh[o.value] = o.textContent.trim(); });
+      var JR = { lun: 'lun', mar: 'mar', mer: 'mer', jeu: 'jeu', ven: 'ven', sam: 'sam' };
+      var liste = cf.map(function(x) {
+        var e = x.reservation;
+        var chiens = x.chiens.map(function(c) { return c ? (nomsCh[c] || 'chien') : 'tous les chiens'; }).join(' + ');
+        return chiens + ' · ' + (SVC_NAMES[e.service] || e.service) + (e.creneau ? ' ' + ({ matin: 'matin', midi: 'midi', apmidi: 'après-midi' }[e.creneau] || e.creneau) : '')
+          + (e.jours_recurrence ? ' · ' + String(e.jours_recurrence).split(',').map(function(j){ return JR[j.trim()] || j.trim(); }).join(', ') : '')
+          + ' (réservation du ' + formatDateFR(String(e.date_debut).slice(0, 10)) + ') : ' + x.dates.length + ' séance' + (x.dates.length > 1 ? 's' : '') + ' en commun, à partir du ' + formatDateFR(x.dates[0]);
+      });
+      var go = await frConfirm({ titre: 'Déjà réservé', icone: 'attention',
+        message: 'Ce client a déjà une réservation sur ces jours et ce créneau :', liste: liste,
+        apres: 'Les séances seraient comptées et facturées deux fois. Pour changer les jours ou la durée, modifiez plutôt la réservation existante.',
+        ok: 'Créer quand même', annuler: 'Retour' });
+      if (!go) return;
+    }
+  } catch (e) { console.log('contrôle doublon :', e); }
   try {
     var { error } = await db.from('reservations').insert(lignes);
     if (error && /montant_ttc|nb_seances/.test(error.message || '')) {   // colonnes absentes : sans montant
