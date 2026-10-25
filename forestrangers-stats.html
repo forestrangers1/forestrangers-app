@@ -94,7 +94,7 @@ html, body { min-height: 100vh; font-family: 'Instrument Sans', sans-serif; back
 
 /* ── LAYOUT ── */
 .content { padding: 20px 24px 40px; max-width: 1200px; }
-.section-title { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-faint); margin-bottom: 10px; margin-top: 24px; display: flex; align-items: center; gap: 8px; }
+.section-title { font-family: 'FRDisplay', 'Oswald', 'Arial Narrow', sans-serif; font-size: 15px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent);   /* v3.08 : orange, plus grand */ margin-bottom: 10px; margin-top: 24px; display: flex; align-items: center; gap: 8px; }
 .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 .grid { display: grid; gap: 10px; }
 .grid-4 { grid-template-columns: repeat(4, 1fr); }
@@ -541,6 +541,95 @@ function agreger(C) {
   return a;
 }
 
+
+// ══════════════════════════════════════════════════════════════
+//  v3.08 — MOIS SANS PLANNING : LUS DANS LES FACTURES (avant l'app)
+//  Un mois passé dont les factures comptent plus de chiens × séances que
+//  le planning est lu dans le détail des factures : séances, chiens,
+//  valeur, clients, chiens servis, déplacements. Les lignes « mois » d'une
+//  facture sur plusieurs mois sont réparties à parts égales. Filtre
+//  « Employé » : les factures ne disent pas qui a fait la sortie → planning seul.
+// ══════════════════════════════════════════════════════════════
+var LIGNE_SUPP = /suppl[ée]mentaire/i;
+function factMois(per, opt) {
+  opt = opt || { service: filters.service, ranger: filters.ranger };
+  if (opt.ranger) return null;
+  var k = '__fm|' + per + '|' + (opt.service || '');
+  if (k in ST.cache) return ST.cache[k];
+  var a = { sorties: { walking: 0, daycare: 0, boarding: 0 }, chiens: { walking: 0, daycare: 0, boarding: 0 }, valSvc: { walking: 0, daycare: 0, boarding: 0 }, valeur: 0, hzTrajets: 0, hzMontant: 0, clients: {} }, vu = false;
+  ST.factures.filter(factureValide).forEach(function(f) {
+    var parC = {};
+    (Array.isArray(f.lignes) ? f.lignes : []).forEach(function(l) {
+      if (!l) return;
+      var part;
+      if (Array.isArray(l.mois) && l.mois.length) { if (l.mois.indexOf(per) === -1) return; part = 1 / l.mois.length; }
+      else { if (f.periode !== per) return; part = 1; }
+      var sv = serviceLigne(l);
+      if (l.type === 'regularisation') return;
+      if (!opt.service || sv === opt.service) a.valeur += (+l.total || 0) * part;
+      if (sv === 'frais_deplacement') { if (!opt.service) { a.hzTrajets += (+l.qte || 0) * part; a.hzMontant += (+l.total || 0) * part; } return; }
+      if (a.sorties[sv] == null || (opt.service && sv !== opt.service)) return;
+      if (l.type === 'annulation' || /annulation/i.test(l.label || '')) return;
+      var q = (+l.qte || 0) * part, nc = chiensLigne(l), supp = LIGNE_SUPP.test(l.label || '') || l.discountNote === 'Chien supplémentaire';
+      a.valSvc[sv] += (+l.total || 0) * part;
+      if (!supp) a.sorties[sv] += q;
+      a.chiens[sv] += q * nc;
+      var x = (parC[sv] = parC[sv] || { base: 0, chiens: 0 }); if (!supp) x.base += q; x.chiens += q * nc;
+      vu = true;
+    });
+    Object.keys(parC).forEach(function(sv) {
+      var x = parC[sv], n = x.base ? Math.max(1, Math.round(x.chiens / x.base)) : 1;
+      a.clients[f.client_id] = Math.max(a.clients[f.client_id] || 0, n);
+    });
+  });
+  return (ST.cache[k] = vu ? a : null);
+}
+function totCh(x) { return x ? (+x.walking || 0) + (+x.daycare || 0) + (+x.boarding || 0) : 0; }
+// Complète un agrégat du planning avec les mois lus dans les factures (mois entiers, passés)
+function completer(A, debut, fin, opt) {
+  if (!A) return A;
+  var cour = perDe(new Date().getFullYear(), new Date().getMonth());
+  A.moisFactures = [];
+  moisEntre(debut, fin).forEach(function(per) {
+    var bm = FR_FACT.periodeMois(per);
+    if (bm.debut < debut || bm.fin > fin || per >= cour) return;
+    var f = factMois(per, opt);
+    if (!f) return;
+    var cm = calc(bm.debut, bm.fin, opt), pm = agreger(cm);
+    if (totCh(f.chiens) <= totCh(pm.chiens)) return;
+    A.valSvcFact = A.valSvcFact || { walking: 0, daycare: 0, boarding: 0 };
+    var pv = { walking: 0, daycare: 0, boarding: 0 };
+    cm.seances.forEach(function(x) { if (x.presents.length && pv[x.service] != null) pv[x.service] += (+x.montant || 0); });
+    ['walking', 'daycare', 'boarding'].forEach(function(sv) { A.valSvcFact[sv] += f.valSvc[sv] - pv[sv]; });
+    ['walking', 'daycare', 'boarding'].forEach(function(sv) {
+      A.sorties[sv] += f.sorties[sv] - pm.sorties[sv];
+      A.chiens[sv] += f.chiens[sv] - pm.chiens[sv];
+    });
+    A.valeur += f.valeur - pm.valeur; A.realise += f.valeur - pm.realise;
+    A.hzTrajets += f.hzTrajets - pm.hzTrajets; A.hzMontant += f.hzMontant - pm.hzMontant;
+    Object.keys(f.clients).forEach(function(id) {
+      if (A.clientsActifs[id]) return;
+      A.clientsActifs[id] = true;
+      for (var k = 1; k <= f.clients[id]; k++) A.chiensServis['fx-' + id + '-' + k] = true;
+    });
+    A.moisFactures.push(per);
+  });
+  A.nbClients = Object.keys(A.clientsActifs).length;
+  A.nbChiens = Object.keys(A.chiensServis).length;
+  A.totalSorties = A.sorties.walking + A.sorties.daycare + A.sorties.boarding;
+  return A;
+}
+// Un mois, planning complété par les factures (mis en cache)
+function aMois(per, opt) {
+  opt = opt || { service: filters.service, ranger: filters.ranger };
+  var k = '__am|' + per + '|' + (opt.service || '') + '|' + (opt.ranger || '');
+  if (ST.cache[k]) return ST.cache[k];
+  var bm = FR_FACT.periodeMois(per);
+  return (ST.cache[k] = completer(agreger(calc(bm.debut, bm.fin, opt)), bm.debut, bm.fin, opt));
+}
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+function anMoins1(iso) { return (+String(iso).slice(0, 4) - 1) + String(iso).slice(4); }
+
 // ── FACTURES ──
 function factureValide(f) { return f.statut !== 'annulee' && f.statut !== 'avoir' && f.statut !== 'brouillon'; }
 function soldeF(f) {
@@ -596,7 +685,7 @@ function renderStats() {
   CHARTS = {};
   var b = bornes();
   var C = calc(b.debut, b.fin), P = calc(b.prevDebut, b.prevFin);
-  var A = agreger(C), AP = agreger(P);
+  var A = completer(agreger(C), b.debut, b.fin), AP = completer(agreger(P), b.prevDebut, b.prevFin);   // v3.08
   var filtreTxt = [filters.service ? SVC_NOMS[filters.service] : '', filters.ranger ? (document.getElementById('f-ranger').selectedOptions[0] || {}).textContent : ''].filter(Boolean).join(' · ');
   document.getElementById('f-resume').textContent = dateFr(b.debut, true) + ' → ' + dateFr(b.fin, true) + (filtreTxt ? ' · ' + filtreTxt : '');
 
@@ -604,7 +693,8 @@ function renderStats() {
   var n = new Date(), evo = [];
   for (var k = -11; k <= 11 - n.getMonth(); k++) evo.push(perDe(n.getFullYear(), n.getMonth() + k));
   var idxCourant = 11;
-  var EV = evo.map(function(per) { var bm = FR_FACT.periodeMois(per); var c = calc(bm.debut, bm.fin); return { per: per, debut: bm.debut, fin: bm.fin, c: c, a: agreger(c) }; });
+  var EV = evo.map(function(per) { var bm = FR_FACT.periodeMois(per); var c = calc(bm.debut, bm.fin); var ap = agreger(c);
+    return { per: per, debut: bm.debut, fin: bm.fin, c: c, aPlan: ap, a: completer(clone(ap), bm.debut, bm.fin) }; });   // v3.08 : a = planning + factures
 
   var h = '';
   // v3.04 (Gabriel, 22/10/2026) : d'abord tout le mois choisi, puis la tendance
@@ -637,10 +727,14 @@ function sectionTesteurs() {
   window._TEST_ROWS = R;
   if (!R.length) return '';
   var tc = somme(R, 'cli'), tt = somme(R, 'tst');
+  // v3.08 : part de chacun dans le combiné, en %
+  function pc(v, t) { return t ? ' <span style="color:var(--text-faint);font-size:11px;font-weight:400;">' + Math.round(v / t * 100) + ' %</span>' : ''; }
   var rows = R.map(function(r) {
+    var t = r.cli + r.tst;
     return '<tr><td>' + esc(moisNom(r.per).charAt(0).toUpperCase() + moisNom(r.per).slice(1)) + (r.enCours ? ' <span class="badge b-muted">en cours</span>' : '') + '</td>'
-      + '<td class="num">' + eur(r.cli) + '</td><td class="num">' + eur(r.tst) + '</td><td class="num main">' + eur(r.cli + r.tst) + '</td></tr>';
-  }).join('');
+      + '<td class="num">' + eur(r.cli) + pc(r.cli, t) + '</td><td class="num">' + eur(r.tst) + pc(r.tst, t) + '</td><td class="num main">' + eur(t) + '</td></tr>';
+  }).join('')
+    + (R.length > 1 ? '<tr style="font-weight:700;"><td>Total</td><td class="num">' + eur(tc) + pc(tc, tc + tt) + '</td><td class="num">' + eur(tt) + pc(tt, tc + tt) + '</td><td class="num main">' + eur(tc + tt) + '</td></tr>' : '');
   var depuis = moisLong(TEST_DEBUT);
   var h = '<div class="section-title">Comptes test — phase de test</div>';
   h += carte('Facturé par mois — clients et testeurs',
@@ -648,8 +742,8 @@ function sectionTesteurs() {
     '<span class="badge b-muted">depuis ' + esc(depuis) + '</span>');
   h += '<div style="margin-top:10px;">' + carte('Clients actifs et testeurs par mois', '<div class="chart-box small"><canvas id="ch-test"></canvas></div><div class="card-note">Au-dessus de chaque barre : le combiné. Survol : clients et testeurs séparément. Mois en cours : estimation d\'après le planning.</div>') + '</div>';
   h += '<div class="grid grid-3" style="margin-top:10px;">'
-    + kpi('green', 'Clients actifs · depuis ' + esc(depuis), eur(tc), 'Facturé' + (R[R.length - 1].enCours ? ' (mois en cours estimé)' : ''))
-    + kpi('amber', 'Testeurs · depuis ' + esc(depuis), eur(tt), L.map(function(c) { return esc(c.prenom); }).join(', ') + ' · factures de test, sinon planning')
+    + kpi('green', 'Clients actifs · depuis ' + esc(depuis), eur(tc), 'Facturé' + (R[R.length - 1].enCours ? ' (mois en cours estimé)' : '') + (tc + tt ? ' · ' + Math.round(tc / (tc + tt) * 100) + ' % du combiné' : ''))
+    + kpi('amber', 'Testeurs · depuis ' + esc(depuis), eur(tt), L.map(function(c) { return esc(c.prenom); }).join(', ') + ' · factures de test, sinon planning' + (tc + tt ? ' · ' + Math.round(tt / (tc + tt) * 100) + ' % du combiné' : ''))
     + kpi('accent', 'Combiné', eur(tc + tt), 'Clients actifs + testeurs')
     + '</div>';
   h += '<div class="card-note" style="margin-top:8px;">Les testeurs ne comptent dans aucun autre chiffre de la page : ils n\'apparaissent qu\'ici et dans la dernière case de la vue rapide.</div>';
@@ -702,11 +796,25 @@ function sectionFinance(b, A, AP, EV, ic) {
     facLabel = 'Facturé — ' + moisNom(pp); facV = somme(Fx, 'total_ttc'); facPV = somme(Fx2, 'total_ttc'); facLabelPrev = moisNom(pp2);
     facSub = Fx.length + ' facture' + (Fx.length > 1 ? 's' : '') + ' · ' + moisNom(perDe(n0.getFullYear(), n0.getMonth())) + ' sera facturé le 1er ' + moisNom(perDe(n0.getFullYear(), n0.getMonth() + 1));
   }
-  h += kpi('accent', 'Valeur des prestations', eur(A.valeur), eur(A.realise) + ' réalisés · ' + eur(A.aVenir) + ' à venir', delta(A.valeur, AP.valeur, b.labelPrev));
-  h += kpi('green', facLabel, eur(facV), facSub + horsFiltre, delta(facV, facPV, facLabelPrev));
+  // v3.08 : même période un an plus tôt (factures d'avant l'app), sauf « Cette année » (déjà comparée à l'an passé)
+  var n1 = '', n1Fac = '';
+  if (filters.periode !== 'annee') {
+    var d1 = anMoins1(b.debut), f1 = anMoins1(b.fin);
+    if (f1.slice(5) === '02-28' && b.fin.slice(5) === '02-29') f1 = f1.slice(0, 5) + '02-28';
+    var lab1 = filters.periode === 'mois' || filters.periode === 'mois_prec' ? MOIS_C[+b.debut.slice(5, 7) - 1] + ' ' + d1.slice(0, 4) : 'un an plus tôt';
+    var AN1 = completer(agreger(calc(d1, f1)), d1, f1);
+    if (AN1.valeur) n1 = delta(A.valeur, AN1.valeur, lab1);
+    var perFac = (filters.periode === 'mois' && !F.length) ? anMoins1(perDe(new Date().getFullYear(), new Date().getMonth() - 1)) : null;
+    var bF = perFac ? FR_FACT.periodeMois(perFac) : { debut: d1, fin: f1 };
+    var facN1 = somme(facturesPeriode(bF.debut, bF.fin), 'total_ttc');
+    if (facN1) n1Fac = delta(facV, facN1, perFac ? MOIS_C[+perFac.slice(5) - 1] + ' ' + perFac.slice(0, 4) : lab1);
+  }
+  h += kpi('accent', 'Valeur des prestations', eur(A.valeur), eur(A.realise) + ' réalisés · ' + eur(A.aVenir) + ' à venir' + (A.moisFactures && A.moisFactures.length ? ' · mois sans planning lus dans les factures' : ''), delta(A.valeur, AP.valeur, b.labelPrev) + n1);
+  h += kpi('green', facLabel, eur(facV), facSub + horsFiltre, delta(facV, facPV, facLabelPrev) + n1Fac);
   h += kpi('blue', 'Encaissé', eur(enc), 'Virements reçus sur la période' + horsFiltre, delta(enc, encP, b.labelPrev));
   h += kpi('red', 'Reste à encaisser', eur(du), ouvertes.length + ' facture' + (ouvertes.length > 1 ? 's' : '') + ' ouverte' + (ouvertes.length > 1 ? 's' : '') + ' (toutes périodes)');
   h += '</div>';
+  h += '<div style="margin-top:10px;">' + carteTotauxAnnuels() + '</div>';   // v3.08
   h += '<div style="margin-top:10px;">' + carte('Évolution — facturé, encaissé, prestations', '<div class="chart-box"><canvas id="ch-fin"></canvas></div><div class="card-note">Barres : facturé par mois de prestation et encaissé par mois de virement. Ligne : valeur des prestations d\'après le planning — en pointillés, la prévision jusqu\'à décembre (réservations connues).</div>') + '</div>';
   if (!F.length && enCours) {
     var Cx = calc(b.debut, b.fin, TOUS);
@@ -868,6 +976,42 @@ function factureParService(F, note) {
   return '<div class="fac-svc">' + h + '</div><div class="card-note">' + (note || 'D\'après le détail des factures, TTC — y compris les mois facturés avant l\'app. Chien supplémentaire et annulations sont comptés avec leur service.') + '</div>';
 }
 
+
+// ── v3.08 : TOTAUX PAR ANNÉE (indépendants des filtres) ──
+// Facturé TTC de chaque année (factures, y compris d'avant l'app), séances de
+// l'année ; année en cours : facturé à ce jour, comparé à la même période de
+// l'an passé, et estimation de fin d'année (+ planning des mois pas encore facturés).
+function carteTotauxAnnuels() {
+  var an = new Date().getFullYear(), cour = perDe(an, new Date().getMonth());
+  var valides = ST.factures.filter(factureValide);
+  function facAn(y, jusqua) { return somme(valides.filter(function(f) { return f.periode && f.periode.slice(0, 4) === String(y) && (!jusqua || f.periode <= jusqua); }), 'total_ttc'); }
+  // Dernier mois de l'année en cours qui a des factures
+  var dernier = valides.reduce(function(m, f) { return f.periode && f.periode.slice(0, 4) === String(an) && f.periode < cour && f.periode > m ? f.periode : m; }, '');
+  var fac0 = facAn(an), fac1 = facAn(an - 1), fac1Meme = dernier ? facAn(an - 1, anMoins1(dernier)) : 0;
+  var reste = 0;
+  for (var p = dernier ? perSuivant(dernier) : perDe(an, 0); p.slice(0, 4) === String(an); p = perSuivant(p)) {
+    if (valides.some(function(f) { return f.periode === p; })) continue;
+    var bm = FR_FACT.periodeMois(p); reste += calc(bm.debut, bm.fin, TOUS).total;
+  }
+  function seances(y, jusqua) {
+    var t = { walking: 0, daycare: 0, boarding: 0 };
+    for (var m = 0; m < 12; m++) { var per = perDe(y, m); if (jusqua && per > jusqua) break; if (per >= cour) break;
+      var a = aMois(per, TOUS); t.walking += a.sorties.walking; t.daycare += a.sorties.daycare; t.boarding += a.chiens.boarding; }
+    return t;
+  }
+  var s1 = seances(an - 1), s0 = seances(an, dernier);
+  function lig(t) { return fmt(Math.round(t.walking)) + ' promenades · ' + fmt(Math.round(t.daycare)) + ' journées Day Care · ' + fmt(Math.round(t.boarding)) + ' nuits'; }
+  var nomDernier = dernier ? MOIS_C[+dernier.slice(5) - 1] : '';
+  var corps = '<div class="grid grid-3" style="gap:10px;">'
+    + '<div><div class="kpi-label">' + (an - 1) + ' · facturé</div><div class="kpi-val">' + eur(fac1) + '</div><div class="kpi-sub">' + lig(s1) + '</div></div>'
+    + '<div><div class="kpi-label">' + an + ' · facturé à ce jour' + (nomDernier ? ' (jusqu\'à ' + nomDernier + ')' : '') + '</div><div class="kpi-val">' + eur(fac0) + '</div>'
+    +   '<div class="kpi-sub">' + lig(s0) + '</div>' + (fac1Meme ? delta(fac0, fac1Meme, 'même période ' + (an - 1)) : '') + '</div>'
+    + '<div><div class="kpi-label">' + an + ' · estimation fin d\'année</div><div class="kpi-val">' + eur(fac0 + reste) + '</div>'
+    +   '<div class="kpi-sub">Facturé + ' + eur(reste) + ' au planning des mois pas encore facturés</div>' + (fac1 ? delta(fac0 + reste, fac1, String(an - 1)) : '') + '</div>'
+    + '</div>';
+  return carte('Totaux par année', corps + '<div class="card-note">Toutes factures, TTC, y compris celles d\'avant l\'app ; indépendant des filtres. Séances d\'après le planning, ou les factures pour les mois sans planning.</div>');
+}
+
 // ── SECTION PROJECTIONS (v2.58) ──
 // Estimation à 3, 6 et 12 mois = ce qui est déjà réservé (réservations
 // récurrentes comprises) + la tendance : chaque mois, (nouveaux clients −
@@ -877,27 +1021,31 @@ var PROJ_TOUS = { service: '', ranger: '' };
 function projMois(k) { var n = new Date(); var per = perDe(n.getFullYear(), n.getMonth() + k); var bm = FR_FACT.periodeMois(per); return { per: per, debut: bm.debut, fin: bm.fin }; }
 function projHistorique() {
   if (ST.cache.__projHist) return ST.cache.__projHist;
+  // v3.08 : 12 derniers mois complets, planning complété par les factures (avant l'app)
   var hist = [];
-  for (var k = -6; k <= -1; k++) { var m = projMois(k); m.a = agreger(calc(m.debut, m.fin, PROJ_TOUS)); hist.push(m); }
+  for (var k = -12; k <= -1; k++) { var m = projMois(k); m.a = aMois(m.per, PROJ_TOUS); hist.push(m); }
   var avec = hist.filter(function(m) { return m.a.nbClients > 0; });
   var der3 = hist.slice(-3);
   var base = somme(der3, function(m) { return m.a.valeur; }) / 3;
   var panier = avec.length ? somme(avec, function(m) { return m.a.valeur / m.a.nbClients; }) / avec.length : 0;
-  // Nouveaux : clients arrivés sur les 6 derniers mois
-  var d0 = hist[0].debut, d1 = hist[5].fin;
-  var nouveaux = ST.clients.filter(function(c) { var d = String(c.client_depuis || c.date_inscription || c.created_at || '').slice(0, 10); return d >= d0 && d <= d1; });
+  // Nouveaux : clients vus pour la première fois (planning ou factures) dans les 12 derniers mois
+  var premier = {}, debutDonnees = ST.factures.reduce(function(min, f) { return f.periode && f.periode < min ? f.periode : min; }, hist[0].per);
+  for (var p = debutDonnees; p <= hist[11].per; p = perSuivant(p)) {
+    Object.keys(aMois(p, PROJ_TOUS).clientsActifs).forEach(function(id) { if (!premier[id]) premier[id] = p; });
+  }
+  var nouveaux = Object.keys(premier).filter(function(id) { return premier[id] >= hist[0].per && hist[0].per > debutDonnees; });
   // Départs : servis sur la période, plus rien depuis 2 mois (ni ce mois-ci, ni réservé dans les 3 prochains)
   var actifs = {}; hist.forEach(function(m) { Object.keys(m.a.clientsActifs).forEach(function(id) { actifs[id] = true; }); });
   var recents = {};
-  [hist[4], hist[5]].concat([0, 1, 2, 3].map(projMois)).forEach(function(m) {
+  [hist[10], hist[11]].concat([0, 1, 2, 3].map(projMois)).forEach(function(m) {
     var c = m.a ? m.a : agreger(calc(m.debut, m.fin, PROJ_TOUS));
     Object.keys(c.clientsActifs).forEach(function(id) { recents[id] = true; });
   });
   var partis = Object.keys(actifs).filter(function(id) { return !recents[id]; });
   var nbMoisDonnees = Math.max(1, avec.length);
   ST.cache.__projHist = { hist: hist, base: base, panier: panier,
-    nouveaux: nouveaux.length / 6, departs: partis.length / nbMoisDonnees,
-    nbNouveaux: nouveaux.length, nbPartis: partis.length, clientsActuels: hist[5].a.nbClients };
+    nouveaux: nouveaux.length / 12, departs: partis.length / nbMoisDonnees,
+    nbNouveaux: nouveaux.length, nbPartis: partis.length, clientsActuels: hist[11].a.nbClients };
   return ST.cache.__projHist;
 }
 function sectionProjection() {
@@ -911,8 +1059,8 @@ function sectionProjection() {
   var h = '<div class="section-title">Projections — 3 mois, 6 mois, 1 an</div>';
   h += carte('Hypothèses de tendance',
     '<div style="display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start;">'
-    + champ('proj-nouveaux', 'Nouveaux clients par mois', H.nouveaux, 'clients', 'Calculé : ' + H.nbNouveaux + ' sur les 6 derniers mois')
-    + champ('proj-panier', 'CA moyen par client et par mois', H.panier, '€ TTC', 'Calculé : moyenne des 6 derniers mois')
+    + champ('proj-nouveaux', 'Nouveaux clients par mois', H.nouveaux, 'clients', 'Calculé : ' + H.nbNouveaux + ' sur les 12 derniers mois (planning et factures)')
+    + champ('proj-panier', 'CA moyen par client et par mois', H.panier, '€ TTC', 'Calculé : moyenne des 12 derniers mois')
     + champ('proj-departs', 'Départs par mois', H.departs, 'clients', 'Calculé : ' + H.nbPartis + ' client' + (H.nbPartis > 1 ? 's' : '') + ' sans séance depuis 2 mois')
     + '<button class="filter-select" style="cursor:pointer;align-self:center;" onclick="resetProj()">Valeurs calculées</button>'
     + '</div>'
@@ -967,6 +1115,7 @@ function sectionServices(b, C, A, AP, EV, ic) {
   var h = '<div class="section-title">Services — ' + esc(b.label) + '</div><div class="grid grid-4">';
   var valSvc = { walking: 0, daycare: 0, boarding: 0 };
   C.seances.forEach(function(s) { if (s.presents.length) valSvc[s.service] += (+s.montant || 0); });
+  if (A.valSvcFact) Object.keys(valSvc).forEach(function(k) { valSvc[k] += A.valSvcFact[k] || 0; });   // v3.08 : mois lus dans les factures
   h += kpi('accent', 'Dog Walking', fmt(A.sorties.walking), fmt(A.chiens.walking) + ' chiens promenés · ' + eur(valSvc.walking), delta(A.sorties.walking, AP.sorties.walking, b.labelPrev));
   h += kpi('green', 'Day Care', fmt(A.sorties.daycare), 'journées · ' + fmt(A.chiens.daycare) + ' chiens · ' + eur(valSvc.daycare), delta(A.sorties.daycare, AP.sorties.daycare, b.labelPrev));
   h += kpi('blue', 'Boarding', fmt(A.chiens.boarding), 'nuits · ' + eur(valSvc.boarding), delta(A.chiens.boarding, AP.chiens.boarding, b.labelPrev));
@@ -1185,19 +1334,28 @@ function dessiner(b, C, A, EV, ic) {
   // Finances
   var fac = EV.map(function(e, i) { return futur(i) ? null : Math.round(somme(ST.factures.filter(function(f) { return factureValide(f) && f.periode === e.per; }), 'total_ttc')); });
   var enc = EV.map(function(e, i) { return futur(i) ? null : Math.round(encaisse(e.debut, e.fin)); });
-  var pre = EV.map(function(e) { return Math.round(e.c.total); });
+  var pre = EV.map(function(e) { return Math.round(e.a.valeur); });   // v3.08 : planning, ou factures pour un mois sans planning
+  var facN1 = EV.map(function(e) { var p1 = anMoins1(e.per); var v = somme(ST.factures.filter(function(f) { return factureValide(f) && f.periode === p1; }), 'total_ttc'); return v ? Math.round(v) : null; });
   nouveauGraph('ch-fin', { data: { labels: labels, datasets: [
     { type: 'bar', label: 'Facturé', data: fac, backgroundColor: acc, borderRadius: 4, maxBarThickness: 22 },
     { type: 'bar', label: 'Encaissé', data: enc, backgroundColor: gr, borderRadius: 4, maxBarThickness: 22 },
-    { type: 'line', label: 'Prestations (planning)', data: pre, borderColor: bl, backgroundColor: bl, pointRadius: 3, borderWidth: 2, tension: 0.25, cubicInterpolationMode: 'monotone', segment: pointille }
+    { type: 'line', label: 'Prestations', data: pre, borderColor: bl, backgroundColor: bl, pointRadius: 3, borderWidth: 2, tension: 0.25, cubicInterpolationMode: 'monotone', segment: pointille },
+    { type: 'line', label: 'Facturé un an plus tôt', data: facN1, borderColor: rgba(acc, 0.6), backgroundColor: rgba(acc, 0.6), borderDash: [5, 4], pointRadius: 2, pointStyle: 'rectRot', borderWidth: 1.5, tension: 0.25, cubicInterpolationMode: 'monotone', spanGaps: true }
   ] }, options: optsBase(false, ' €') });
 
   // Services (empilé, mois futurs plus clairs)
   var ds = [['walking', 'Dog Walking', gr, 'sorties'], ['daycare', 'Day Care', acc, 'sorties'],   /* v2.83 : vert Dog Walking, orange Day Care, bleu Boarding */
              ['boarding', 'Boarding (nuits)', bl, 'chiens']].filter(function(s) { return !filters.service || filters.service === s[0]; });
-  nouveauGraph('ch-svc', { type: 'bar', data: { labels: labels, datasets: ds.map(function(s) {
-    return { label: s[1], data: EV.map(function(e) { return e.a[s[3]][s[0]]; }), backgroundColor: EV.map(function(e, i) { return futur(i) ? rgba(s[2], 0.35) : s[2]; }), borderRadius: 3, maxBarThickness: 26 };
-  }) }, options: optsBase(true) });
+  var dsSvc = ds.map(function(s) {
+    return { type: 'bar', stack: 'an', label: s[1], data: EV.map(function(e) { return Math.round(e.a[s[3]][s[0]]); }), backgroundColor: EV.map(function(e, i) { return futur(i) ? rgba(s[2], 0.35) : s[2]; }), borderRadius: 3, maxBarThickness: 26 };
+  });
+  // v3.08 : un an plus tôt (factures avant l'app), en pointillés par service
+  ds.forEach(function(s) {
+    dsSvc.push({ type: 'line', label: s[1] + ' un an plus tôt', data: EV.map(function(e) { var v = aMois(anMoins1(e.per))[s[3]][s[0]]; return v ? Math.round(v) : null; }),
+      borderColor: rgba(s[2], 0.75), backgroundColor: rgba(s[2], 0.75), borderDash: [5, 4], borderWidth: 1.5, pointRadius: 2, pointStyle: 'rectRot', tension: 0.25, cubicInterpolationMode: 'monotone', spanGaps: true, stack: 'n1-' + s[0] });   // seule dans sa pile : pas additionnée aux barres
+  });
+  var oSvc = optsBase(true); oSvc.scales.y.stacked = true;
+  nouveauGraph('ch-svc', { data: { labels: labels, datasets: dsSvc }, options: oSvc });
 
   // Saisonnalité : chiens par jour ouvré. v2.90 : un mois passé sans planning
   // est complété par le détail de ses factures (pointillés, losange).
@@ -1210,14 +1368,14 @@ function dessiner(b, C, A, EV, ic) {
     if (futur(i)) return null;
     var f = chiensFactures(e.per);
     if (!f) return null;
-    return (!e.a.totalSorties || totChiens(f) > totChiens(e.a.chiens)) ? f : null;
+    return (!e.aPlan.totalSorties || totChiens(f) > totChiens(e.aPlan.chiens)) ? f : null;
   });
   // v3.07 (Gabriel, 25/10/2026) : l'année en cours et la précédente superposées,
   // de janvier à décembre. Année précédente en pointillés, d'après les factures ;
   // année en cours : planning, ou factures pour un mois passé sans planning complet ;
   // mois à venir d'après les réservations connues (trait plus clair).
   var anS = new Date().getFullYear(), moisAuj = new Date().getMonth();
-  var parPer = {}; EV.forEach(function(e, i) { parPer[e.per] = { e: e, src: parFact[i] || e.a.chiens, fact: !!parFact[i], futur: futur(i) }; });
+  var parPer = {}; EV.forEach(function(e, i) { parPer[e.per] = { e: e, src: parFact[i] || e.aPlan.chiens, fact: !!parFact[i], futur: futur(i) }; });
   function saison(an, m) {
     var per = perDe(an, m), bm = FR_FACT.periodeMois(per), x = parPer[per], src = null, fact = false, fut = false;
     if (x) { src = x.src; fact = x.fact; fut = x.futur; }
@@ -1273,7 +1431,8 @@ function dessiner(b, C, A, EV, ic) {
   // Clients servis par mois
   nouveauGraph('ch-cli', { type: 'line', data: { labels: labels, datasets: [
     { label: 'Clients servis', data: EV.map(function(e) { return e.a.nbClients; }), borderColor: gr, backgroundColor: rgba(gr, 0.15), fill: true, pointRadius: 3, borderWidth: 2, tension: 0.25, cubicInterpolationMode: 'monotone', segment: pointille },
-    { label: 'Chiens servis', data: EV.map(function(e) { return e.a.nbChiens; }), borderColor: acc, backgroundColor: acc, pointRadius: 2, borderWidth: 2, tension: 0.25, cubicInterpolationMode: 'monotone', segment: pointille }
+    { label: 'Chiens servis', data: EV.map(function(e) { return e.a.nbChiens; }), borderColor: acc, backgroundColor: acc, pointRadius: 2, borderWidth: 2, tension: 0.25, cubicInterpolationMode: 'monotone', segment: pointille },
+    { label: 'Clients servis un an plus tôt', data: EV.map(function(e) { return aMois(anMoins1(e.per)).nbClients || null; }), borderColor: rgba(gr, 0.7), backgroundColor: rgba(gr, 0.7), borderDash: [5, 4], pointRadius: 2, pointStyle: 'rectRot', borderWidth: 1.5, tension: 0.25, cubicInterpolationMode: 'monotone', spanGaps: true }
   ] }, options: optsBase(false) });
 
   // Km par camionnette (12 derniers mois, pas de prévision)
