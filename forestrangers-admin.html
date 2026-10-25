@@ -637,6 +637,19 @@ html.light .fa-box .rc-btn.pay { color:#1f7a34; }
 /* ─── PLANNING MONTH CELL ─── */
 .week-head.month-cell { border-radius: 8px; min-height: 52px; padding: 6px; text-align: left; cursor: pointer; transition: all 0.15s; margin-bottom: 0; }
 .month-cell .week-num { font-size: 13px; }
+/* v3.06 : vue Mois sur ordinateur — une case par service avec le nombre de chiens */
+.mc-top { display:flex; align-items:baseline; justify-content:space-between; gap:6px; }
+.mc-total { display:none; font-size:11px; color:var(--text-dim); font-weight:600; }
+.mc-boxes { display:none; flex-direction:column; gap:3px; margin-top:6px; }
+.mc-box { display:flex; justify-content:space-between; align-items:center; gap:6px; border-radius:6px; padding:3px 7px; font-size:11px; font-weight:700; line-height:1.3; }
+.mc-dots { display:flex; gap:2px; flex-wrap:wrap; margin-top:2px; }
+@media (min-width: 900px) {
+  .mc-boxes { display:flex; }
+  .mc-total { display:block; }
+  .mc-dots, .month-count { display:none; }
+  html.light .mc-box { filter: brightness(0.8) saturate(1.2); }
+  .week-head.month-cell { min-height: 92px; }
+}
 .month-count { font-size: 10px; font-weight: 700; margin-top: 2px; color: #eceee6; }
 .week-head.today .month-count { color: #ff5f1f; }
 .week-head.weekend .month-count { color: #5a9ae0; }
@@ -2676,12 +2689,12 @@ async function loadDashboardStats() {
   try {
     // 5. Charger planning du jour dans le tableau
     var planRes = await db.from('reservations')
-      .select('*, clients(prenom, nom, numero_client, is_test, adresse, commune, code_postal)')
+      .select('*, clients(prenom, nom, numero_client, is_test, adresse, commune, code_postal, quartier)')
       .lte('date_debut', today)
       .gte('date_fin', today)
       .neq('statut', 'annule')
       .order('creneau', { ascending: true });
-    if (planRes.error && /adresse|commune|code_postal/.test(planRes.error.message || '')) {   // repli sans les colonnes d'adresse
+    if (planRes.error && /adresse|commune|code_postal|quartier/.test(planRes.error.message || '')) {   // repli sans les colonnes d'adresse
       planRes = await db.from('reservations').select('*, clients(prenom, nom, numero_client, is_test)')
         .lte('date_debut', today).gte('date_fin', today).neq('statut', 'annule').order('creneau', { ascending: true });
     }
@@ -4777,9 +4790,49 @@ function rangerSeance(r, ds) {
 //  adresse n'est pas encore localisée : rangée par commune puis adresse.
 // ══════════════════════════════════════════════════════════════
 var KOPSTAL_GPS = [49.6644, 6.0736];
-var GEO_LS_A = 'fr-geo-cache';
-var GEO_A = {};
+var GEO_LS_A = 'fr-geo-cache';          // même cache que l'app ranger : [lat, lon], [] = pas trouvé
+var GEO_ECH_LS = 'fr-geo-echecs';       // v3.05 : date du dernier échec, pour réessayer plus tard
+var GEO_A = {}, GEO_ECH = {};
 try { GEO_A = JSON.parse(localStorage.getItem(GEO_LS_A) || '{}') || {}; } catch (e) { GEO_A = {}; }
+try { GEO_ECH = JSON.parse(localStorage.getItem(GEO_ECH_LS) || '{}') || {}; } catch (e) { GEO_ECH = {}; }
+// v3.05 : centre des communes et des quartiers de Luxembourg-Ville (approx.) — l'ordre
+// est bon tout de suite, même hors connexion ou si une adresse est introuvable.
+var ZONES_GPS = {
+  'kopstal': [49.664, 6.074], 'bridel': [49.657, 6.081], 'kehlen': [49.668, 6.035], 'keispelt': [49.682, 6.050], 'meispelt': [49.690, 6.035],
+  'olm': [49.646, 6.022], 'nospelt': [49.670, 6.008], 'dondelange': [49.682, 6.025], 'mamer': [49.627, 6.023], 'capellen': [49.645, 5.990],
+  'holzem': [49.616, 6.000], 'strassen': [49.620, 6.073], 'bertrange': [49.611, 6.050], 'leudelange': [49.590, 6.064],
+  'walferdange': [49.660, 6.133], 'helmsange': [49.665, 6.137], 'bereldange': [49.655, 6.124], 'steinsel': [49.677, 6.124],
+  'heisdorf': [49.672, 6.140], 'mullendorf': [49.682, 6.127], 'lorentzweiler': [49.700, 6.146], 'lintgen': [49.722, 6.128],
+  'mersch': [49.749, 6.105], 'hesperange': [49.570, 6.155], 'howald': [49.582, 6.143], 'itzig': [49.587, 6.172],
+  'sandweiler': [49.616, 6.217], 'niederanven': [49.650, 6.255], 'senningerberg': [49.650, 6.225], 'hostert': [49.658, 6.233],
+  'schuttrange': [49.622, 6.270], 'contern': [49.587, 6.227], 'bettembourg': [49.518, 6.103], 'esch sur alzette': [49.496, 5.981],
+  'luxembourg': [49.611, 6.130],
+  // Luxembourg-Ville : quartiers
+  'merl': [49.605, 6.103], 'limpertsberg': [49.620, 6.120], 'belair': [49.611, 6.110], 'hollerich': [49.598, 6.112],
+  'gare': [49.600, 6.133], 'bonnevoie nord': [49.598, 6.142], 'bonnevoie sud': [49.590, 6.142], 'bonnevoie': [49.595, 6.142],
+  'kirchberg': [49.628, 6.160], 'cessange': [49.587, 6.105], 'gasperich': [49.580, 6.125], 'rollingergrund': [49.620, 6.095],
+  'muhlenbach': [49.630, 6.112], 'beggen': [49.645, 6.132], 'dommeldange': [49.640, 6.140], 'eich': [49.630, 6.135],
+  'weimerskirch': [49.628, 6.147], 'neudorf': [49.615, 6.160], 'clausen': [49.613, 6.143], 'pfaffenthal': [49.617, 6.133],
+  'grund': [49.609, 6.135], 'ville haute': [49.611, 6.130], 'cents': [49.612, 6.172], 'hamm': [49.607, 6.182],
+  'pulvermuhl': [49.603, 6.158], 'kalchesbruck': [49.630, 6.180]
+};
+// Noms luxembourgeois ou allemands → nom de la table
+var ZONES_ALIAS = { 'bartreng': 'bertrange', 'stroossen': 'strassen', 'koplescht': 'kopstal', 'briddel': 'bridel', 'mamer': 'mamer',
+  'walfer': 'walferdange', 'helsem': 'helmsange', 'bereldeng': 'bereldange', 'steesel': 'steinsel', 'hesper': 'hesperange',
+  'houwald': 'howald', 'letzebuerg': 'luxembourg', 'luxemburg': 'luxembourg', 'luxembourg ville': 'luxembourg', 'kielen': 'kehlen',
+  'keespelt': 'keispelt', 'olm': 'olm', 'kapellen': 'capellen', 'leideleng': 'leudelange', 'stengefort': 'steinfort',
+  'belair': 'belair', 'bel air': 'belair', 'centre ville': 'ville haute', 'ville': 'ville haute', 'haute ville': 'ville haute',
+  'muehlenbach': 'muhlenbach', 'pulvermuehl': 'pulvermuhl', 'kalchesbrueck': 'kalchesbruck', 'pfaffental': 'pfaffenthal' };
+function normZone(t) {
+  var x = String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z]+/g, ' ').trim();
+  x = x.replace(/^(luxembourg|lux)\s+/, '');
+  return ZONES_ALIAS[x] || x;
+}
+function zoneGps(c) {
+  if (!c) return null;
+  var q = normZone(c.quartier), m = normZone(c.commune);
+  return (q && ZONES_GPS[q]) || (m && ZONES_GPS[m]) || null;
+}
 function adresseCompleteA(c) {
   c = c || {};
   return [c.adresse, ((c.code_postal ? 'L-' + c.code_postal + ' ' : '') + (c.commune || '')).trim(), 'Luxembourg'].filter(Boolean).join(', ');
@@ -4789,12 +4842,14 @@ function distKmA(a, b) {
   var x = Math.sin(dLa / 2) * Math.sin(dLa / 2) + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLo / 2) * Math.sin(dLo / 2);
   return 2 * R * Math.asin(Math.sqrt(x));
 }
-function distanceKopstalA(c) {
+// Position d'un client : son adresse si elle est localisée, sinon le centre de son quartier / sa commune
+function gpsClient(c) {
   if (!c) return null;
   var g = GEO_A[adresseCompleteA(c)];
-  if (!(g && g.length)) g = GEO_A[[c.commune, 'Luxembourg'].filter(Boolean).join(', ')];
-  return g && g.length ? distKmA(KOPSTAL_GPS, g) : null;
+  if (g && g.length) return g;
+  return zoneGps(c);
 }
+function distanceKopstalA(c) { var g = gpsClient(c); return g ? distKmA(KOPSTAL_GPS, g) : null; }
 function cleAdresseA(c) { return String(adresseCompleteA(c)).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
 // Compare deux clients : distance, puis adresse (mêmes adresses côte à côte), puis nom
 function compareKopstal(ca, cb) {
@@ -4818,33 +4873,71 @@ function trierGroupesKopstal(groupes, clientsMap) {
     return compareKopstal(clientsMap[a[0].client_id], clientsMap[b[0].client_id]);
   });
 }
-// Localisation des adresses inconnues, puis un seul rafraîchissement
+// Localisation précise des adresses (OpenStreetMap, 1 demande par seconde, mémorisée).
+// v3.05 : 3 essais (adresse structurée, adresse libre, rue + commune), résultat refusé
+// s'il tombe à plus de 6 km du quartier / de la commune, échec réessayé après 3 jours.
 var _geoFileA = [], _geoEnCoursA = false, _geoApres = {};
+var GEO_REESSAI_MS = 3 * 864e5;
+function geoAFaire(c) {
+  var a = adresseCompleteA(c);
+  if (!(a in GEO_A)) return true;
+  if (GEO_A[a] && GEO_A[a].length) return false;
+  return !GEO_ECH[a] || (Date.now() - GEO_ECH[a] > GEO_REESSAI_MS);
+}
 function geocoderAdressesA(clients, apres, cle) {
   (clients || []).forEach(function(c) {
-    if (!c || (!c.adresse && !c.commune)) return;
+    if (!c || !c.adresse || !geoAFaire(c)) return;
     var a = adresseCompleteA(c);
-    if (!(a in GEO_A) && _geoFileA.indexOf(a) === -1) _geoFileA.push(a);
+    if (!_geoFileA.some(function(x) { return x.a === a; })) _geoFileA.push({ a: a, c: c });
   });
   if (apres) _geoApres[cle || 'defaut'] = apres;
   if (_geoEnCoursA || !_geoFileA.length) return;
   _geoEnCoursA = true;
   var nouveau = false;
+  function nominatim(params) {
+    return fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=lu&' + params, { headers: { 'Accept-Language': 'fr' } })
+      .then(function(r) { return r.ok ? r.json() : []; })
+      .then(function(j) { return (j && j[0]) ? [parseFloat(j[0].lat), parseFloat(j[0].lon)] : null; });
+  }
+  function plausible(g, c) { var z = zoneGps(c); return g && (!z || distKmA(g, z) <= 6); }
   (function suivant() {
-    var a = _geoFileA.shift();
-    if (!a) {
+    var t = _geoFileA.shift();
+    if (!t) {
       _geoEnCoursA = false;
-      try { localStorage.setItem(GEO_LS_A, JSON.stringify(GEO_A)); } catch (e) {}
+      try { localStorage.setItem(GEO_LS_A, JSON.stringify(GEO_A)); localStorage.setItem(GEO_ECH_LS, JSON.stringify(GEO_ECH)); } catch (e) {}
       var fs = _geoApres; _geoApres = {};
       if (nouveau) Object.keys(fs).forEach(function(k) { try { fs[k](); } catch (e) {} });
       return;
     }
-    fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=lu,fr,be,de&q=' + encodeURIComponent(a), { headers: { 'Accept-Language': 'fr' } })
-      .then(function(r) { return r.ok ? r.json() : []; })
-      .then(function(j) { GEO_A[a] = (j && j[0]) ? [parseFloat(j[0].lat), parseFloat(j[0].lon)] : []; nouveau = true; })
-      .catch(function() { /* hors ligne : on réessaiera au prochain affichage */ })
-      .then(function() { setTimeout(suivant, 1100); });
+    var c = t.c, ville = c.commune || '';
+    var essais = [
+      'street=' + encodeURIComponent(c.adresse) + '&city=' + encodeURIComponent(ville) + (c.code_postal ? '&postalcode=' + encodeURIComponent(c.code_postal) : ''),
+      'q=' + encodeURIComponent(t.a),
+      'q=' + encodeURIComponent([c.adresse, c.quartier || ville, 'Luxembourg'].filter(Boolean).join(', '))
+    ];
+    var k = 0, horsLigne = false;
+    (function essai() {
+      if (k >= essais.length) {
+        if (!horsLigne) { GEO_A[t.a] = []; GEO_ECH[t.a] = Date.now(); nouveau = true; }
+        return setTimeout(suivant, 1100);
+      }
+      nominatim(essais[k++]).then(function(g) {
+        if (plausible(g, c)) { GEO_A[t.a] = g; delete GEO_ECH[t.a]; nouveau = true; setTimeout(suivant, 1100); }
+        else setTimeout(essai, 1100);
+      }).catch(function() { horsLigne = true; k = essais.length; setTimeout(essai, 0); });
+    })();
   })();
+}
+// Petit état sous le planning : adresses encore approximatives
+function noteLocalisation(clients) {
+  var restants = (clients || []).filter(function(c) { return c && !c._jt && c.adresse && !(GEO_A[adresseCompleteA(c)] || []).length; });
+  if (!restants.length) return '';
+  var sansZone = restants.filter(function(c) { return !zoneGps(c); });
+  return '<div style="grid-column:1/-1;font-size:11px;color:var(--text-faint);margin:0 0 8px;">'
+    + (_geoEnCoursA ? 'Localisation des adresses en cours : l\'ordre se met à jour tout seul. ' : '')
+    + restants.length + ' adresse' + (restants.length > 1 ? 's' : '') + ' rangée' + (restants.length > 1 ? 's' : '') + ' d\'après la commune ou le quartier'
+    + (sansZone.length ? ' · position inconnue (en fin de liste) : ' + sansZone.map(function(c) { return msgEsc((c.prenom || '') + ' ' + (c.nom || '') + (c.commune ? ' (' + c.commune + ')' : '')); }).join(', ') : '')
+    + '.</div>';
 }
 // Séances du jour pour le planning, filtre « Ranger » appliqué
 function seancesPlanning(resas, ds) {
@@ -4947,7 +5040,11 @@ async function loadPlanning() {
     } else if (vuePlanning==='semaine') {
       renderPlanningSemaine(resas, clientsMap, chiensMap, clientDogsMap, debut, today);
     } else {
-      renderPlanningMois(resas, clientsMap, debut, fin, today);
+      renderPlanningMois(resas, clientsMap, debut, fin, today, chiensMap, clientDogsMap);
+    }
+    if (vuePlanning !== 'mois') {   // v3.05 : adresses pas encore localisées précisément
+      var noteG = noteLocalisation(Object.keys(clientsMap).map(function(k){ return clientsMap[k]; }));
+      if (noteG) grid.insertAdjacentHTML('afterbegin', noteG);
     }
     // Charger rangers dans filtre
     var selR = document.getElementById('filtre-ranger');
@@ -5272,7 +5369,11 @@ function renderPlanningJour(resas, clientsMap, chiensMap, clientDogsMap, dateStr
   grid.innerHTML = html;
 }
 
-function renderPlanningMois(resas, clientsMap, debut, fin, today) {
+function renderPlanningMois(resas, clientsMap, debut, fin, today, chiensMap, clientDogsMap) {
+  chiensMap = chiensMap || {}; clientDogsMap = clientDogsMap || {};
+  // v3.06 : nombre de CHIENS par service (Walking, Day Care, Pension) — même compte que la vue Jour
+  var MC = [['walking', 'Walking'], ['daycare', 'Day Care'], ['boarding', 'Pension']];
+  function rgbaHex(h, a) { var x = parseInt(String(h).slice(1), 16); return 'rgba(' + (x >> 16 & 255) + ',' + (x >> 8 & 255) + ',' + (x & 255) + ',' + a + ')'; }
   var grid=document.getElementById('planning-grid');
   grid.style.gridTemplateColumns='repeat(7,1fr)';
   var html='';
@@ -5288,13 +5389,23 @@ function renderPlanningMois(resas, clientsMap, debut, fin, today) {
     var cols=[...new Set(dr.map(function(r){return SVC_COLORS[r.service]||'#ff5f1f';}))];
     var off=daysBetween(cur,todayMid);
     var hc = isT?'week-head month-cell today':isWE?'week-head month-cell weekend':'week-head month-cell other';
-    html+='<div class="'+hc+'" onclick="ouvrirJourPlanning('+off+');">';
+    html+='<div class="'+hc+'" style="position:relative;" onclick="ouvrirJourPlanning('+off+');">';
     html+='<div class="week-num">'+cur.getDate()+'</div>';
     html+=bandeauCalendrier(ds, true);
     if (nbR>0) {
-      html+='<div class="month-count">'+nbR+'</div>';
-      html+='<div style="display:flex;gap:2px;flex-wrap:wrap;margin-top:2px;">';
+      var nbSvc = { walking: 0, daycare: 0, boarding: 0 };
+      groupBookings(dr).forEach(function(g) { if (g[0].service in nbSvc) nbSvc[g[0].service] += Math.max(1, dogNamesForRows(g, chiensMap, clientDogsMap).length); });
+      var totalChiens = nbSvc.walking + nbSvc.daycare + nbSvc.boarding;
+      html+='<div class="mc-total" style="position:absolute;top:8px;right:9px;">'+totalChiens+' chien'+(totalChiens>1?'s':'')+'</div>';
+      html+='<div class="month-count">'+totalChiens+'</div>';
+      html+='<div class="mc-dots">';
       cols.forEach(function(c){html+='<div style="width:5px;height:5px;border-radius:50%;background:'+c+';"></div>';});
+      html+='</div><div class="mc-boxes">';
+      MC.forEach(function(m) {
+        var n = nbSvc[m[0]]; if (!n) return;
+        var col = SVC_COLORS[m[0]];
+        html+='<div class="mc-box" style="background:'+rgbaHex(col,0.14)+';color:'+col+';border:1px solid '+rgbaHex(col,0.35)+';"><span>'+m[1]+'</span><span>'+n+'</span></div>';
+      });
       html+='</div>';
     }
     html+='</div>';
